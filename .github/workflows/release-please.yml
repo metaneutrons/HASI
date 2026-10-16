@@ -1,0 +1,75 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+    steps:
+      - name: Check out main
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Validate the root release configuration and App settings
+        env:
+          RELEASE_PLEASE_CLIENT_ID: ${{ vars.RELEASE_PLEASE_CLIENT_ID }}
+          RELEASE_PLEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+        run: node scripts/release/metadata.mjs app-config
+
+      - name: Create the repository-scoped Release Please App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_PLEASE_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-actions: write
+
+      - name: Verify the App can access the repository and dispatch the release workflow
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          workflow_path="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml" --jq '.path')"
+          test "$workflow_path" = ".github/workflows/release.yml"
+          config_path="$(gh api "repos/$GITHUB_REPOSITORY/contents/release-please-config.json?ref=main" --jq '.path')"
+          test "$config_path" = "release-please-config.json"
+
+      - name: Update the Release Please pull request or create the version draft
+        id: release
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Dispatch the exact Release Please tag
+        if: steps.release.outputs.release_created == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          node scripts/release/metadata.mjs tag "$RELEASE_TAG"
+          workflow_path="$(gh api "repos/$GITHUB_REPOSITORY/contents/.github/workflows/release.yml?ref=$RELEASE_TAG" --jq '.path')"
+          test "$workflow_path" = ".github/workflows/release.yml"
+          gh workflow run release.yml --ref "$RELEASE_TAG"

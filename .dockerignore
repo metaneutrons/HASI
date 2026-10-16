@@ -1,0 +1,44 @@
+# Send only source needed by the monorepo web build. This excludes the host
+# checkout, environment files, research material and captured verification
+# images from the Docker build context by default.
+**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!LICENSE
+!NOTICE
+!tsconfig.json
+!tsconfig.base.json
+!apps
+!apps/**
+!packages
+!packages/**
+!fixtures
+!fixtures/**
+!scripts
+!scripts/**
+
+# Re-exclude local credentials, generated files, caches and non-build data even
+# beneath the directories re-included above.
+**/.env*
+**/.git
+**/.vercel
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.turbo
+**/.cache
+**/.pnpm-store
+**/research
+**/verification
+**/captures
+**/*token*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.log
+**/*.test.*
+**/*.spec.*
+**/tests

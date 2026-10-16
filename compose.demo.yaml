@@ -1,0 +1,37 @@
+services:
+  database:
+    image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+    environment:
+      POSTGRES_DB: hasi
+      POSTGRES_USER: hasi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a local-only URL-safe POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hasi -d hasi"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  hasi:
+    image: ${HASI_IMAGE:-hasi:local}
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      HASI_DEMO_MODE: "1"
+      HASI_DEMO_ORIGIN: http://127.0.0.1:${HASI_DEMO_PORT:-3000}
+      HASI_DEMO_SECRET: ${HASI_DEMO_SECRET:?Set a fresh 32-byte base64url HASI_DEMO_SECRET}
+      DATABASE_URL: postgresql://hasi:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@database:5432/hasi
+      PORT: ${HASI_DEMO_PORT:-3000}
+      # Optional server-only credentials; omit them to disable model calls.
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GWDG_API_KEY: ${GWDG_API_KEY:-}
+      CUSTOM_API_KEY: ${CUSTOM_API_KEY:-}
+      CUSTOM_ENDPOINT: ${CUSTOM_ENDPOINT:-}
+      CUSTOM_MODEL_ID: ${CUSTOM_MODEL_ID:-}
+    ports:
+      - "127.0.0.1:${HASI_DEMO_PORT:-3000}:${HASI_DEMO_PORT:-3000}"
+
+volumes:
+  postgres-data:
