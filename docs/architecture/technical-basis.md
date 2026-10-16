@@ -1,7 +1,7 @@
 # Proposed technical basis for hasi
 
 Created: 2026-10-09. Updated: 2026-10-16. Status: architecture with an initial
-local prototype under development; no production provisioning has been
+local prototype under development; no institutional production provisioning has been
 performed. The agreed MVP covers permission-aware
 knowledge search with citations across intranet.hs-hannover.de and
 service.it.hs-hannover.de, plus anny room booking. Microsoft 365 Bookings is
@@ -36,9 +36,11 @@ are local research utilities and introduce no production runtime dependency.
 | Verification | Focused backend/integration tests and browser flow tests, e.g. Vitest and Playwright | Verify identities, permissions, action integrity, retrieval and actual UI behavior |
 
 Initial prototype package versions and compatibility are pinned in the workspace
-manifests and lockfile. The hosting platform, model provider, model, embedding
-model and retention policy remain open. A TypeScript SDK does not dictate where
-models or the application are hosted.
+manifests and lockfile. The public prototype is hosted on Vercel; GroqCloud is
+the first integrated model provider for the synthetic-data prototype. The
+institutional production platform, exact model, embedding model and retention
+policy remain open. See [LLM router credentials](llm-router-credentials.md) for
+the agreed separation of provider configuration and server-side secrets.
 
 Next.js is a frontend/BFF choice, not the location of the business authorization
 rules. Those rules belong to the application API. A React/Vite SPA is a viable

@@ -167,6 +167,17 @@ Keep the retrieval embedding model/index separate from the conversational model.
 Switching the latter should not require re-embedding. Changing embedding model
 or dimensions requires a versioned compatible index and migration/evaluation.
 
+## Provider credentials
+
+GroqCloud is the first selected prototype provider. Credentials are stored
+server-side in the deployment secret store; model profiles and provider
+connections carry secret references only. A HASI-owned resolver separates
+Vercel environment variables from future institutional secret-manager storage.
+Model/plugin/client input cannot choose those references or endpoints.
+The [LLM router credential decision](llm-router-credentials.md) defines provider
+connections, administration visibility, deployment scopes, rotation and required
+implementation checks. This decision does not mark runtime integration complete.
+
 ## Reproducible evaluation
 
 The [first benchmark plan](../evaluation/benchmark-v1.md) proposes current model
