@@ -69,6 +69,16 @@ Previously saved chat cards can still load, but their text grants no authority;
 selection rechecks the current server catalog. The offline dialogue parser also
 maps office/workplace wording and keeps at most eight resource cards per reply.
 
+Each model call receives the current server time in `Europe/Berlin` and
+explicit ISO calendar dates for today, tomorrow and the day after tomorrow.
+These advance Berlin calendar days rather than 24-hour durations, including
+across daylight-saving changes. The same context is supplied to Groq, GWDG and
+custom profiles. Earlier chat messages do not yet have individual trusted
+timestamps in the model context; an ambiguous reference to an older relative
+date requires clarification. Calendar context does not make model output
+authoritative: the exact absolute date remains visible on the proposal and
+requires user confirmation.
+
 ## State migration and limits
 
 The expanded output contract is anny plugin version 0.3.0. The deployed host

@@ -18,6 +18,12 @@ const FAKE_KEY = "test-groq-key-only";
 const GWDG_FAKE_KEY = "test-gwdg-key-only";
 const CUSTOM_FAKE_KEY = "test-custom-key-only";
 
+const calendarCases = [
+  { now: '2026-10-16T22:30:00Z', today: '2026-10-17', tomorrow: '2026-10-18', after: '2026-10-19' },
+  { now: '2026-10-24T22:30:00Z', today: '2026-10-25', tomorrow: '2026-10-26', after: '2026-10-27' },
+  { now: '2026-12-31T23:30:00Z', today: '2027-01-01', tomorrow: '2027-01-02', after: '2027-01-03' },
+];
+
 function request(profileId: ChatRequest["profileId"] = "groq-oss-120b"): ChatRequest {
   return {
     profileId,
@@ -85,6 +91,24 @@ function validCustomEnvironment(overrides: Record<string, string | undefined> = 
     ...overrides,
   };
 }
+
+describe('server-owned Berlin calendar context', () => {
+  for (const profileId of ['groq-oss-120b', 'gwdg-qwen3-30b', 'custom-default'] as const) {
+    it.each(calendarCases)(`anchors relative dates for ${profileId} at $now`, async ({ now, today, tomorrow, after }) => {
+      const provider = fakeProvider(completion({ content: 'Hallo.' }));
+      await runModelStep(request(profileId), {
+        env: { ...validCustomEnvironment(), GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY },
+        fetch: provider.fetch,
+        now: new Date(now),
+      });
+      const sent = JSON.parse(String(provider.calls[0]?.init?.body)) as { messages: { role: string; content: string }[] };
+      const system = sent.messages.find(message => message.role === 'system')?.content;
+      expect(system).toContain(`heute=${today}, morgen=${tomorrow}, übermorgen=${after}`);
+      expect(system).toContain('Europe/Berlin, nicht das UTC-Kalenderdatum');
+      expect(system).toContain('ältere Nachricht');
+    });
+  }
+});
 
 async function expectRouterError(
   promise: Promise<unknown>,
