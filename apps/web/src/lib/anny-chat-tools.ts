@@ -23,6 +23,13 @@ export type ChatProposal = {
   expiresAt: string;
 };
 
+/** Recheck a restored UI slot without persisting the bridge's availability cache. */
+export function availabilityInputForSlot(resourceId: string, interval: TimeInterval) {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(interval.startDate));
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value;
+  return chatToolSchemas.anny_get_availability.parse({ resourceId, date: `${part("year")}-${part("month")}-${part("day")}`, time: `${part("hour")}:${part("minute")}`, durationMinutes: (Date.parse(interval.endDate) - Date.parse(interval.startDate)) / 60_000 });
+}
+
 type AnnyChatToolResultBase = {
   output: Record<string, unknown>;
   rooms?: RoomCard[];

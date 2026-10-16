@@ -31,10 +31,22 @@ through an explicit offline selection. There is no silent offline/provider
 fallback on a Groq error. Knowledge retrieval is still absent; general model
 answers must not be represented as verified institutional guidance or citations.
 
-The transcript currently lasts for the mounted chat view. Leaving the route or
-reloading starts a fresh conversation; confirmed demo bookings persist according
-to the selected execution mode. Persistent, identity-scoped conversation storage
-is separate MVP work.
+The prototype supports up to 20 separate chats per test account in the browser.
+Each chat owns its transcript, bounded model history, selected profile, draft,
+room-search context, availability cache and current proposal. Switching chats
+does not unmount their runtimes: replies finish in their originating conversation,
+and another chat can run independently. Changing accounts or leaving the route
+unmounts the runtimes and aborts pending model requests.
+
+A versioned, size-limited local store restores chats across navigation and reload.
+Chats can be renamed or deleted; deleting a chat does not cancel a booking.
+In-flight chats cannot be deleted. A reload never resumes requests or executes
+actions automatically; interrupted requests are marked. Restored availability
+cards are checked again before preparing a proposal, and confirmation remains
+an explicit action bound to that proposal. These browser-local histories are
+synthetic prototype state, not protected server-side user records. Device sync,
+multi-tab conflict resolution and durable institutional conversation storage
+remain work for the backend.
 
 ## Production continuation
 

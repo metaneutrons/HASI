@@ -1,0 +1,76 @@
+import {
+  MAX_CHAT_SESSIONS, createChatSession, deleteChat, loadChatWorkspace,
+  renameChat, saveChatWorkspace, selectChat, updateChatSnapshot,
+  type ChatSnapshot, type ChatWorkspace,
+} from "./chat-sessions";
+
+type StorageLike = Pick<Storage, "getItem" | "setItem">;
+type View = { workspace: ChatWorkspace; busy: Readonly<Record<string, boolean>>; notice: string | null };
+
+export function browserChatStorage(): StorageLike | undefined {
+  try { return typeof window === "undefined" ? undefined : window.localStorage; }
+  catch { return undefined; }
+}
+
+/** Each mounted account owns one store; late responses address a chat by ID. */
+export function createChatWorkspaceStore(ownerId: string, storage?: StorageLike) {
+  const loaded = loadChatWorkspace(ownerId, storage);
+  let view: View = { workspace: loaded.workspace, busy: {}, notice: loaded.notice };
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const listeners = new Set<() => void>();
+  const emit = () => listeners.forEach((listener) => listener());
+
+  function flush() {
+    clearTimeout(timer);
+    timer = undefined;
+    const saved = saveChatWorkspace(view.workspace, storage);
+    if (!saved) {
+      const notice = "Die Chats können gerade nicht gespeichert werden. Sie bleiben bis zum Schließen dieser Seite verfügbar.";
+      if (view.notice !== notice) { view = { ...view, notice }; emit(); }
+    }
+  }
+
+  function publish(workspace: ChatWorkspace, busy = view.busy) {
+    if (workspace === view.workspace && busy === view.busy) return;
+    const changed = workspace !== view.workspace;
+    view = { ...view, workspace, busy };
+    emit();
+    if (changed) { clearTimeout(timer); timer = setTimeout(flush, 180); }
+  }
+
+  return {
+    getSnapshot: () => view,
+    subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
+    flush,
+    dismissNotice() { view = { ...view, notice: null }; emit(); },
+    update(sessionId: string, snapshot: ChatSnapshot, busy: boolean) {
+      const session = view.workspace.sessions.find((item) => item.id === sessionId);
+      if (!session) return;
+      let next: ChatWorkspace;
+      try {
+        next = JSON.stringify(session.snapshot) === JSON.stringify(snapshot)
+          ? view.workspace : updateChatSnapshot(view.workspace, sessionId, snapshot);
+      } catch {
+        view = { ...view, busy: { ...view.busy, [sessionId]: busy }, notice: "Dieser Chat überschreitet die Speichergrenzen und kann gerade nicht gespeichert werden. Beginne für weitere Fragen einen neuen Chat." }; emit(); return;
+      }
+      publish(next, Boolean(view.busy[sessionId]) === busy ? view.busy : { ...view.busy, [sessionId]: busy });
+    },
+    create() {
+      if (view.workspace.sessions.length >= MAX_CHAT_SESSIONS) {
+        view = { ...view, notice: `Du kannst bis zu ${MAX_CHAT_SESSIONS} Chats speichern. Lösche einen nicht mehr benötigten Verlauf, um einen neuen Chat zu beginnen.` }; emit(); return;
+      }
+      const selected = view.workspace.sessions.find((session) => session.id === view.workspace.activeId);
+      const session = createChatSession(selected?.snapshot.profileId);
+      publish({ ...view.workspace, activeId: session.id, sessions: [...view.workspace.sessions, session] });
+    },
+    select(sessionId: string) { publish(selectChat(view.workspace, sessionId)); },
+    rename(sessionId: string, title: string) { publish(renameChat(view.workspace, sessionId, title)); },
+    remove(sessionId: string) {
+      if (view.busy[sessionId]) return;
+      const busy = { ...view.busy }; delete busy[sessionId];
+      publish(deleteChat(view.workspace, sessionId), busy);
+    },
+  };
+}
+
+export type ChatWorkspaceStore = ReturnType<typeof createChatWorkspaceStore>;

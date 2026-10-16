@@ -30,7 +30,10 @@ account. Start in **Chat**: describe a task, for example “Ich brauche morgen u
 14 Uhr einen Raum für vier Personen für eine Stunde.” HASI asks for missing
 details and embeds room results, available times and a booking proposal in the
 conversation. Select a time and confirm the exact proposal on its card. View
-the result in the chat or under **Buchungen**. The
+the result in the chat or under **Buchungen**. **Neuer Chat** opens a separate
+conversation. Switch, rename or delete saved chats in the chat list (drawer on
+mobile). Drafts, profiles and contexts persist per test account in this browser;
+ongoing replies finish in their original chat. The
 administrator can enable/disable the integration and check/activate compatible
 plugin releases under **Verwaltung**. Theme selection offers Light, Dark and
 System. Without a local Groq credential, explicitly select **Dialog-Demo · ohne

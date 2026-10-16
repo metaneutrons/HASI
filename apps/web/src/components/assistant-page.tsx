@@ -1,39 +1,21 @@
 "use client";
 
-import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, Clock3, MapPin, MessageCircle, Plus, Search, Sparkles, Users } from "lucide-react";
+import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, Clock3, MapPin, MessageCircle, PanelLeft, Plus, Search, Sparkles, Users, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { apiRequest, formatDateTime, formatTime, postJson } from "@/lib/api";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import { apiRequest, formatDateTime, formatTime } from "@/lib/api";
 import { classifyIntent, matchingResources, mergeRoomRequest, missingRoomDetails, requestStartDate, roomRequestSummary, type RoomRequest } from "@/lib/chat-demo";
-import type { Booking, Resource, TimeInterval } from "@/lib/types";
+import type { Booking, Resource, TimeInterval, User } from "@/lib/types";
 import { useSession } from "@/components/session-provider";
-import { createAnnyChatTools, type AnnyChatToolResult } from "@/lib/anny-chat-tools";
+import { availabilityInputForSlot, createAnnyChatTools, type AnnyChatToolResult } from "@/lib/anny-chat-tools";
 import { modelReplySchema, type WireMessage } from "@/lib/chat-contract";
 import { appendChatText } from "@/lib/chat-history";
-
-type Proposal = {
-  id: string;
-  resourceName: string;
-  startDate: string;
-  endDate: string;
-  status: "pending" | "confirmed" | "outcome_unknown" | "failed";
-  expiresAt: string;
-};
-type RoomOption = { resource: Resource; intervals: TimeInterval[]; checked: boolean };
-type Message = {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  tool?: string;
-  rooms?: RoomOption[];
-  proposal?: Proposal;
-  bookings?: Booking[];
-  confirmed?: boolean;
-  model?: string;
-  interactionId?: string;
-};
+import type { ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
+import { browserChatStorage, createChatWorkspaceStore } from "@/lib/chat-workspace-store";
+import { ChatSessionList } from "@/components/chat-session-list";
 
 type ModelProfile = { id: string; label: string; modelId: string; provider: "groq" };
+type ModelConfiguration = { profiles: ModelProfile[]; ready: boolean; loading: boolean; error: string | null };
 
 const suggestions = [
   { icon: Search, title: "Einen Raum finden", text: "Ich brauche morgen um 14 Uhr einen Raum für vier Personen für eine Stunde.", caption: "Gemeinsam planen und buchen" },
@@ -45,67 +27,105 @@ function id() { return crypto.randomUUID(); }
 
 export function AssistantPage() {
   const { user } = useSession();
-  return <Conversation key={user?.id} name={user?.displayName.split(/\s|·/)[0] ?? ""} />;
+  return user ? <ChatWorkspace key={user.id} user={user} /> : null;
 }
 
-function Conversation({ name }: { name: string }) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+function ChatWorkspace({ user }: { user: User }) {
+  // SessionProvider establishes the account on the client before this mounts.
+  const [store] = useState(() => createChatWorkspaceStore(user.id, browserChatStorage()));
+  const view = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  const drawer = useRef<HTMLDialogElement>(null);
+  const [configuration, setConfiguration] = useState<ModelConfiguration>({ profiles: [], ready: false, loading: true, error: null });
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/chat", { cache: "no-store" }).then(async (response) => {
+      if (!response.ok) throw new Error("configuration");
+      return await response.json() as { configured: boolean; profiles: ModelProfile[] };
+    }).then((result) => {
+      if (active) setConfiguration({ profiles: result.profiles, ready: result.configured, loading: false, error: result.configured ? null : "GroqCloud ist noch nicht konfiguriert. Du kannst ausdrücklich die Dialog-Demo wählen." });
+    }).catch(() => { if (active) setConfiguration({ profiles: [], ready: false, loading: false, error: "GroqCloud ist gerade nicht erreichbar. Die Dialog-Demo kann separat ausgewählt werden." }); });
+    const flush = () => store.flush();
+    window.addEventListener("pagehide", flush);
+    return () => { active = false; window.removeEventListener("pagehide", flush); store.flush(); };
+  }, [store]);
+
+  function newChat() { store.create(); drawer.current?.close(); }
+
+  return <section className="chat-workspace" aria-label="Deine Chatverläufe">
+    <aside className="chat-session-panel" aria-label="Chatliste"><ChatSessionList view={view} store={store} /></aside>
+    <dialog className="chat-history-dialog" ref={drawer} aria-label="Chatliste" onClick={(event) => { if (event.target === event.currentTarget) drawer.current?.close(); }}><div className="chat-history-dialog-body"><ChatSessionList view={view} store={store} close={() => drawer.current?.close()} /></div></dialog>
+    <div className="chat-conversations">
+      {view.notice && <div className="chat-storage-notice" role="status"><span>{view.notice}</span><button className="icon-button" type="button" aria-label="Hinweis schließen" onClick={store.dismissNotice}><X size={16} /></button></div>}
+      {view.workspace.sessions.map((session) => <Conversation key={session.id} sessionId={session.id} ownerId={user.id} initial={session.snapshot} name={user.displayName.split(/\s|·/)[0] ?? ""} active={session.id === view.workspace.activeId} configuration={configuration} onSnapshot={store.update} onNewChat={newChat} onShowHistory={() => drawer.current?.showModal()} />)}
+    </div>
+  </section>;
+}
+
+type ConversationProps = { sessionId: string; ownerId: string; name: string; initial: ChatSnapshot; active: boolean; configuration: ModelConfiguration; onSnapshot: (id: string, snapshot: ChatSnapshot, busy: boolean) => void; onNewChat: () => void; onShowHistory: () => void };
+
+function Conversation({ sessionId, ownerId, name, initial, active, configuration, onSnapshot, onNewChat, onShowHistory }: ConversationProps) {
+  const [messages, setMessages] = useState<Message[]>(initial.messages);
+  const [input, setInput] = useState(initial.input);
   const [busy, setBusy] = useState(false);
   const [activity, setActivity] = useState("");
-  const [request, setRequest] = useState<RoomRequest>({});
-  const [roomContext, setRoomContext] = useState(false);
-  const [chosenRoom, setChosenRoom] = useState<Resource | null>(null);
-  const [activeResult, setActiveResult] = useState<string | null>(null);
-  const [activeProposal, setActiveProposal] = useState<string | null>(null);
-  const [profiles, setProfiles] = useState<ModelProfile[]>([]);
-  const [profileId, setProfileId] = useState("groq-oss-120b");
-  const [modelReady, setModelReady] = useState(false);
-  const [modelLoading, setModelLoading] = useState(true);
-  const [modelError, setModelError] = useState<string | null>(null);
+  const [request, setRequest] = useState<RoomRequest>(initial.request);
+  const [roomContext, setRoomContext] = useState(initial.roomContext);
+  const [chosenRoom, setChosenRoom] = useState<Resource | null>(initial.chosenRoom);
+  const [activeResult, setActiveResult] = useState<string | null>(initial.activeResult);
+  const [activeProposal, setActiveProposal] = useState<string | null>(initial.activeProposal);
+  const [profileId, setProfileId] = useState(initial.profileId);
+  const [messagesTruncated, setMessagesTruncated] = useState(initial.messagesTruncated);
+  const [interrupted, setInterrupted] = useState(initial.interrupted);
+  const { profiles, ready: modelReady, loading: modelLoading, error: modelError } = configuration;
   const lock = useRef(false);
-  const history = useRef<WireMessage[]>([]);
+  const alive = useRef(true);
+  const history = useRef<WireMessage[]>(structuredClone(initial.history));
   const toolBridge = useRef<ReturnType<typeof createAnnyChatTools> | null>(null);
   const pendingRequest = useRef<AbortController | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
+  const inputId = useId();
   const latestMessage = messages.at(-1)?.id;
   const offline = profileId === "offline";
   const canSend = offline || (!modelLoading && modelReady);
 
   function tools() {
-    toolBridge.current ??= createAnnyChatTools(apiRequest);
+    toolBridge.current ??= createAnnyChatTools(requestForChat);
     return toolBridge.current;
   }
 
   useEffect(() => {
-    let active = true;
-    fetch("/api/chat", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Die Modellkonfiguration ist nicht erreichbar.");
-        return await response.json() as { configured: boolean; profiles: ModelProfile[]; defaultProfileId: string };
-      })
-      .then((result) => {
-        if (!active) return;
-        setProfiles(result.profiles);
-        setProfileId(result.defaultProfileId);
-        setModelReady(result.configured);
-        if (!result.configured) setModelError("GroqCloud ist noch nicht konfiguriert. Du kannst ausdrücklich die Dialog-Demo wählen.");
-      })
-      .catch(() => { if (active) setModelError("GroqCloud ist gerade nicht erreichbar. Die Dialog-Demo kann separat ausgewählt werden."); })
-      .finally(() => { if (active) setModelLoading(false); });
-    return () => { active = false; pendingRequest.current?.abort(); };
+    alive.current = true;
+    return () => { alive.current = false; pendingRequest.current?.abort(); };
   }, []);
 
   useEffect(() => {
+    onSnapshot(sessionId, { messages, input, history: history.current, profileId, request, roomContext, chosenRoom, activeResult, activeProposal, interrupted: interrupted || busy, messagesTruncated }, busy);
+  }, [messages, input, profileId, request, roomContext, chosenRoom, activeResult, activeProposal, interrupted, busy, messagesTruncated, sessionId, onSnapshot]);
+
+  useEffect(() => {
     const element = scroller.current;
-    if (element) element.scrollTo({ top: latestMessage || busy ? element.scrollHeight : 0, behavior: "instant" });
-  }, [latestMessage, busy]);
+    if (active && element) element.scrollTo({ top: latestMessage || busy ? element.scrollHeight : 0, behavior: "instant" });
+  }, [latestMessage, busy, active]);
+
+  async function requestForChat<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const signal = pendingRequest.current?.signal;
+    if (!alive.current || signal?.aborted) throw new DOMException("Chat closed", "AbortError");
+    const session = await apiRequest<{ user: User | null }>("/api/session", { signal });
+    if (!alive.current || signal?.aborted || session.user?.id !== ownerId) throw new Error("Das Testkonto wurde gewechselt. Bitte öffne den Chat erneut.");
+    const result = await apiRequest<T>(path, { ...init, signal });
+    if (!alive.current || signal?.aborted) throw new DOMException("Chat closed", "AbortError");
+    return result;
+  }
+
+  function postForChat<T>(path: string, body: unknown) { return requestForChat<T>(path, { method: "POST", body: JSON.stringify(body) }); }
 
   function add(message: Omit<Message, "id">) {
     if (offline) appendChatText(history.current, message.role, message.text);
     const messageId = id();
-    setMessages((previous) => [...previous, { ...message, id: messageId }]);
+    if (messages.length >= 200) setMessagesTruncated(true);
+    setMessages((previous) => [...previous.slice(-199), { ...message, id: messageId }]);
     return messageId;
   }
 
@@ -117,6 +137,8 @@ function Conversation({ name }: { name: string }) {
   function start(label: string) {
     if (lock.current) return false;
     lock.current = true;
+    pendingRequest.current = new AbortController();
+    setInterrupted(false);
     setBusy(true);
     setActivity(label);
     return true;
@@ -124,6 +146,7 @@ function Conversation({ name }: { name: string }) {
 
   function finish() {
     lock.current = false;
+    pendingRequest.current = null;
     setBusy(false);
   }
 
@@ -157,8 +180,7 @@ function Conversation({ name }: { name: string }) {
     }
     history.current.push({ role: "user", content: text });
     const interactionId = id();
-    const controller = new AbortController();
-    pendingRequest.current = controller;
+    const controller = pendingRequest.current!;
     try {
       for (let step = 0; step < 4; step += 1) {
         setActivity("GroqCloud antwortet …");
@@ -197,7 +219,7 @@ function Conversation({ name }: { name: string }) {
         if (actionableResult) return;
       }
       add({ role: "assistant", text: "Die maximale Zahl an Modellschritten für diese Nachricht ist erreicht. Du kannst die angezeigten Karten nutzen oder eine weitere Nachricht schreiben." });
-    } finally { pendingRequest.current = null; }
+    } finally { /* The interaction owns cancellation until finish(). */ }
   }
 
   async function searchRooms(next: RoomRequest, selected: Resource | null) {
@@ -208,7 +230,7 @@ function Conversation({ name }: { name: string }) {
       return;
     }
     setActivity("anny · Räume suchen");
-    const result = await apiRequest<{ resources: Resource[] }>("/api/resources");
+    const result = await requestForChat<{ resources: Resource[] }>("/api/resources");
     const resources = matchingResources(result.resources, next).filter((resource) => !selected || resource.id === selected.id);
     if (!resources.length) {
       add({ role: "assistant", tool: "anny · Raumsuche", text: "Für diese Anforderungen finde ich in den zugänglichen Testdaten keinen Raum. Du kannst eine neue Raumsuche beginnen und die Anforderungen ändern." });
@@ -222,7 +244,7 @@ function Conversation({ name }: { name: string }) {
     }
     setActivity("anny · Verfügbarkeit prüfen");
     const options = await Promise.all(resources.map(async (resource) => {
-      const availability = await postJson<{ intervals: TimeInterval[] }>("/api/availability", { resourceId: resource.id, serviceId: resource.serviceId, startDate, durationMinutes: next.durationMinutes });
+      const availability = await postForChat<{ intervals: TimeInterval[] }>("/api/availability", { resourceId: resource.id, serviceId: resource.serviceId, startDate, durationMinutes: next.durationMinutes });
       return { resource, intervals: availability.intervals.filter((interval) => interval.available).slice(0, 3), checked: true };
     }));
     const count = options.filter((option) => option.intervals.length).length;
@@ -256,7 +278,7 @@ function Conversation({ name }: { name: string }) {
       const intent = classifyIntent(trimmed, roomContext);
       if (intent === "bookings") {
         setActivity("anny · Eigene Buchungen laden");
-        const result = await apiRequest<{ bookings: Booking[] }>("/api/bookings");
+        const result = await requestForChat<{ bookings: Booking[] }>("/api/bookings");
         add({ role: "assistant", tool: "anny · Eigene Buchungen", text: result.bookings.length ? "Hier sind deine Buchungen aus der Testumgebung." : "Du hast in der Testumgebung noch keine Buchungen. Soll ich einen Raum für dich suchen?", bookings: result.bookings });
         setRoomContext(false);
       } else if (intent === "knowledge") {
@@ -291,7 +313,7 @@ function Conversation({ name }: { name: string }) {
     add({ role: "user", text: `Ich möchte ${resource.name} buchen.` });
     try { await searchRooms(request, resource); }
     catch (cause) { add({ role: "assistant", text: cause instanceof Error ? cause.message : "Der Raum konnte nicht geprüft werden." }); }
-    finally { finish(); composer.current?.focus(); }
+    finally { finish(); if (active) composer.current?.focus(); }
   }
 
   async function prepare(resource: Resource, interval: TimeInterval) {
@@ -303,12 +325,18 @@ function Conversation({ name }: { name: string }) {
     add({ role: "user", text: selection });
     try {
       const args = { resourceId: resource.id, startDate: interval.startDate, endDate: interval.endDate };
+      if (!offline) {
+        const check = availabilityInputForSlot(resource.id, interval);
+        const checked = await tools().run("anny_get_availability", check);
+        recordTool("anny_get_availability", check, checked.output);
+      }
       const result = offline
-        ? await postJson<{ proposal: Proposal }>("/api/proposals", { ...args, serviceId: resource.serviceId })
+        ? await postForChat<{ proposal: Proposal }>("/api/proposals", { ...args, serviceId: resource.serviceId })
         : await tools().run("anny_propose_booking", args);
       if (!result.proposal) throw new Error("Es wurde kein Buchungsvorschlag zurückgegeben.");
       if (!offline && "output" in result) recordTool("anny_propose_booking", args, result.output);
-      addActionResult({ text: "Der Buchungsvorschlag ist vorbereitet. Bitte prüfe die Angaben und bestätige die Buchung ausdrücklich.", tool: "anny · Buchungsvorschlag", proposal: result.proposal });
+      const { id, resourceName, startDate, endDate, status, expiresAt } = result.proposal;
+      addActionResult({ text: "Der Buchungsvorschlag ist vorbereitet. Bitte prüfe die Angaben und bestätige die Buchung ausdrücklich.", tool: "anny · Buchungsvorschlag", proposal: { id, resourceName, startDate, endDate, status, expiresAt } });
       setActiveProposal(result.proposal.id);
     } catch (cause) { addActionResult({ text: cause instanceof Error ? cause.message : "Der Buchungsvorschlag konnte nicht erstellt werden." }); }
     finally { finish(); }
@@ -320,7 +348,7 @@ function Conversation({ name }: { name: string }) {
     if (!offline) appendChatText(history.current, "user", action);
     add({ role: "user", text: action });
     try {
-      const result = await postJson<{ proposal: Proposal; bookingId?: string }>(`/api/proposals/${encodeURIComponent(proposal.id)}/confirm`, {});
+      const result = await postForChat<{ proposal: Proposal; bookingId?: string }>(`/api/proposals/${encodeURIComponent(proposal.id)}/confirm`, {});
       if (result.proposal.status === "confirmed") {
         setActiveProposal(null);
         setRoomContext(false);
@@ -335,19 +363,14 @@ function Conversation({ name }: { name: string }) {
     finally { finish(); }
   }
 
-  function reset() {
-    if (lock.current) return;
-    setMessages([]); setRequest({}); setRoomContext(false); setChosenRoom(null); setActiveResult(null); setActiveProposal(null); setInput("");
-    history.current = []; tools().reset();
-    composer.current?.focus();
-  }
-
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void send(input); }
 
   return (
-    <section className="chat-page" aria-label="HASI Chat">
-      <div className="chat-toolbar"><label className="chat-model-picker"><MessageCircle size={15} aria-hidden="true" /><span className="sr-only">Sprachmodell</span><select aria-label="Sprachmodell" value={profileId} disabled={busy || modelLoading} onChange={(event) => setProfileId(event.currentTarget.value)}>{profiles.length ? profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.label}</option>) : <option value="groq-oss-120b">{modelLoading ? "Modell wird geladen …" : "GroqCloud nicht verfügbar"}</option>}<option value="offline">Dialog-Demo · ohne Modell</option></select></label><button type="button" onClick={reset} disabled={busy} className="chat-new"><Plus size={16} aria-hidden="true" /> Neuer Chat</button></div>
+    <section className="chat-page" aria-label="HASI Chat" hidden={!active}>
+      <div className="chat-toolbar"><button className="chat-history-toggle icon-button" type="button" onClick={onShowHistory} aria-label="Chatliste öffnen"><PanelLeft size={19} /></button><label className="chat-model-picker"><MessageCircle size={15} aria-hidden="true" /><span className="sr-only">Sprachmodell</span><select aria-label="Sprachmodell" value={profileId} disabled={busy || modelLoading} onChange={(event) => { const value = event.currentTarget.value; if (value === "offline" || value === "groq-oss-120b" || value === "groq-oss-20b") setProfileId(value); }}>{profiles.length ? profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.label}</option>) : <option value="groq-oss-120b">{modelLoading ? "Modell wird geladen …" : "GroqCloud nicht verfügbar"}</option>}<option value="offline">Dialog-Demo · ohne Modell</option></select></label><button type="button" onClick={onNewChat} className="chat-new" aria-label="Neuer Chat"><Plus size={16} aria-hidden="true" /><span>Neuer Chat</span></button></div>
       {modelError && !offline && <p className="chat-model-error" role="status">{modelError}</p>}
+      {interrupted && <p className="chat-recovery-note" role="status">Eine frühere Anfrage wurde unterbrochen. Bei Buchungen prüfe bitte zuerst den aktuellen Status.</p>}
+      {messagesTruncated && <p className="chat-recovery-note">Die letzten 200 Nachrichten dieses Chats werden gespeichert und angezeigt.</p>}
       <div className="chat-scroller" ref={scroller}>
         {messages.length === 0 ? (
           <div className="chat-welcome">
@@ -382,8 +405,8 @@ function Conversation({ name }: { name: string }) {
       </div>
       <div className="chat-composer-dock">
         <form className="chat-composer" onSubmit={submit}>
-          <label className="sr-only" htmlFor="chat-input">Nachricht an HASI</label>
-          <textarea id="chat-input" ref={composer} rows={2} maxLength={2000} value={input} onChange={(event) => setInput(event.currentTarget.value)} placeholder="Frag HASI oder beschreibe, was du vorhast …" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(input); } }} />
+          <label className="sr-only" htmlFor={inputId}>Nachricht an HASI</label>
+          <textarea id={inputId} ref={composer} rows={2} maxLength={2000} value={input} onChange={(event) => setInput(event.currentTarget.value)} placeholder="Frag HASI oder beschreibe, was du vorhast …" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(input); } }} />
           <div className="chat-composer-bottom"><span><span className="status-dot" /> {offline ? "Dialog-Demo · ohne Sprachmodell" : modelLoading ? "GroqCloud wird verbunden …" : modelReady ? "GroqCloud · anny-Testdaten" : "GroqCloud nicht verfügbar"}</span><button type="submit" aria-label="Nachricht senden" disabled={busy || !canSend || !input.trim()}><ArrowUp size={20} aria-hidden="true" /></button></div>
         </form>
         <p className="chat-footnote">{offline ? "Dialog-Demo mit Testdaten · IT- und Intranet-Wissen folgt" : "Nachrichten und Toolergebnisse gehen an GroqCloud. Bitte nur Testdaten eingeben."}</p>

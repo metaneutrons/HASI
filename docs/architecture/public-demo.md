@@ -37,14 +37,21 @@ evidence. No model-callable booking execution or cancellation tool exists.
 Only the existing host-owned confirmation card calls the confirmation endpoint.
 Prepared intervals must match a previously observed available interval.
 
-Demo accounts, proposals, bookings and the plugin switch are stored only in
-the visitor's namespaced localStorage. Administrator selection is intentionally
+Demo accounts, proposals, bookings, chat workspaces and the plugin switch are stored only in
+the visitor's namespaced localStorage. Each test account has up to 20 chats with
+separate model context, drafts and tool state. The chat workspace is limited to
+2 MiB and 200 displayed messages per chat; storage failures are shown, and no
+whole chats are silently evicted. Only the context of the selected chat is sent
+for its inference; other chats can finish existing requests in the background.
+The account scope is a test-data namespace, not production authorization.
+Administrator selection is intentionally
 available to everyone and affects that browser's simulation. It grants no
 access to an institutional or shared administration system. Client-side
 validation is convenience, not an authentication or authorization boundary.
 Clearing site data resets the demonstration. Storage is bounded; blocked
-localStorage falls back to nonpersistent in-memory state. Multi-tab changes
-have no transactional or durable-booking guarantee.
+localStorage falls back to nonpersistent in-memory state. Restored chats do not
+resume interrupted calls or business actions. Multi-tab changes use last-write
+semantics and have no conflict-resolution or durable-booking guarantee.
 
 Institutional knowledge answers, source connectors and production model data
 policy remain MVP work. Plugin updates are not performed in the browser; the demo says this
