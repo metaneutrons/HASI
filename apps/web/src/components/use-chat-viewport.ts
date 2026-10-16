@@ -23,6 +23,7 @@ export function useChatViewport(enabled: boolean) {
       }
       frame.toggleAttribute("data-keyboard-open", value?.keyboard ?? false);
       frame.toggleAttribute("data-chat-cramped", Boolean(value && value.height < 260));
+      frame.toggleAttribute("data-chat-minimal", Boolean(value && value.height < 180));
     };
     const schedule = () => { if (!pending) pending = requestAnimationFrame(update); };
     update();
@@ -42,6 +43,7 @@ export function useChatViewport(enabled: boolean) {
       frame.style.removeProperty("--chat-viewport-top");
       frame.removeAttribute("data-keyboard-open");
       frame.removeAttribute("data-chat-cramped");
+      frame.removeAttribute("data-chat-minimal");
     };
   }, [enabled]);
   return ref;
