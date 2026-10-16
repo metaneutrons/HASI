@@ -17,6 +17,7 @@ import { usePathname } from "next/navigation";
 import { useRef, useState, type ReactNode } from "react";
 import { useSession } from "@/components/session-provider";
 import { PublicDemoNotice } from "@/components/public-demo-notice";
+import { useChatViewport } from "@/components/use-chat-viewport";
 import { useTheme, type Theme } from "@/components/theme-provider";
 import type { Role } from "@/lib/types";
 
@@ -310,6 +311,7 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const activeKey = pathname === "/bookings" ? "bookings" : pathname === "/admin" ? "admin" : "assistant";
+  const frameRef = useChatViewport(activeKey === "assistant");
   const initial = user ? initials(user.displayName) : "H";
 
   async function handleLogout(): Promise<boolean> {
@@ -327,7 +329,7 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
   }
 
   return (
-    <div className={`app-frame${activeKey === "assistant" ? " app-frame--chat" : ""}`}>
+    <div ref={frameRef} className={`app-frame${activeKey === "assistant" ? " app-frame--chat" : ""}`}>
       <aside className="side-nav" aria-label="HASI Navigation">
         <WordmarkLink />
         <div className="side-nav-label">CAMPUS</div>
