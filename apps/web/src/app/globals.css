@@ -325,7 +325,7 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .welcome-nav { display: flex; min-height: 92px; align-items: center; justify-content: space-between; gap: 18px; border-bottom: 1px solid var(--line); }
 .welcome-nav-actions { display: flex; align-items: center; gap: 16px; }
 .welcome-page > .public-demo-notice { width: 100%; max-width: 1260px; }
-.welcome-main { position: relative; display: grid; width: min(100%, 1260px); flex: 1; align-items: center; gap: clamp(42px, 8vw, 130px); grid-template-columns: minmax(0, 1.03fr) minmax(350px, 0.83fr); margin: 0 auto; padding: clamp(48px, 8vh, 94px) 0; }
+.welcome-main { position: relative; display: flex; width: min(100%, 1260px); flex: 1; flex-direction: column; align-items: stretch; gap: 24px; margin: 0 auto; padding: 42px 0 34px; }
 .welcome-copy { position: relative; min-width: 0; padding-bottom: 18px; }
 .welcome-copy .eyebrow { margin-bottom: 29px; }
 .welcome-copy h1, .assistant-hero h1, .admin-hero h1, .bookings-page h1 {
@@ -339,10 +339,11 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 }
 .welcome-copy h1 span, .assistant-hero h1 span, .admin-hero h1 span { color: var(--accent); }
 .welcome-copy h1 span, .assistant-hero h1 span, .admin-hero h1 span { display: inline-block; transform: translateX(-0.025em); }
+.welcome-copy h1 { font-size: clamp(3.35rem, 16vw, 4.5rem); }
 .welcome-lede { max-width: 445px; margin: 25px 0 0; color: var(--muted); font-size: clamp(15px, 1.5vw, 17px); line-height: 1.75; }
 .welcome-note { display: flex; max-width: 390px; align-items: center; gap: 12px; margin-top: 29px; color: var(--ink-soft); font-size: 13px; }
 .welcome-note-icon { display: inline-flex; width: 35px; height: 35px; flex: 0 0 auto; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); color: var(--accent); }
-.welcome-orbit { position: absolute; right: -18px; bottom: -68px; width: 220px; height: 220px; opacity: 0.58; pointer-events: none; }
+.welcome-orbit { position: absolute; right: -70px; bottom: -31px; width: 148px; height: 148px; opacity: 0.25; pointer-events: none; }
 .orbit-ring { position: absolute; inset: 10%; border: 1px solid var(--line-strong); border-radius: 50%; transform: rotate(-22deg) scaleY(0.59); }
 .orbit-ring--two { inset: 23% 0; border-color: color-mix(in srgb, var(--accent) 31%, transparent); transform: rotate(32deg) scaleY(0.55); }
 .orbit-core { position: absolute; top: 50%; left: 50%; display: flex; width: 57px; height: 57px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 19px; background: var(--surface-solid); box-shadow: var(--shadow-small); transform: translate(-50%, -50%) rotate(-8deg); }
@@ -375,6 +376,17 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .welcome-footer { display: flex; min-height: 62px; align-items: center; gap: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
 .footer-divider { width: 1px; height: 12px; background: var(--line-strong); }
 .welcome-footer-right { margin-left: auto; }
+
+/* Keep the introduction and sign-in card stacked until both columns fit. */
+@media (min-width: 761px) {
+  .welcome-main { display: grid; align-items: center; gap: 5vw; grid-template-columns: minmax(0, 1fr) minmax(315px, 0.92fr); padding: clamp(48px, 8vh, 94px) 0; }
+  .welcome-copy h1 { font-size: clamp(3.1rem, 7.5vw, 7rem); }
+  .welcome-orbit { right: -18px; bottom: -68px; width: 220px; height: 220px; opacity: 0.58; }
+}
+
+@media (min-width: 981px) {
+  .welcome-main { gap: clamp(42px, 8vw, 130px); grid-template-columns: minmax(0, 1.03fr) minmax(350px, 0.83fr); }
+}
 
 .assistant-page, .bookings-page, .admin-page { min-width: 0; }
 .page-enter { animation: page-enter 360ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
@@ -675,7 +687,6 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
   .admin-summary-main .summary-label { white-space: nowrap; }
   .admin-summary-note { display: none; }
   .welcome-page { padding-right: 5vw; padding-left: 5vw; }
-  .welcome-main { gap: 5vw; grid-template-columns: minmax(0, 1fr) minmax(315px, 0.92fr); }
 }
 
 @media (max-width: 760px) {
@@ -807,14 +818,11 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
   .welcome-nav .brand-caption { display: none; }
   .welcome-nav-actions { gap: 5px; }
   .welcome-nav-actions .prototype-label { font-size: 9px; }
-  .welcome-main { display: flex; flex: 1; flex-direction: column; align-items: stretch; gap: 24px; padding: 42px 0 34px; }
   .welcome-copy { padding-bottom: 0; }
   .welcome-copy .eyebrow { margin-bottom: 16px; font-size: 9px; }
-  .welcome-copy h1 { font-size: clamp(3.35rem, 16vw, 4.5rem); }
   .welcome-lede { max-width: 35ch; margin-top: 15px; font-size: 13px; line-height: 1.6; }
   .welcome-note { margin-top: 17px; font-size: 11px; }
   .welcome-note-icon { width: 32px; height: 32px; }
-  .welcome-orbit { right: -70px; bottom: -31px; width: 148px; height: 148px; opacity: 0.25; }
   .login-card { max-width: none; padding: 19px; border-radius: 20px; }
   .login-card h2 { font-size: 20px; }
   .login-intro { margin: 10px 0 15px; font-size: 11px; }
