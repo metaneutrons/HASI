@@ -1,29 +1,13 @@
 "use client";
 
-import {
-  ArrowDownRight,
-  ArrowRight,
-  CalendarDays,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  CircleAlert,
-  Clock3,
-  MapPin,
-  Search,
-  Sparkles,
-  Users,
-  Wifi,
-  X,
-} from "lucide-react";
+import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, Clock3, MapPin, MessageCircle, Plus, Search, Sparkles, Users } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { apiRequest, formatDateTime, formatTime, postJson, toOffsetIso } from "@/lib/api";
-import type { Resource, TimeInterval, User } from "@/lib/types";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { apiRequest, formatDateTime, formatTime, postJson } from "@/lib/api";
+import { classifyIntent, matchingResources, mergeRoomRequest, missingRoomDetails, requestStartDate, roomRequestSummary, type RoomRequest } from "@/lib/chat-demo";
+import type { Booking, Resource, TimeInterval } from "@/lib/types";
 import { useSession } from "@/components/session-provider";
 
-type ResourceResult = { resources: Resource[] };
-type AvailabilityResult = { intervals: TimeInterval[] };
 type Proposal = {
   id: string;
   resourceName: string;
@@ -32,507 +16,236 @@ type Proposal = {
   status: "pending" | "confirmed" | "outcome_unknown" | "failed";
   expiresAt: string;
 };
-type ProposalResult = { proposal: Proposal };
-type ConfirmationResult = { proposal: Proposal; bookingId?: string };
+type RoomOption = { resource: Resource; intervals: TimeInterval[]; checked: boolean };
+type Message = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  tool?: string;
+  rooms?: RoomOption[];
+  proposal?: Proposal;
+  bookings?: Booking[];
+  confirmed?: boolean;
+};
 
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 11) return "Guten Morgen";
-  if (hour < 18) return "Guten Tag";
-  return "Guten Abend";
-}
+const suggestions = [
+  { icon: Search, title: "Einen Raum finden", text: "Ich brauche morgen um 14 Uhr einen Raum für vier Personen für eine Stunde.", caption: "Gemeinsam planen und buchen" },
+  { icon: BookOpen, title: "Eine IT-Frage stellen", text: "Wie richte ich eduroam ein?", caption: "Wissenssuche ist in Vorbereitung" },
+  { icon: CalendarDays, title: "Meine Buchungen", text: "Zeige mir meine Buchungen.", caption: "Deine Reservierungen im Überblick" },
+];
 
-function firstName(user: User | null) {
-  return user?.displayName.trim().split(/\s+/)[0] ?? "";
-}
-
-function defaultDateAndTime() {
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  date.setHours(9, 0, 0, 0);
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return {
-    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
-  };
-}
-
-function ResourceIcon({ feature }: { feature: string }) {
-  const normalized = feature.toLocaleLowerCase("de-DE");
-  if (normalized.includes("wifi") || normalized.includes("wlan")) return <Wifi size={14} aria-hidden="true" />;
-  if (normalized.includes("kapaz") || normalized.includes("plätze") || normalized.includes("sitz")) return <Users size={14} aria-hidden="true" />;
-  return <Check size={14} aria-hidden="true" />;
-}
-
-function ResourceCard({
-  resource,
-  selected,
-  onSelect,
-}: {
-  resource: Resource;
-  selected: boolean;
-  onSelect: (resource: Resource) => void;
-}) {
-  const shortLocation = resource.location.split(",")[0] ?? resource.location;
-  return (
-    <button
-      type="button"
-      className={`resource-card${selected ? " is-selected" : ""}`}
-      aria-pressed={selected}
-      onClick={() => onSelect(resource)}
-    >
-      <span className="resource-card-art" aria-hidden="true">
-        <span className="resource-art-disc resource-art-disc--one" />
-        <span className="resource-art-disc resource-art-disc--two" />
-        <span className="resource-art-line resource-art-line--one" />
-        <span className="resource-art-line resource-art-line--two" />
-        <span className="resource-art-number">{String(resource.capacity).padStart(2, "0")}</span>
-        <span className="resource-art-caption">PLÄTZE</span>
-        <span className="resource-art-arrow"><ArrowDownRight size={16} /></span>
-      </span>
-      <span className="resource-card-content">
-        <span className="resource-card-location"><MapPin size={13} aria-hidden="true" /> {shortLocation}</span>
-        <span className="resource-card-title">{resource.name}</span>
-        <span className="resource-card-description">{resource.description}</span>
-        <span className="resource-card-bottom">
-          <span className="resource-people"><Users size={14} aria-hidden="true" /> Bis {resource.capacity} Personen</span>
-          <ChevronRight className="resource-chevron" size={17} aria-hidden="true" />
-        </span>
-      </span>
-    </button>
-  );
-}
-
-function SelectionPanel({ onClear, children }: { onClear: () => void; children: import("react").ReactNode }) {
-  return (
-    <section className="selection-panel" id="selection-panel" tabIndex={-1}>
-      <div className="selection-panel-heading">
-        <div>
-          <span className="section-kicker">DEIN NÄCHSTER SCHRITT</span>
-          <h2>Raum planen</h2>
-        </div>
-        <button className="icon-button selection-close" type="button" onClick={onClear} aria-label="Auswahl schließen">
-          <X size={17} aria-hidden="true" />
-        </button>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function AvailabilityForm({
-  resource,
-}: {
-  resource: Resource;
-}) {
-  const initial = useMemo(() => defaultDateAndTime(), []);
-  const [date, setDate] = useState(initial.date);
-  const [time, setTime] = useState(initial.time);
-  const [duration, setDuration] = useState(60);
-  const [intervals, setIntervals] = useState<TimeInterval[]>([]);
-  const [selectedInterval, setSelectedInterval] = useState<TimeInterval | null>(null);
-  const [checking, setChecking] = useState(false);
-  const [proposing, setProposing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [proposalError, setProposalError] = useState<string | null>(null);
-  const [proposal, setProposal] = useState<Proposal | null>(null);
-  const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
-  const [confirming, setConfirming] = useState(false);
-  const [confirmError, setConfirmError] = useState<string | null>(null);
-
-  async function checkAvailability(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setChecking(true);
-    setError(null);
-    setProposal(null);
-    setConfirmation(null);
-    setProposalError(null);
-    setConfirmError(null);
-    try {
-      const startDate = toOffsetIso(`${date}T${time}`);
-      const result = await postJson<AvailabilityResult>("/api/availability", {
-        resourceId: resource.id,
-        serviceId: resource.serviceId,
-        startDate,
-        durationMinutes: duration,
-      });
-      const available = result.intervals.filter((interval) => interval.available);
-      setIntervals(result.intervals);
-      setSelectedInterval(available[0] ?? null);
-      if (result.intervals.length === 0) setError("Für diesen Zeitraum wurden keine freien Zeiten zurückgegeben.");
-    } catch (cause) {
-      setIntervals([]);
-      setSelectedInterval(null);
-      const message = cause instanceof Error ? cause.message : "Die Verfügbarkeit konnte nicht geladen werden.";
-      setError(message);
-    } finally {
-      setChecking(false);
-    }
-  }
-
-  async function createProposal() {
-    if (!selectedInterval) return;
-    setProposing(true);
-    setProposalError(null);
-    setConfirmation(null);
-    try {
-      const result = await postJson<ProposalResult>("/api/proposals", {
-        resourceId: resource.id,
-        serviceId: resource.serviceId,
-        startDate: selectedInterval.startDate,
-        endDate: selectedInterval.endDate,
-      });
-      setProposal(result.proposal);
-    } catch (cause) {
-      setProposalError(cause instanceof Error ? cause.message : "Der Reservierungsvorschlag konnte nicht erstellt werden.");
-    } finally {
-      setProposing(false);
-    }
-  }
-
-  async function confirmProposal() {
-    if (!proposal) return;
-    setConfirming(true);
-    setConfirmError(null);
-    try {
-      const result = await postJson<ConfirmationResult>(`/api/proposals/${encodeURIComponent(proposal.id)}/confirm`, {});
-      setConfirmation(result);
-      if (result.proposal.status === "confirmed") setProposal(null);
-    } catch (cause) {
-      setConfirmError(cause instanceof Error ? cause.message : "Die Bestätigung konnte nicht abgeschlossen werden.");
-    } finally {
-      setConfirming(false);
-    }
-  }
-
-  const availableIntervals = intervals.filter((interval) => interval.available);
-  const proposalState = confirmation?.proposal.status;
-
-  return (
-    <div className="booking-flow">
-      <div className="selected-resource-summary">
-        <span className="selected-resource-icon"><CalendarDays size={18} aria-hidden="true" /></span>
-        <span className="selected-resource-copy">
-          <strong>{resource.name}</strong>
-          <span><MapPin size={13} aria-hidden="true" /> {resource.location}</span>
-        </span>
-      </div>
-
-      <form className="availability-form" onSubmit={(event) => void checkAvailability(event)}>
-        <div className="form-field-grid">
-          <label className="form-field">
-            <span>Datum</span>
-            <input type="date" value={date} min={new Date().toISOString().slice(0, 10)} onChange={(event) => setDate(event.currentTarget.value)} required />
-          </label>
-          <label className="form-field">
-            <span>Startzeit</span>
-            <input type="time" value={time} onChange={(event) => setTime(event.currentTarget.value)} required />
-          </label>
-        </div>
-        <label className="form-field form-field--duration">
-          <span>Dauer</span>
-          <span className="select-wrap">
-            <select value={duration} onChange={(event) => setDuration(Number(event.currentTarget.value))}>
-              <option value={30}>30 Minuten</option>
-              <option value={60}>1 Stunde</option>
-              <option value={90}>1,5 Stunden</option>
-              <option value={120}>2 Stunden</option>
-            </select>
-            <ChevronDown size={16} aria-hidden="true" />
-          </span>
-        </label>
-        <button className="button button--secondary button--wide" type="submit" disabled={checking || !date || !time}>
-          {checking ? <><span className="spinner" /> Zeiten werden geprüft</> : <>Verfügbarkeit prüfen <ArrowRight size={16} aria-hidden="true" /></>}
-        </button>
-      </form>
-
-      {error && <div className="inline-alert inline-alert--soft" role="status"><CircleAlert size={17} aria-hidden="true" />{error}</div>}
-
-      {intervals.length > 0 && (
-        <div className="availability-results" aria-live="polite">
-          <div className="availability-title-row">
-            <div>
-              <span className="section-kicker">VERFÜGBARE ZEITEN</span>
-              <h3>{availableIntervals.length ? "Das passt gut." : "Keine Zeit frei"}</h3>
-            </div>
-            <span className="availability-count">{availableIntervals.length} frei</span>
-          </div>
-          <div className="availability-source"><span className="status-dot" /> Verfügbarkeit aus der Testumgebung</div>
-          {availableIntervals.length > 0 ? (
-            <div className="time-slot-list">
-              {availableIntervals.map((interval) => {
-                const selected = selectedInterval?.startDate === interval.startDate;
-                return (
-                  <button
-                    key={interval.startDate}
-                    type="button"
-                    className={`time-slot${selected ? " is-selected" : ""}`}
-                    aria-pressed={selected}
-                    onClick={() => {
-                      setSelectedInterval(interval);
-                      setProposal(null);
-                      setConfirmation(null);
-                    }}
-                  >
-                    <span className="time-slot-time"><Clock3 size={15} aria-hidden="true" />{formatTime(interval.startDate)}–{formatTime(interval.endDate)}</span>
-                    {selected && <Check size={16} aria-hidden="true" />}
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="small-copy">Wähle ein anderes Datum oder eine andere Dauer.</p>
-          )}
-          {selectedInterval && !proposal && !confirmation && (
-            <button className="button button--primary button--wide" type="button" onClick={() => void createProposal()} disabled={proposing}>
-              {proposing ? <><span className="spinner spinner--light" /> Vorschlag wird erstellt</> : <>Buchung vorbereiten <ArrowRight size={16} aria-hidden="true" /></>}
-            </button>
-          )}
-        </div>
-      )}
-
-      {proposalError && <div className="inline-alert" role="alert"><CircleAlert size={17} aria-hidden="true" />{proposalError}</div>}
-
-      {proposal && !confirmation && (
-        <div className="proposal-card">
-          <div className="proposal-heading"><span className="proposal-check"><Check size={15} aria-hidden="true" /></span><strong>Buchungsvorschlag</strong></div>
-          <p>{formatDateTime(proposal.startDate)} · {formatTime(proposal.endDate)} Uhr</p>
-          <p className="proposal-expiry">Der Buchungsvorschlag läuft am {formatDateTime(proposal.expiresAt)} ab.</p>
-          <button className="button button--primary button--wide" type="button" onClick={() => void confirmProposal()} disabled={confirming}>
-            {confirming ? <><span className="spinner spinner--light" /> Bestätigung läuft</> : <>Verbindlich bestätigen <Check size={16} aria-hidden="true" /></>}
-          </button>
-        </div>
-      )}
-
-      {confirmation && proposalState === "confirmed" && (
-        <div className="success-card" role="status">
-          <span className="success-icon"><Check size={18} aria-hidden="true" /></span>
-          <div><strong>Der Raum ist reserviert.</strong><p>{formatDateTime(confirmation.proposal.startDate)} · {formatTime(confirmation.proposal.endDate)} Uhr</p></div>
-          <Link href="/bookings" className="success-link">Buchung ansehen <ArrowRight size={15} aria-hidden="true" /></Link>
-        </div>
-      )}
-
-      {confirmation && (proposalState === "outcome_unknown" || proposalState === "failed") && (
-        <div className={`inline-alert ${proposalState === "outcome_unknown" ? "inline-alert--soft" : ""}`} role="status">
-          <CircleAlert size={17} aria-hidden="true" />
-          {proposalState === "outcome_unknown"
-            ? "Der externe Buchungsdienst hat nicht eindeutig geantwortet. Prüfe deine Buchungen, bevor du erneut reservierst."
-            : "Der Buchungsdienst konnte den Raum nicht bestätigen. Wähle einen anderen Zeitraum."}
-        </div>
-      )}
-
-      {confirmError && <div className="inline-alert" role="alert"><CircleAlert size={17} aria-hidden="true" />{confirmError}</div>}
-    </div>
-  );
-}
+function id() { return crypto.randomUUID(); }
 
 export function AssistantPage() {
   const { user } = useSession();
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [activeFeature, setActiveFeature] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Resource | null>(null);
-  const [searchSummary, setSearchSummary] = useState<string | null>(null);
+  return <Conversation key={user?.id} name={user?.displayName.split(/\s|·/)[0] ?? ""} />;
+}
 
-  const loadResources = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await apiRequest<ResourceResult>("/api/resources");
-      setResources(result.resources);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Räume konnten nicht geladen werden.");
-    } finally {
-      setLoading(false);
+function Conversation({ name }: { name: string }) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [activity, setActivity] = useState("");
+  const [request, setRequest] = useState<RoomRequest>({});
+  const [roomContext, setRoomContext] = useState(false);
+  const [chosenRoom, setChosenRoom] = useState<Resource | null>(null);
+  const [activeResult, setActiveResult] = useState<string | null>(null);
+  const [activeProposal, setActiveProposal] = useState<string | null>(null);
+  const lock = useRef(false);
+  const scroller = useRef<HTMLDivElement>(null);
+  const composer = useRef<HTMLTextAreaElement>(null);
+  const latestMessage = messages.at(-1)?.id;
+
+  useEffect(() => {
+    const element = scroller.current;
+    if (element) element.scrollTo({ top: latestMessage || busy ? element.scrollHeight : 0, behavior: "instant" });
+  }, [latestMessage, busy]);
+
+  function add(message: Omit<Message, "id">) {
+    const messageId = id();
+    setMessages((previous) => [...previous, { ...message, id: messageId }]);
+    return messageId;
+  }
+
+  function start(label: string) {
+    if (lock.current) return false;
+    lock.current = true;
+    setBusy(true);
+    setActivity(label);
+    return true;
+  }
+
+  function finish() {
+    lock.current = false;
+    setBusy(false);
+  }
+
+  async function searchRooms(next: RoomRequest, selected: Resource | null) {
+    const missing = missingRoomDetails(next);
+    const invalid = Object.values(next).some((value) => value === "__invalid__" || (typeof value === "number" && value <= 0) || (Array.isArray(value) && value.includes("__invalid__")));
+    if (invalid) {
+      add({ role: "assistant", text: `Diese Angaben sind für die Dialog-Demo nicht eindeutig. Bitte präzisiere: ${missing.join(", ") || "Ausstattung oder Suchbegriff"}. Du kannst mit „neue Raumsuche“ auch von vorn beginnen.` });
+      return;
     }
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    apiRequest<ResourceResult>("/api/resources")
-      .then((result) => {
-        if (active) setResources(result.resources);
-      })
-      .catch((cause: unknown) => {
-        if (active) setError(cause instanceof Error ? cause.message : "Räume konnten nicht geladen werden.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    if (!selected || !window.matchMedia("(max-width: 760px)").matches) return;
-    const panel = document.getElementById("selection-panel");
-    if (!panel) return;
-
-    panel.focus({ preventScroll: true });
-    panel.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      block: "start",
-    });
-  }, [selected]);
-
-  const features = useMemo(
-    () => Array.from(new Set(resources.flatMap((resource) => resource.features))).slice(0, 5),
-    [resources],
-  );
-  const filteredResources = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase("de-DE");
-    return resources.filter((resource) => {
-      const matchesQuery = !needle || [resource.name, resource.description, resource.location, ...resource.features]
-        .join(" ")
-        .toLocaleLowerCase("de-DE")
-        .includes(needle);
-      const matchesFeature = !activeFeature || resource.features.includes(activeFeature);
-      return matchesQuery && matchesFeature;
-    });
-  }, [resources, query, activeFeature]);
-
-  function submitSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const normalizedQuery = query.trim();
-    setSearchSummary(normalizedQuery ? `Ich habe ${filteredResources.length} ${filteredResources.length === 1 ? "Raum" : "Räume"} für „${normalizedQuery}“ gefunden.` : `Ich zeige dir ${filteredResources.length} verfügbare ${filteredResources.length === 1 ? "Möglichkeit" : "Möglichkeiten"}.`);
+    setActivity("anny · Räume suchen");
+    const result = await apiRequest<{ resources: Resource[] }>("/api/resources");
+    const resources = matchingResources(result.resources, next).filter((resource) => !selected || resource.id === selected.id);
+    if (!resources.length) {
+      add({ role: "assistant", tool: "anny · Raumsuche", text: "Für diese Anforderungen finde ich in den zugänglichen Testdaten keinen Raum. Du kannst eine neue Raumsuche beginnen und die Anforderungen ändern." });
+      return;
+    }
+    const startDate = requestStartDate(next);
+    if (missing.length || !startDate || !next.durationMinutes) {
+      const resultId = add({ role: "assistant", tool: "anny · Raumsuche", text: `${selected ? `Wir planen mit ${selected.name}.` : `${resources.length} Räume passen zu deiner Suche.`} Für die Verfügbarkeitsprüfung brauche ich noch: ${missing.join(", ") || "ein gültiges Datum und eine gültige Startzeit"}. Antworte einfach hier im Chat, zum Beispiel „morgen um 14 Uhr für eine Stunde“.`, rooms: resources.map((resource) => ({ resource, intervals: [], checked: false })) });
+      setActiveResult(resultId);
+      return;
+    }
+    setActivity("anny · Verfügbarkeit prüfen");
+    const options = await Promise.all(resources.map(async (resource) => {
+      const availability = await postJson<{ intervals: TimeInterval[] }>("/api/availability", { resourceId: resource.id, serviceId: resource.serviceId, startDate, durationMinutes: next.durationMinutes });
+      return { resource, intervals: availability.intervals.filter((interval) => interval.available).slice(0, 3), checked: true };
+    }));
+    const count = options.filter((option) => option.intervals.length).length;
+    const resultId = add({ role: "assistant", tool: "anny · Raumsuche und Verfügbarkeit", text: `${roomRequestSummary(next)}\n${count ? "Hier sind die verfügbaren Zeiten. Prüfe das Zeitfenster auf der Karte; es kann vom gewünschten Beginn abweichen. Wähle eine Zeit, dann bereite ich den Buchungsvorschlag vor." : "Zu diesen Anforderungen sind keine Zeiten frei. Nenne mir einen anderen Zeitraum."}`, rooms: options });
+    setActiveResult(resultId);
   }
 
-  function clearSelection() {
-    setSelected(null);
+  async function send(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || trimmed.length > 2000 || !start("Anfrage wird verarbeitet")) return;
+    setInput("");
+    add({ role: "user", text: trimmed });
+    setActiveResult(null);
+    const pendingProposal = activeProposal;
+    setActiveProposal(null);
+    try {
+      if (/^(ja|ok(?:ay)?|bestätigen|buche(?:n)?|mach das)[.!\s]*$/i.test(trimmed) && pendingProposal) {
+        setActiveProposal(pendingProposal);
+        add({ role: "assistant", text: "Bitte prüfe Raum und Zeitraum im Buchungsvorschlag und nutze dort „Buchung bestätigen“. Erst dieser Schritt löst die Buchung aus." });
+        return;
+      }
+      const intent = classifyIntent(trimmed, roomContext);
+      if (intent === "bookings") {
+        setActivity("anny · Eigene Buchungen laden");
+        const result = await apiRequest<{ bookings: Booking[] }>("/api/bookings");
+        add({ role: "assistant", tool: "anny · Eigene Buchungen", text: result.bookings.length ? "Hier sind deine Buchungen aus der Testumgebung." : "Du hast in der Testumgebung noch keine Buchungen. Soll ich einen Raum für dich suchen?", bookings: result.bookings });
+        setRoomContext(false);
+      } else if (intent === "knowledge") {
+        setRoomContext(false);
+        add({ role: "assistant", text: "Die Wissenssuche in Service IT und im Intranet gehört zu HASI. Diese Quellen sind in diesem Prototyp noch nicht angebunden. Deshalb kann ich deine Frage hier noch nicht mit geprüften Quellen und den passenden Zugriffsrechten beantworten. Du kannst bereits Raumsuche und Buchung im Chat ausprobieren." });
+      } else if (intent === "rooms") {
+        const reset = !roomContext || /(?:neue|andere)\s+(?:raum)?suche|(?:anderen|neuen)\s+raum|von vorne/i.test(trimmed);
+        const next = mergeRoomRequest(trimmed, reset ? {} : request);
+        const selected = reset ? null : chosenRoom;
+        if (reset) setChosenRoom(null);
+        setRequest(next);
+        setRoomContext(true);
+        await searchRooms(next, selected);
+      } else {
+        setRoomContext(false);
+        add({ role: "assistant", text: intent === "greeting" ? `Hallo ${name}. Was möchtest du erledigen? Ich kann in dieser Demo Räume suchen, Buchungen vorbereiten und deine Reservierungen anzeigen.` : "Ich kann in dieser Dialog-Demo Räume suchen und buchen sowie deine Buchungen anzeigen. Schreib zum Beispiel: „Morgen um 14 Uhr einen Raum für vier Personen für eine Stunde.“ Die IT- und Intranet-Wissenssuche wird später ebenfalls über diesen Chat erreichbar." });
+      }
+    } catch (cause) {
+      add({ role: "assistant", text: cause instanceof Error ? cause.message : "Die Anfrage konnte nicht abgeschlossen werden. Bitte versuche es erneut." });
+    } finally {
+      finish();
+    }
   }
+
+  async function chooseRoom(resource: Resource) {
+    if (!start("Raum auswählen")) return;
+    setChosenRoom(resource);
+    setRoomContext(true);
+    setActiveResult(null);
+    setActiveProposal(null);
+    add({ role: "user", text: `Ich möchte ${resource.name} buchen.` });
+    try { await searchRooms(request, resource); }
+    catch (cause) { add({ role: "assistant", text: cause instanceof Error ? cause.message : "Der Raum konnte nicht geprüft werden." }); }
+    finally { finish(); composer.current?.focus(); }
+  }
+
+  async function prepare(resource: Resource, interval: TimeInterval) {
+    if (!start("anny · Buchung vorbereiten")) return;
+    setActiveResult(null);
+    setActiveProposal(null);
+    add({ role: "user", text: `${resource.name}, ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} Uhr. Bitte vorbereiten.` });
+    try {
+      const result = await postJson<{ proposal: Proposal }>("/api/proposals", { resourceId: resource.id, serviceId: resource.serviceId, startDate: interval.startDate, endDate: interval.endDate });
+      add({ role: "assistant", text: "Der Buchungsvorschlag ist vorbereitet. Bitte prüfe die Angaben und bestätige die Buchung ausdrücklich.", tool: "anny · Buchungsvorschlag", proposal: result.proposal });
+      setActiveProposal(result.proposal.id);
+    } catch (cause) { add({ role: "assistant", text: cause instanceof Error ? cause.message : "Der Buchungsvorschlag konnte nicht erstellt werden." }); }
+    finally { finish(); }
+  }
+
+  async function confirm(proposal: Proposal) {
+    if (activeProposal !== proposal.id || !start("anny · Bestätigte Buchung ausführen")) return;
+    try {
+      const result = await postJson<{ proposal: Proposal; bookingId?: string }>(`/api/proposals/${encodeURIComponent(proposal.id)}/confirm`, {});
+      if (result.proposal.status === "confirmed") {
+        setActiveProposal(null);
+        setRoomContext(false);
+        setRequest({});
+        setChosenRoom(null);
+        add({ role: "assistant", text: `Die Testbuchung für ${result.proposal.resourceName} ist bestätigt. ${formatDateTime(result.proposal.startDate)} bis ${formatTime(result.proposal.endDate)} Uhr.`, tool: "anny · Buchung ausgeführt", confirmed: true });
+      } else {
+        setActiveProposal(null);
+        add({ role: "assistant", text: result.proposal.status === "outcome_unknown" ? "Der Buchungsdienst hat nicht eindeutig geantwortet. Prüfe deine Buchungen, bevor du erneut buchst." : "Die Buchung konnte nicht bestätigt werden. Bitte suche erneut nach freien Zeiten." });
+      }
+    } catch (cause) { add({ role: "assistant", text: cause instanceof Error ? cause.message : "Die Bestätigung konnte nicht abgeschlossen werden. Prüfe vor einem erneuten Versuch deine Buchungen." }); }
+    finally { finish(); }
+  }
+
+  function reset() {
+    if (lock.current) return;
+    setMessages([]); setRequest({}); setRoomContext(false); setChosenRoom(null); setActiveResult(null); setActiveProposal(null); setInput("");
+    composer.current?.focus();
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void send(input); }
 
   return (
-    <div className="assistant-page page-enter">
-      <section className="assistant-hero">
-        <div className="assistant-hero-copy">
-          <div className="eyebrow"><span className="eyebrow-rule" /> DEIN CAMPUSASSISTENT</div>
-          <h1>Was steht heute<br /><span>an?</span></h1>
-          <p>{getGreeting()}{firstName(user) ? `, ${firstName(user)}` : ""}. Wobei kann ich dich unterstützen?</p>
-        </div>
-        <div className="assistant-hero-aside">
-          <span className="hero-date-label">HEUTE</span>
-          <time dateTime={new Date().toISOString()}>{new Intl.DateTimeFormat("de-DE", { weekday: "long", day: "numeric", month: "long" }).format(new Date())}</time>
-          <span className="hero-aside-line" />
-          <span className="hero-aside-note"><Sparkles size={15} aria-hidden="true" /> Raumplanung ist verfügbar</span>
-        </div>
-      </section>
-
-      <section className="search-section" aria-label="Räume suchen">
-        <form className="resource-search" onSubmit={submitSearch}>
-          <Search size={20} strokeWidth={1.8} aria-hidden="true" />
-          <label className="sr-only" htmlFor="resource-query">Raum, Gebäude oder Ausstattung suchen</label>
-          <input
-            id="resource-query"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.currentTarget.value);
-              setSearchSummary(null);
-            }}
-            placeholder="Raum, Gebäude oder Ausstattung suchen"
-            autoComplete="off"
-          />
-          {query && <button className="search-clear" type="button" aria-label="Suche leeren" onClick={() => setQuery("")}><X size={16} /></button>}
-          <button className="search-submit" type="submit" aria-label="Suchen"><ArrowRight size={19} aria-hidden="true" /></button>
-        </form>
-
-        <div className="search-lower-row">
-          <div className="feature-filters" aria-label="Ausstattung filtern">
-            <button className={`filter-chip${activeFeature === null ? " is-active" : ""}`} type="button" aria-pressed={activeFeature === null} onClick={() => setActiveFeature(null)}>Alle Räume</button>
-              {features.map((feature) => (
-              <button className={`filter-chip${activeFeature === feature ? " is-active" : ""}`} type="button" key={feature} aria-pressed={activeFeature === feature} onClick={() => setActiveFeature(activeFeature === feature ? null : feature)}>
-                  <ResourceIcon feature={feature} />{feature}
-              </button>
+    <section className="chat-page" aria-label="HASI Chat">
+      <div className="chat-toolbar"><span><MessageCircle size={15} aria-hidden="true" /> Dein Hochschulassistent</span><button type="button" onClick={reset} disabled={busy} className="chat-new"><Plus size={16} aria-hidden="true" /> Neuer Chat</button></div>
+      <div className="chat-scroller" ref={scroller}>
+        {messages.length === 0 ? (
+          <div className="chat-welcome">
+            <span className="chat-orb" aria-hidden="true"><Sparkles size={30} strokeWidth={1.3} /></span>
+            <p className="chat-greeting">Hallo {name}.</p>
+            <h1>Was kann ich <br /><span>für dich tun?</span></h1>
+            <p className="chat-intro">Eine Frage, ein Vorhaben, dein nächster Schritt.<br className="chat-desktop-break" /> Dein Hochschulalltag beginnt mit einem Gespräch.</p>
+            <div className="chat-suggestions">{suggestions.map(({ icon: Icon, title, text, caption }) => <button type="button" key={title} disabled={busy} onClick={() => void send(text)}><Icon size={19} strokeWidth={1.6} aria-hidden="true" /><strong>{title}</strong><span>{caption}</span><ArrowRight size={16} aria-hidden="true" /></button>)}</div>
+          </div>
+        ) : (
+          <div className="chat-transcript" role="log" aria-label="Gesprächsverlauf" aria-live="polite" aria-relevant="additions">
+            {messages.map((message) => (
+              <article key={message.id} className={`chat-message chat-message--${message.role}`} aria-label={message.role === "user" ? "Du" : "HASI"}>
+                <span className="chat-speaker">{message.role === "user" ? "Du" : <><Sparkles size={14} aria-hidden="true" /> HASI</>}</span>
+                <div className="chat-message-body">
+                  {message.tool && <span className="chat-tool-label"><Check size={13} aria-hidden="true" /> {message.tool}</span>}
+                  <p>{message.text}</p>
+                  {message.rooms && <div className="chat-room-list">{message.rooms.map(({ resource, intervals, checked }) => <article className="chat-tool-card" key={resource.id}>
+                    <div className="chat-room-heading"><span className="chat-room-icon"><CalendarDays size={20} strokeWidth={1.5} aria-hidden="true" /></span><div><h2>{resource.name}</h2><span><MapPin size={12} aria-hidden="true" /> {resource.location}</span></div></div>
+                    <p className="chat-room-details"><Users size={14} aria-hidden="true" /> Bis {resource.capacity} Personen <span>·</span> {resource.features.join(" · ")}</p>
+                    {checked ? intervals.length ? <div className="chat-slots">{intervals.map((interval) => <button type="button" disabled={busy || activeResult !== message.id} onClick={() => void prepare(resource, interval)} key={interval.startDate} aria-label={`${resource.name} am ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} vorbereiten`}><Clock3 size={14} aria-hidden="true" /><span>{formatDateTime(interval.startDate)}–{formatTime(interval.endDate)}</span><ArrowRight size={14} aria-hidden="true" /></button>)}</div> : <p className="chat-no-slots">Keine freien Zeiten zu diesen Anforderungen.</p> : <button className="chat-card-action" type="button" disabled={busy || activeResult !== message.id} onClick={() => void chooseRoom(resource)}>Diesen Raum planen <ArrowRight size={15} aria-hidden="true" /></button>}
+                  </article>)}</div>}
+                  {message.proposal && <div className="chat-tool-card chat-proposal"><span className="chat-proposal-label">BITTE PRÜFEN UND BESTÄTIGEN</span><h2>{message.proposal.resourceName}</h2><p>{formatDateTime(message.proposal.startDate)} bis {formatTime(message.proposal.endDate)} Uhr</p><small>Gültig bis {formatTime(message.proposal.expiresAt)} Uhr · Testumgebung</small><button className="button button--primary button--wide" type="button" disabled={busy || activeProposal !== message.proposal.id} onClick={() => void confirm(message.proposal!)}>{activeProposal === message.proposal.id ? "Buchung bestätigen" : "Vorschlag abgeschlossen oder ersetzt"}<Check size={16} aria-hidden="true" /></button></div>}
+                  {message.bookings && message.bookings.length > 0 && <div className="chat-booking-list">{message.bookings.map((booking) => <div className="chat-tool-card" key={booking.id}><h2>{booking.resourceName}</h2><p>{formatDateTime(booking.startDate)} bis {formatTime(booking.endDate)} Uhr</p><span className="chat-booking-status">{booking.status === "confirmed" || booking.status === "accepted" ? "Bestätigt" : booking.status}</span></div>)}</div>}
+                  {message.confirmed && <Link className="chat-card-action" href="/bookings">Meine Buchungen öffnen <ArrowRight size={15} aria-hidden="true" /></Link>}
+                </div>
+              </article>
             ))}
           </div>
-          <span className="prototype-note"><span className="status-dot" /> {process.env.NEXT_PUBLIC_HASI_PUBLIC_DEMO === "1" ? "Browser-Demo" : "Lokaler Prototyp"}</span>
-        </div>
-      </section>
-
-      {searchSummary && (
-        <div className="assistant-response" role="status" aria-live="polite">
-          <span className="response-mark"><Sparkles size={16} aria-hidden="true" /></span>
-          <p>{searchSummary}</p>
-          <button className="icon-button response-dismiss" type="button" aria-label="Hinweis schließen" onClick={() => setSearchSummary(null)}><X size={16} /></button>
-        </div>
-      )}
-
-      <div className="assistant-grid">
-        <section className="resource-results" aria-labelledby="resources-heading">
-          <div className="section-heading-row">
-            <div>
-              <span className="section-kicker">RÄUME & ARBEITSPLÄTZE</span>
-              <h2 id="resources-heading">Was passt zu deinem Tag?</h2>
-            </div>
-            <span className="result-count">{loading ? "…" : `${filteredResources.length} ${filteredResources.length === 1 ? "Ergebnis" : "Ergebnisse"}`}</span>
-          </div>
-
-          {loading ? (
-            <div className="resource-list" aria-label="Räume werden geladen" aria-busy="true">
-              {[0, 1, 2].map((item) => <div className="resource-skeleton" key={item}><span /><div><i /><i /><i /></div></div>)}
-            </div>
-          ) : error ? (
-            <div className="state-card state-card--error" role="alert">
-              <span className="state-icon"><CircleAlert size={20} aria-hidden="true" /></span>
-              <div><strong>Räume gerade nicht erreichbar</strong><p>{error}</p></div>
-              <button className="button button--secondary" type="button" onClick={() => void loadResources()}>Erneut laden</button>
-            </div>
-          ) : resources.length === 0 ? (
-            <div className="state-card state-card--empty">
-              <span className="state-icon"><Search size={20} aria-hidden="true" /></span>
-              <div><strong>Im Moment sind keine Räume hinterlegt.</strong><p>Schau später noch einmal vorbei.</p></div>
-            </div>
-          ) : filteredResources.length === 0 ? (
-            <div className="state-card state-card--empty">
-              <span className="state-icon"><Search size={20} aria-hidden="true" /></span>
-              <div><strong>Keine passenden Räume gefunden.</strong><p>Ändere deine Suche oder setze den Ausstattungsfilter zurück.</p></div>
-              <button className="button button--secondary" type="button" onClick={() => { setQuery(""); setActiveFeature(null); setSearchSummary(null); }}>Filter zurücksetzen</button>
-            </div>
-          ) : (
-            <div className="resource-list">
-              {filteredResources.map((resource) => (
-                <ResourceCard key={resource.id} resource={resource} selected={selected?.id === resource.id} onSelect={setSelected} />
-              ))}
-            </div>
-          )}
-
-          <div className="knowledge-note">
-            <span className="knowledge-icon"><Sparkles size={16} aria-hidden="true" /></span>
-            <span><strong>Campuswissen</strong><small>Der Wissensassistent ist im MVP vorgesehen, in diesem Prototyp aber noch nicht angebunden.</small></span>
-            <span className="coming-soon">Demnächst</span>
-          </div>
-        </section>
-
-        <aside className={`booking-aside${selected ? " booking-aside--selected" : " booking-aside--empty"}`} aria-label="Raumreservierung">
-          {selected ? (
-            <SelectionPanel onClear={clearSelection}>
-              <AvailabilityForm
-                key={selected.id}
-                resource={selected}
-              />
-            </SelectionPanel>
-          ) : (
-            <div className="selection-empty">
-              <div className="selection-empty-art" aria-hidden="true">
-                <span className="selection-orbit selection-orbit--one" />
-                <span className="selection-orbit selection-orbit--two" />
-                <span className="selection-empty-symbol"><CalendarDays size={24} strokeWidth={1.6} /></span>
-                <span className="selection-star selection-star--one" />
-                <span className="selection-star selection-star--two" />
-              </div>
-              <span className="section-kicker">GUT ZU WISSEN</span>
-              <h2>Ein Platz, der<br />zu dir passt.</h2>
-              <p>Wähle einen Raum aus der Liste, um freie Zeiten zu prüfen und direkt zu reservieren.</p>
-              <span className="selection-empty-foot"><span className="status-dot" /> Verfügbarkeit aus der Testumgebung</span>
-            </div>
-          )}
-        </aside>
+        )}
+        {busy && <div className="chat-activity" role="status"><span className="spinner" />{activity}</div>}
       </div>
-
-      <footer className="app-footer">
-        <span>HASI <span className="footer-dot">·</span> Hochschulassistent</span>
-        <span>Testumgebung der Hochschule Hannover</span>
-      </footer>
-    </div>
+      <div className="chat-composer-dock">
+        <form className="chat-composer" onSubmit={submit}>
+          <label className="sr-only" htmlFor="chat-input">Nachricht an HASI</label>
+          <textarea id="chat-input" ref={composer} rows={2} maxLength={2000} value={input} onChange={(event) => setInput(event.currentTarget.value)} placeholder="Frag HASI oder beschreibe, was du vorhast …" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(input); } }} />
+          <div className="chat-composer-bottom"><span><span className="status-dot" /> Dialog-Demo · ohne Sprachmodell</span><button type="submit" aria-label="Nachricht senden" disabled={busy || !input.trim()}><ArrowUp size={20} aria-hidden="true" /></button></div>
+        </form>
+        <p className="chat-footnote">Testdaten · Raumsuche und Buchung verfügbar · IT- und Intranet-Wissen folgt</p>
+      </div>
+    </section>
   );
 }

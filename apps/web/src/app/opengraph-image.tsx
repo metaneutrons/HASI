@@ -16,7 +16,7 @@ export default function OpenGraphImage() {
         <span style={{ color: "#cf6b43" }}>Ein Assistent.</span>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 23, color: "#686d66" }}>
-        <span>Räume finden. Buchungen ausprobieren.</span>
+        <span>Frag HASI. Erledige deinen nächsten Schritt.</span>
         <span>Ausschließlich Testdaten</span>
       </div>
     </div>,

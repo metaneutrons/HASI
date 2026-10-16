@@ -16,6 +16,13 @@ knowledge or model services. No integration credential is configured in Vercel.
 This demonstrates interactions and appearance; it does not deploy the backend
 or prove that real integration permissions work.
 
+The main interface is a conversation. Room search, availability, own bookings,
+proposals and confirmations render inline as tool result cards. A bounded
+German dialogue parser fills explicit date/time/duration/capacity slots across
+turns; it is labelled as a demo without a language model. It never executes a
+booking based on prose confirmation. Knowledge questions receive an explicit
+unavailable-source response instead of invented institutional advice or citations.
+
 Demo accounts, proposals, bookings and the plugin switch are stored only in
 the visitor's namespaced localStorage. Administrator selection is intentionally
 available to everyone and affects that browser's simulation. It grants no

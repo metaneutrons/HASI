@@ -72,6 +72,7 @@ export function formatDateTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin",
     weekday: "short",
     day: "numeric",
     month: "long",
@@ -83,5 +84,5 @@ export function formatDateTime(value: string): string {
 export function formatTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" }).format(date);
+  return new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" }).format(date);
 }
