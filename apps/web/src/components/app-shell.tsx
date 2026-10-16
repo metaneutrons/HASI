@@ -24,7 +24,7 @@ const navItems = [
   { href: "/", label: "Chat", icon: MessageCircle, key: "assistant" },
   { href: "/bookings", label: "Buchungen", icon: PanelTop, key: "bookings" },
 ];
-const prototypeLabel = process.env.NEXT_PUBLIC_HASI_PUBLIC_DEMO === "1" ? "Browser-Demo" : "Lokaler Prototyp";
+const prototypeLabel = process.env.NEXT_PUBLIC_HASI_PUBLIC_DEMO === "1" ? "Prototyp" : "Lokaler Prototyp";
 
 const roleLabel: Record<Role, string> = {
   student: "Studentisches Konto",

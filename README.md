@@ -6,10 +6,13 @@ independently running anny plugin. This is an incomplete implementation of the
 agreed MVP, not a production service.
 
 **Public demo:** [hasi.metaneutrons.cc](https://hasi.metaneutrons.cc)
-uses a browser-only simulation. All accounts are selectable test personas;
-bookings and administrator changes stay in that browser. No real SSO, anny,
-knowledge search or model service is connected. The local reference below
-exercises the separate core/plugin/HTTP-client architecture.
+connects the chat to GroqCloud through a server-side model router. GPT-OSS 120B
+and 20B can be selected in the chat; an explicit offline dialogue mode is also
+available. Messages and selected tool results are sent to GroqCloud. Use test
+data only. All accounts are selectable test personas; anny bookings and
+administrator changes remain browser simulations. No real SSO, anny account or
+institutional knowledge source is connected. The local reference below exercises
+the separate core/plugin/HTTP-client architecture.
 
 ## Run locally
 
@@ -30,8 +33,12 @@ conversation. Select a time and confirm the exact proposal on its card. View
 the result in the chat or under **Buchungen**. The
 administrator can enable/disable the integration and check/activate compatible
 plugin releases under **Verwaltung**. Theme selection offers Light, Dark and
-System. The dialogue currently uses a bounded German demo parser, not an LLM.
-IT questions explicitly explain that knowledge sources are not connected yet.
+System. Without a local Groq credential, explicitly select **Dialog-Demo · ohne
+Modell** to use the bounded German parser. To use Groq locally, set
+`GROQ_API_KEY` in the server process environment or `apps/web/.env.local`;
+Next.js loads that file from the web application's directory. Never commit it.
+IT/intranet retrieval remains unavailable; model answers are not verified
+institutional advice or evidence of an internal source search.
 See [chat-first interaction](docs/architecture/chat-first.md).
 
 For an optimized web preview, use `pnpm preview`. This builds the application
@@ -101,8 +108,8 @@ isolation for third-party plugins remain production work.
 
 The mandatory MVP still includes permission-aware knowledge search with source
 citations across both `intranet.hs-hannover.de` and `service.it.hs-hannover.de`,
-plus anny. Neither knowledge source nor an LLM/model selector is connected in
-this prototype. Real SSO, authoritative customer linking/rights, persistent
+plus anny. Knowledge retrieval, production model-profile policy/approval and
+institutional integration remain incomplete. Real SSO, authoritative customer linking/rights, persistent
 state, reconciliation, cancellation and real-device mobile qualification remain
 open. Microsoft 365 Bookings is deferred.
 
@@ -110,6 +117,7 @@ open. Microsoft 365 Bookings is deferred.
 - [Technical basis](docs/architecture/technical-basis.md)
 - [MVP delivery plan](docs/plans/hasi-mvp.md)
 - [Prompt injection defenses and model evaluation](docs/architecture/security-and-models.md)
+- [LLM router credentials and provider configuration](docs/architecture/llm-router-credentials.md)
 - [First model comparison and dataset plan](docs/evaluation/benchmark-v1.md)
 - [Service-IT source research](docs/research/service-it.md)
 - [anny API research and pinned specifications](docs/research/anny-api.md)

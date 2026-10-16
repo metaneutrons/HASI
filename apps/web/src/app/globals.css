@@ -1015,6 +1015,12 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .chat-toolbar > span, .chat-new { display: inline-flex; align-items: center; gap: 7px; }
 .chat-new { min-height: 44px; padding: 8px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-soft); cursor: pointer; font-size: 12px; }
 .chat-new:hover { background: var(--surface-raised); }
+.chat-model-picker { display: flex; min-width: 0; align-items: center; gap: 7px; }
+.chat-model-picker > svg { flex-shrink: 0; color: var(--accent); }
+.chat-model-picker select { min-width: 0; max-width: 100%; min-height: 44px; padding: 6px 22px 6px 0; border: 0; border-radius: 8px; background: transparent; color: var(--ink-soft); font-size: 13px; cursor: pointer; }
+.chat-model-picker option { background: var(--surface-solid); color: var(--ink); }
+.chat-model-error { flex-shrink: 0; margin: 0; padding: 7px 18px; color: var(--red); font-size: 12px; }
+.chat-speaker small { margin-left: 5px; color: var(--faint); font-size: 11px; font-weight: 400; }
 .chat-scroller { min-height: 0; flex: 1; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .chat-welcome { display: flex; width: min(100% - 48px, 850px); min-height: 100%; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto; padding: 22px 0 34px; text-align: center; }
 .chat-orb { display: flex; width: 64px; height: 64px; align-items: center; justify-content: center; margin-bottom: 22px; border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line)); border-radius: 22px; background: radial-gradient(circle at 28% 20%, var(--surface-raised), var(--accent-soft)); box-shadow: 0 12px 32px color-mix(in srgb, var(--accent) 12%, transparent), inset 0 1px 1px var(--surface-raised); color: var(--accent); transform: rotate(-7deg); }
@@ -1086,6 +1092,8 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
   .app-frame--chat .app-content { padding: 0 0 calc(65px + env(safe-area-inset-bottom)); }
   .chat-toolbar { min-height: 44px; padding: 0 14px; font-size: 11px; }
   .chat-toolbar > span { gap: 5px; }
+  .chat-model-picker { flex: 1; }
+  .chat-model-picker select { width: 100%; font-size: 16px; }
   .chat-new { padding: 6px; font-size: 12px; }
   .chat-welcome { width: calc(100% - 32px); padding: 18px 0 24px; }
   .chat-orb { display: none; }
