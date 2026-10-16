@@ -88,6 +88,20 @@ describe("bounded German chat demo parser", () => {
     expect(matchingResources(rooms, imperative)).toHaveLength(3);
   });
 
+  it("keeps common room questions and the room-booking noun out of the search query", () => {
+    const now = new Date("2026-06-01T10:00:00.000Z");
+    const question = mergeRoomRequest("Welche Räume gibt es?", {}, now);
+    const bookingQuestion = mergeRoomRequest("Welche Räume kannst du buchen?", {}, now);
+    const bookingNoun = mergeRoomRequest("Raumbuchung", {}, now);
+
+    expect(question.query).toBeUndefined();
+    expect(bookingQuestion.query).toBeUndefined();
+    expect(bookingNoun.query).toBeUndefined();
+    expect(matchingResources(rooms, question)).toHaveLength(3);
+    expect(matchingResources(rooms, bookingQuestion)).toHaveLength(3);
+    expect(classifyIntent("Raumbuchung", false)).toBe("rooms");
+  });
+
   it("accepts explicit room ranges and the supported duration and group spellings", () => {
     const now = new Date("2026-06-01T10:00:00.000Z");
     expect(mergeRoomRequest("übermorgen 14 bis 16 Uhr, wir sind zu viert", {}, now)).toMatchObject({

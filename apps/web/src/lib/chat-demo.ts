@@ -302,7 +302,7 @@ function parseQuery(text: string): string | undefined {
     /\b(?:display|beamer|whiteboard|videokonferenz|wlan)\b/giu,
     /\b(?:expo[\s-]*plaza|linden)\b/giu,
     /\b(?:ich\s+)?(?:such(?:e|en)?|brauche|benötige|benoetige|möchte|moechte|hätte\s+gern|haette\s+gern|finde|finden|reserviere|buch(?:e|en)?|gibt\s+es|haben\s+sie)\b/giu,
-    /\b(?:kannst|kann|können|koennen|könnt|koennt|du|mir|mich|uns|ihnen|zeig|zeige|zeigen|gib|gibt|einmal|mal|einen?|einer|einem|der|die|das|bitte|doch|lieber|stattdessen|campus|raum|räume|raeume|zimmer|für|fuer|mit|ohne|am|im|in|und|oder|wir|sind|zu|person(?:en)?|leute|gruppe|morgen|heute|übermorgen|uebermorgen)\b/giu,
+    /\b(?:kannst|kann|können|koennen|könnt|koennt|du|mir|mich|uns|ihnen|zeig|zeige|zeigen|gib|gibt|einmal|mal|einen?|einer|einem|der|die|das|welche|welcher|welchen|was|bitte|doch|lieber|stattdessen|campus|raumbuchung(?:en)?|raum|räume|raeume|zimmer|für|fuer|mit|ohne|am|im|in|und|oder|wir|sind|zu|person(?:en)?|leute|gruppe|morgen|heute|übermorgen|uebermorgen)\b/giu,
   ];
   for (const pattern of patterns) residual = residual.replace(pattern, " ");
   const words = normalize(residual).match(/[a-z0-9]+/gu)?.filter((word) => word.length > 2) ?? [];
@@ -347,7 +347,7 @@ export function classifyIntent(text: string, hasRoomContext: boolean): "rooms" |
   const normalized = normalize(text).trim();
   if (/\b(?:meine|eigene)\s+buchungen?\b|\bbuchungen?\s+(?:anzeigen|auflisten|zeigen)\b|\bwas\s+habe\s+ich\s+gebucht\b|\bmy\s+bookings\b/iu.test(normalized)) return "bookings";
 
-  const hasRoomWording = /\b(?:raum|raume|raeume|zimmer|seminarraum|projektraum|medienstudio|computerraum|reservier\w*|raumplanung)\b/iu.test(normalized);
+  const hasRoomWording = /\b(?:raum|raume|raeume|raumbuchung|raumbuchungen|zimmer|seminarraum|projektraum|medienstudio|computerraum|reservier\w*|raumplanung)\b/iu.test(normalized);
   if (hasRoomWording) return "rooms";
 
   const knowledgeTerms = /\b(?:eduroam|vpn|intranet|service\s*it|it[-\s]*service|passwort|multifaktor|mfa|account|zugangsdaten|softwareportal)\b/iu;
