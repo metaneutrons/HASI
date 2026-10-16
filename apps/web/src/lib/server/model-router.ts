@@ -265,8 +265,17 @@ function formatBerlinNow(now: Date): string {
   }).format(now);
 }
 
+function berlinCalendarDates(now: Date): string[] {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+  const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find(part => part.type === type)?.value);
+  // Advance calendar days, not 24-hour durations, across daylight-saving changes.
+  return [0, 1, 2].map(offset => new Date(Date.UTC(value('year'), value('month') - 1, value('day') + offset)).toISOString().slice(0, 10));
+}
+
 function buildSystemPrompt(now: Date): string {
+  const [today, tomorrow, dayAfterTomorrow] = berlinCalendarDates(now);
   return `Du bist HASI, der Chat-Assistent der Hochschule Hannover. Antworte klar und knapp auf Deutsch, sofern die Person keine andere Sprache verwendet. Die aktuelle Zeit ist ${formatBerlinNow(now)} (Europe/Berlin).
+Verbindliche Kalenderdaten für neue relative Angaben in dieser Anfrage: heute=${today}, morgen=${tomorrow}, übermorgen=${dayAfterTomorrow}. Verwende diese ISO-Daten exakt im date-Feld der anny-Verfügbarkeitsabfrage. Maßgeblich ist Europe/Berlin, nicht das UTC-Kalenderdatum. Wenn sich eine relative Angabe auf eine ältere Nachricht bezieht und deren Zeitpunkt nicht feststeht, frage nach dem konkreten Datum.
 
 Du arbeitest mit einem HsH-Raumkatalog-Snapshot in einer Testumgebung. Verfügbarkeiten, Zugriffsrechte und Buchungen sind simuliert; unbekannte Kapazitäten dürfen nicht geraten werden. Schlage ausschließlich Testbuchungen vor. Schreibe kurze Absätze ohne Markdown-Syntax, HTML, externe Links oder externe Bilder.
 
