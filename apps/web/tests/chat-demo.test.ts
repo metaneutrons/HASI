@@ -58,6 +58,8 @@ describe("bounded German chat demo parser", () => {
     }
     expect(matchingResources(resources, office).map(r => r.id)).toEqual(['desk']);
     expect(matchingResources(resources, { kind: 'workplace', query: 'Amrum' }).map(r => r.id)).toEqual(['desk']);
+    expect(matchingResources(resources, { kind: 'workplace', location: 'Amrum' }).map(r => r.id)).toEqual(['desk']);
+    expect(matchingResources(resources, { kind: 'meeting_room', location: 'Amrum' })).toEqual([]);
     expect(matchingResources(resources, { kind: 'workplace', capacity: 2 })).toEqual([]);
     expect(matchingResources(resources, { capacity: 4 }).map(r => r.id)).toEqual(['meeting', 'hall']);
     expect(matchingResources(resources, { kind: 'room' }).map(r => r.id)).toEqual(['meeting', 'hall']);

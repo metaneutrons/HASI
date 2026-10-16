@@ -410,7 +410,8 @@ export function matchingResources(resources: Resource[], request: RoomRequest): 
     }
     const features = new Set(resource.features.map(normalize));
     if (!requiredFeatures.every((feature) => features.has(normalize(feature)))) return false;
-    if (request.location && !normalize(resource.location).includes(normalize(request.location))) return false;
+    const location = kind === 'workplace' ? `${resource.location} ${resource.parentName ?? resource.name}` : resource.location;
+    if (request.location && !normalize(location).includes(normalize(request.location))) return false;
     const searchable = normalize(`${resource.name} ${resource.parentName ?? ''} ${resource.description} ${resource.features.join(" ")}`);
     if (!requiredQuery.every((token) => searchable.split(/[^a-z0-9]+/u).some((candidate) => stemGermanWord(candidate) === token))) return false;
     return true;

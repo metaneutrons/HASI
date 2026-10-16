@@ -106,6 +106,8 @@ describe("bounded Anny chat tools", () => {
     expect(search.rooms?.map(r => r.resource.id).sort()).toEqual(['180116', '180117']);
     expect(search.rooms?.every(r => r.resource.kind === 'workplace' && r.resource.parentId === '179669' && r.resource.capacity === null)).toBe(true);
     expect(search.output.resources).toEqual(expect.arrayContaining([expect.objectContaining({ id: '180116', parentId: '179669', bookingUnit: 'one_workplace', capacity: null })]));
+    const officeAsLocation = await tools.run('anny_search_resources', { kind: 'workplace', location: 'Amrum' });
+    expect(officeAsLocation.rooms?.map(r => r.resource.id).sort()).toEqual(['180116', '180117']);
     expect((await tools.run('anny_search_resources', { kind: 'meeting_room', capacity: 8 })).rooms).toHaveLength(5);
     expect((await tools.run('anny_search_resources', { kind: 'lecture_hall' })).rooms).toEqual([]);
     harness.calls.length = 0;
