@@ -28,4 +28,17 @@ describe("chat history across UI actions and model switches", () => {
     expect(history).toHaveLength(3);
     expect(chatRequestSchema.safeParse({ profileId: "groq-oss-20b", messages: history }).success).toBe(true);
   });
+
+  it("preserves completed tool results when recording an interrupted generation and a follow-up", () => {
+    const history: WireMessage[] = [
+      { role: "user", content: "Ich brauche morgen um 14 Uhr einen Raum für vier Personen für eine Stunde." },
+      { role: "assistant", content: "", toolCalls: [{ id: "search-1", name: "anny_search_resources", arguments: { capacity: 4 } }] },
+      { role: "tool", toolCallId: "search-1", name: "anny_search_resources", content: '{"resources":[]}' },
+    ];
+    appendChatText(history, "assistant", "Die Verarbeitung wurde durch einen technischen Fehler unterbrochen.");
+    appendChatText(history, "user", "gugu");
+    expect(history[2]).toMatchObject({ role: "tool", toolCallId: "search-1" });
+    expect(history.slice(-2).map(({ role }) => role)).toEqual(["assistant", "user"]);
+    expect(chatRequestSchema.safeParse({ profileId: "groq-oss-120b", messages: history }).success).toBe(true);
+  });
 });

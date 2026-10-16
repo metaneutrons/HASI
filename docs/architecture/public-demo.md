@@ -20,7 +20,7 @@ integration permissions.
 
 The main interface is a conversation. Room search, availability, own bookings,
 proposals and confirmations render inline as tool result cards. The default
-profile is Groq GPT-OSS 120B, with GPT-OSS 20B selectable for comparison. Each
+profile is Groq GPT-OSS 120B, with GPT-OSS 20B and Qwen3.8 27B selectable for comparison. Qwen is labelled Preview and uses non-thinking mode; GPT-OSS uses low reasoning effort. Each
 assistant response records the resolved profile. An explicit offline selection
 retains the bounded German dialogue parser; provider errors never silently
 switch to it or another provider. General model answers are available, while
@@ -68,9 +68,17 @@ explicitly. Independent MCP updates are verified by local integration tests.
   GET `/api/chat` reports configuration presence and approved profiles only;
   a successful inference is a separate runtime check.
 - `apps/web/vercel.json` pins functions to `fra1`. The chat handler permits a
-  maximum 30-second invocation, with a 20-second provider timeout, no automatic
-  retries, 1,536 output tokens, a 60,000-byte request body, 30,000 message-content
+  maximum 30-second invocation, with a shared 20-second generation deadline,
+  1,536 output tokens per generation, a 60,000-byte request body, 30,000 message-content
   characters and four validated tool calls per inference step.
+- Native HTTP 400 `tool_use_failed` permits exactly one regeneration using the
+  same selected profile, lower temperature and a fixed schema reminder. Failed
+  generated content is discarded, never replayed or executed. Other errors,
+  including transport/auth/quota failures, have no automatic retry. No business
+  action is retried. Thus one admitted HTTP request can make at most two provider
+  calls within the same deadline; the regional limit can admit at most 120
+  generation attempts per 600-second window. Failed generations may also count
+  toward provider usage. This is not monetary accounting.
 - Vercel WAF rule `hasi-chat` allows 60 inference requests per 600-second fixed
   window. The SDK uses a server-owned shared key and a pinned callback host
   `hasi.metaneutrons.cc`; Preview checks use the same public project firewall
@@ -81,8 +89,11 @@ explicitly. Independent MCP updates are verified by local integration tests.
   quotas remain separate. Durable per-user/day accounting and a hard monetary
   ceiling require further infrastructure before an institutional pilot.
 - Provider HTTP 429 responses produce a distinct quota notice. Diagnostics log
-  only host-owned failure categories and HTTP status codes, never provider error
-  payloads, messages, headers, prompts or credentials.
+  only host-owned failure categories, HTTP status, allowlisted provider codes,
+  known tool names and schema issue codes/field names. They never log provider error
+  payloads, argument values, messages, headers, prompts or credentials. Interrupted
+  generations receive a neutral history entry before the next user message;
+  completed tool results remain available and no action resumes automatically.
 - Local Vercel metadata, environment files and private research are ignored by
   Git. `.vercelignore` also excludes research/documents and test/build artifacts
   from CLI deployment uploads.

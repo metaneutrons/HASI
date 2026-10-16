@@ -8,7 +8,7 @@ import { classifyIntent, matchingResources, mergeRoomRequest, missingRoomDetails
 import type { Booking, Resource, TimeInterval, User } from "@/lib/types";
 import { useSession } from "@/components/session-provider";
 import { availabilityInputForSlot, createAnnyChatTools, type AnnyChatToolResult } from "@/lib/anny-chat-tools";
-import { modelReplySchema, type WireMessage } from "@/lib/chat-contract";
+import { MODEL_PROFILE_IDS, modelReplySchema, type WireMessage } from "@/lib/chat-contract";
 import { appendChatText } from "@/lib/chat-history";
 import type { ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
 import { browserChatStorage, createChatWorkspaceStore } from "@/lib/chat-workspace-store";
@@ -219,7 +219,10 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         if (actionableResult) return;
       }
       add({ role: "assistant", text: "Die maximale Zahl an Modellschritten für diese Nachricht ist erreicht. Du kannst die angezeigten Karten nutzen oder eine weitere Nachricht schreiben." });
-    } finally { /* The interaction owns cancellation until finish(). */ }
+    } catch (cause) {
+      appendChatText(history.current, "assistant", "Die Verarbeitung der letzten Nachricht wurde durch einen technischen Fehler unterbrochen. Offene Schritte wurden nicht automatisch fortgesetzt; berücksichtige die bereits vorliegenden Tool-Ergebnisse.");
+      throw cause;
+    }
   }
 
   async function searchRooms(next: RoomRequest, selected: Resource | null) {
@@ -367,7 +370,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
 
   return (
     <section className="chat-page" aria-label="HASI Chat" hidden={!active}>
-      <div className="chat-toolbar"><button className="chat-history-toggle icon-button" type="button" onClick={onShowHistory} aria-label="Chatliste öffnen"><PanelLeft size={19} /></button><label className="chat-model-picker"><MessageCircle size={15} aria-hidden="true" /><span className="sr-only">Sprachmodell</span><select aria-label="Sprachmodell" value={profileId} disabled={busy || modelLoading} onChange={(event) => { const value = event.currentTarget.value; if (value === "offline" || value === "groq-oss-120b" || value === "groq-oss-20b") setProfileId(value); }}>{profiles.length ? profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.label}</option>) : <option value="groq-oss-120b">{modelLoading ? "Modell wird geladen …" : "GroqCloud nicht verfügbar"}</option>}<option value="offline">Dialog-Demo · ohne Modell</option></select></label><button type="button" onClick={onNewChat} className="chat-new" aria-label="Neuer Chat"><Plus size={16} aria-hidden="true" /><span>Neuer Chat</span></button></div>
+      <div className="chat-toolbar"><button className="chat-history-toggle icon-button" type="button" onClick={onShowHistory} aria-label="Chatliste öffnen"><PanelLeft size={19} /></button><label className="chat-model-picker"><MessageCircle size={15} aria-hidden="true" /><span className="sr-only">Sprachmodell</span><select aria-label="Sprachmodell" value={profileId} disabled={busy || modelLoading} onChange={(event) => { const value = event.currentTarget.value; if (value === "offline" || MODEL_PROFILE_IDS.some((id) => id === value)) setProfileId(value as typeof profileId); }}>{profiles.length ? profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.label}</option>) : <option value="groq-oss-120b">{modelLoading ? "Modell wird geladen …" : "GroqCloud nicht verfügbar"}</option>}<option value="offline">Dialog-Demo · ohne Modell</option></select></label><button type="button" onClick={onNewChat} className="chat-new" aria-label="Neuer Chat"><Plus size={16} aria-hidden="true" /><span>Neuer Chat</span></button></div>
       {modelError && !offline && <p className="chat-model-error" role="status">{modelError}</p>}
       {interrupted && <p className="chat-recovery-note" role="status">Eine frühere Anfrage wurde unterbrochen. Bei Buchungen prüfe bitte zuerst den aktuellen Status.</p>}
       {messagesTruncated && <p className="chat-recovery-note">Die letzten 200 Nachrichten dieses Chats werden gespeichert und angezeigt.</p>}

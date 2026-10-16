@@ -65,10 +65,11 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
     return Response.json(await dependencies.run(input), { headers });
   } catch (cause) {
     // Provider/SDK errors can contain request bodies, headers or credentials.
-    // Log only host-owned categories and a numeric HTTP status, never the cause.
-    console.warn("HASI model request failed", cause instanceof ModelRouterError
+    // Serialize allowlisted metadata so nested schema issue names remain visible.
+    // Never log the cause or provider payload.
+    console.warn("HASI model request failed", JSON.stringify(cause instanceof ModelRouterError
       ? { code: cause.code, providerStatus: cause.providerStatus, ...(cause.diagnostics && Object.keys(cause.diagnostics).length ? { diagnostics: cause.diagnostics } : {}) }
-      : { code: "unexpected_provider_failure" });
+      : { code: "unexpected_provider_failure" }));
     if (cause instanceof ModelRouterError && cause.code === "provider_rate_limited") {
       return Response.json({ error: "Das Anfragelimit bei GroqCloud ist erreicht. Bitte warte eine Minute und versuche es erneut. Vorhandene Buchungskarten kannst du weiter nutzen." }, { status: 429, headers: { ...headers, "retry-after": "60" } });
     }

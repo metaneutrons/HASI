@@ -106,6 +106,12 @@ describe("Groq model router", () => {
           modelId: "openai/gpt-oss-20b",
           provider: "groq",
         },
+        {
+          id: "groq-qwen-3.8-27b",
+          label: "Groq Qwen3.8 27B · Preview",
+          modelId: "qwen/qwen3.8-27b",
+          provider: "groq",
+        },
       ],
       defaultProfileId: "groq-oss-120b",
     });
@@ -226,6 +232,54 @@ describe("Groq model router", () => {
         },
       ],
     });
+  });
+
+  it("regenerates a rejected room-search call once on the same model without replaying failed output", async () => {
+    const failed = fakeProvider({ error: {
+      message: `private provider message ${FAKE_KEY}`,
+      code: "tool_use_failed",
+      failed_generation: '{"name":"anny_search_resources","parameters":{"capacity":4,"query":""}}',
+    } }, 400);
+    const success = fakeProvider(completion({ toolCalls: [{ id: "room-1", name: "anny_search_resources", arguments: '{"capacity":4}' }] }));
+    let count = 0;
+    const reply = await runModelStep({ ...request(), messages: [{ role: "user", content: "Ich brauche morgen um 14 Uhr einen Raum für vier Personen für eine Stunde." }] }, {
+      env: { GROQ_API_KEY: FAKE_KEY }, now: NOW,
+      fetch: async (input, init) => ++count === 1 ? failed.fetch(input, init) : success.fetch(input, init),
+    });
+    expect(count).toBe(2);
+    const initial = JSON.parse(String(failed.calls[0]?.init?.body));
+    const retry = JSON.parse(String(success.calls[0]?.init?.body));
+    expect(initial.model).toBe(retry.model);
+    expect(initial.temperature).toBe(0.2);
+    expect(retry.temperature).toBe(0);
+    expect(retry.messages.slice(1)).toEqual(initial.messages.slice(1));
+    expect(retry.messages[0].content).toContain("Generierungsversuch");
+    expect(JSON.stringify(retry.messages)).not.toMatch(/private provider|parameters/);
+    expect(reply.message.toolCalls).toEqual([{ id: "room-1", name: "anny_search_resources", arguments: { capacity: 4 } }]);
+  });
+
+  it("bounds tool-generation retries and sanitizes the final error", async () => {
+    const provider = fakeProvider({ error: { message: FAKE_KEY, code: "tool_use_failed" } }, 400);
+    const error = await expectRouterError(runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW }), "provider_unavailable");
+    expect(provider.calls).toHaveLength(2);
+    expect(error.diagnostics?.providerCode).toBe("tool_use_failed");
+    expect(JSON.stringify(error)).not.toContain(FAKE_KEY);
+  });
+
+  it.each([400, 401, 429, 500])("does not regenerate for an unclassified HTTP %i failure", async (status) => {
+    const provider = fakeProvider({ error: { message: "Do not retry me" } }, status);
+    await expectRouterError(runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW }), status === 429 ? "provider_rate_limited" : "provider_unavailable");
+    expect(provider.calls).toHaveLength(1);
+  });
+
+  it("uses Qwen-specific reasoning settings with the same tool contract", async () => {
+    const provider = fakeProvider(completion({ toolCalls: [{ id: "qwen-room-1", name: "anny_search_resources", arguments: '{"capacity":4}' }] }));
+    const reply = await runModelStep(request("groq-qwen-3.8-27b"), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
+    const body = JSON.parse(String(provider.calls[0]?.init?.body));
+    expect(body.model).toBe("qwen/qwen3.8-27b");
+    expect(body.reasoning_effort).toBe("none");
+    expect(body.tools).toHaveLength(4);
+    expect(reply.profile.id).toBe("groq-qwen-3.8-27b");
   });
 
   it("rejects model tool arguments that fail the strict schema", async () => {

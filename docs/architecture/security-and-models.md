@@ -167,6 +167,29 @@ Keep the retrieval embedding model/index separate from the conversational model.
 Switching the latter should not require re-embedding. Changing embedding model
 or dimensions requires a versioned compatible index and migration/evaluation.
 
+## Additional safety-model evaluation (2026-10-16)
+
+Evaluate two separate jobs: injection/jailbreak detection with
+`meta-llama/llama-prompt-guard-2-86m`, and written HASI content policies with
+`openai/gpt-oss-safeguard-20b`. Both are currently Groq Preview models. This is
+an evaluation proposal, not an active runtime filter. Start in shadow mode on
+synthetic fixtures; record labels, false negatives, false positives, latency,
+usage and classifier failures without full chat logging. Classifiers receive
+only context they are independently approved to process, after access checks.
+
+Prompt Guard has a 512-token window: do not silently truncate long documents;
+evaluate overlapping chunks and attacks across boundaries. Include German and
+English attacks, poisoned tool/source text and benign academic/legal quotations
+of offensive or adversarial content. A content-safety label does not establish
+factual correctness, citation support, schema validity or user authorization.
+Keep those as independent benchmark/backend checks. Classifiers have no tools,
+cannot grant permissions or confirmations, and must never approve their own
+proposed business actions. Define timeout/unavailable handling and blocking
+thresholds only after calibration; do not silently enable blocking in the demo.
+
+Sources: [Groq Prompt Guard 2](https://console.groq.com/docs/model/meta-llama/llama-prompt-guard-2-86m),
+[Groq GPT-OSS-Safeguard](https://console.groq.com/docs/model/openai/gpt-oss-safeguard-20b).
+
 ## Provider credentials
 
 GroqCloud is the first selected prototype provider. Credentials are stored
