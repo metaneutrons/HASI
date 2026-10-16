@@ -136,8 +136,8 @@ function Conversation({ name }: { name: string }) {
       } else if (intent === "rooms") {
         const reset = !roomContext || /(?:neue|andere)\s+(?:raum)?suche|(?:anderen|neuen)\s+raum|von vorne/i.test(trimmed);
         const next = mergeRoomRequest(trimmed, reset ? {} : request);
-        const selected = reset ? null : chosenRoom;
-        if (reset) setChosenRoom(null);
+        const selected = reset || next.query !== request.query ? null : chosenRoom;
+        if (!selected) setChosenRoom(null);
         setRequest(next);
         setRoomContext(true);
         await searchRooms(next, selected);
