@@ -54,6 +54,9 @@ export interface AnnyMockCatalogResource {
   location: string;
   features: string[];
   serviceId: string;
+  kind?: 'workplace' | 'meeting_room' | 'lecture_hall' | 'room';
+  parentId?: string | null;
+  parentName?: string | null;
 }
 
 export interface AnnyMockCatalogService {
@@ -449,7 +452,10 @@ const catalogResourceSchema = z.strictObject({
   capacity: z.number().int().min(1).nullable(),
   location: z.string(),
   features: z.array(z.string()),
-  serviceId: annyIdSchema
+  serviceId: annyIdSchema,
+  kind: z.enum(['workplace', 'meeting_room', 'lecture_hall', 'room']).optional(),
+  parentId: annyIdSchema.nullable().optional(),
+  parentName: z.string().nullable().optional()
 });
 const catalogServiceSchema = z.strictObject({ id: annyIdSchema, name: z.string().min(1) });
 const catalogSchema = z.strictObject({

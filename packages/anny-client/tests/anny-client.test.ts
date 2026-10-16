@@ -59,6 +59,82 @@ describe('AnnyClient', () => {
       ]);
   });
 
+  it('includes child resources by default across pages and preserves parent relationships', async () => {
+    const requests: { url: URL; authorization: string | null; redirect: RequestInit['redirect'] | undefined }[] = [];
+    const resources = Array.from({ length: 61 }, (_, index) => ({
+      id: `resource-${String(index + 1)}`,
+      type: 'resources',
+      attributes: { name: `Resource ${String(index + 1)}` },
+      ...(index === 60
+        ? { relationships: { parent: { data: { type: 'resources', id: 'resource-1' } } } }
+        : {})
+    }));
+    const fetchImpl: typeof fetch = (input, init) => {
+      const url = input instanceof URL ? input : new URL(typeof input === 'string' ? input : input.url);
+      const page = Number(url.searchParams.get('page[number]'));
+      const headers = new Headers(init?.headers);
+      requests.push({ url, authorization: headers.get('authorization'), redirect: init?.redirect });
+      return Promise.resolve(new Response(JSON.stringify({
+        data: resources.slice((page - 1) * 50, page * 50),
+        meta: { page: { 'current-page': page, 'last-page': 2 } }
+      }), { status: 200, headers: { 'content-type': 'application/vnd.api+json' } }));
+    };
+    const client = new AnnyClient({
+      baseUrl: 'https://anny.example',
+      organizationId: 'test-tenant',
+      token,
+      fetchImpl
+    });
+
+    const result = await client.listResources();
+
+    expect(result).toHaveLength(61);
+    expect(result[60]?.relationships?.parent?.data).toEqual({ type: 'resources', id: 'resource-1' });
+    expect(requests).toHaveLength(2);
+    expect(requests.map(({ url }) => url.searchParams.get('page[number]'))).toEqual(['1', '2']);
+    for (const { url, authorization, redirect } of requests) {
+      expect(url.searchParams.get('o')).toBe('test-tenant');
+      expect(url.searchParams.get('page[size]')).toBe('50');
+      expect(url.searchParams.get('filter[exclude_child_resources]')).toBe('false');
+      expect(url.toString()).not.toContain(token);
+      expect(authorization).toBe(`Bearer ${token}`);
+      expect(redirect).toBe('error');
+    }
+  });
+
+  it('can opt out of child resources without changing the authenticated GET policy', async () => {
+    let calls = 0;
+    let requestedUrl: URL | undefined;
+    let authorization: string | null = null;
+    const fetchImpl: typeof fetch = (input, init) => {
+      calls += 1;
+      requestedUrl = input instanceof URL ? input : new URL(typeof input === 'string' ? input : input.url);
+      authorization = new Headers(init?.headers).get('authorization');
+      return Promise.resolve(new Response(JSON.stringify({
+        data: [{ id: 'root-resource', type: 'resources', attributes: { name: 'Root resource' } }],
+        meta: { page: { 'current-page': 1, 'last-page': 1 } }
+      }), { status: 200, headers: { 'content-type': 'application/vnd.api+json' } }));
+    };
+    const client = new AnnyClient({
+      baseUrl: 'https://anny.example',
+      organizationId: 'test-tenant',
+      token,
+      fetchImpl
+    });
+
+    await expect(client.listResources({ includeChildResources: false })).resolves.toMatchObject([
+      { id: 'root-resource', type: 'resources' }
+    ]);
+
+    expect(calls).toBe(1);
+    expect(requestedUrl?.searchParams.get('filter[exclude_child_resources]')).toBe('true');
+    expect(requestedUrl?.searchParams.get('o')).toBe('test-tenant');
+    expect(requestedUrl?.searchParams.get('page[number]')).toBe('1');
+    expect(requestedUrl?.searchParams.get('page[size]')).toBe('50');
+    expect(requestedUrl?.toString()).not.toContain(token);
+    expect(authorization).toBe(`Bearer ${token}`);
+  });
+
   it('uses the vendor page size limit and preserves numeric-string resource IDs across pages', async () => {
     const catalog: AnnyMockCatalog = {
       resources: Array.from({ length: 51 }, (_, index) => ({

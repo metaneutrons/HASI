@@ -103,6 +103,9 @@ const resourceSchema = z.strictObject({
   location: plainTextSchema(140),
   features: z.array(plainTextSchema(48)).max(12),
   serviceId: idSchema,
+  kind: z.enum(['workplace', 'meeting_room', 'lecture_hall', 'room']).optional(),
+  parentId: idSchema.nullable().optional(),
+  parentName: plainTextSchema(160).nullable().optional(),
 });
 
 const intervalSchema = z
@@ -158,6 +161,7 @@ const chatMessageSchema = z.strictObject({
 });
 
 const roomRequestSchema = z.strictObject({
+  kind: z.enum(['workplace', 'meeting_room', 'lecture_hall', 'room']).optional(),
   date: plainTextSchema(32).optional(),
   time: plainTextSchema(32).optional(),
   durationMinutes: z.number().int().min(0).max(10_080).optional(),

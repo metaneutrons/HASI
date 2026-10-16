@@ -41,6 +41,33 @@ const rooms: Resource[] = [
 ];
 
 describe("bounded German chat demo parser", () => {
+  it('distinguishes one workplace in an office from rooms with person capacities', () => {
+    const resources: Resource[] = [
+      { ...rooms[0]!, id: 'desk', name: 'Platz 1', kind: 'workplace', parentId: 'office', parentName: 'Büro Amrum', capacity: null },
+      { ...rooms[1]!, id: 'meeting', kind: 'meeting_room', capacity: 8 },
+      { ...rooms[0]!, id: 'hall', name: 'Synthetic lecture hall', kind: 'lecture_hall', capacity: 120 },
+    ];
+    const office = mergeRoomRequest('Ich möchte ein Büro buchen', {});
+    expect(classifyIntent('Ich möchte ein Büro buchen', false)).toBe('rooms');
+    expect(office.kind).toBe('workplace');
+    expect(office.query).toBeUndefined();
+    for (const phrase of ['Ich suche einen Büroraum', 'Ich suche nach Arbeitsplätzen', 'Ich brauche zwei Arbeitsplätze']) {
+      expect(classifyIntent(phrase, false)).toBe('rooms');
+      expect(mergeRoomRequest(phrase, {}).kind).toBe('workplace');
+      expect(mergeRoomRequest(phrase, {}).query).toBeUndefined();
+    }
+    expect(matchingResources(resources, office).map(r => r.id)).toEqual(['desk']);
+    expect(matchingResources(resources, { kind: 'workplace', query: 'Amrum' }).map(r => r.id)).toEqual(['desk']);
+    expect(matchingResources(resources, { kind: 'workplace', capacity: 2 })).toEqual([]);
+    expect(matchingResources(resources, { capacity: 4 }).map(r => r.id)).toEqual(['meeting', 'hall']);
+    expect(matchingResources(resources, { kind: 'room' }).map(r => r.id)).toEqual(['meeting', 'hall']);
+    expect(matchingResources(resources, mergeRoomRequest('Besprechungsraum für 6 Personen', {})).map(r => r.id)).toEqual(['meeting']);
+    expect(matchingResources(resources, mergeRoomRequest('Hörsaal für 100 Personen', {})).map(r => r.id)).toEqual(['hall']);
+    expect(mergeRoomRequest('lieber ein Büro', { kind: 'meeting_room', capacity: 8 })).toMatchObject({ kind: 'workplace', capacity: undefined });
+    expect(mergeRoomRequest('einzelne Arbeitsplätze', { kind: 'workplace', capacity: 2 })).toMatchObject({ kind: 'workplace', capacity: undefined });
+    expect(mergeRoomRequest('einen Besprechungsraum', { kind: 'workplace', capacity: 2 })).toMatchObject({ kind: 'meeting_room', capacity: 2 });
+    expect(roomRequestSummary(mergeRoomRequest('Ich brauche zwei Arbeitsplätze', {}))).toContain('Jede Buchung reserviert genau einen Arbeitsplatz');
+  });
   it("fills the initial room request and carries omitted slots across follow-ups", () => {
     const now = new Date("2026-06-01T10:00:00.000Z");
     const first = mergeRoomRequest(

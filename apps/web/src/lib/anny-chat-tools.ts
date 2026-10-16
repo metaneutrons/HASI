@@ -1,5 +1,5 @@
 import { chatToolSchemas, type ChatToolName } from "./chat-contract";
-import { matchingResources, requestStartDate, type RoomRequest } from "./chat-demo";
+import { matchingResources, requestStartDate, workplaceGroupQuestion, type RoomRequest } from "./chat-demo";
 import type { Booking, Resource, TimeInterval } from "./types";
 
 const ANNY_TOOL_NAMES = [
@@ -76,6 +76,9 @@ function isResource(value: unknown): value is Resource {
     && isAnnyId(value.id)
     && typeof value.name === "string"
     && typeof value.description === "string"
+    && (value.kind === undefined || ['workplace', 'meeting_room', 'lecture_hall', 'room'].includes(String(value.kind)))
+    && (value.parentId === undefined || value.parentId === null || isAnnyId(value.parentId))
+    && (value.parentName === undefined || value.parentName === null || typeof value.parentName === 'string')
     && (value.capacity === null || Number.isInteger(value.capacity) && Number(value.capacity) > 0)
     && typeof value.location === "string"
     && Array.isArray(value.features)
@@ -123,6 +126,9 @@ function toRoomCardResource(resource: Resource): Resource {
     location: cleanText(resource.location, 140),
     features: resource.features.slice(0, 12).map((feature) => cleanText(feature, 48)),
     serviceId: resource.serviceId,
+    kind: resource.kind ?? 'room',
+    parentId: resource.parentId ?? null,
+    parentName: resource.parentName ? cleanText(resource.parentName, 160) : null,
   };
 }
 
@@ -132,6 +138,10 @@ function toModelResource(resource: Resource): Record<string, unknown> {
     name: cleanText(resource.name, 80),
     description: cleanText(resource.description, 80),
     capacity: resource.capacity,
+    kind: resource.kind ?? 'room',
+    bookingUnit: resource.kind === 'workplace' ? 'one_workplace' : 'whole_room',
+    parentId: resource.parentId ?? null,
+    parentName: resource.parentName ? cleanText(resource.parentName, 120) : null,
     location: cleanText(resource.location, 60),
     features: resource.features.slice(0, 6).map((feature) => cleanText(feature, 20)),
   };
@@ -213,11 +223,14 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
 
   async function searchResources(input: Record<string, unknown>): Promise<AnnyChatToolResult> {
     const requestFilters: RoomRequest = {
+      kind: input.kind as RoomRequest['kind'],
       capacity: input.capacity as number | undefined,
       features: input.features as string[] | undefined,
       location: input.location as string | undefined,
       query: input.query as string | undefined,
     };
+    const clarification = workplaceGroupQuestion(requestFilters);
+    if (clarification) return { name: 'anny_search_resources', output: { resources: [], returned: 0, truncated: 0, clarificationRequired: clarification }, rooms: [] };
     const resources = await loadAllowedResources();
     const matches = matchingResources(resources, requestFilters);
     const shown = matches.slice(0, MAX_RESOURCES).map(toRoomCardResource);
@@ -288,6 +301,8 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
 
     const output = boundedOutput({
       resource: { id: resource.id, name: cleanText(resource.name, 120) },
+      bookingUnit: resource.kind === 'workplace' ? 'one_workplace' : 'whole_room',
+      parentName: resource.parentName ? cleanText(resource.parentName, 120) : null,
       requestedStartDate: startDate,
       durationMinutes,
       intervals,

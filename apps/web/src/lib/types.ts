@@ -7,6 +7,7 @@ export type User = {
 };
 
 export type Persona = User;
+export type ResourceKind = 'workplace' | 'meeting_room' | 'lecture_hall' | 'room';
 
 export type Resource = {
   id: string;
@@ -16,6 +17,10 @@ export type Resource = {
   location: string;
   features: string[];
   serviceId: string;
+  /** Missing only in chat cards saved by older clients. */
+  kind?: ResourceKind;
+  parentId?: string | null;
+  parentName?: string | null;
 };
 
 export type TimeInterval = {

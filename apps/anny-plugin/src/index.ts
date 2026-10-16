@@ -6,7 +6,8 @@ import { AnnyClient } from '@hasi/anny-client';
 import { annyManifest } from './manifest.js';
 
 export { annyManifest, demoPresentation } from './manifest.js';
-export interface Presentation { capacity: number | null; location: string; features: string[]; serviceId: string }
+export type ResourceKind = 'workplace' | 'meeting_room' | 'lecture_hall' | 'room';
+export interface Presentation { capacity: number | null; location: string; features: string[]; serviceId: string; kind?: ResourceKind; parentId?: string | null; parentName?: string | null }
 export interface AnnyPluginOptions { client: AnnyClient | ((actor: ActorContext) => AnnyClient); allowedHosts?: string[]; consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>; publicKey: KeyObject; serviceToken: string; presentation: Record<string, Presentation>; version?: string }
 const annyId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/);
 const interval = z.strictObject({ resourceId: annyId, serviceId: annyId, startDate: z.iso.datetime({ offset: true }), endDate: z.iso.datetime({ offset: true }) });
@@ -19,7 +20,12 @@ export function createAnnyPlugin(options: AnnyPluginOptions): FastifyInstance {
     if (!actor.resourceIds.includes(resourceId) || metadata?.serviceId !== serviceId) throw new Error('Resource/service access denied.');
     return metadata;
   };
-  const names = async (actor: ActorContext) => new Map((await client(actor).listResources()).map(resource => [resource.id, resource.attributes?.name ?? 'Raum']));
+  const names = async (actor: ActorContext) => new Map((await client(actor).listResources()).map(resource => {
+    const profile = options.presentation[resource.id];
+    const name = resource.attributes?.name ?? 'Ressource';
+    const qualified = profile?.parentName && profile.parentName !== name ? `${name} · ${profile.parentName}` : name;
+    return [resource.id, profile?.kind === 'workplace' ? `Arbeitsplatz · ${qualified}` : qualified];
+  }));
   const assertAvailable = async (args: z.infer<typeof interval>, actor: ActorContext) => {
     authorized(args.resourceId, args.serviceId, actor);
     const minutes = (Date.parse(args.endDate) - Date.parse(args.startDate)) / 60000;
@@ -33,7 +39,7 @@ export function createAnnyPlugin(options: AnnyPluginOptions): FastifyInstance {
       'anny.search_resources': async (_args, actor) => ({ resources: (await client(actor).listResources()).flatMap(resource => {
         const profile = options.presentation[resource.id];
         if (!actor.resourceIds.includes(resource.id) || !profile || resource.attributes?.bookings_enabled === false) return [];
-        return [{ id: resource.id, name: resource.attributes?.name ?? 'Raum', description: resource.attributes?.plain_description ?? '', ...profile }];
+        return [{ id: resource.id, name: resource.attributes?.name ?? 'Raum', description: resource.attributes?.plain_description ?? '', ...profile, kind: profile.kind ?? 'room', parentId: profile.parentId ?? null, parentName: profile.parentName ?? null }];
       }) }),
       'anny.get_availability': async (args, actor) => {
         const parsed = z.strictObject({ resourceId: annyId, serviceId: annyId, startDate: z.iso.datetime({ offset: true }), durationMinutes: z.number().int().min(15).max(1440) }).parse(args);

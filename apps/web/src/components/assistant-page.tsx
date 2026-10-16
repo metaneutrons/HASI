@@ -4,7 +4,7 @@ import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, Clock3, MapPin, Mes
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { apiRequest, formatDateTime, formatTime } from "@/lib/api";
-import { classifyIntent, matchingResources, mergeRoomRequest, missingRoomDetails, requestStartDate, roomRequestSummary, type RoomRequest } from "@/lib/chat-demo";
+import { classifyIntent, matchingResources, mergeRoomRequest, missingRoomDetails, requestStartDate, roomRequestSummary, workplaceGroupQuestion, type RoomRequest } from "@/lib/chat-demo";
 import type { Booking, Resource, TimeInterval, User } from "@/lib/types";
 import { useChatWorkspaceStore } from "@/components/chat-sidebar-context";
 import { useSession } from "@/components/session-provider";
@@ -245,6 +245,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   }
 
   async function searchRooms(next: RoomRequest, selected: Resource | null) {
+    const clarification = workplaceGroupQuestion(next);
+    if (clarification) { add({ role: 'assistant', text: clarification }); return; }
     const missing = missingRoomDetails(next);
     const invalid = Object.values(next).some((value) => value === "__invalid__" || (typeof value === "number" && value <= 0) || (Array.isArray(value) && value.includes("__invalid__")));
     if (invalid) {
@@ -253,14 +255,15 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     }
     setActivity("anny · Räume suchen");
     const result = await requestForChat<{ resources: Resource[] }>("/api/resources");
-    const resources = matchingResources(result.resources, next).filter((resource) => !selected || resource.id === selected.id);
+    const matches = matchingResources(result.resources, next).filter((resource) => !selected || resource.id === selected.id);
+    const resources = matches.slice(0, 8);
     if (!resources.length) {
       add({ role: "assistant", tool: "anny · Raumsuche", text: "Für diese Anforderungen finde ich in den zugänglichen Testdaten keinen Raum. Du kannst eine neue Raumsuche beginnen und die Anforderungen ändern." });
       return;
     }
     const startDate = requestStartDate(next);
     if (missing.length || !startDate || !next.durationMinutes) {
-      const resultId = add({ role: "assistant", tool: "anny · Raumsuche", text: `${selected ? `Wir planen mit ${selected.name}.` : `${resources.length} ${resources.length === 1 ? "Raum passt" : "Räume passen"} zu deiner Suche.`} Für die Verfügbarkeitsprüfung brauche ich noch: ${missing.join(", ") || "ein gültiges Datum und eine gültige Startzeit"}. Antworte einfach hier im Chat, zum Beispiel „morgen um 14 Uhr für eine Stunde“.`, rooms: resources.map((resource) => ({ resource, intervals: [], checked: false })) });
+      const resultId = add({ role: "assistant", tool: "anny · Ressourcen suchen", text: `${selected ? `Wir planen mit ${selected.name}.` : `${matches.length} passende ${next.kind === 'workplace' ? 'Arbeitsplätze' : 'Ressourcen'} gefunden.${matches.length > resources.length ? ' Ich zeige die ersten acht; mit einem Büronamen oder Standort kannst du eingrenzen.' : ''}`} Für die Verfügbarkeitsprüfung brauche ich noch: ${missing.join(", ") || "ein gültiges Datum und eine gültige Startzeit"}. Antworte einfach hier im Chat, zum Beispiel „morgen um 14 Uhr für eine Stunde“.`, rooms: resources.map((resource) => ({ resource, intervals: [], checked: false })) });
       setActiveResult(resultId);
       return;
     }
@@ -328,14 +331,17 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   }
 
   async function chooseRoom(resource: Resource) {
-    if (!offline) { await send(`Ich möchte ${resource.name} buchen. Verwende diesen Raum und frage nach noch fehlenden Angaben.`); return; }
+    const label = `${resource.kind === 'workplace' ? 'einen einzelnen Arbeitsplatz: ' : ''}${resource.name}${resource.parentName ? ` im Büro ${resource.parentName}` : ''}`;
+    if (!offline) { await send(`Ich möchte ${label} buchen (resourceId: ${resource.id}). Verwende genau diese Ressource und frage nach noch fehlenden Angaben.`); return; }
     if (!start("Raum auswählen")) return;
     setChosenRoom(resource);
+    const next = { ...request, kind: resource.kind ?? 'room' as const };
+    setRequest(next);
     setRoomContext(true);
     setActiveResult(null);
     setActiveProposal(null);
-    add({ role: "user", text: `Ich möchte ${resource.name} buchen.` });
-    try { await searchRooms(request, resource); }
+    add({ role: "user", text: `Ich möchte ${label} buchen.` });
+    try { await searchRooms(next, resource); }
     catch (cause) { add({ role: "assistant", text: cause instanceof Error ? cause.message : "Der Raum konnte nicht geprüft werden." }); }
     finally { finish(); if (active) composer.current?.focus(); }
   }
@@ -344,7 +350,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     if (!start("anny · Buchung vorbereiten")) return;
     setActiveResult(null);
     setActiveProposal(null);
-    const selection = `${resource.name}, ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} Uhr. Bitte vorbereiten.`;
+    const selection = `${resource.kind === 'workplace' ? 'Einzelner Arbeitsplatz: ' : ''}${resource.name}${resource.parentName ? ` · ${resource.parentName}` : ''}, ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} Uhr. Bitte vorbereiten.`;
     if (!offline) appendChatText(history.current, "user", selection);
     add({ role: "user", text: selection });
     try {
@@ -413,9 +419,9 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                   {message.tool && <span className="chat-tool-label"><Check size={13} aria-hidden="true" /> {message.tool}</span>}
                   <p>{message.text}</p>
                   {message.rooms && <div className="chat-room-list">{message.rooms.map(({ resource, intervals, checked }) => <article className="chat-tool-card" key={resource.id}>
-                    <div className="chat-room-heading"><span className="chat-room-icon"><CalendarDays size={20} strokeWidth={1.5} aria-hidden="true" /></span><div><h2>{resource.name}</h2><span><MapPin size={12} aria-hidden="true" /> {resource.location}</span></div></div>
-                    <p className="chat-room-details"><Users size={14} aria-hidden="true" /> {resource.capacity === null ? "Personenzahl nicht hinterlegt" : `Bis ${resource.capacity} Personen`} {resource.features.length > 0 && <><span>·</span> {resource.features.join(" · ")}</>}</p>
-                    {checked ? intervals.length ? <div className="chat-slots">{intervals.map((interval) => <button type="button" disabled={busy || activeResult !== message.id && activeResult !== message.interactionId} onClick={() => void prepare(resource, interval)} key={interval.startDate} aria-label={`${resource.name} am ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} vorbereiten`}><Clock3 size={14} aria-hidden="true" /><span>{formatDateTime(interval.startDate)}–{formatTime(interval.endDate)}</span><ArrowRight size={14} aria-hidden="true" /></button>)}</div> : <p className="chat-no-slots">Keine freien Zeiten zu diesen Anforderungen.</p> : <button className="chat-card-action" type="button" disabled={busy || activeResult !== message.id && activeResult !== message.interactionId} onClick={() => void chooseRoom(resource)}>Diesen Raum planen <ArrowRight size={15} aria-hidden="true" /></button>}
+                    <div className="chat-room-heading"><span className="chat-room-icon"><CalendarDays size={20} strokeWidth={1.5} aria-hidden="true" /></span><div><h2>{resource.name}</h2>{resource.parentName && <span>Büro: {resource.parentName}</span>}<span><MapPin size={12} aria-hidden="true" /> {resource.location}</span></div></div>
+                    <p className="chat-room-details"><Users size={14} aria-hidden="true" /> {resource.kind === 'workplace' ? 'Einzelner Arbeitsplatz' : `${resource.kind === 'lecture_hall' ? 'Hörsaal' : resource.kind === 'meeting_room' ? 'Besprechungsraum' : 'Raum'} · ${resource.capacity === null ? 'Personenkapazität nicht hinterlegt' : `bis ${resource.capacity} Personen`}`} {resource.features.length > 0 && <><span>·</span> {resource.features.join(" · ")}</>}</p>
+                    {checked ? intervals.length ? <div className="chat-slots">{intervals.map((interval) => <button type="button" disabled={busy || activeResult !== message.id && activeResult !== message.interactionId} onClick={() => void prepare(resource, interval)} key={interval.startDate} aria-label={`${resource.name}${resource.parentName ? ` in ${resource.parentName}` : ''} am ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} vorbereiten`}><Clock3 size={14} aria-hidden="true" /><span>{formatDateTime(interval.startDate)}–{formatTime(interval.endDate)}</span><ArrowRight size={14} aria-hidden="true" /></button>)}</div> : <p className="chat-no-slots">Keine freien Zeiten zu diesen Anforderungen.</p> : <button className="chat-card-action" type="button" disabled={busy || activeResult !== message.id && activeResult !== message.interactionId} onClick={() => void chooseRoom(resource)}>{resource.kind === 'workplace' ? 'Diesen Arbeitsplatz planen' : 'Diesen Raum planen'} <ArrowRight size={15} aria-hidden="true" /></button>}
                   </article>)}</div>}
                   {message.sources && message.sources.length > 0 && <div className="chat-source-list" aria-label="Gefundene Demoquellen">{message.sources.map((source) => <Link className="chat-source-card" href={knowledgeDocumentHref(source.id)} target="_blank" rel="noreferrer" key={source.id}><BookOpen size={18} aria-hidden="true" /><span><small>{knowledgeSourceLabel(source.sourceSystem)} · Fassung {source.revision}</small><strong>{source.title}</strong><code>{source.citationId}</code></span><ArrowRight size={16} aria-hidden="true" /></Link>)}</div>}
                   {message.proposal && <div className="chat-tool-card chat-proposal"><span className="chat-proposal-label">BITTE PRÜFEN UND BESTÄTIGEN</span><h2>{message.proposal.resourceName}</h2><p>{formatDateTime(message.proposal.startDate)} bis {formatTime(message.proposal.endDate)} Uhr</p><small>Gültig bis {formatTime(message.proposal.expiresAt)} Uhr · Testumgebung</small><button className="button button--primary button--wide" type="button" disabled={busy || activeProposal !== message.proposal.id} onClick={() => void confirm(message.proposal!)}>{activeProposal === message.proposal.id ? "Buchung bestätigen" : "Vorschlag abgeschlossen oder ersetzt"}<Check size={16} aria-hidden="true" /></button></div>}

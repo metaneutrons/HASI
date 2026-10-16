@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { MemoryJsonStore } from "@hasi/state";
 import { createDemoRuntime } from "@hasi/demo-runtime";
+import { hshDemoCatalog } from '../../../fixtures/catalog';
 import {
   createAnnyChatTools,
   availabilityInputForSlot,
@@ -32,7 +33,7 @@ function recordSetCookie(jar: Map<string, string>, setCookie: string): void {
   }
 }
 
-function createHarness(startAt = "2030-01-01T10:30:00.000Z") {
+function createHarness(startAt = "2030-01-01T10:30:00.000Z", catalog?: Parameters<typeof createDemoRuntime>[0]['catalog']) {
   const currentTime = new Date(startAt);
   const calls: HarnessCall[] = [];
   const cookies = new Map<string, string>();
@@ -56,6 +57,7 @@ function createHarness(startAt = "2030-01-01T10:30:00.000Z") {
     store: new MemoryJsonStore(`web-chat-tools-${randomUUID()}`),
     secret: randomBytes(32).toString("base64url"),
     fetch: transport,
+    ...(catalog ? { catalog } : {}),
   });
   runtimes.push(runtime);
   const request: Request = async <T>(path: string, init: RequestInit = {}) => {
@@ -96,6 +98,23 @@ function outputIntervals(result: AnnyChatToolResult): TimeInterval[] {
 }
 
 describe("bounded Anny chat tools", () => {
+  it('returns actual desk IDs and their offices without converting booking quantity to person capacity', async () => {
+    const harness = createHarness('2030-01-01T10:30:00.000Z', hshDemoCatalog);
+    await login(harness.request, 'employee');
+    const tools = createAnnyChatTools(harness.request, { now: harness.now });
+    const search = await tools.run('anny_search_resources', { kind: 'workplace', query: 'Amrum' });
+    expect(search.rooms?.map(r => r.resource.id).sort()).toEqual(['180116', '180117']);
+    expect(search.rooms?.every(r => r.resource.kind === 'workplace' && r.resource.parentId === '179669' && r.resource.capacity === null)).toBe(true);
+    expect(search.output.resources).toEqual(expect.arrayContaining([expect.objectContaining({ id: '180116', parentId: '179669', bookingUnit: 'one_workplace', capacity: null })]));
+    expect((await tools.run('anny_search_resources', { kind: 'meeting_room', capacity: 8 })).rooms).toHaveLength(5);
+    expect((await tools.run('anny_search_resources', { kind: 'lecture_hall' })).rooms).toEqual([]);
+    harness.calls.length = 0;
+    const ambiguous = await tools.run('anny_search_resources', { kind: 'workplace', capacity: 2 });
+    expect(ambiguous.output.clarificationRequired).toContain('einzelne Arbeitsplätze');
+    expect(harness.calls).toHaveLength(0);
+    await expect(tools.run('anny_get_availability', { resourceId: '179669', date: '2030-01-03', time: '09:00', durationMinutes: 60 })).rejects.toThrow(/zugänglichen Ressourcen/);
+    expect(harness.calls.map(c => c.path)).toEqual(['/api/resources']);
+  });
   it("rechecks a restored slot in Berlin time using a fresh bridge before proposing", async () => {
     const harness = createHarness();
     await login(harness.request, "student");

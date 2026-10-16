@@ -20,7 +20,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 2,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "190263",
@@ -36,7 +42,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 2,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "192942",
@@ -52,7 +64,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 2,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "190291",
@@ -68,7 +86,254 @@
         "89080",
         "89081"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 3,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
+    },
+    {
+      "id": "180116",
+      "name": "Amrum 1 (1J.2.34)",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "179669",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "180117",
+      "name": "Amrum 2 (1J.2.34)",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "179669",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190448",
+      "name": "Arbeitsplatz 1",
+      "description": "",
+      "capacity": null,
+      "location": "Expo Plaza 4",
+      "features": [
+        "Höhenverstellbarer Schreibtisch"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "190259",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190449",
+      "name": "Arbeitsplatz 1",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "180211",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "194960",
+      "name": "Arbeitsplatz 1",
+      "description": "",
+      "capacity": null,
+      "location": "Ahlem 4G",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "192942",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "194961",
+      "name": "Arbeitsplatz 2",
+      "description": "",
+      "capacity": null,
+      "location": "Ahlem 4G",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "192942",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190454",
+      "name": "Arbeitsplatz in 1J.1.02",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "180210",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190451",
+      "name": "Arbeitsplatz in 1J.1.26",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Kinderspielzeug",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "180207",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190455",
+      "name": "Arbeitsplatz in 1J.2.02",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "180189",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190456",
+      "name": "Arbeitsplatz in 1J.2.05",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "91271"
+      ],
+      "serviceId": "91271",
+      "kind": "workplace",
+      "parentId": "180187",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190452",
+      "name": "Arbeitsplatz in 1J.2.53",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "180205",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
     },
     {
       "id": "180224",
@@ -82,7 +347,13 @@
       "serviceIds": [
         "65625"
       ],
-      "serviceId": "65625"
+      "serviceId": "65625",
+      "kind": "meeting_room",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "6",
+      "categoryName": "Meetingraum",
+      "hasChildren": false
     },
     {
       "id": "180226",
@@ -97,7 +368,13 @@
       "serviceIds": [
         "65625"
       ],
-      "serviceId": "65625"
+      "serviceId": "65625",
+      "kind": "meeting_room",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "6",
+      "categoryName": "Meetingraum",
+      "hasChildren": false
     },
     {
       "id": "173420",
@@ -111,7 +388,13 @@
       "serviceIds": [
         "65625"
       ],
-      "serviceId": "65625"
+      "serviceId": "65625",
+      "kind": "meeting_room",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "6",
+      "categoryName": "Meetingraum",
+      "hasChildren": false
     },
     {
       "id": "180222",
@@ -123,7 +406,13 @@
       "serviceIds": [
         "65625"
       ],
-      "serviceId": "65625"
+      "serviceId": "65625",
+      "kind": "meeting_room",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "6",
+      "categoryName": "Meetingraum",
+      "hasChildren": false
     },
     {
       "id": "180207",
@@ -140,7 +429,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "190259",
@@ -155,7 +450,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "180211",
@@ -171,7 +472,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "180208",
@@ -187,7 +494,35 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
+    },
+    {
+      "id": "190450",
+      "name": "Flex-Büro \"Isaac Newton\" (1J.1.28)",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "180208",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
     },
     {
       "id": "180205",
@@ -203,7 +538,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "180210",
@@ -219,7 +560,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "180189",
@@ -235,7 +582,211 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
+    },
+    {
+      "id": "190292",
+      "name": "Flex-Platz 1",
+      "description": "",
+      "capacity": null,
+      "location": "3E, Kleefeld",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "89080",
+        "89081"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "190291",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190293",
+      "name": "Flex-Platz 2",
+      "description": "",
+      "capacity": null,
+      "location": "3E, Kleefeld",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "89080",
+        "89081"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "190291",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190294",
+      "name": "Flex-Platz 3",
+      "description": "",
+      "capacity": null,
+      "location": "3E, Kleefeld",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "89080",
+        "89081"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "190291",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "173424",
+      "name": "Föhr 1 (1J.2.27)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "173423",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "173425",
+      "name": "Föhr 2 (1J.2.27)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "173423",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190264",
+      "name": "KITE 1",
+      "description": "",
+      "capacity": null,
+      "location": "EP4",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "190263",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190265",
+      "name": "KITE 2",
+      "description": "",
+      "capacity": null,
+      "location": "EP4",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "190263",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190289",
+      "name": "Kleefeld 1",
+      "description": "",
+      "capacity": null,
+      "location": "Kleefeld 3E",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "190288",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "190290",
+      "name": "Kleefeld 2",
+      "description": "",
+      "capacity": null,
+      "location": "Kleefeld 3E",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "190288",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
     },
     {
       "id": "180187",
@@ -250,7 +801,13 @@
       "serviceIds": [
         "91271"
       ],
-      "serviceId": "91271"
+      "serviceId": "91271",
+      "kind": "office",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "180188",
@@ -265,7 +822,167 @@
       "serviceIds": [
         "91271"
       ],
-      "serviceId": "91271"
+      "serviceId": "91271",
+      "kind": "workplace",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "180118",
+      "name": "Langeoog 1 (1J.2.22)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "179671",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "180119",
+      "name": "Langeoog 2 (1J.2.22)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "179671",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "180120",
+      "name": "Norderney 1 (1J.2.35)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "179670",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "180121",
+      "name": "Norderney 2 (1J.2.35)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "179670",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "180122",
+      "name": "Pellworm 1 (1J.2.26)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "179673",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "180123",
+      "name": "Pellworm 2 (1J.2.26)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "179673",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "180124",
+      "name": "Pellworm 3 (1J.2.26)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "179673",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
     },
     {
       "id": "179669",
@@ -281,7 +998,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 2,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "173423",
@@ -297,7 +1020,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 2,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "179671",
@@ -313,7 +1042,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 2,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "179670",
@@ -329,7 +1064,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 2,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "179673",
@@ -345,7 +1086,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 3,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "179665",
@@ -361,7 +1108,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "office",
+      "parentId": null,
+      "quantity": 3,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": true
     },
     {
       "id": "179675",
@@ -377,7 +1130,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
     },
     {
       "id": "179676",
@@ -393,7 +1152,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
     },
     {
       "id": "179677",
@@ -409,7 +1174,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
     },
     {
       "id": "179663",
@@ -425,7 +1196,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
     },
     {
       "id": "179674",
@@ -441,7 +1218,13 @@
         "65624",
         "76878"
       ],
-      "serviceId": null
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
     },
     {
       "id": "173414",
@@ -455,7 +1238,79 @@
       "serviceIds": [
         "83057"
       ],
-      "serviceId": "83057"
+      "serviceId": "83057",
+      "kind": "meeting_room",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "6",
+      "categoryName": "Meetingraum",
+      "hasChildren": false
+    },
+    {
+      "id": "179666",
+      "name": "Sylt 1 (1J.2.24)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "179665",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "179668",
+      "name": "Sylt 3 (1J.2.24)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "179665",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
+    },
+    {
+      "id": "179667",
+      "name": "Sylt2 (1J.2.24)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null,
+      "kind": "workplace",
+      "parentId": "179665",
+      "quantity": 1,
+      "categoryId": "60",
+      "categoryName": "Flex Desk",
+      "hasChildren": false
     },
     {
       "id": "180223",
@@ -471,7 +1326,13 @@
       "serviceIds": [
         "83059"
       ],
-      "serviceId": "83059"
+      "serviceId": "83059",
+      "kind": "meeting_room",
+      "parentId": null,
+      "quantity": 1,
+      "categoryId": "6",
+      "categoryName": "Meetingraum",
+      "hasChildren": false
     }
   ],
   "services": [
