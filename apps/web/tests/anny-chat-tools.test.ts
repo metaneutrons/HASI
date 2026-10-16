@@ -1,45 +1,84 @@
-import { describe, expect, it } from "vitest";
+import { randomBytes, randomUUID } from "node:crypto";
+import { afterEach, describe, expect, it } from "vitest";
+import { MemoryJsonStore } from "@hasi/state";
+import { createDemoRuntime } from "@hasi/demo-runtime";
 import {
   createAnnyChatTools,
   availabilityInputForSlot,
   type AnnyChatToolResult,
 } from "../src/lib/anny-chat-tools";
-import {
-  createPublicDemoTransport,
-  PUBLIC_DEMO_STORAGE_KEY,
-  type PublicDemoStorage,
-} from "../src/lib/public-demo";
 import type { Booking, Resource, TimeInterval } from "../src/lib/types";
 
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
+type HarnessCall = { path: string; method: string; body?: unknown };
+const runtimes: Array<ReturnType<typeof createDemoRuntime>> = [];
+const origin = "http://127.0.0.1:3001";
 
-class MemoryStorage implements PublicDemoStorage {
-  values = new Map<string, string>();
+afterEach(async () => {
+  await Promise.all(runtimes.splice(0).map((runtime) => runtime.close()));
+});
 
-  getItem(key: string): string | null {
-    return this.values.get(key) ?? null;
-  }
-
-  setItem(key: string, value: string): void {
-    this.values.set(key, value);
-  }
-
-  removeItem(key: string): void {
-    this.values.delete(key);
+function recordSetCookie(jar: Map<string, string>, setCookie: string): void {
+  const [pair, ...attributes] = setCookie.split(";");
+  if (!pair) return;
+  const separator = pair.indexOf("=");
+  if (separator < 1) return;
+  const name = pair.slice(0, separator).trim();
+  const maxAge = attributes.find((attribute) => attribute.trim().toLowerCase().startsWith("max-age="));
+  if (maxAge && Number(maxAge.trim().slice("max-age=".length)) <= 0) {
+    jar.delete(name);
+  } else {
+    jar.set(name, pair.trim());
   }
 }
 
-function createHarness(startAt = "2030-01-01T10:30:00.000Z", storage = new MemoryStorage()) {
+function createHarness(startAt = "2030-01-01T10:30:00.000Z") {
   const currentTime = new Date(startAt);
-  const transport = createPublicDemoTransport({ storage, now: () => new Date(currentTime) });
-  const calls: Array<{ path: string; method: string }> = [];
-  const request: Request = <T>(path: string, init: RequestInit = {}) => {
-    calls.push({ path, method: (init.method ?? "GET").toUpperCase() });
-    return transport.request<T>(path, init);
+  const calls: HarnessCall[] = [];
+  const cookies = new Map<string, string>();
+  const transport: typeof fetch = async (input, init) => {
+    const request = new Request(input, init);
+    const headers = new Headers(request.headers);
+    headers.set("origin", origin);
+    if (cookies.size > 0) headers.set("cookie", [...cookies.values()].join("; "));
+    const routedRequest = new Request(request, { headers, redirect: "error" });
+    const url = new URL(routedRequest.url);
+    const response = url.pathname === "/mcp" || url.pathname.startsWith("/.well-known/")
+      ? await runtime.handlePlugin(routedRequest)
+      : url.pathname === "/api/v1" || url.pathname.startsWith("/api/v1/")
+        ? await runtime.handleMock(routedRequest)
+        : await runtime.handleCore(routedRequest);
+    for (const setCookie of response.headers.getSetCookie()) recordSetCookie(cookies, setCookie);
+    return response;
+  };
+  const runtime = createDemoRuntime({
+    origin,
+    store: new MemoryJsonStore(`web-chat-tools-${randomUUID()}`),
+    secret: randomBytes(32).toString("base64url"),
+    fetch: transport,
+  });
+  runtimes.push(runtime);
+  const request: Request = async <T>(path: string, init: RequestInit = {}) => {
+    const url = new URL(path, origin);
+    const headers = new Headers(init.headers);
+    if (init.body !== undefined && !headers.has("content-type")) headers.set("content-type", "application/json");
+    calls.push({
+      path: `${url.pathname}${url.search}`,
+      method: (init.method ?? "GET").toUpperCase(),
+      ...(typeof init.body === "string" ? { body: JSON.parse(init.body) as unknown } : {}),
+    });
+    const response = await transport(new Request(url, { ...init, headers }));
+    const payload = await response.json() as unknown;
+    if (!response.ok) {
+      const message = typeof payload === "object" && payload !== null && "error" in payload && typeof payload.error === "string"
+        ? payload.error
+        : `Request failed with status ${response.status}.`;
+      throw Object.assign(new Error(message), { status: response.status });
+    }
+    return payload as T;
   };
   return {
     calls,
-    storage,
     request,
     now: () => new Date(currentTime),
   };
@@ -112,10 +151,13 @@ describe("bounded Anny chat tools", () => {
 
     const after = await harness.request<{ bookings: Booking[] }>("/api/bookings");
     expect(after.bookings).toHaveLength(before.bookings.length);
-    const saved = JSON.parse(harness.storage.getItem(PUBLIC_DEMO_STORAGE_KEY) ?? "null") as {
-      proposals?: Array<{ status: string }>;
-    };
-    expect(saved.proposals?.at(-1)?.status).toBe("pending");
+    expect(proposalResult.proposal?.status).toBe("pending");
+    expect(harness.calls.find(({ path, method }) => path === "/api/proposals" && method === "POST")?.body).toEqual({
+      resourceId: "00000000-0000-4000-8000-000000000101",
+      serviceId: "00000000-0000-4000-8000-000000000201",
+      startDate: slot?.startDate,
+      endDate: slot?.endDate,
+    });
   });
 
   it("rejects unknown execution tools and strict-schema violations before any request", async () => {
@@ -191,10 +233,7 @@ describe("bounded Anny chat tools", () => {
     });
     expect(equivalent.proposal?.status).toBe("pending");
 
-    const saved = JSON.parse(harness.storage.getItem(PUBLIC_DEMO_STORAGE_KEY) ?? "null") as {
-      proposals?: Array<{ arguments: { startDate: string; endDate: string } }>;
-    };
-    expect(saved.proposals?.at(-1)?.arguments).toEqual({
+    expect(harness.calls.find(({ path, method }) => path === "/api/proposals" && method === "POST")?.body).toEqual({
       resourceId: "00000000-0000-4000-8000-000000000101",
       serviceId: "00000000-0000-4000-8000-000000000201",
       startDate: slot?.startDate,
@@ -205,6 +244,31 @@ describe("bounded Anny chat tools", () => {
   it("keeps unavailable intervals in model output but omits them from host cards", async () => {
     const harness = createHarness();
     await login(harness.request, "student");
+    const bookingTools = createAnnyChatTools(harness.request, { now: harness.now });
+    const bookingAvailability = await bookingTools.run("anny_get_availability", {
+      resourceId: "00000000-0000-4000-8000-000000000101",
+      date: "2030-01-03",
+      time: "08:00",
+      durationMinutes: 120,
+    });
+    const bookingSlot = outputIntervals(bookingAvailability).find((interval) => (
+      interval.available && interval.startDate === "2030-01-03T09:00:00.000Z"
+    ));
+    expect(bookingSlot).toBeDefined();
+    const prepared = await bookingTools.run("anny_propose_booking", {
+      resourceId: "00000000-0000-4000-8000-000000000101",
+      startDate: bookingSlot?.startDate,
+      endDate: bookingSlot?.endDate,
+    });
+    expect(prepared.proposal?.status).toBe("pending");
+    const proposalId = prepared.proposal?.id;
+    expect(proposalId).toBeDefined();
+    const confirmed = await harness.request<{ proposal: { status: string } }>(`/api/proposals/${proposalId}/confirm`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(confirmed.proposal.status).toBe("confirmed");
+
     const tools = createAnnyChatTools(harness.request, { now: harness.now });
 
     const result = await tools.run("anny_get_availability", {
@@ -267,7 +331,7 @@ describe("bounded Anny chat tools", () => {
 
     await expect(tools.run("anny_search_resources", {})).rejects.toMatchObject({
       status: 409,
-      message: "Das Demo-Plug-in ist deaktiviert.",
+      message: "Das Plugin ist deaktiviert.",
     });
   });
 });

@@ -4,11 +4,6 @@ export async function apiRequest<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  if (process.env.NEXT_PUBLIC_HASI_PUBLIC_DEMO === "1") {
-    const { requestPublicDemo } = await import("@/lib/public-demo");
-    return requestPublicDemo<T>(path, init);
-  }
-
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("content-type")) {
     headers.set("content-type", "application/json");

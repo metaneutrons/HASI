@@ -1,107 +1,158 @@
-# Public demonstration on Vercel
+# Server-backed public demo on Vercel
 
 Date: 2026-10-16. Repository: `metaneutrons/HASI`, public, GPL-3.0-only.
-Demonstration domain: `hasi.metaneutrons.cc`.
+Configured demonstration domain: `hasi.metaneutrons.cc`.
 
-## Two distinct execution modes
+The server-backed demo runtime is implemented in this branch, but no completed
+Preview or Production deployment qualification is recorded yet. The domain and
+configuration below describe the intended deployment contract; they do not
+confirm live behavior.
 
-The local reference prototype runs the core, signed MCP plugin, actual anny
-HTTP client and contract mock as separate processes. Its permissions and
-confirmation boundaries are enforced in the backend.
+## Runtime and data boundaries
 
-The public Vercel deployment builds the same UI with
-`NEXT_PUBLIC_HASI_PUBLIC_DEMO=1`. Its anny/session/admin API transport remains a
-browser-only simulation. The separate Next.js `/api/chat` endpoint uses AI SDK
-Core and the Groq adapter with a server-resolved `GROQ_API_KEY` Vercel Secret.
-The key is never sent to the browser or an integration plugin. This deployment
-does not proxy to localhost or connect to real HsH, anny, SSO or knowledge
-services. It does not deploy the core/MCP reference stack or prove institutional
-integration permissions.
+`pnpm dev` remains the local reference stack: Next.js UI, core API, signed MCP
+plugin and synthetic anny HTTP service run as separate processes. Their state is
+in memory and resets when they restart.
 
-The main interface is a conversation. Room search, availability, own bookings,
-proposals and confirmations render inline as tool result cards. The default
-profile is Groq GPT-OSS 120B, with GPT-OSS 20B and Qwen3.8 27B selectable for comparison. Qwen is labelled Preview and uses non-thinking mode; GPT-OSS uses low reasoning effort. Each
-assistant response records the resolved profile. An explicit offline selection
-retains the bounded German dialogue parser; provider errors never silently
-switch to it or another provider. General model answers are available, while
-IT/intranet source retrieval and source citations remain unavailable.
+The Vercel demo uses the same core API, signed MCP invocation, anny plugin,
+AnnyClient and synthetic HTTP service. Vercel co-locates the Node.js entry
+points in one deployment. Same-origin HTTP requests cross the core API,
+Streamable HTTP MCP endpoint and synthetic anny API in both modes.
 
-The server validates the complete wire message/tool sequence and executes one
-inference step. The browser performs at most four such steps per user turn,
-stopping once host-rendered availability, proposal or booking cards supply the
-answer and next action. It runs only the four typed anny read/prepare tools through the existing
-transport. Their data are synthetic and client-controlled in this mode. The
-browser sends messages and bounded tool outputs to GroqCloud, as stated in the
-UI. Client-side tool results/history are not authenticated institutional
-evidence. No model-callable booking execution or cancellation tool exists.
-Only the existing host-owned confirmation card calls the confirmation endpoint.
-Prepared intervals must match a previously observed available interval.
+```mermaid
+flowchart LR
+    UI[Browser UI] -->|same-origin HTTP| Core[HASI core API]
+    Core -->|signed MCP over HTTP| Plugin[anny plugin]
+    Plugin --> Client[AnnyClient]
+    Client -->|HTTP| Mock[Synthetic anny service]
+    Core -. sessions, proposals, registry, replay .-> DB[(Neon Postgres)]
+    Mock -. bookings and availability .-> DB
+```
 
-Demo accounts, proposals, bookings, chat workspaces and the plugin switch are stored only in
-the visitor's namespaced localStorage. Each test account has up to 20 chats with
-separate model context, drafts and tool state. The chat workspace is limited to
-2 MiB and 200 displayed messages per chat; storage failures are shown, and no
-whole chats are silently evicted. Only the context of the selected chat is sent
-for its inference; other chats can finish existing requests in the background.
-The account scope is a test-data namespace, not production authorization.
-Administrator selection is intentionally
-available to everyone and affects that browser's simulation. It grants no
-access to an institutional or shared administration system. Client-side
-validation is convenience, not an authentication or authorization boundary.
-Clearing site data resets the demonstration. Storage is bounded; blocked
-localStorage falls back to nonpersistent in-memory state. Restored chats do not
-resume interrupted calls or business actions. Multi-tab changes use last-write
-semantics and have no conflict-resolution or durable-booking guarantee.
+The demo runtime stores sessions, proposals, registry settings, invocation
+replay claims and synthetic anny state in Neon Postgres. Sessions, proposals,
+registry settings and synthetic service state are scoped to a server-issued
+browser workspace; replay claims use single-use invocation IDs. The workspace
+cookie contains a random ID, expiry and server HMAC; it is `HttpOnly`,
+`SameSite=Strict`, and `Secure` on HTTPS. Visitors cannot select or submit
+another workspace ID through the UI.
 
-Institutional knowledge answers, source connectors and production model data
-policy remain MVP work. Plugin updates are not performed in the browser; the demo says this
-explicitly. Independent MCP updates are verified by local integration tests.
+Records survive server restarts within their retention period. The store uses a
+seven-day default lifetime; sessions, proposals and replay claims have shorter
+explicit expiry where configured. The workspace cookie lasts seven days from
+issuance. After it expires, the next request receives a new workspace with
+synthetic defaults; old workspace data remains isolated and expires according
+to its record lifetime.
 
-## Deployment contract
+The student, employee and administrator personas are public selectable test
+fixtures inside each visitor's workspace. All three share that workspace's
+synthetic calendar. Selecting the administrator persona permits administration
+of that workspace's demo integration. Fixture roles and permissions establish
+no institutional identity or authority.
+
+Chat transcripts, drafts and profile preferences remain in the browser's
+versioned local storage. Each test persona has up to 20 saved chats, separate
+model context and tool state; a chat can display earlier synthetic results.
+Server APIs remain authoritative for sessions, proposals, plugin state and
+bookings. Browser chat history is not authenticated institutional evidence and
+is not copied to Postgres.
+
+The UI is built with `NEXT_PUBLIC_HASI_PUBLIC_DEMO=1`. Server handlers require
+`HASI_DEMO_MODE=1`, `DATABASE_URL` and a dedicated `HASI_DEMO_SECRET`. Groq
+inference continues through the server-side `/api/chat` route with
+`GROQ_API_KEY`; no credential is sent to the browser or plugin. An explicit
+offline profile retains the bounded German dialogue parser. Provider failures
+do not trigger a silent fallback. IT/intranet retrieval and institutional
+citations remain unavailable.
+
+Real SSO, institutional permissions, anny tenant and customer linking, full
+anny API coverage, third-party artifact isolation, cancellation and booking
+reconciliation remain open work. The synthetic demo provides no connection to
+HsH identity, anny tenant data or institutional knowledge services.
+
+## Chat and request limits
+
+The chat server validates the complete wire message/tool sequence and executes
+one inference step. The browser performs at most four steps per user turn and
+stops when host-rendered availability, proposal or booking cards supply the
+next action. Only typed anny read and proposal-preparation tools are model
+facing. A host-owned confirmation card performs the separately authorized
+booking execution. Prepared intervals must match a previously observed
+available interval.
+
+The default profile is Groq GPT-OSS 120B. GPT-OSS 20B and Qwen3.8 27B are also
+available; Qwen is labelled Preview and uses non-thinking mode, while GPT-OSS
+uses low reasoning effort. Each assistant response records the resolved
+profile. Messages and bounded tool results are sent to GroqCloud, as stated in
+the UI.
+
+The chat handler allows a maximum 30-second invocation, a shared 20-second
+generation deadline, 1,536 output tokens per generation, a 60,000-byte request
+body, 30,000 message-content characters and four validated tool calls per
+inference step. Native HTTP 400 `tool_use_failed` permits one regeneration with
+the same selected profile, lower temperature and a fixed schema reminder.
+Failed generated content is discarded. Other errors, including
+transport/auth/quota failures, have no automatic retry, and business actions
+are never retried. One admitted HTTP request can make at most two provider
+calls within the same deadline. Failed generations may count toward provider
+usage; this is not monetary accounting.
+
+The chat route uses Vercel Firewall rule `hasi-chat`, configured for 60
+inference requests per 600-second fixed window. It uses a server-owned shared
+rate-limit key and pins the WAF callback host to `hasi.metaneutrons.cc`.
+Preview's WAF check uses that public project callback. It does not use the
+Vercel automation bypass credential. Missing or failed limiter checks fail
+closed before inference. Local execution has no distributed WAF. The counter
+is regional, not an atomic worldwide token or currency budget. Input, output
+and request caps bound prototype throughput; provider quotas remain separate.
+Durable per-user/day accounting and a hard monetary ceiling remain necessary
+before an institutional pilot.
+
+Diagnostics log only host-owned failure categories, HTTP status, allowlisted
+provider codes, known tool names and schema issue codes or field names. They do
+not log provider error payloads, argument values, messages, headers, prompts or
+credentials. Interrupted generations receive a neutral history entry before
+the next user message. Completed tool results remain visible; no action resumes
+automatically.
+
+## Vercel configuration
 
 - Vercel project `hasi`, team `metaneutrons`, root directory `apps/web`.
-- Node.js 24.x; version-pinned pnpm 12.11.2 installation and build commands
-  reside in `apps/web/vercel.json`.
-- Set the public-demo flag to `1` in Preview and Production before building.
-  Changing a `NEXT_PUBLIC_` value requires a rebuild.
+- Node.js 24.x, `fra1`, and version-pinned pnpm 12.11.2 install/build commands
+  are configured in `apps/web/vercel.json`.
+- Set `NEXT_PUBLIC_HASI_PUBLIC_DEMO=1` for both Preview and Production builds.
+  Changing this public flag requires a rebuild.
+- Set `HASI_DEMO_MODE=1`, `DATABASE_URL` and a separately provisioned
+  `HASI_DEMO_SECRET` for both Preview and Production. The secret must encode 32
+  random bytes as 43 base64url characters. Keep it server-side.
 - Set `GROQ_API_KEY` as a server-side Vercel Secret in the required environments.
-  GET `/api/chat` reports configuration presence and approved profiles only;
-  a successful inference is a separate runtime check.
-- `apps/web/vercel.json` pins functions to `fra1`. The chat handler permits a
-  maximum 30-second invocation, with a shared 20-second generation deadline,
-  1,536 output tokens per generation, a 60,000-byte request body, 30,000 message-content
-  characters and four validated tool calls per inference step.
-- Native HTTP 400 `tool_use_failed` permits exactly one regeneration using the
-  same selected profile, lower temperature and a fixed schema reminder. Failed
-  generated content is discarded, never replayed or executed. Other errors,
-  including transport/auth/quota failures, have no automatic retry. No business
-  action is retried. Thus one admitted HTTP request can make at most two provider
-  calls within the same deadline; the regional limit can admit at most 120
-  generation attempts per 600-second window. Failed generations may also count
-  toward provider usage. This is not monetary accounting.
-- Vercel WAF rule `hasi-chat` allows 60 inference requests per 600-second fixed
-  window. The SDK uses a server-owned shared key and a pinned callback host
-  `hasi.metaneutrons.cc`; Preview checks use the same public project firewall
-  without creating a deployment-protection bypass. Missing/failed limiter
-  checks fail closed before inference. Local execution has no distributed WAF.
-- The WAF counter is regional, not an atomic worldwide token or currency
-  budget. Input/output and request caps bound prototype throughput; provider
-  quotas remain separate. Durable per-user/day accounting and a hard monetary
-  ceiling require further infrastructure before an institutional pilot.
-- Provider HTTP 429 responses produce a distinct quota notice. Diagnostics log
-  only host-owned failure categories, HTTP status, allowlisted provider codes,
-  known tool names and schema issue codes/field names. They never log provider error
-  payloads, argument values, messages, headers, prompts or credentials. Interrupted
-  generations receive a neutral history entry before the next user message;
-  completed tool results remain available and no action resumes automatically.
+  `GET /api/chat` reports configuration presence and approved profiles; a
+  successful inference is a separate runtime check.
+- Production self-requests use the pinned origin `https://hasi.metaneutrons.cc`
+  and the `production:v1` database namespace. Preview uses its Vercel deployment
+  URL as origin and a `preview:<commit SHA>` namespace, with the deployment URL
+  as a fallback when a commit SHA is unavailable.
+- When Preview deployment protection requires a server self-request bypass,
+  `VERCEL_AUTOMATION_BYPASS_SECRET` is added by the internal, origin-pinned
+  core-to-MCP-to-mock HTTP transport only. It cannot be set by a caller, and it
+  is not used for the WAF callback. Production does not use this Preview bypass.
+- App API and MCP routes use Node.js runtime functions with a 60-second maximum;
+  `/api/chat` uses a 30-second maximum.
 - Local Vercel metadata, environment files and private research are ignored by
-  Git. `.vercelignore` also excludes research/documents and test/build artifacts
-  from CLI deployment uploads.
-- DNS is a DNS-only CNAME to the project target returned by Vercel. Preserve
-  other records in the zone. TLS is managed by Vercel.
-- The site advertises `noindex` and disallows crawlers in `robots.txt` because
-  its campus information and bookings are synthetic.
+  Git. `.vercelignore` excludes research/documents and test/build artifacts from
+  CLI deployment uploads.
+- The DNS record is a DNS-only CNAME to the Vercel project target. Preserve
+  other zone records. Vercel manages TLS.
+- The site advertises `noindex` and disallows crawlers because its campus
+  information and bookings are synthetic.
 
-Rollback uses a previously verified Vercel deployment; no external booking or
-database state needs migration for the simulated anny state. Future real backend
-hosting and identity integration require a separate deployment design.
+For local server-backed demo mode, configure `NEXT_PUBLIC_HASI_PUBLIC_DEMO=1`,
+`HASI_DEMO_MODE=1`, `HASI_DEMO_ORIGIN=http://127.0.0.1:3001`, `DATABASE_URL` and
+`HASI_DEMO_SECRET` in `apps/web/.env.local`, then run
+`pnpm --filter @hasi/web dev`. This runs the co-located server runtime against a
+local PostgreSQL database. It is separate from `pnpm dev`, which continues to
+start the multi-process in-memory reference stack.
+
+Deployment and live qualification, including the acceptance checks in
+[`server-demo-parity.md`](../plans/server-demo-parity.md), remain outstanding.
+No production or preview readiness claim is made here.

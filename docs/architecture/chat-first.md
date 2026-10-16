@@ -21,10 +21,11 @@ The administrative surface remains separate.
 The chat now supports real GroqCloud inference through the server-side
 `/api/chat` endpoint and interchangeable approved profiles. Only the server
 resolves credentials. Typed anny read/prepare calls are returned to the host;
-the host executes them through the existing API transport and renders tool cards.
-In local reference mode that transport reaches the core/MCP/plugin/anny mock;
-in public-demo mode it reaches the browser simulation. No execution tool is
-exposed to the model. Exact proposals require the host confirmation button.
+the host sends them through the core API, which invokes the signed MCP plugin,
+AnnyClient and synthetic HTTP service. Local development runs these components
+as separate processes. Vercel co-locates their Node.js entry points and keeps
+the same HTTP boundaries. The model receives no execution tool. Exact proposals
+require the host confirmation button.
 
 `chat-demo.ts` remains a deterministic, bounded German parser available only
 through an explicit offline selection. There is no silent offline/provider
@@ -38,27 +39,34 @@ does not unmount their runtimes: replies finish in their originating conversatio
 and another chat can run independently. Changing accounts or leaving the route
 unmounts the runtimes and aborts pending model requests.
 
-A versioned, size-limited local store restores chats across navigation and reload.
-Chats can be renamed or deleted; deleting a chat does not cancel a booking.
-In-flight chats cannot be deleted. A reload never resumes requests or executes
-actions automatically; interrupted requests are marked. Restored availability
-cards are checked again before preparing a proposal, and confirmation remains
-an explicit action bound to that proposal. These browser-local histories are
-synthetic prototype state, not protected server-side user records. Device sync,
-multi-tab conflict resolution and durable institutional conversation storage
-remain work for the backend.
+A versioned, size-limited browser store restores chats across navigation and
+reload in both local and public-demo modes. Chats can be renamed or deleted;
+deleting a chat does not cancel a booking. In-flight chats cannot be deleted. A
+reload never resumes requests or executes actions automatically; interrupted
+requests are marked. Restored availability cards are checked again before
+preparing a proposal, and confirmation remains an explicit action bound to that
+proposal. Chat histories remain local browser data. In the Vercel demo,
+server-issued workspace cookies isolate public selectable personas, while
+Neon Postgres stores synthetic sessions, proposals, plugin settings, replay
+claims and bookings. Workspace cookies expire after seven days; a later visit
+receives a new workspace with synthetic defaults. Local `pnpm dev` keeps backend
+state in memory. Neither mode supplies institutional identity or protected
+conversation storage.
 
 ## Production continuation
 
-Move production tool orchestration and conversation storage into the application
-API, retaining the provider interface and explicit model profiles. The current
-client loop is limited to the prototype's synthetic data. Models propose calls
-to registered tools; the core retains identity, authorization and execution policy. Neither a model
-nor plugin-supplied prose can create or bypass confirmation. Tool cards use
-host-owned, typed renderers rather than arbitrary plugin HTML or scripts.
+For institutional production, retain the provider interface and explicit model
+profiles while adding real identity, source authorization and approved service
+connections. The current server-backed demo uses synthetic identities and data.
+Models propose calls to registered tools; the core retains identity,
+authorization and execution policy. Neither a model nor plugin-supplied prose
+can create or bypass confirmation. Tool cards use host-owned, typed renderers
+rather than arbitrary plugin HTML or scripts.
 
 IT/intranet search will use the same transcript, returning citations and only
-content authorized for the current user. Model selection and evaluations must
-compare both conversational quality and correct tool use. The browser demo is
-not evidence that retrieval, model isolation or production prompt-injection
+content authorized for the current user. Real SSO, anny tenant/account linking,
+full API coverage, third-party artifact isolation, cancellation and booking
+reconciliation remain open. Model selection and evaluations must compare both
+conversational quality and correct tool use. The demo is not evidence that
+institutional retrieval, real permissions or production prompt-injection
 defences are implemented.

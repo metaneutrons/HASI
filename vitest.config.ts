@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig({
   resolve: {
     alias: Object.fromEntries(([
+      ['@', './apps/web/src'],
+      ['@hasi/demo-runtime', './packages/demo-runtime/src/index.ts'],
+      ['@hasi/api', './apps/api/src/index.ts'],
+      ['@hasi/state', './packages/state/src/index.ts'],
       ['@hasi/plugin-sdk', './packages/plugin-sdk/src/index.ts'],
       ['@hasi/anny-client', './packages/anny-client/src/index.ts'],
       ['@hasi/anny-plugin', './apps/anny-plugin/src/index.ts'],

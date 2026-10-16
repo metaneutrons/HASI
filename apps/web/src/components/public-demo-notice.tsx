@@ -4,7 +4,7 @@ export function PublicDemoNotice() {
   return (
     <aside className="public-demo-notice" role="note">
       <strong>Öffentlicher Prototyp.</strong>{" "}
-      Chat über GroqCloud. anny nutzt Testdaten; Buchungen und Einstellungen bleiben in diesem Browser. Keine Verbindung zu HsH oder zum echten anny-System.
+      Chat über GroqCloud. Anmeldung und anny nutzen Testdaten. Buchungen und Einstellungen werden serverseitig in deinem Testbereich gespeichert. Keine Verbindung zu HsH oder zum echten anny-System.
       {" "}<a href="https://github.com/metaneutrons/HASI" target="_blank" rel="noreferrer">Quellcode · GPLv3</a>
     </aside>
   );

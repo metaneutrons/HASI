@@ -3,6 +3,12 @@ import type { ActorContext } from '@hasi/plugin-sdk';
 import { RequestError } from './registry.js';
 
 export interface Persona { id: string; displayName: string; role: 'student' | 'employee' | 'admin'; actor: ActorContext }
+export interface IdentityProvider {
+  login(id: string): { token: string; user: Persona } | Promise<{ token: string; user: Persona }>;
+  resolve(token: string | undefined): Persona | undefined | Promise<Persona | undefined>;
+  logout(token: string | undefined): void | Promise<void>;
+}
+
 const resource = (suffix: number) => `00000000-0000-4000-8000-000000000${String(suffix)}`;
 export const personas: Persona[] = [
   { id: 'student', displayName: 'Lea · Studentin', role: 'student', actor: { subject: 'fixture-student', customerId: resource(301), resourceIds: [resource(101), resource(102)], permissions: ['rooms:read', 'rooms:prepare', 'rooms:execute'] } },

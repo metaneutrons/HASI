@@ -1,4 +1,4 @@
-# Independent plugins and the local prototype
+# Independent plugins and the server-backed demo
 
 Date: 2026-10-16. This design replaces the earlier suggestion to start with
 in-process integration packages. Independently deployed and updated plugins
@@ -21,19 +21,35 @@ core process. The core API depends on the SDK and wire contract, not the anny
 plugin implementation. The development launcher wires the included example
 deployment; it is not a plugin marketplace or production installer.
 
+The Vercel demo co-locates Node.js API and MCP entry points in one deployment
+while preserving the same HTTP path: core API, signed MCP, anny plugin,
+AnnyClient and synthetic anny service. It stores demo sessions, proposals,
+plugin registry state, replay claims and synthetic bookings in Neon Postgres.
+Sessions, proposals, registry state and bookings are workspace-scoped; the
+browser's chat history remains in local storage.
+
+`pnpm dev` remains the separate-process, in-memory reference mode.
+Workspace cookies expire after seven days; a later visit receives a new
+workspace with synthetic defaults.
+
 ## Mock identity
 
 Three synthetic personas model student, employee and administrator access.
-The server resolves an opaque HttpOnly session cookie to an internal actor,
-resource grants and anny customer mapping. Browser requests cannot supply a
-customer ID or actor grants. These fixtures make no claim about real HsH roles
-or released SSO attributes. The identity adapter may later consume verified
-institutional claims while preserving the internal actor contract.
+In local mode, the server resolves an opaque HttpOnly session cookie to an
+internal actor, resource grants and anny customer mapping. In the Vercel demo,
+`DurableDemoIdentity` stores sessions by token hash and resolves them within a
+server-issued, HMAC-signed workspace cookie. Each visitor has isolated
+synthetic state, and all fixture personas are intentionally selectable there.
+Administrator access affects only that visitor's demo workspace. These fixtures
+make no claim about real HsH roles, institutional identity or SSO attributes.
+Institutional deployments must use verified identity and permission mappings,
+not the demo identity provider.
 
-Mock login is available only in explicit development/test mode, bound to
-loopback, with same-origin checks on mutations. Production startup must fail
-with mock identity enabled. This does not simulate SAML/OIDC redirects or prove
-that a future real SSO deployment is correct.
+The local `MockIdentityProvider` is available only in explicit development or
+test mode, bound to loopback, with same-origin checks on mutations. The public
+demo has a separate server-backed fixture identity with a public persona
+selector. Neither mode simulates SAML/OIDC redirects or proves that a future
+real SSO deployment is correct.
 
 ## Plugin contract
 
@@ -73,9 +89,10 @@ HTTPS alone does not establish an authorized destination.
 Production distribution should use independently versioned packages/container
 artifacts with publisher provenance, pinned digests, preflight compatibility
 checks, staged activation and an available previous artifact for rollback.
-Persistent installation state, artifact delivery/signature verification,
-multi-instance rollout and database migrations are separate implementation
-work; the local registry and proposals currently live in memory.
+The Vercel demo persists approved registry state and proposals in workspace-
+scoped Postgres; local `pnpm dev` keeps registry and proposal state in memory.
+Artifact delivery/signature verification, multi-instance rollout and database
+migrations remain production work.
 
 Third-party code still needs a publisher/review policy and OS/container,
 filesystem, credential, network and resource isolation. A process boundary
@@ -119,8 +136,10 @@ by backend permissions regardless of navigation visibility.
 
 ## Qualification criteria
 
-- **P1:** Mock sessions resolve server-owned identities; forged/missing sessions,
-  wrong-origin mutations and production mock startup are rejected.
+- **P1:** Local mock sessions and public-demo fixture sessions resolve
+  server-owned identities; forged/missing sessions, foreign workspaces,
+  wrong-origin mutations and institutional production use of demo identity are
+  rejected.
 - **P2:** A valid signed invocation succeeds; forged, expired, mismatched or
   replayed execution capabilities fail before the handler.
 - **P3:** The same anny client performs real HTTP against the contract mock;
@@ -128,7 +147,8 @@ by backend permissions regardless of navigation visibility.
 - **P4:** Cross-user confirmation and changed arguments fail; repeated exact
   confirmations cannot create duplicate mock bookings.
 - **P5:** A compatible plugin update changes the active plugin independently of
-  the host, while expanded permissions/incompatible contracts are blocked.
+  the host and persists across server instances, while expanded
+  permissions/incompatible contracts are blocked.
 - **P6:** User/admin views work at 375 px and desktop width in light and dark
   modes without horizontal page overflow. Native phone/keyboard testing remains
   required before mobile production acceptance.

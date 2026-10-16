@@ -62,7 +62,7 @@ describe('prototype identity, plugin and external API boundaries', () => {
       expect(replay.json<{ proposal: { status: string } }>().proposal.status).toBe('confirmed');
       const bookings = await client.listBookings('00000000-0000-4000-8000-000000000301');
       expect(bookings.filter(booking => booking.resourceId === args.resourceId && booking.startDate === args.startDate)).toHaveLength(1);
-      registry.setEnabled(annyManifest.id, false);
+      await registry.setEnabled(annyManifest.id, false);
       expect((await api.inject({ url: '/api/resources', headers: { ...headers, cookie: student } })).statusCode).toBe(409);
       expect(MOCK_IDS).toBeDefined();
     } finally { await api.close(); await plugin.close(); await mock.close(); }
