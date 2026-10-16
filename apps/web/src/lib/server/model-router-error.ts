@@ -1,3 +1,5 @@
+import type { GroqErrorDiagnostics } from "./groq-error-diagnostics";
+
 export type ModelRouterErrorCode =
   | "invalid_request"
   | "profile_not_approved"
@@ -7,7 +9,7 @@ export type ModelRouterErrorCode =
   | "invalid_model_response";
 
 export class ModelRouterError extends Error {
-  constructor(readonly code: ModelRouterErrorCode, message: string, readonly providerStatus?: number) {
+  constructor(readonly code: ModelRouterErrorCode, message: string, readonly providerStatus?: number, readonly diagnostics?: GroqErrorDiagnostics) {
     super(message);
     this.name = "ModelRouterError";
   }
