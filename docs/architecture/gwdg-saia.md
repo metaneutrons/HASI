@@ -15,14 +15,25 @@ limited to:
 
 | Profile | SAIA model ID | Tool calling |
 | --- | --- | --- |
-| GWDG SAIA · GPT-OSS 120B | `openai-gpt-oss-120b` | Listed as verified by GWDG |
 | GWDG SAIA · Qwen3 30B A3B Instruct 2507 | `qwen3-30b-a3b-instruct-2507` | Listed as verified by GWDG |
+
+HASI currently exposes only the Qwen profile. A protected Preview check on
+2026-10-16 passed short text generation, a `knowledge_search` tool call with a
+cited answer, and an `anny_search_resources` room search. Initial GPT-OSS 120B
+probes returned upstream HTTP 500, including a short text request, so HASI
+defers that model despite GWDG listing it as tool-calling verified. The upstream
+cause is not established; add the profile only after successful runtime
+qualification.
 
 The adapter calls the OpenAI-compatible Chat Completions API through AI SDK's
 OpenAI-compatible provider and uses the same HASI tool schemas and reply
 validation as Groq. It adds no GWDG-specific options, retries or automatic
 fallback. GWDG's published model list changes over time; new model profiles
 require an explicit code and evaluation change.
+
+Generation deadlines are 45 seconds for GWDG and 20 seconds for Groq and custom
+connections. The server route's invocation limit must exceed the selected
+provider's deadline.
 
 To add the key to a new Vercel deployment, use interactive secret entry. Do not
 put the value in the command, shell history, repository or client environment:

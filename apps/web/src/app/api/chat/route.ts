@@ -5,7 +5,7 @@ import { getDemoRuntime } from "@/lib/server/demo-runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export function GET() {
   return Response.json(listModelProfiles(), { headers: { "cache-control": "private, no-store" } });

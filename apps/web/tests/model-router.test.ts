@@ -127,13 +127,6 @@ describe("model router", () => {
           configured: true,
         },
         {
-          id: "gwdg-oss-120b",
-          label: "GWDG SAIA · GPT-OSS 120B",
-          modelId: "openai-gpt-oss-120b",
-          provider: "gwdg",
-          configured: false,
-        },
-        {
           id: "gwdg-qwen3-30b",
           label: "GWDG SAIA · Qwen3 30B A3B Instruct 2507",
           modelId: "qwen3-30b-a3b-instruct-2507",
@@ -166,13 +159,13 @@ describe("model router", () => {
     expect(fetchCalled).toBe(false);
   });
 
-  it.each(["gwdg-oss-120b", "gwdg-qwen3-30b"] as const)("rejects a missing GWDG key for %s without borrowing Groq credentials", async (profileId) => {
+  it("rejects a missing GWDG key without borrowing Groq credentials", async () => {
     let fetchCalled = false;
     const fetch: typeof globalThis.fetch = async () => {
       fetchCalled = true;
       throw new Error("Network should not be called.");
     };
-    await expectRouterError(runModelStep(request(profileId), { env: { GROQ_API_KEY: FAKE_KEY }, fetch, now: NOW }), "missing_credentials");
+    await expectRouterError(runModelStep(request("gwdg-qwen3-30b"), { env: { GROQ_API_KEY: FAKE_KEY }, fetch, now: NOW }), "missing_credentials");
     expect(fetchCalled).toBe(false);
   });
 
@@ -326,9 +319,9 @@ describe("model router", () => {
     expect(reply.profile.id).toBe("groq-qwen-3.8-27b");
   });
 
-  it("uses the GWDG key and fixed SAIA endpoint without Groq request options", async () => {
+  it("uses the GWDG Qwen key and fixed SAIA endpoint without Groq request options", async () => {
     const provider = fakeProvider(completion({ content: "Antwort von SAIA." }));
-    const reply = await runModelStep(request("gwdg-oss-120b"), {
+    const reply = await runModelStep(request("gwdg-qwen3-30b"), {
       env: { GWDG_API_KEY: GWDG_FAKE_KEY },
       fetch: provider.fetch,
       now: NOW,
@@ -341,16 +334,16 @@ describe("model router", () => {
     expect(headers.get("authorization")).toBe(`Bearer ${GWDG_FAKE_KEY}`);
     expect(headers.get("authorization")).not.toContain(FAKE_KEY);
     const body = JSON.parse(String(provider.calls[0]?.init?.body));
-    expect(body.model).toBe("openai-gpt-oss-120b");
+    expect(body.model).toBe("qwen3-30b-a3b-instruct-2507");
     expect(body.reasoning_effort).toBeUndefined();
     expect(body.parallel_tool_calls).toBeUndefined();
-    expect(reply.profile).toMatchObject({ id: "gwdg-oss-120b", provider: "gwdg" });
+    expect(reply.profile).toMatchObject({ id: "gwdg-qwen3-30b", provider: "gwdg" });
     expect(reply.message.content).toBe("Antwort von SAIA.");
   });
 
-  it.each(["gwdg-oss-120b", "gwdg-qwen3-30b"] as const)("keeps %s bound to its own credential when Groq is also configured", async (profileId) => {
+  it("keeps GWDG bound to its own credential when Groq is also configured", async () => {
     const provider = fakeProvider(completion({ content: "GWDG only." }));
-    await runModelStep(request(profileId), {
+    await runModelStep(request("gwdg-qwen3-30b"), {
       env: { GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY },
       fetch: provider.fetch,
       now: NOW,
@@ -374,7 +367,7 @@ describe("model router", () => {
       return (++count === 1 ? firstResponse : secondResponse).fetch(input, init);
     };
 
-    const initial = await runModelStep(request("gwdg-oss-120b"), { env: { GWDG_API_KEY: GWDG_FAKE_KEY }, fetch, now: NOW });
+    const initial = await runModelStep(request("gwdg-qwen3-30b"), { env: { GWDG_API_KEY: GWDG_FAKE_KEY }, fetch, now: NOW });
     expect(initial.message.toolCalls).toEqual([
       { id: "gwdg-knowledge-1", name: "knowledge_search", arguments: { query: "WLAN-Zugang Morgenstern-Lab" } },
       { id: "gwdg-anny-1", name: "anny_search_resources", arguments: { capacity: 4 } },
@@ -382,7 +375,7 @@ describe("model router", () => {
     const toolCalls = initial.message.toolCalls;
     if (!toolCalls) throw new Error("Expected GWDG tool calls.");
     const followUp = await runModelStep({
-      profileId: "gwdg-oss-120b",
+      profileId: "gwdg-qwen3-30b",
       messages: [
         { role: "user", content: "Suche Wissen und einen Raum." },
         initial.message,
@@ -417,7 +410,7 @@ describe("model router", () => {
 
     const privatePayload = `Authorization: Bearer ${GWDG_FAKE_KEY}; provider response payload`;
     const failure = fakeProvider({ error: { message: privatePayload } }, 500);
-    const httpError = await expectRouterError(runModelStep(request("gwdg-oss-120b"), {
+    const httpError = await expectRouterError(runModelStep(request("gwdg-qwen3-30b"), {
       env: { GWDG_API_KEY: GWDG_FAKE_KEY },
       fetch: failure.fetch,
       now: NOW,
@@ -433,7 +426,7 @@ describe("model router", () => {
       fetchCalled = true;
       throw new Error("Network should not be called.");
     };
-    for (const profileId of ["groq-oss-120b", "gwdg-oss-120b", "custom-default"] as const) {
+    for (const profileId of ["groq-oss-120b", "gwdg-qwen3-30b", "custom-default"] as const) {
       for (const override of [
         { credentialRef: "env:GROQ_API_KEY" },
         { endpoint: "https://attacker.example/v1" },
@@ -446,7 +439,7 @@ describe("model router", () => {
         } as unknown as ChatRequest, {
           env: {
             GWDG_API_KEY: GWDG_FAKE_KEY,
-          GROQ_API_KEY: FAKE_KEY,
+            GROQ_API_KEY: FAKE_KEY,
             CUSTOM_API_KEY: CUSTOM_FAKE_KEY,
             CUSTOM_ENDPOINT: "https://custom.example.test/v1",
             CUSTOM_MODEL_ID: "custom-model",

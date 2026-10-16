@@ -56,7 +56,10 @@ must also be present before the profile can send requests. Configure all three
 values in `apps/web/.env.local`; none belongs in a `NEXT_PUBLIC_` variable.
 The custom endpoint is pinned server-side and must support the chat-completions
 tool protocol used by HASI. Operators must qualify tool calls against their
-provider before enabling room workflows. See [GWDG SAIA and custom providers](docs/architecture/gwdg-saia.md).
+provider before enabling room workflows. The currently exposed GWDG profile is
+Qwen3 30B A3B Instruct 2507; protected Preview checks passed for a cited
+knowledge answer and anny room search. GPT-OSS 120B is deferred after upstream
+HTTP 500 responses. See [GWDG SAIA and custom providers](docs/architecture/gwdg-saia.md).
 
 Keep credentials private and never commit the file or expose them through a `NEXT_PUBLIC_` variable. The public UI sends messages and selected tool results to the chosen model provider. Do not enter personal, confidential or institutional data.
 

@@ -50,11 +50,15 @@ The custom connection uses `CUSTOM_ENDPOINT` and `CUSTOM_MODEL_ID` supplied by
 the operator in the server environment; it is shown only when the HTTPS
 endpoint and model ID validate. Its key is resolved through the same allowlisted
 secret resolver. No custom connection values are accepted from a chat request.
-The router allowlists Groq GPT-OSS 120B, 20B and Qwen3.8 27B Preview, GWDG
-`openai-gpt-oss-120b` and `qwen3-30b-a3b-instruct-2507`, and one custom model
-profile. Configured custom providers must be independently qualified for native
-tool calls before room workflows are enabled. Production data-policy approval
-and durable budgets remain required. HASI's router
+The router allowlists Groq GPT-OSS 120B, 20B and Qwen3.8 27B Preview, the GWDG
+`qwen3-30b-a3b-instruct-2507` profile, and one custom model profile. The GWDG
+GPT-OSS 120B profile is deferred after protected Preview probes returned
+upstream HTTP 500; its cause is not established. Qwen passed Preview checks for
+knowledge retrieval and anny room search on 2026-10-16. This runtime result
+does not establish Production qualification or approval for protected HsH data.
+Configured custom providers must be independently qualified for native tool
+calls before room workflows are enabled. Production data-policy approval and
+durable budgets remain required. HASI's router
 is a server-side application module; introducing an external routing service
 would require a separate trust and credential-storage decision.
 

@@ -4,7 +4,6 @@ export const MODEL_PROFILE_IDS = [
   "groq-oss-120b",
   "groq-oss-20b",
   "groq-qwen-3.8-27b",
-  "gwdg-oss-120b",
   "gwdg-qwen3-30b",
   "custom-default",
 ] as const;

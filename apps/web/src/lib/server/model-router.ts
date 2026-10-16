@@ -75,13 +75,6 @@ const MODEL_PROFILES: readonly ServerModelProfile[] = Object.freeze([
     reasoningEffort: "none",
   }),
   Object.freeze({
-    id: "gwdg-oss-120b",
-    label: "GWDG SAIA · GPT-OSS 120B",
-    modelId: "openai-gpt-oss-120b",
-    provider: "gwdg",
-    connection: GWDG_CONNECTION,
-  }),
-  Object.freeze({
     id: "gwdg-qwen3-30b",
     label: "GWDG SAIA · Qwen3 30B A3B Instruct 2507",
     modelId: "qwen3-30b-a3b-instruct-2507",
@@ -400,7 +393,7 @@ export async function runModelStep(
 
   const instructions = buildSystemPrompt(getNow(options.now));
   const messages = toModelMessages(request.messages);
-  const deadline = Date.now() + 20_000;
+  const deadline = Date.now() + (profile.provider === "gwdg" ? 45_000 : 20_000);
   const generate = (retry: boolean) => generateText({
     model,
     instructions: retry

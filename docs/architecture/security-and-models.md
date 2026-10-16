@@ -202,6 +202,11 @@ those references or endpoints.
 The [LLM router credential decision](llm-router-credentials.md) defines provider
 connections, administration visibility, deployment scopes, rotation and required
 implementation checks. This decision does not mark runtime integration complete.
+As of 2026-10-16, the GWDG Qwen profile passed protected Preview checks for
+knowledge retrieval and anny room search. GWDG GPT-OSS 120B is deferred after
+upstream HTTP 500 responses; this failure's cause is unestablished. Preview
+qualification does not approve protected HsH data or establish Production
+readiness.
 
 ## Reproducible evaluation
 
