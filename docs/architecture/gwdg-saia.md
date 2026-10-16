@@ -25,6 +25,12 @@ defers that model despite GWDG listing it as tool-calling verified. The upstream
 cause is not established; add the profile only after successful runtime
 qualification.
 
+The profile is labelled **Experimental**. A subsequent Production browser test
+answered a knowledge question without invoking `knowledge_search` and invented
+a citation identifier. Passing individual native-tool cases does not establish
+reliable tool selection or source grounding. Only validated retrieval results
+produce trusted source cards. See the [dated evaluation observations](../evaluation/gwdg-preview-2026-10-16.md).
+
 The adapter calls the OpenAI-compatible Chat Completions API through AI SDK's
 OpenAI-compatible provider and uses the same HASI tool schemas and reply
 validation as Groq. It adds no GWDG-specific options, retries or automatic

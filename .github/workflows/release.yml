@@ -1,0 +1,730 @@
+name: Container Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      qualification_only:
+        description: Build and verify native release payloads from main without creating a release or publishing to GHCR
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ inputs.qualification_only && format('container-release-qualification-{0}', github.sha) || 'container-release-production' }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/metaneutrons/hasi
+  RELEASE_APP_ACTOR: metaneutrons-release-please[bot]
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.metadata.outputs.artifact_label }}
+      version: ${{ steps.metadata.outputs.version }}
+      qualification_only: ${{ steps.metadata.outputs.qualification_only }}
+    steps:
+      - name: Check out the exact dispatched ref
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Run release gate tests
+        run: node --test scripts/release/*.test.mjs
+
+      - name: Validate root configuration and derive the requested artifact label
+        id: metadata
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          QUALIFICATION_ONLY: ${{ inputs.qualification_only }}
+        run: |
+          set -euo pipefail
+          node scripts/release/metadata.mjs config
+          if [ "$QUALIFICATION_ONLY" = "true" ]; then
+            node scripts/release/metadata.mjs qualification
+          else
+            node scripts/release/metadata.mjs tag "$RELEASE_TAG"
+          fi
+
+      - name: Verify the exact dispatched source is reachable from main
+        env:
+          QUALIFICATION_ONLY: ${{ inputs.qualification_only }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.artifact_label }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          checkout_sha="$(git rev-parse HEAD)"
+          test "$checkout_sha" = "$GITHUB_SHA"
+          if [ "$QUALIFICATION_ONLY" = "true" ]; then
+            test "$GITHUB_REF_TYPE" = "branch"
+            test "$GITHUB_REF_NAME" = "main"
+          else
+            test "$GITHUB_REF_TYPE" = "tag"
+            test "$GITHUB_REF_NAME" = "$RELEASE_TAG"
+            tag_sha="$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")"
+            test "$tag_sha" = "$GITHUB_SHA"
+          fi
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
+
+      - name: Require an App-authored draft for release tags
+        id: release
+        if: inputs.qualification_only != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.artifact_label }}
+          EXPECTED_RELEASE_ACTOR: ${{ env.RELEASE_APP_ACTOR }}
+        run: node scripts/release/release-state.mjs preflight
+
+
+  registry-preflight:
+    needs: preflight
+    if: needs.preflight.outputs.qualification_only == 'false'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_REPOSITORY: ghcr.io/metaneutrons/hasi
+      RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - name: Check out the validated stable tag
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Preflight stable GHCR authorization and immutable version tags
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release/registry-preflight.mjs
+
+  build-payloads:
+    needs: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+      RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+      ARCHITECTURE: ${{ matrix.architecture }}
+      LOCAL_IMAGE: ghcr.io/metaneutrons/hasi:${{ needs.preflight.outputs.version }}-${{ matrix.architecture }}
+    steps:
+      - name: Check out the qualified source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Enable the containerd image store for OCI archive loading
+        uses: docker/setup-docker-action@1a6edb0ba9ac496f6850236981f15d8f9a82254d # v5.0.0
+        with:
+          daemon-config: |-
+            {"features":{"containerd-snapshotter":true}}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Build a native OCI archive with provenance and SBOM
+        env:
+          REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          archive="release-assets/hasi-${RELEASE_TAG}-linux-${ARCHITECTURE}.oci.tar"
+          docker buildx build \
+            --platform "linux/${ARCHITECTURE}" \
+            --build-arg "VERSION=${RELEASE_VERSION}" \
+            --build-arg "REVISION=${REVISION}" \
+            --provenance=mode=max \
+            --sbom=generator=docker/buildkit-syft-scanner@sha256:ae4f3b554449e7e25548e7d8ccc029d17357348e30c6e3df01b92bc93654d6a9 \
+            --output "type=oci,dest=${archive},name=${LOCAL_IMAGE}" \
+            .
+          docker load --input "$archive"
+          docker image inspect "$LOCAL_IMAGE" > "$RUNNER_TEMP/image-inspect.json"
+          node scripts/release/verify-image-labels.mjs \
+            "$RUNNER_TEMP/image-inspect.json" \
+            "$RELEASE_VERSION" "$REVISION" "$ARCHITECTURE"
+          node scripts/release/verify-oci-archive.mjs "$archive" "$ARCHITECTURE"
+
+      - name: Start an isolated pinned PostgreSQL for the runtime smoke test
+        run: |
+          set -euo pipefail
+          docker network create hasi-release-smoke
+          docker run --detach \
+            --name hasi-release-postgres \
+            --network hasi-release-smoke \
+            --network-alias postgres \
+            --health-cmd 'pg_isready -U postgres -d hasi' \
+            --health-interval 2s \
+            --health-timeout 2s \
+            --health-retries 60 \
+            --health-start-period 5s \
+            --env POSTGRES_PASSWORD=release-smoke-only \
+            --env POSTGRES_DB=hasi \
+            'postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2'
+          ready=0
+          for ((attempt = 1; attempt <= 60; attempt += 1)); do
+            status="$(docker inspect --format '{{.State.Health.Status}}' hasi-release-postgres)"
+            if [ "$status" = "healthy" ]; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            docker logs hasi-release-postgres
+            exit 1
+          fi
+
+      - name: Run the application container and end-to-end smoke checks
+        env:
+          HASI_DEMO_SECRET: release-smoke-only-not-a-credential-123456789
+        run: |
+          set -euo pipefail
+          docker run --detach \
+            --name hasi-release-app \
+            --network hasi-release-smoke \
+            --publish 127.0.0.1:3000:3000 \
+            --env HASI_DEMO_MODE=1 \
+            --env HASI_DEMO_SECRET="$HASI_DEMO_SECRET" \
+            --env HASI_DEMO_ORIGIN=http://127.0.0.1:3000 \
+            --env DATABASE_URL=postgresql://postgres:release-smoke-only@postgres:5432/hasi \
+            "$LOCAL_IMAGE"
+          node scripts/release/runtime-readiness.mjs http://127.0.0.1:3000/api/session
+          node scripts/container-smoke.mjs
+
+      - name: Generate the SPDX release asset
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ env.LOCAL_IMAGE }}
+          format: spdx-json
+          output-file: release-assets/hasi-${{ env.RELEASE_TAG }}-linux-${{ env.ARCHITECTURE }}.oci.tar.spdx.json
+          syft-version: v1.54.1
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Install pinned cosign
+        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+        with:
+          cosign-release: v2.6.0
+
+      - name: Sign the exact OCI archive with GitHub's keyless identity
+        run: |
+          set -euo pipefail
+          archive="release-assets/hasi-${RELEASE_TAG}-linux-${ARCHITECTURE}.oci.tar"
+          cosign sign-blob --yes \
+            --bundle "${archive}.sigstore.json" \
+            "$archive"
+
+      - name: Attest the exact OCI archive with GitHub provenance
+        uses: actions/attest-build-provenance@e4d4f7c39adfa4c260fb5c147f0622000aa14b99 # v4.0.0
+        with:
+          subject-path: release-assets/hasi-${{ env.RELEASE_TAG }}-linux-${{ env.ARCHITECTURE }}.oci.tar
+          predicate-type: https://slsa.dev/provenance/v1
+
+      - name: Verify the qualified archive signature and provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          archive="release-assets/hasi-${RELEASE_TAG}-linux-${ARCHITECTURE}.oci.tar"
+          cosign verify-blob \
+            --bundle "${archive}.sigstore.json" \
+            --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@${GITHUB_REF}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "$archive"
+          gh attestation verify "$archive" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+            --source-ref "$GITHUB_REF"
+
+      - name: Upload the architecture payload for exact release assembly
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: release-payload-${{ matrix.architecture }}
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-assets:
+    needs:
+      - preflight
+      - registry-preflight
+      - build-payloads
+    if: needs.preflight.outputs.qualification_only == 'false'
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+      attestations: read
+    outputs:
+      release_id: ${{ steps.release-draft.outputs.release_id }}
+    env:
+      RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+      RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+      EXPECTED_RELEASE_ACTOR: metaneutrons-release-please[bot]
+    steps:
+      - name: Check out the verified source scripts
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Download both native payloads
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          pattern: release-payload-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Create the exact asset checksum inventory
+        run: node scripts/release/assets.mjs create release-assets "$RELEASE_TAG"
+
+      - name: Install pinned cosign
+        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+        with:
+          cosign-release: v2.6.0
+
+      - name: Verify archive signatures and GitHub provenance before upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for architecture in amd64 arm64; do
+            archive="release-assets/hasi-${RELEASE_TAG}-linux-${architecture}.oci.tar"
+            cosign verify-blob \
+              --bundle "${archive}.sigstore.json" \
+              --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@${GITHUB_REF}" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              "$archive"
+            gh attestation verify "$archive" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+              --source-ref "$GITHUB_REF"
+          done
+
+      - name: Mint a repository-scoped release App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_PLEASE_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+
+      - name: Revalidate the original Release Please draft
+        id: release-draft
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/release/release-state.mjs require-draft
+
+      - name: Upload exact assets without clobbering existing files
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: gh release upload "$RELEASE_TAG" release-assets/* --repo "$GITHUB_REPOSITORY"
+
+      - name: Read back and verify every release asset
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_ID: ${{ steps.release-draft.outputs.release_id }}
+        run: |
+          set -euo pipefail
+          mkdir readback-assets
+          gh release download "$RELEASE_TAG" --dir readback-assets --repo "$GITHUB_REPOSITORY"
+          node scripts/release/assets.mjs verify readback-assets "$RELEASE_TAG"
+          node scripts/release/assets.mjs compare release-assets "$RELEASE_TAG" readback-assets
+          node scripts/release/release-state.mjs verify-assets
+
+      - name: Verify the downloaded archive signatures and GitHub provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for architecture in amd64 arm64; do
+            archive="readback-assets/hasi-${RELEASE_TAG}-linux-${architecture}.oci.tar"
+            cosign verify-blob \
+              --bundle "${archive}.sigstore.json" \
+              --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@${GITHUB_REF}" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              "$archive"
+            gh attestation verify "$archive" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+              --source-ref "$GITHUB_REF"
+          done
+
+      - name: Publish the verified assets as a prerelease until image qualification completes
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_ID: ${{ steps.release-draft.outputs.release_id }}
+        run: node scripts/release/release-state.mjs publish-prerelease
+
+  publish-stable-image:
+    needs:
+      - preflight
+      - registry-preflight
+      - publish-assets
+    if: needs.preflight.outputs.qualification_only == 'false'
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+      RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+      REVISION: ${{ github.sha }}
+      IMAGE: ghcr.io/metaneutrons/hasi
+      EXPECTED_RELEASE_ACTOR: metaneutrons-release-please[bot]
+    outputs:
+      digest: ${{ steps.index.outputs.digest }}
+      amd64_digest: ${{ steps.archive-digests.outputs.archive_digest_amd64 }}
+      arm64_digest: ${{ steps.archive-digests.outputs.archive_digest_arm64 }}
+    steps:
+      - name: Check out release verification scripts
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Enable the containerd image store for OCI archive loading
+        uses: docker/setup-docker-action@1a6edb0ba9ac496f6850236981f15d8f9a82254d # v5.0.0
+        with:
+          daemon-config: |-
+            {"features":{"containerd-snapshotter":true}}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Install pinned cosign before signature verification
+        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+        with:
+          cosign-release: v2.6.0
+
+      - name: Download the exact draft assets and verify their inventory
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir release-assets
+          gh release download "$RELEASE_TAG" --dir release-assets --repo "$GITHUB_REPOSITORY"
+          node scripts/release/assets.mjs verify release-assets "$RELEASE_TAG"
+
+      - name: Extract and validate the qualified native image digests
+        id: archive-digests
+        run: |
+          set -euo pipefail
+          for architecture in amd64 arm64; do
+            archive="release-assets/hasi-${RELEASE_TAG}-linux-${architecture}.oci.tar"
+            node scripts/release/verify-oci-archive.mjs "$archive" "$architecture"
+          done
+
+      - name: Write the exact qualified platform digest map
+        env:
+          AMD64_DIGEST: ${{ steps.archive-digests.outputs.archive_digest_amd64 }}
+          ARM64_DIGEST: ${{ steps.archive-digests.outputs.archive_digest_arm64 }}
+        run: |
+          set -euo pipefail
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; const digests = { amd64: process.env.AMD64_DIGEST, arm64: process.env.ARM64_DIGEST }; if (!Object.values(digests).every((value) => /^sha256:[a-f0-9]{64}$/.test(value ?? ""))) throw new Error("qualified archive digests are incomplete"); writeFileSync(process.env.RUNNER_TEMP + "/platform-digests.json", JSON.stringify(digests) + "\n", { flag: "wx" });'
+
+      - name: Verify archive signatures and GitHub provenance again before registry writes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for architecture in amd64 arm64; do
+            archive="release-assets/hasi-${RELEASE_TAG}-linux-${architecture}.oci.tar"
+            cosign verify-blob \
+              --bundle "${archive}.sigstore.json" \
+              --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@${GITHUB_REF}" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              "$archive"
+            gh attestation verify "$archive" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+              --source-ref "$GITHUB_REF"
+          done
+
+      - name: Revalidate GHCR authorization and exact candidate digests for safe retry
+        id: registry-candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          IMAGE_REPOSITORY: ${{ env.IMAGE }}
+          RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
+          AMD64_DIGEST: ${{ steps.archive-digests.outputs.archive_digest_amd64 }}
+          ARM64_DIGEST: ${{ steps.archive-digests.outputs.archive_digest_arm64 }}
+        run: node scripts/release/registry-preflight.mjs candidate
+
+      - name: Authenticate to GHCR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
+      - name: Push the two qualified architecture manifests
+        env:
+          AMD64_EXISTS: ${{ steps.registry-candidate.outputs.candidate_amd64_exists }}
+          ARM64_EXISTS: ${{ steps.registry-candidate.outputs.candidate_arm64_exists }}
+        run: |
+          set -euo pipefail
+          for architecture in amd64 arm64; do
+            archive="release-assets/hasi-${RELEASE_TAG}-linux-${architecture}.oci.tar"
+            image="${IMAGE}:${RELEASE_VERSION}-${architecture}"
+            docker load --input "$archive"
+            docker image inspect "$image" > "$RUNNER_TEMP/${architecture}-inspect.json"
+            node scripts/release/verify-image-labels.mjs \
+              "$RUNNER_TEMP/${architecture}-inspect.json" "$RELEASE_VERSION" "$REVISION" "$architecture"
+            if [ "$architecture" = amd64 ]; then
+              exists="$AMD64_EXISTS"
+            else
+              exists="$ARM64_EXISTS"
+            fi
+            if [ "$exists" = true ]; then
+              printf 'Reusing existing %s tag after exact qualified-digest match.\n' "$architecture"
+            else
+              docker push --platform "linux/${architecture}" "$image"
+            fi
+          done
+
+      - name: Pull back and verify both architecture manifests
+        env:
+          AMD64_DIGEST: ${{ steps.archive-digests.outputs.archive_digest_amd64 }}
+          ARM64_DIGEST: ${{ steps.archive-digests.outputs.archive_digest_arm64 }}
+        run: |
+          set -euo pipefail
+          for architecture in amd64 arm64; do
+            image="${IMAGE}:${RELEASE_VERSION}-${architecture}"
+            docker pull --platform "linux/${architecture}" "$image"
+            docker image inspect "$image" > "$RUNNER_TEMP/${architecture}-registry-inspect.json"
+            if [ "$architecture" = "amd64" ]; then
+              expected_digest="$AMD64_DIGEST"
+            else
+              expected_digest="$ARM64_DIGEST"
+            fi
+            node scripts/release/verify-image-labels.mjs \
+              "$RUNNER_TEMP/${architecture}-registry-inspect.json" "$RELEASE_VERSION" "$REVISION" "$architecture" "$IMAGE" "$expected_digest"
+          done
+
+      - name: Assemble and read back the exact two-architecture release index
+        id: index
+        env:
+          CANDIDATE_VERSION_EXISTS: ${{ steps.registry-candidate.outputs.candidate_version_exists }}
+          CANDIDATE_VERSION_DIGEST: ${{ steps.registry-candidate.outputs.candidate_version_digest }}
+        run: |
+          set -euo pipefail
+          if [ "$CANDIDATE_VERSION_EXISTS" = true ]; then
+            printf 'Reusing existing version index at %s after platform-digest verification.\n' "$CANDIDATE_VERSION_DIGEST"
+          else
+            docker buildx imagetools create \
+              --tag "${IMAGE}:${RELEASE_VERSION}" \
+              "${IMAGE}:${RELEASE_VERSION}-amd64" \
+              "${IMAGE}:${RELEASE_VERSION}-arm64"
+          fi
+          docker buildx imagetools inspect --raw "${IMAGE}:${RELEASE_VERSION}" > "$RUNNER_TEMP/release-index.json"
+          docker pull "${IMAGE}:${RELEASE_VERSION}"
+          docker image inspect --format '{{json .RepoDigests}}' "${IMAGE}:${RELEASE_VERSION}" > "$RUNNER_TEMP/repo-digests.json"
+          node scripts/release/verify-index.mjs \
+            "$RUNNER_TEMP/release-index.json" "$RELEASE_VERSION" "$IMAGE" \
+            "$RUNNER_TEMP/repo-digests.json" "$RUNNER_TEMP/platform-digests.json" \
+            "$CANDIDATE_VERSION_DIGEST"
+
+      - name: Sign and attest the exact GHCR image index
+        uses: actions/attest-build-provenance@e4d4f7c39adfa4c260fb5c147f0622000aa14b99 # v4.0.0
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.index.outputs.digest }}
+          predicate-type: https://slsa.dev/provenance/v1
+
+      - name: Add a keyless cosign signature to the exact image index
+        run: cosign sign --yes "${IMAGE}@${{ steps.index.outputs.digest }}"
+
+      - name: Verify image signature and GitHub provenance by digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cosign verify \
+            --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@${GITHUB_REF}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "${IMAGE}@${{ steps.index.outputs.digest }}"
+          gh attestation verify "oci://${IMAGE}@${{ steps.index.outputs.digest }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+            --source-ref "$GITHUB_REF"
+
+      - name: Require anonymous pull and exact readback before release promotion
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/docker-anonymous
+          RELEASE_DIGEST: ${{ steps.index.outputs.digest }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$DOCKER_CONFIG"
+          docker pull "${IMAGE}@${RELEASE_DIGEST}"
+          docker buildx imagetools inspect --raw "${IMAGE}@${RELEASE_DIGEST}" > "$RUNNER_TEMP/anonymous-index.json"
+          docker image inspect --format '{{json .RepoDigests}}' "${IMAGE}@${RELEASE_DIGEST}" > "$RUNNER_TEMP/anonymous-repo-digests.json"
+          node scripts/release/verify-index.mjs \
+            "$RUNNER_TEMP/anonymous-index.json" "$RELEASE_VERSION" "$IMAGE" \
+            "$RUNNER_TEMP/anonymous-repo-digests.json" "$RUNNER_TEMP/platform-digests.json" "$RELEASE_DIGEST"
+
+  promote-release:
+    needs:
+      - preflight
+      - publish-assets
+      - publish-stable-image
+    if: needs.preflight.outputs.qualification_only == 'false'
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+      EXPECTED_RELEASE_ACTOR: metaneutrons-release-please[bot]
+      RELEASE_ID: ${{ needs.publish-assets.outputs.release_id }}
+    steps:
+      - name: Check out release-state verification script
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Mint a repository-scoped release App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_PLEASE_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+
+      - name: Promote the verified prerelease to a stable release
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/release/release-state.mjs promote-stable
+
+  promote-stable-aliases:
+    needs:
+      - preflight
+      - publish-stable-image
+      - promote-release
+    if: needs.preflight.outputs.qualification_only == 'false'
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: read
+      packages: write
+    env:
+      RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+      RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+      IMAGE: ghcr.io/metaneutrons/hasi
+      RELEASE_DIGEST: ${{ needs.publish-stable-image.outputs.digest }}
+      AMD64_DIGEST: ${{ needs.publish-stable-image.outputs.amd64_digest }}
+      ARM64_DIGEST: ${{ needs.publish-stable-image.outputs.arm64_digest }}
+    steps:
+      - name: Check out release verification scripts
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Enable the containerd image store for registry readback
+        uses: docker/setup-docker-action@1a6edb0ba9ac496f6850236981f15d8f9a82254d # v5.0.0
+        with:
+          daemon-config: |-
+            {"features":{"containerd-snapshotter":true}}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Write the exact qualified platform digest map
+        run: |
+          set -euo pipefail
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; const digests = { amd64: process.env.AMD64_DIGEST, arm64: process.env.ARM64_DIGEST }; if (!Object.values(digests).every((value) => /^sha256:[a-f0-9]{64}$/.test(value ?? ""))) throw new Error("qualified archive digests are incomplete"); writeFileSync(process.env.RUNNER_TEMP + "/platform-digests.json", JSON.stringify(digests) + "\n", { flag: "wx" });'
+
+      - name: Authenticate to GHCR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
+      - name: Check release order before mutable alias writes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_RELEASE_ACTOR: metaneutrons-release-please[bot]
+        run: |
+          set -euo pipefail
+          node scripts/release/release-state.mjs assert-monotonic
+
+      - name: Promote only the verified digest to mutable aliases
+        run: |
+          set -euo pipefail
+          major="${RELEASE_VERSION%%.*}"
+          remainder="${RELEASE_VERSION#*.}"
+          minor="${major}.${remainder%%.*}"
+          for alias in "$major" "$minor" latest; do
+            docker buildx imagetools create --tag "${IMAGE}:${alias}" "${IMAGE}@${RELEASE_DIGEST}"
+            docker buildx imagetools inspect --raw "${IMAGE}:${alias}" > "$RUNNER_TEMP/alias-index.json"
+            docker pull "${IMAGE}:${alias}"
+            docker image inspect --format '{{json .RepoDigests}}' "${IMAGE}:${alias}" > "$RUNNER_TEMP/alias-repo-digests.json"
+            node scripts/release/verify-index.mjs \
+              "$RUNNER_TEMP/alias-index.json" "$RELEASE_VERSION" "$IMAGE" \
+              "$RUNNER_TEMP/alias-repo-digests.json" "$RUNNER_TEMP/platform-digests.json" "$RELEASE_DIGEST"
+          done
+
+      - name: Require anonymous pull and exact readback for each mutable alias
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/docker-anonymous
+        run: |
+          set -euo pipefail
+          mkdir -p "$DOCKER_CONFIG"
+          major="${RELEASE_VERSION%%.*}"
+          remainder="${RELEASE_VERSION#*.}"
+          minor="${major}.${remainder%%.*}"
+          for alias in "$major" "$minor" latest; do
+            docker pull "${IMAGE}:${alias}"
+            docker buildx imagetools inspect --raw "${IMAGE}:${alias}" > "$RUNNER_TEMP/anonymous-alias-index.json"
+            docker image inspect --format '{{json .RepoDigests}}' "${IMAGE}:${alias}" > "$RUNNER_TEMP/anonymous-alias-repo-digests.json"
+            node scripts/release/verify-index.mjs \
+              "$RUNNER_TEMP/anonymous-alias-index.json" "$RELEASE_VERSION" "$IMAGE" \
+              "$RUNNER_TEMP/anonymous-alias-repo-digests.json" "$RUNNER_TEMP/platform-digests.json" "$RELEASE_DIGEST"
+          done

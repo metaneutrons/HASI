@@ -38,10 +38,14 @@ function setEnv(values: Record<string, string | undefined>) {
 }
 
 function chatRequest() {
-  return new Request("https://hasi.metaneutrons.cc/api/chat", {
+  const origin = process.env.VERCEL_ENV === "preview"
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://hasi.metaneutrons.cc";
+  return new Request(`${origin}/api/chat`, {
     method: "POST",
     headers: {
-      origin: "https://hasi.metaneutrons.cc",
+      host: new URL(origin).host,
+      origin,
       "content-type": "application/json",
     },
     body: JSON.stringify({ messages: [] }),
@@ -84,6 +88,17 @@ afterEach(() => {
 });
 
 describe("chat route demo boundary", () => {
+  it("rejects a foreign Host before opening session storage", async () => {
+    setPreviewEnv();
+    const request = chatRequest();
+    request.headers.set("host", "attacker.invalid");
+    request.headers.set("x-forwarded-host", "hasi-preview.vercel.app");
+
+    expect((await postChat(request)).status).toBe(403);
+    expect(mocks.initialize).not.toHaveBeenCalled();
+    expect(mocks.handleChatPost).not.toHaveBeenCalled();
+  });
+
   it("rejects anonymous visitors before invoking chat", async () => {
     setPreviewEnv();
     mocks.createDemoRuntime.mockReturnValue({ hasSession: vi.fn().mockResolvedValue(false) });

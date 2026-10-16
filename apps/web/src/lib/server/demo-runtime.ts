@@ -40,14 +40,19 @@ async function initialize() {
   return createDemoRuntime({ origin, store, secret: requiredSecret('HASI_DEMO_SECRET'), fetch: internalFetch, catalog: hshDemoCatalog });
 }
 
+export function canonicalDemoRequest(request: Request): Request | null {
+  const origin = new URL(configuredOrigin());
+  // Next.js may use an internal origin in request.url. Only the configured
+  // public Host can cross this boundary; forwarded host headers cannot select it.
+  if (request.headers.get('host') !== origin.host) return null;
+  const incoming = new URL(request.url);
+  return new Request(new URL(`${incoming.pathname}${incoming.search}`, origin), request);
+}
+
 export async function demoResponse(request: Request, target: 'handleCore' | 'handlePlugin' | 'handleMock' | 'handleKnowledgePlugin'): Promise<Response> {
   try {
-    const origin = new URL(configuredOrigin());
-    // Next.js may use an internal localhost origin in request.url. Only the
-    // explicitly configured public Host can cross this adapter boundary.
-    if (request.headers.get('host') !== origin.host) return Response.json({ error: 'Unzulässiger Host.' }, { status: 403, headers: { 'cache-control': 'private, no-store' } });
-    const incoming = new URL(request.url);
-    const canonical = new Request(new URL(`${incoming.pathname}${incoming.search}`, origin), request);
+    const canonical = canonicalDemoRequest(request);
+    if (!canonical) return Response.json({ error: 'Unzulässiger Host.' }, { status: 403, headers: { 'cache-control': 'private, no-store' } });
     return await (await getDemoRuntime())[target](canonical);
   }
   catch { return Response.json({ error: 'Der HASI-Dienst ist vorübergehend nicht verfügbar. Bitte versuche es erneut.' }, { status: 503, headers: { 'cache-control': 'private, no-store' } }); }

@@ -76,7 +76,7 @@ const MODEL_PROFILES: readonly ServerModelProfile[] = Object.freeze([
   }),
   Object.freeze({
     id: "gwdg-qwen3-30b",
-    label: "GWDG SAIA · Qwen3 30B A3B Instruct 2507",
+    label: "GWDG SAIA · Qwen3 30B A3B Instruct 2507 · Experimental",
     modelId: "qwen3-30b-a3b-instruct-2507",
     provider: "gwdg",
     connection: GWDG_CONNECTION,

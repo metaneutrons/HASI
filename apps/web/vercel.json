@@ -3,5 +3,9 @@
   "framework": "nextjs",
   "regions": ["fra1"],
   "installCommand": "npx --yes pnpm@12.11.2 install --frozen-lockfile",
-  "buildCommand": "npx --yes pnpm@12.11.2 run build"
+  "buildCommand": "npx --yes pnpm@12.11.2 run build",
+  "git": {
+    "deploymentEnabled": true
+  },
+  "ignoreCommand": "exit 1"
 }

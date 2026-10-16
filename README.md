@@ -114,7 +114,7 @@ The host owns identity, permissions and state transitions. The model can search 
 
 HASI is an incomplete MVP prototype, not an operational Hochschule Hannover service. Real SSO and account linking, institutional permission mapping, live availability and booking, real Intranet/Service-IT source adapters, cancellation and booking reconciliation, production provider approval, third-party plugin isolation, and native-device qualification remain outstanding. Responsive browser checks do not establish iPhone or Android qualification. The public demo's durable synthetic state does not provide institutional authorization or booking reconciliation.
 
-Container releases for GHCR on `linux/amd64` and `linux/arm64` are being prepared; no GHCR image has been published.
+Versioned GHCR images for `linux/amd64` and `linux/arm64` are built only through Release Please. The workflow and local Compose demo are implemented; no GHCR image has been published, and hosted native qualification is recorded separately in [D3](https://github.com/metaneutrons/HASI/issues/17). See the [container runtime and release boundaries](docs/architecture/container-runtime.md) before building or selecting a release image. Read-only mainline qualification uploads CI artifacts without creating a tag or release.
 
 See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](docs/plans/server-demo-parity.md) for qualification scope.
 

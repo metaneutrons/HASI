@@ -47,6 +47,8 @@ jobs:
       - run: pnpm lint
       - name: Validate Git hooks
         run: pnpm exec lefthook validate
+      - name: Probe release metadata and publication gates
+        run: node --test scripts/release/*.test.mjs
       - run: pnpm typecheck
       # This explicit network step verifies and materializes the pinned public
       # anny schema used by client contract tests. Tests themselves do not fetch.
