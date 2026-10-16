@@ -15,6 +15,8 @@ import {
 
 const NOW = new Date("2026-10-16T09:30:00.000Z");
 const FAKE_KEY = "test-groq-key-only";
+const GWDG_FAKE_KEY = "test-gwdg-key-only";
+const CUSTOM_FAKE_KEY = "test-custom-key-only";
 
 function request(profileId: ChatRequest["profileId"] = "groq-oss-120b"): ChatRequest {
   return {
@@ -75,6 +77,15 @@ function fakeProvider(body: unknown, status = 200) {
   return { fetch, calls };
 }
 
+function validCustomEnvironment(overrides: Record<string, string | undefined> = {}) {
+  return {
+    CUSTOM_API_KEY: CUSTOM_FAKE_KEY,
+    CUSTOM_ENDPOINT: "https://custom.example.test/api/v2/",
+    CUSTOM_MODEL_ID: "custom-model-id",
+    ...overrides,
+  };
+}
+
 async function expectRouterError(
   promise: Promise<unknown>,
   code: string,
@@ -89,7 +100,7 @@ async function expectRouterError(
   throw new Error("Expected the model router to reject the request.");
 }
 
-describe("Groq model router", () => {
+describe("model router", () => {
   it("reports approved profiles without exposing a credential value", () => {
     expect(listModelProfiles({ GROQ_API_KEY: FAKE_KEY })).toEqual({
       configured: true,
@@ -99,24 +110,46 @@ describe("Groq model router", () => {
           label: "Groq GPT-OSS 120B",
           modelId: "openai/gpt-oss-120b",
           provider: "groq",
+          configured: true,
         },
         {
           id: "groq-oss-20b",
           label: "Groq GPT-OSS 20B",
           modelId: "openai/gpt-oss-20b",
           provider: "groq",
+          configured: true,
         },
         {
           id: "groq-qwen-3.8-27b",
           label: "Groq Qwen3.8 27B · Preview",
           modelId: "qwen/qwen3.8-27b",
           provider: "groq",
+          configured: true,
+        },
+        {
+          id: "gwdg-oss-120b",
+          label: "GWDG SAIA · GPT-OSS 120B",
+          modelId: "openai-gpt-oss-120b",
+          provider: "gwdg",
+          configured: false,
+        },
+        {
+          id: "gwdg-qwen3-30b",
+          label: "GWDG SAIA · Qwen3 30B A3B Instruct 2507",
+          modelId: "qwen3-30b-a3b-instruct-2507",
+          provider: "gwdg",
+          configured: false,
         },
       ],
       defaultProfileId: "groq-oss-120b",
     });
     expect(JSON.stringify(listModelProfiles({ GROQ_API_KEY: FAKE_KEY }))).not.toContain(FAKE_KEY);
     expect(listModelProfiles({}).configured).toBe(false);
+    const gwdgProfiles = listModelProfiles({ GWDG_API_KEY: GWDG_FAKE_KEY });
+    expect(gwdgProfiles.configured).toBe(true);
+    expect(gwdgProfiles.profiles.filter(({ provider }) => provider === "gwdg").every(({ configured }) => configured)).toBe(true);
+    expect(gwdgProfiles.profiles.filter(({ provider }) => provider === "groq").every(({ configured }) => !configured)).toBe(true);
+    expect(JSON.stringify(gwdgProfiles)).not.toContain(GWDG_FAKE_KEY);
   });
 
   it("rejects missing credentials before attempting a provider request", async () => {
@@ -130,6 +163,16 @@ describe("Groq model router", () => {
       runModelStep(request(), { env: {}, fetch, now: NOW }),
       "missing_credentials",
     );
+    expect(fetchCalled).toBe(false);
+  });
+
+  it.each(["gwdg-oss-120b", "gwdg-qwen3-30b"] as const)("rejects a missing GWDG key for %s without borrowing Groq credentials", async (profileId) => {
+    let fetchCalled = false;
+    const fetch: typeof globalThis.fetch = async () => {
+      fetchCalled = true;
+      throw new Error("Network should not be called.");
+    };
+    await expectRouterError(runModelStep(request(profileId), { env: { GROQ_API_KEY: FAKE_KEY }, fetch, now: NOW }), "missing_credentials");
     expect(fetchCalled).toBe(false);
   });
 
@@ -281,6 +324,297 @@ describe("Groq model router", () => {
     expect(body.reasoning_effort).toBe("none");
     expect(body.tools).toHaveLength(5);
     expect(reply.profile.id).toBe("groq-qwen-3.8-27b");
+  });
+
+  it("uses the GWDG key and fixed SAIA endpoint without Groq request options", async () => {
+    const provider = fakeProvider(completion({ content: "Antwort von SAIA." }));
+    const reply = await runModelStep(request("gwdg-oss-120b"), {
+      env: { GWDG_API_KEY: GWDG_FAKE_KEY },
+      fetch: provider.fetch,
+      now: NOW,
+    });
+
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0]?.url).toBe("https://chat-ai.academiccloud.de/v1/chat/completions");
+    expect(provider.calls[0]?.init?.redirect).toBe("error");
+    const headers = new Headers(provider.calls[0]?.init?.headers);
+    expect(headers.get("authorization")).toBe(`Bearer ${GWDG_FAKE_KEY}`);
+    expect(headers.get("authorization")).not.toContain(FAKE_KEY);
+    const body = JSON.parse(String(provider.calls[0]?.init?.body));
+    expect(body.model).toBe("openai-gpt-oss-120b");
+    expect(body.reasoning_effort).toBeUndefined();
+    expect(body.parallel_tool_calls).toBeUndefined();
+    expect(reply.profile).toMatchObject({ id: "gwdg-oss-120b", provider: "gwdg" });
+    expect(reply.message.content).toBe("Antwort von SAIA.");
+  });
+
+  it.each(["gwdg-oss-120b", "gwdg-qwen3-30b"] as const)("keeps %s bound to its own credential when Groq is also configured", async (profileId) => {
+    const provider = fakeProvider(completion({ content: "GWDG only." }));
+    await runModelStep(request(profileId), {
+      env: { GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY },
+      fetch: provider.fetch,
+      now: NOW,
+    });
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0]?.url).toBe("https://chat-ai.academiccloud.de/v1/chat/completions");
+    expect(new Headers(provider.calls[0]?.init?.headers).get("authorization")).toBe(`Bearer ${GWDG_FAKE_KEY}`);
+  });
+
+  it("round-trips GWDG knowledge and anny tool calls through the typed wire contract", async () => {
+    const firstResponse = fakeProvider(completion({ toolCalls: [
+      { id: "gwdg-knowledge-1", name: "knowledge_search", arguments: JSON.stringify({ query: "WLAN-Zugang Morgenstern-Lab" }) },
+      { id: "gwdg-anny-1", name: "anny_search_resources", arguments: JSON.stringify({ capacity: 4 }) },
+    ] }));
+    const secondResponse = fakeProvider(completion({ content: "Beide Demoabfragen sind ausgewertet." }));
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    let count = 0;
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      calls.push({ url, init });
+      return (++count === 1 ? firstResponse : secondResponse).fetch(input, init);
+    };
+
+    const initial = await runModelStep(request("gwdg-oss-120b"), { env: { GWDG_API_KEY: GWDG_FAKE_KEY }, fetch, now: NOW });
+    expect(initial.message.toolCalls).toEqual([
+      { id: "gwdg-knowledge-1", name: "knowledge_search", arguments: { query: "WLAN-Zugang Morgenstern-Lab" } },
+      { id: "gwdg-anny-1", name: "anny_search_resources", arguments: { capacity: 4 } },
+    ]);
+    const toolCalls = initial.message.toolCalls;
+    if (!toolCalls) throw new Error("Expected GWDG tool calls.");
+    const followUp = await runModelStep({
+      profileId: "gwdg-oss-120b",
+      messages: [
+        { role: "user", content: "Suche Wissen und einen Raum." },
+        initial.message,
+        { role: "tool", toolCallId: toolCalls[0]!.id, name: toolCalls[0]!.name, content: JSON.stringify({ documents: [] }) },
+        { role: "tool", toolCallId: toolCalls[1]!.id, name: toolCalls[1]!.name, content: JSON.stringify({ resources: [] }) },
+        { role: "user", content: "Fasse die Ergebnisse zusammen." },
+      ],
+    }, { env: { GWDG_API_KEY: GWDG_FAKE_KEY }, fetch, now: NOW });
+
+    const body = JSON.parse(String(calls[1]?.init?.body)) as { messages: Array<{ role: string; tool_call_id?: string; content?: string; tool_calls?: Array<{ function: { name: string } }> }> };
+    expect(calls.map(({ url }) => url)).toEqual([
+      "https://chat-ai.academiccloud.de/v1/chat/completions",
+      "https://chat-ai.academiccloud.de/v1/chat/completions",
+    ]);
+    expect(body.messages.find(({ role }) => role === "assistant")?.tool_calls?.map(({ function: definition }) => definition.name)).toEqual(["knowledge_search", "anny_search_resources"]);
+    expect(body.messages.filter(({ role }) => role === "tool").map(({ tool_call_id }) => tool_call_id)).toEqual(["gwdg-knowledge-1", "gwdg-anny-1"]);
+    expect(body.messages.filter(({ role }) => role === "tool").map(({ content }) => content)).toEqual(['{"documents":[]}', '{"resources":[]}']);
+    expect(followUp.message.content).toBe("Beide Demoabfragen sind ausgewertet.");
+  });
+
+  it("rejects GWDG redirects without following them and returns sanitized failures", async () => {
+    const calls: Array<{ url: string; redirect?: RequestRedirect }> = [];
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      calls.push({ url, redirect: init?.redirect });
+      return new Response(null, { status: 302, headers: { location: "https://attacker.example/collect" } });
+    };
+    const error = await expectRouterError(runModelStep(request("gwdg-qwen3-30b"), { env: { GWDG_API_KEY: GWDG_FAKE_KEY }, fetch, now: NOW }), "provider_unavailable");
+    expect(error.message).toBe("The model service could not complete this request.");
+    expect(JSON.stringify(error)).not.toContain(GWDG_FAKE_KEY);
+    expect(calls).toEqual([{ url: "https://chat-ai.academiccloud.de/v1/chat/completions", redirect: "error" }]);
+
+    const privatePayload = `Authorization: Bearer ${GWDG_FAKE_KEY}; provider response payload`;
+    const failure = fakeProvider({ error: { message: privatePayload } }, 500);
+    const httpError = await expectRouterError(runModelStep(request("gwdg-oss-120b"), {
+      env: { GWDG_API_KEY: GWDG_FAKE_KEY },
+      fetch: failure.fetch,
+      now: NOW,
+    }), "provider_unavailable");
+    expect(httpError.message).toBe("The model service could not complete this request.");
+    expect(JSON.stringify(httpError)).not.toContain(GWDG_FAKE_KEY);
+    expect(JSON.stringify(httpError)).not.toContain("provider response payload");
+  });
+
+  it("does not allow client input to override profile connections or secret references", async () => {
+    let fetchCalled = false;
+    const fetch: typeof globalThis.fetch = async () => {
+      fetchCalled = true;
+      throw new Error("Network should not be called.");
+    };
+    for (const profileId of ["groq-oss-120b", "gwdg-oss-120b", "custom-default"] as const) {
+      for (const override of [
+        { credentialRef: "env:GROQ_API_KEY" },
+        { endpoint: "https://attacker.example/v1" },
+        { baseURL: "https://attacker.example/v1" },
+        { providerOrigin: "https://attacker.example" },
+      ]) {
+        await expectRouterError(runModelStep({
+          ...request(profileId),
+          ...override,
+        } as unknown as ChatRequest, {
+          env: {
+            GWDG_API_KEY: GWDG_FAKE_KEY,
+          GROQ_API_KEY: FAKE_KEY,
+            CUSTOM_API_KEY: CUSTOM_FAKE_KEY,
+            CUSTOM_ENDPOINT: "https://custom.example.test/v1",
+            CUSTOM_MODEL_ID: "custom-model",
+          },
+          fetch,
+          now: NOW,
+        }), "invalid_request");
+      }
+    }
+    expect(fetchCalled).toBe(false);
+  });
+
+  it("exposes custom readiness without returning its endpoint or key", () => {
+    const partial = listModelProfiles({
+      CUSTOM_ENDPOINT: "https://custom.example.test/v1",
+      CUSTOM_MODEL_ID: "custom-model-id",
+    });
+    expect(partial.configured).toBe(false);
+    expect(partial.profiles.some((profile) => profile.id === "custom-default")).toBe(true);
+    expect(partial.profiles.find((profile) => profile.id === "custom-default")).toMatchObject({
+      label: "Custom · custom-model-id",
+      modelId: "custom-model-id",
+      provider: "custom",
+      configured: false,
+    });
+    const configured = listModelProfiles(validCustomEnvironment());
+    expect(configured.configured).toBe(true);
+    expect(configured.profiles.find((profile) => profile.id === "custom-default")?.configured).toBe(true);
+    expect(JSON.stringify(configured)).not.toContain(CUSTOM_FAKE_KEY);
+    expect(JSON.stringify(configured)).not.toContain("custom.example.test");
+  });
+
+  it("uses only the custom key and pins the endpoint host and base path", async () => {
+    const provider = fakeProvider(completion({ content: "Custom model response." }));
+    const reply = await runModelStep(request("custom-default"), {
+      env: validCustomEnvironment({
+        GROQ_API_KEY: FAKE_KEY,
+        GWDG_API_KEY: GWDG_FAKE_KEY,
+        CUSTOM_ENDPOINT: "https://custom.example.test/api/v2///",
+      }),
+      fetch: provider.fetch,
+      now: NOW,
+    });
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0]?.url).toBe("https://custom.example.test/api/v2/chat/completions");
+    expect(provider.calls[0]?.init?.redirect).toBe("error");
+    expect(new Headers(provider.calls[0]?.init?.headers).get("authorization")).toBe(`Bearer ${CUSTOM_FAKE_KEY}`);
+    expect(new Headers(provider.calls[0]?.init?.headers).get("authorization")).not.toContain(FAKE_KEY);
+    expect(new Headers(provider.calls[0]?.init?.headers).get("authorization")).not.toContain(GWDG_FAKE_KEY);
+    const body = JSON.parse(String(provider.calls[0]?.init?.body));
+    expect(body.model).toBe("custom-model-id");
+    expect(body.reasoning_effort).toBeUndefined();
+    expect(body.parallel_tool_calls).toBeUndefined();
+    expect(reply.profile).toMatchObject({ id: "custom-default", modelId: "custom-model-id", provider: "custom" });
+    expect(reply.message.content).toBe("Custom model response.");
+  });
+
+  it("does not borrow configured Groq or GWDG keys when custom credentials are missing", async () => {
+    let fetchCalled = false;
+    const fetch: typeof globalThis.fetch = async () => {
+      fetchCalled = true;
+      throw new Error("Network should not be called.");
+    };
+    const env = validCustomEnvironment({ CUSTOM_API_KEY: undefined, GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY });
+    const profiles = listModelProfiles(env);
+    expect(profiles.configured).toBe(true);
+    expect(profiles.profiles.find((profile) => profile.id === "custom-default")?.configured).toBe(false);
+    await expectRouterError(runModelStep(request("custom-default"), { env, fetch, now: NOW }), "missing_credentials");
+    expect(fetchCalled).toBe(false);
+  });
+
+  it("accepts the maximum custom model ID while keeping its display label bounded", async () => {
+    const modelId = "m".repeat(128);
+    const env = validCustomEnvironment({ CUSTOM_MODEL_ID: modelId });
+    const profile = listModelProfiles(env).profiles.find((entry) => entry.id === "custom-default");
+    expect(profile?.modelId).toBe(modelId);
+    expect(profile?.label.length).toBeLessThanOrEqual(82);
+    const provider = fakeProvider(completion({ content: "Ready." }));
+    const reply = await runModelStep(request("custom-default"), { env, fetch: provider.fetch, now: NOW });
+    expect(JSON.parse(String(provider.calls[0]?.init?.body)).model).toBe(modelId);
+    expect(reply.profile.label.length).toBeLessThanOrEqual(82);
+  });
+
+  it.each([
+    "http://custom.example.test/v1",
+    "https://user:password@custom.example.test/v1",
+    "https://custom.example.test/v1?token=x",
+    "https://custom.example.test/v1#fragment",
+    "https://custom.example.test/v1?",
+    "https://custom.example.test/v1#",
+    "not a URL",
+  ])("does not expose or call a custom connection with invalid endpoint %s", async (endpoint) => {
+    let fetchCalled = false;
+    const fetch: typeof globalThis.fetch = async () => {
+      fetchCalled = true;
+      throw new Error("Network should not be called.");
+    };
+    const env = validCustomEnvironment({ CUSTOM_ENDPOINT: endpoint });
+    expect(listModelProfiles(env).profiles.some((profile) => profile.id === "custom-default")).toBe(false);
+    await expectRouterError(runModelStep(request("custom-default"), { env, fetch, now: NOW }), "profile_not_approved");
+    expect(fetchCalled).toBe(false);
+  });
+
+  it.each(["", "\ncustom-model", "x".repeat(129)])("does not expose or call a custom connection with invalid model ID %j", async (modelId) => {
+    let fetchCalled = false;
+    const fetch: typeof globalThis.fetch = async () => {
+      fetchCalled = true;
+      throw new Error("Network should not be called.");
+    };
+    const env = validCustomEnvironment({ CUSTOM_MODEL_ID: modelId });
+    expect(listModelProfiles(env).profiles.some((profile) => profile.id === "custom-default")).toBe(false);
+    await expectRouterError(runModelStep(request("custom-default"), { env, fetch, now: NOW }), "profile_not_approved");
+    expect(fetchCalled).toBe(false);
+  });
+
+  it("round-trips custom knowledge and anny tool calls through the same validated contract", async () => {
+    const firstResponse = fakeProvider(completion({ toolCalls: [
+      { id: "custom-knowledge-1", name: "knowledge_search", arguments: JSON.stringify({ query: "WLAN-Zugang Morgenstern-Lab" }) },
+      { id: "custom-anny-1", name: "anny_search_resources", arguments: JSON.stringify({ capacity: 4 }) },
+    ] }));
+    const secondResponse = fakeProvider(completion({ content: "Die custom tool responses wurden verarbeitet." }));
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    let count = 0;
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      calls.push({ url, init });
+      return (++count === 1 ? firstResponse : secondResponse).fetch(input, init);
+    };
+    const env = validCustomEnvironment();
+    const initial = await runModelStep(request("custom-default"), { env, fetch, now: NOW });
+    const toolCalls = initial.message.toolCalls;
+    expect(toolCalls?.map(({ name }) => name)).toEqual(["knowledge_search", "anny_search_resources"]);
+    if (!toolCalls) throw new Error("Expected custom tool calls.");
+    const followUp = await runModelStep({
+      profileId: "custom-default",
+      messages: [
+        { role: "user", content: "Suche Wissen und einen Raum." },
+        initial.message,
+        { role: "tool", toolCallId: toolCalls[0]!.id, name: toolCalls[0]!.name, content: JSON.stringify({ documents: [] }) },
+        { role: "tool", toolCallId: toolCalls[1]!.id, name: toolCalls[1]!.name, content: JSON.stringify({ resources: [] }) },
+        { role: "user", content: "Fasse die Ergebnisse zusammen." },
+      ],
+    }, { env, fetch, now: NOW });
+    const body = JSON.parse(String(calls[1]?.init?.body)) as { messages: Array<{ role: string; tool_call_id?: string; content?: string; tool_calls?: Array<{ function: { name: string } }> }> };
+    expect(calls.map(({ url }) => url)).toEqual([
+      "https://custom.example.test/api/v2/chat/completions",
+      "https://custom.example.test/api/v2/chat/completions",
+    ]);
+    expect(body.messages.find(({ role }) => role === "assistant")?.tool_calls?.map(({ function: definition }) => definition.name)).toEqual(["knowledge_search", "anny_search_resources"]);
+    expect(body.messages.filter(({ role }) => role === "tool").map(({ tool_call_id }) => tool_call_id)).toEqual(["custom-knowledge-1", "custom-anny-1"]);
+    expect(body.messages.filter(({ role }) => role === "tool").map(({ content }) => content)).toEqual(['{"documents":[]}', '{"resources":[]}']);
+    expect(followUp.message.content).toBe("Die custom tool responses wurden verarbeitet.");
+  });
+
+  it("rejects custom redirects and sanitizes custom provider HTTP errors", async () => {
+    const redirect = await expectRouterError(runModelStep(request("custom-default"), {
+      env: validCustomEnvironment(),
+      fetch: async () => new Response(null, { status: 302, headers: { location: "https://attacker.example/collect" } }),
+      now: NOW,
+    }), "provider_unavailable");
+    expect(redirect.message).toBe("The model service could not complete this request.");
+
+    const privatePayload = `Authorization: Bearer ${CUSTOM_FAKE_KEY}; private server payload`;
+    const failure = fakeProvider({ error: { message: privatePayload } }, 500);
+    const error = await expectRouterError(runModelStep(request("custom-default"), { env: validCustomEnvironment(), fetch: failure.fetch, now: NOW }), "provider_unavailable");
+    expect(error.message).toBe("The model service could not complete this request.");
+    expect(JSON.stringify(error)).not.toContain(CUSTOM_FAKE_KEY);
+    expect(JSON.stringify(error)).not.toContain("private server payload");
   });
 
   it("rejects model tool arguments that fail the strict schema", async () => {

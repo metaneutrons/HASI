@@ -192,11 +192,13 @@ Sources: [Groq Prompt Guard 2](https://console.groq.com/docs/model/meta-llama/ll
 
 ## Provider credentials
 
-GroqCloud is the first selected prototype provider. Credentials are stored
-server-side in the deployment secret store; model profiles and provider
-connections carry secret references only. A HASI-owned resolver separates
-Vercel environment variables from future institutional secret-manager storage.
-Model/plugin/client input cannot choose those references or endpoints.
+GroqCloud was the first selected prototype provider; GWDG SAIA and an
+operator-configured OpenAI-compatible connection are additional selectable
+demo profiles. Credentials are stored server-side in the deployment secret
+store; model profiles and provider connections carry secret references only. A
+HASI-owned resolver separates Vercel environment variables from future
+institutional secret-manager storage. Model/plugin/client input cannot choose
+those references or endpoints.
 The [LLM router credential decision](llm-router-credentials.md) defines provider
 connections, administration visibility, deployment scopes, rotation and required
 implementation checks. This decision does not mark runtime integration complete.

@@ -71,8 +71,8 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
       ? { code: cause.code, providerStatus: cause.providerStatus, ...(cause.diagnostics && Object.keys(cause.diagnostics).length ? { diagnostics: cause.diagnostics } : {}) }
       : { code: "unexpected_provider_failure" }));
     if (cause instanceof ModelRouterError && cause.code === "provider_rate_limited") {
-      return Response.json({ error: "Das Anfragelimit bei GroqCloud ist erreicht. Bitte warte eine Minute und versuche es erneut. Vorhandene Buchungskarten kannst du weiter nutzen." }, { status: 429, headers: { ...headers, "retry-after": "60" } });
+      return Response.json({ error: "Das Anfragelimit des ausgewählten Modellanbieters ist erreicht. Bitte warte eine Minute und versuche es erneut. Vorhandene Buchungskarten kannst du weiter nutzen." }, { status: 429, headers: { ...headers, "retry-after": "60" } });
     }
-    return error("GroqCloud konnte die Anfrage nicht abschließen. Bitte versuche es erneut oder wähle ausdrücklich die Dialog-Demo.", 503);
+    return error("Der ausgewählte Modellanbieter konnte die Anfrage nicht abschließen. Bitte versuche es erneut oder wähle ausdrücklich die Dialog-Demo.", 503);
   }
 }

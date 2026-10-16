@@ -22,7 +22,7 @@ Ask questions, find rooms and prepare a simulated booking in one conversation.</
 - **Chat and room workflows:** multiple saved chats; room search, availability, booking proposals and explicit confirmation inside the conversation; responsive layouts with light, dark and system themes.
 - **Room catalog:** 30 rooms and all 9 services from an authorized, read-only HsH anny catalog snapshot dated 2026-10-16. Availability, access grants and bookings are synthetic; the snapshot does not contain live booking state or establish booking rights.
 - **Knowledge demo:** 60 entirely fictional documents, split between Service IT and Intranet examples. Search applies synthetic audience access rules before returning content, and the authenticated demo reader checks access again. These documents are not HsH guidance.
-- **Chat models:** GroqCloud inference runs through a server-side route. Chat messages and selected tool results are sent to GroqCloud, so use synthetic test data only. An explicit offline dialogue profile is available; provider failures never silently switch profiles.
+- **Chat models:** GroqCloud and GWDG SAIA inference run through a server-side route; an optional OpenAI-compatible custom connection can be configured server-side. Chat messages and selected tool results are sent to the selected model provider, so use synthetic test data only. An explicit offline dialogue profile is available; provider failures never silently switch profiles.
 - **Test identity:** visitors can select student, employee or administrator demo personas in an isolated workspace. They are fixtures, not real SSO, HsH identities or institutional permissions.
 
 The [public demo](https://hasi.metaneutrons.cc) uses a server-backed runtime and isolated synthetic state. Chat transcripts and profile settings stay in browser storage; the server stores workspace sessions, proposals, integration settings and simulated bookings. There is no live anny tenant, institutional knowledge source or real SSO connection.
@@ -42,14 +42,23 @@ Open <http://127.0.0.1:3001>. Start in **Chat**, describe a room request, choose
 
 `pnpm dev` builds backend packages, then starts the local multi-process reference stack with in-memory state: the web UI on port 3001, core API on 4100, anny MCP plugin on 4101, synthetic anny HTTP service on 4102 and knowledge MCP on 4103. It creates ephemeral signing keys and service tokens. If a port is occupied, startup stops; it does not stop other services. Stop the launcher with Ctrl-C. To use another UI port, run `HASI_WEB_PORT=3002 pnpm dev`.
 
-Without a local Groq credential, explicitly choose **Dialog-Demo · ohne Modell**. To use GroqCloud locally, provide a server-side credential in `apps/web/.env.local` or the web server process environment:
+To use GroqCloud or GWDG SAIA locally, provide the corresponding server-side credential in `apps/web/.env.local` or the web server process environment. A profile without its own credential is unavailable; choose another configured profile or explicitly select **Dialog-Demo · ohne Modell**:
 
 ```dotenv
 # apps/web/.env.local
 GROQ_API_KEY=
+GWDG_API_KEY=
 ```
 
-Keep the value private and never commit the file or expose the credential through a `NEXT_PUBLIC_` variable. The public UI sends messages and selected tool results to GroqCloud. Do not enter personal, confidential or institutional data.
+An optional custom OpenAI-compatible profile appears only when `CUSTOM_ENDPOINT`
+is a valid HTTPS base URL and `CUSTOM_MODEL_ID` is set. Its own `CUSTOM_API_KEY`
+must also be present before the profile can send requests. Configure all three
+values in `apps/web/.env.local`; none belongs in a `NEXT_PUBLIC_` variable.
+The custom endpoint is pinned server-side and must support the chat-completions
+tool protocol used by HASI. Operators must qualify tool calls against their
+provider before enabling room workflows. See [GWDG SAIA and custom providers](docs/architecture/gwdg-saia.md).
+
+Keep credentials private and never commit the file or expose them through a `NEXT_PUBLIC_` variable. The public UI sends messages and selected tool results to the chosen model provider. Do not enter personal, confidential or institutional data.
 
 ### Local PostgreSQL server mode
 
@@ -62,6 +71,10 @@ HASI_DEMO_ORIGIN=http://127.0.0.1:3001
 DATABASE_URL=
 HASI_DEMO_SECRET=
 GROQ_API_KEY=
+GWDG_API_KEY=
+CUSTOM_API_KEY=
+CUSTOM_ENDPOINT=
+CUSTOM_MODEL_ID=
 ```
 
 Then run `pnpm --filter @hasi/web dev`. This PostgreSQL mode is separate from `pnpm dev`, which continues to run the multi-process in-memory stack. Do not commit `.env.local` or place secrets in client-visible variables. See [public demo architecture](docs/architecture/public-demo.md) for the runtime and data boundaries.
@@ -109,6 +122,7 @@ See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](doc
 - [Technical basis](docs/architecture/technical-basis.md)
 - [Security and model evaluation](docs/architecture/security-and-models.md)
 - [LLM router credentials and provider configuration](docs/architecture/llm-router-credentials.md)
+- [GWDG SAIA and custom model connections](docs/architecture/gwdg-saia.md)
 - [Knowledge MCP and authenticated document delivery](docs/architecture/knowledge-mcp.md)
 - [Room snapshot provenance](docs/evaluation/anny-room-snapshot.md)
 - [Evaluation plan](docs/evaluation/benchmark-v1.md)
