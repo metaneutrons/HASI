@@ -37,8 +37,8 @@ answer support before considering general-user approval.
 ## Availability observations
 
 Some Qwen requests failed, while identical adapter paths passed other probes.
-The former 20-second generation budget was insufficient for some longer turns;
-the GWDG profile now permits 45 seconds. This is not an established reliability
-or latency result. Initial GWDG GPT-OSS 120B calls repeatedly returned upstream
+Longer turns also failed under the former 20-second generation budget;
+the GWDG profile now permits 45 seconds. The failed calls' precise causes were
+not established. This is not an established reliability or latency result. Initial GWDG GPT-OSS 120B calls repeatedly returned upstream
 HTTP 500, including a short-text request; that profile is excluded until
 runtime qualification succeeds. No upstream root cause is established.
