@@ -6,9 +6,10 @@ import { AnnyClient } from '@hasi/anny-client';
 import { annyManifest } from './manifest.js';
 
 export { annyManifest, demoPresentation } from './manifest.js';
-export interface Presentation { capacity: number; location: string; features: string[]; serviceId: string }
+export interface Presentation { capacity: number | null; location: string; features: string[]; serviceId: string }
 export interface AnnyPluginOptions { client: AnnyClient | ((actor: ActorContext) => AnnyClient); allowedHosts?: string[]; consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>; publicKey: KeyObject; serviceToken: string; presentation: Record<string, Presentation>; version?: string }
-const interval = z.strictObject({ resourceId: z.uuid(), serviceId: z.uuid(), startDate: z.iso.datetime({ offset: true }), endDate: z.iso.datetime({ offset: true }) });
+const annyId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/);
+const interval = z.strictObject({ resourceId: annyId, serviceId: annyId, startDate: z.iso.datetime({ offset: true }), endDate: z.iso.datetime({ offset: true }) });
 
 export function createAnnyPlugin(options: AnnyPluginOptions): FastifyInstance {
   const client = (actor: ActorContext) => typeof options.client === 'function' ? options.client(actor) : options.client;
@@ -35,7 +36,7 @@ export function createAnnyPlugin(options: AnnyPluginOptions): FastifyInstance {
         return [{ id: resource.id, name: resource.attributes?.name ?? 'Raum', description: resource.attributes?.plain_description ?? '', ...profile }];
       }) }),
       'anny.get_availability': async (args, actor) => {
-        const parsed = z.strictObject({ resourceId: z.uuid(), serviceId: z.uuid(), startDate: z.iso.datetime({ offset: true }), durationMinutes: z.number().int().min(15).max(1440) }).parse(args);
+        const parsed = z.strictObject({ resourceId: annyId, serviceId: annyId, startDate: z.iso.datetime({ offset: true }), durationMinutes: z.number().int().min(15).max(1440) }).parse(args);
         authorized(parsed.resourceId, parsed.serviceId, actor);
         const result = await client(actor).getAvailability({ resourceId: parsed.resourceId, serviceId: parsed.serviceId, startDate: parsed.startDate, duration: parsed.durationMinutes });
         return { intervals: result.data.flatMap(entry => entry.start_date && entry.end_date && typeof entry.available === 'boolean' ? [{ startDate: entry.start_date, endDate: entry.end_date, available: entry.available }] : []) };

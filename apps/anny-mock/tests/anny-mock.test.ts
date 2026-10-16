@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createAnnyMock, MOCK_IDS, MOCK_RESOURCE_VIEWS } from '../src/index.js';
+import { createAnnyMock, MOCK_IDS, MOCK_RESOURCE_VIEWS, type AnnyMockCatalog } from '../src/index.js';
 
 interface OpenApiSnapshot {
   components: { schemas: Record<string, unknown> };
@@ -56,7 +56,7 @@ describe('Anny mock contract', () => {
 
     const servicesReply = await app.inject({
       method: 'GET',
-      url: `/api/v1/services?o=${MOCK_IDS.organization}&page%5Bnumber%5D=1&page%5Bsize%5D=100`,
+      url: `/api/v1/services?o=${MOCK_IDS.organization}&page%5Bnumber%5D=1&page%5Bsize%5D=50`,
       headers: { authorization: 'Bearer contract-test-token' }
     });
     expect(servicesReply.statusCode).toBe(200);
@@ -117,5 +117,73 @@ describe('Anny mock contract', () => {
       payload: { order_customer_id: MOCK_IDS.customers.student, bookings: [{ resource_id: 'invalid' }] }
     });
     expect(invalidOrder.statusCode).toBe(400);
+  });
+
+  it('uses an optional catalog for availability and bookings with numeric-string Anny IDs', async () => {
+    const catalog: AnnyMockCatalog = {
+      resources: [{
+        id: '1234567',
+        name: 'Catalog room',
+        description: 'Imported sanitized room metadata.',
+        capacity: null,
+        location: 'Campus',
+        features: [],
+        serviceId: '543210'
+      }],
+      services: [{ id: '543210', name: 'Room booking' }]
+    };
+    const catalogApp = createAnnyMock({ token: 'catalog-test-token', catalog });
+    const start = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
+    start.setUTCHours(9, 0, 0, 0);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    try {
+      await catalogApp.ready();
+      const resourcesReply = await catalogApp.inject({
+        method: 'GET',
+        url: `/api/v1/resources?o=${MOCK_IDS.organization}&page%5Bsize%5D=50`,
+        headers: { authorization: 'Bearer catalog-test-token' }
+      });
+      expect(resourcesReply.json<{ data: { id: string }[] }>().data.map(({ id }) => id)).toEqual(['1234567']);
+
+      const availability = await catalogApp.inject({
+        method: 'GET',
+        url: `/api/v1/availability/upcoming-intervals?service_id=543210&resource_id=1234567&start_date=${encodeURIComponent(start.toISOString())}&duration=60`
+      });
+      expect(availability.statusCode).toBe(200);
+      expect(availability.json<{ data: { available: boolean; resource_ids: string[] }[] }>().data[0])
+        .toMatchObject({ available: true, resource_ids: ['1234567'] });
+
+      const created = await catalogApp.inject({
+        method: 'POST',
+        url: `/api/v1/orders/from-config?o=${MOCK_IDS.organization}`,
+        headers: { authorization: 'Bearer catalog-test-token', 'content-type': 'application/json' },
+        payload: {
+          order_customer_id: MOCK_IDS.customers.student,
+          bookings: [{
+            resource_id: '1234567',
+            service_id: { '543210': 1 },
+            start_date: start.toISOString(),
+            end_date: end.toISOString()
+          }]
+        }
+      });
+      expect(created.statusCode).toBe(200);
+      const createdBody = created.json<{ included: { relationships: { resource: { data: { id: string } }; service: { data: { id: string } } } }[] }>();
+      expect(createdBody.included[0]?.relationships).toMatchObject({
+        resource: { data: { id: '1234567' } },
+        service: { data: { id: '543210' } }
+      });
+
+      const bookings = await catalogApp.inject({
+        method: 'GET',
+        url: `/api/v1/customers/${MOCK_IDS.customers.student}/bookings?o=${MOCK_IDS.organization}&page%5Bsize%5D=50`,
+        headers: { authorization: 'Bearer catalog-test-token' }
+      });
+      expect(bookings.statusCode).toBe(200);
+      expect(bookings.json<{ included: { relationships: { resource: { data: { id: string } } } }[] }>().included[0]?.relationships.resource.data.id)
+        .toBe('1234567');
+    } finally {
+      await catalogApp.close();
+    }
   });
 });

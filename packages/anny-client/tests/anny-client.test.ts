@@ -2,11 +2,12 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   AnnyClient,
   AnnyOutcomeUnknownError,
+  AnnyResponseValidationError,
   AnnyResponseShapeError,
   AnnyUnsupportedOperationError,
   type CreateBookingInput
 } from '../src/index.js';
-import { createAnnyMock, MOCK_IDS } from '../../../apps/anny-mock/src/index.js';
+import { createAnnyMock, MOCK_IDS, type AnnyMockCatalog } from '../../../apps/anny-mock/src/index.js';
 
 const token = 'client-contract-token';
 const organizationId = MOCK_IDS.organization;
@@ -25,8 +26,14 @@ describe('AnnyClient', () => {
     await Promise.all(apps.splice(0).map((app) => app.close()));
   });
 
-  async function clientFor(options: { allowWrites?: boolean; pageSize?: number; fetchImpl?: typeof fetch; timeoutMs?: number } = {}) {
-    const app = createAnnyMock({ token });
+  async function clientFor(options: {
+    allowWrites?: boolean;
+    pageSize?: number;
+    fetchImpl?: typeof fetch;
+    timeoutMs?: number;
+    catalog?: AnnyMockCatalog;
+  } = {}) {
+    const app = createAnnyMock({ token, ...(options.catalog ? { catalog: options.catalog } : {}) });
     apps.push(app);
     const address = await app.listen({ host: '127.0.0.1', port: 0 });
     return new AnnyClient({
@@ -50,6 +57,57 @@ describe('AnnyClient', () => {
         { type: 'services', id: MOCK_IDS.services.students2 },
         { type: 'services', id: MOCK_IDS.services.hybridMeeting }
       ]);
+  });
+
+  it('uses the vendor page size limit and preserves numeric-string resource IDs across pages', async () => {
+    const catalog: AnnyMockCatalog = {
+      resources: Array.from({ length: 51 }, (_, index) => ({
+        id: String(index + 1000),
+        name: `Room ${String(index + 1)}`,
+        description: 'Catalog room',
+        capacity: index === 0 ? null : 4,
+        location: 'Campus',
+        features: [],
+        serviceId: '82001'
+      })),
+      services: [{ id: '82001', name: 'Room booking' }]
+    };
+    const requestedPageSizes: string[] = [];
+    const fetchImpl: typeof fetch = (input, init) => {
+      const requestUrl = input instanceof URL ? input : new URL(typeof input === 'string' ? input : input.url);
+      requestedPageSizes.push(requestUrl.searchParams.get('page[size]') ?? '');
+      return fetch(input, init);
+    };
+    const client = await clientFor({ catalog, fetchImpl });
+    const resources = await client.listResources();
+
+    expect(requestedPageSizes).toEqual(['50', '50']);
+    expect(resources).toHaveLength(51);
+    expect(resources[0]?.id).toBe('1000');
+    expect(resources[50]?.id).toBe('1050');
+    await expect(clientFor({ pageSize: 51 })).rejects.toThrow('pageSize must be an integer between 1 and 50.');
+  });
+
+  it('accepts only boolean or integer 0/1 service protection values', async () => {
+    const readProtection = async (value: unknown) => {
+      const client = new AnnyClient({
+        baseUrl: 'http://localhost:4102',
+        organizationId,
+        token,
+        allowLoopback: true,
+        fetchImpl: () => Promise.resolve(new Response(JSON.stringify({
+          data: { id: '81002', type: 'services', attributes: { is_protected: value } }
+        }), { status: 200, headers: { 'content-type': 'application/vnd.api+json' } }))
+      });
+      return client.listServices();
+    };
+
+    await expect(readProtection(0)).resolves.toMatchObject([{ attributes: { is_protected: false } }]);
+    await expect(readProtection(1)).resolves.toMatchObject([{ attributes: { is_protected: true } }]);
+    await expect(readProtection(false)).resolves.toMatchObject([{ attributes: { is_protected: false } }]);
+    await expect(readProtection(true)).resolves.toMatchObject([{ attributes: { is_protected: true } }]);
+    await expect(readProtection(2)).rejects.toBeInstanceOf(AnnyResponseValidationError);
+    await expect(readProtection('1')).rejects.toBeInstanceOf(AnnyResponseValidationError);
   });
 
   it('reads public availability without applying the Admin Bearer identity', async () => {

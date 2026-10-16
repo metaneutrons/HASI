@@ -3,7 +3,8 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { AnnyClient } from '@hasi/anny-client';
 import { createAnnyPlugin, annyManifest, demoPresentation } from '@hasi/anny-plugin';
-import { createAnnyMock, MOCK_IDS } from '@hasi/anny-mock';
+import { createAnnyMock, MOCK_IDS, type AnnyMockCatalog } from '@hasi/anny-mock';
+import { createKnowledgePlugin, knowledgeManifest } from '@hasi/knowledge-plugin';
 import { digest } from '@hasi/plugin-sdk';
 import type { JsonStore } from '@hasi/state';
 import { createApi, PluginRegistry } from '@hasi/api';
@@ -27,6 +28,7 @@ export interface DemoRuntimeOptions {
   /** Dedicated demo secret, never an institutional integration credential. */
   secret: string;
   fetch?: typeof fetch;
+  catalog?: AnnyMockCatalog;
 }
 
 function equal(a: string, b: string): boolean {
@@ -47,6 +49,7 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
   const privateKey = createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), seed]), format: 'der', type: 'pkcs8' });
   const publicKey = createPublicKey(privateKey);
   const pluginToken = derive('plugin-service').toString('base64url');
+  const knowledgeToken = derive('knowledge-service').toString('base64url');
   const mockToken = derive('mock-anny-service').toString('base64url');
   const cookieKey = derive('workspace-cookie');
   const sign = (value: string) => createHmac('sha256', cookieKey).update(value).digest('base64url');
@@ -66,7 +69,7 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
     return uuid.parse(parts[1]);
   };
   const plugin = createAnnyPlugin({
-    publicKey, serviceToken: pluginToken, presentation: demoPresentation, allowedHosts: [origin.hostname],
+    publicKey, serviceToken: pluginToken, presentation: options.catalog ? Object.fromEntries(options.catalog.resources.map(({ id, capacity, location, features, serviceId }) => [id, { capacity, location, features, serviceId }])) : demoPresentation, allowedHosts: [origin.hostname],
     consumeInvocation: (jti, expiresAt) => options.store.compareAndSet(`invocation:${jti}`, null, { consumed: true }, expiresAt * 1000),
     client: actor => {
       const workspaceId = subjectWorkspace(actor.subject);
@@ -80,6 +83,15 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
       return new AnnyClient({ baseUrl: origin.origin, organizationId: MOCK_IDS.organization, token: mockToken, allowLoopback: !secure, allowWrites: true, fetchImpl: scopedFetch });
     },
   });
+
+  const knowledge = createKnowledgePlugin({ publicKey, serviceToken: knowledgeToken, allowedHosts: [origin.hostname], consumeInvocation: (jti, expiresAt) => options.store.compareAndSet(`invocation:${jti}`, null, { consumed: true }, expiresAt * 1000) });
+
+  function handleKnowledgePlugin(request: Request) {
+    const url = new URL(request.url);
+    if (url.origin !== origin.origin || !url.pathname.startsWith('/plugins/knowledge/')) return Promise.resolve(failure(403));
+    url.pathname = url.pathname.slice('/plugins/knowledge'.length);
+    return forward(knowledge, new Request(url, request));
+  }
 
   function workspace(request: Request) {
     const signed = cookieValue(request.headers.get('cookie'), cookieName);
@@ -96,8 +108,9 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
     const space = workspace(request);
     const store = workspaceStore(space.id);
     const registry = new PluginRegistry(privateKey, { store, scope: space.id, fetch: internalFetch });
-    await registry.install({ endpoint: `${origin.origin}/mcp`, serviceToken: pluginToken, expectedManifestDigest: digest(annyManifest), allowLoopback: !secure });
-    const app = await createApi({ mode: secure ? 'public-demo' : 'test', registry, identity: new DurableDemoIdentity(store, space.id), store, origin: origin.origin, allowedHosts: [origin.hostname], secureCookies: secure, sessionCookieName: sessionName });
+    await registry.install({ endpoint: `${origin.origin}/mcp`, serviceToken: pluginToken, expectedManifestDigest: digest(annyManifest), approvedPreviousManifestDigests: ['61b8360b00745238bbdfc1dfa134bb20d7e4790581d47bb46091e27ef1c691fb'], allowLoopback: !secure });
+    await registry.install({ endpoint: `${origin.origin}/plugins/knowledge/mcp`, serviceToken: knowledgeToken, expectedManifestDigest: digest(knowledgeManifest), allowLoopback: !secure });
+    const app = await createApi({ mode: secure ? 'public-demo' : 'test', registry, identity: new DurableDemoIdentity(store, space.id, options.catalog?.resources.map(resource => resource.id)), store, origin: origin.origin, allowedHosts: [origin.hostname], secureCookies: secure, sessionCookieName: sessionName });
     try {
       const response = await forward(app, request);
       if (space.cookie) response.headers.append('set-cookie', space.cookie);
@@ -109,17 +122,17 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
     if (!equal(request.headers.get('authorization') ?? '', `Bearer ${mockToken}`)) return failure(401);
     const scope = uuid.safeParse(request.headers.get('x-hasi-demo-workspace'));
     if (!scope.success) return failure(403);
-    const app = createAnnyMock({ token: mockToken, store: workspaceStore(scope.data), scope: 'anny' });
+    const app = createAnnyMock({ token: mockToken, store: workspaceStore(scope.data), scope: 'anny', ...(options.catalog ? { catalog: options.catalog } : {}) });
     try { return await forward(app, request); } finally { await app.close(); }
   }
 
   async function hasSession(request: Request): Promise<boolean> {
     const space = workspace(request);
     if (space.cookie) return false;
-    return Boolean(await new DurableDemoIdentity(workspaceStore(space.id), space.id).resolve(cookieValue(request.headers.get('cookie'), sessionName)));
+    return Boolean(await new DurableDemoIdentity(workspaceStore(space.id), space.id, options.catalog?.resources.map(resource => resource.id)).resolve(cookieValue(request.headers.get('cookie'), sessionName)));
   }
 
-  return { handleCore, handleMock, hasSession, handlePlugin: (request: Request) => forward(plugin, request), close: () => plugin.close() };
+  return { handleCore, handleMock, hasSession, handleKnowledgePlugin, handlePlugin: (request: Request) => forward(plugin, request), close: async () => { await Promise.all([plugin.close(), knowledge.close()]); } };
 }
 
 function failure(status: number) { return Response.json({ error: 'Die Anfrage konnte nicht abgeschlossen werden.' }, { status, headers: { 'cache-control': 'private, no-store' } }); }

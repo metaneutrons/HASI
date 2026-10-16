@@ -132,7 +132,8 @@ interface RequestOptions<T> {
   schema: z.ZodType<T>;
 }
 
-const pageSizeDefault = 100;
+const pageSizeDefault = 50;
+const pageSizeMaximum = 50;
 const pageLimit = 100;
 const maxResponseBytes = 5 * 1024 * 1024;
 
@@ -304,8 +305,8 @@ export class AnnyClient {
     const timeoutMs = options.timeoutMs ?? 10_000;
     const pageSize = options.pageSize ?? pageSizeDefault;
     if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) throw new TypeError('timeoutMs must be a positive integer.');
-    if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 1000) {
-      throw new TypeError('pageSize must be an integer between 1 and 1000.');
+    if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > pageSizeMaximum) {
+      throw new TypeError(`pageSize must be an integer between 1 and ${String(pageSizeMaximum)}.`);
     }
 
     this.baseUrl = url.origin;

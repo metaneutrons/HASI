@@ -43,7 +43,7 @@ function createHarness(startAt = "2030-01-01T10:30:00.000Z") {
     if (cookies.size > 0) headers.set("cookie", [...cookies.values()].join("; "));
     const routedRequest = new Request(request, { headers, redirect: "error" });
     const url = new URL(routedRequest.url);
-    const response = url.pathname === "/mcp" || url.pathname.startsWith("/.well-known/")
+    const response = url.pathname.startsWith("/plugins/knowledge/") ? await runtime.handleKnowledgePlugin(routedRequest) : url.pathname === "/mcp" || url.pathname.startsWith("/.well-known/")
       ? await runtime.handlePlugin(routedRequest)
       : url.pathname === "/api/v1" || url.pathname.startsWith("/api/v1/")
         ? await runtime.handleMock(routedRequest)

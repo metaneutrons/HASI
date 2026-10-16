@@ -16,6 +16,8 @@ export interface Registration {
   serviceToken: string;
   expectedManifestDigest: string;
   allowLoopback: boolean;
+  /** Operator-approved previous pins for an intentional contract migration. Never request input. */
+  approvedPreviousManifestDigests?: readonly string[];
 }
 
 export interface PluginRegistryOptions {
@@ -119,13 +121,13 @@ export class PluginRegistry {
   private endpoint(registration: Registration): URL {
     const endpoint = new URL(registration.endpoint);
     const loopback = ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname);
-    if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || endpoint.pathname !== '/mcp' || (endpoint.protocol !== 'https:' && !(registration.allowLoopback && loopback && endpoint.protocol === 'http:'))) throw new RequestError(400, 'Unzulässiger Plugin-Endpunkt.');
+    if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !/^\/(?:plugins\/[a-z0-9-]+\/)?mcp$/.test(endpoint.pathname) || (endpoint.protocol !== 'https:' && !(registration.allowLoopback && loopback && endpoint.protocol === 'http:'))) throw new RequestError(400, 'Unzulässiger Plugin-Endpunkt.');
     return endpoint;
   }
 
   private async fetchManifest(registration: Registration): Promise<PluginManifest> {
     const endpoint = this.endpoint(registration);
-    const response = await this.fetchImpl(new URL('/.well-known/hasi-plugin.json', endpoint), { redirect: 'error', signal: AbortSignal.timeout(5000), headers: { authorization: `Bearer ${registration.serviceToken}` } });
+    const response = await this.fetchImpl(new URL('./.well-known/hasi-plugin.json', endpoint), { redirect: 'error', signal: AbortSignal.timeout(5000), headers: { authorization: `Bearer ${registration.serviceToken}` } });
     if (!response.ok) throw new RequestError(502, 'Plugin nicht erreichbar.');
     if (!response.body) throw new RequestError(502, 'Plugin-Manifest fehlt.');
     const reader = response.body.getReader();
@@ -336,6 +338,22 @@ export class PluginRegistry {
         stored = await this.store.read(key);
       }
       if (!stored) throw new RequestError(503, 'Der Plugin-Zustand konnte nicht gespeichert werden.');
+      // A contract change requires an explicit server-owned old -> new pin.
+      // Verify the entire previous signed state before retaining its enabled flag.
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const previous = persistedStateSchema.safeParse(stored.value);
+        if (!previous.success || previous.data.expectedManifestDigest === registration.expectedManifestDigest || !registration.approvedPreviousManifestDigests?.includes(previous.data.expectedManifestDigest)) break;
+        if (digest(liveManifest) !== registration.expectedManifestDigest) throw new RequestError(409, 'Plugin-Freigabe oder Version stimmt nicht überein.');
+        const verified = this.validatePersistedState(stored.value, { ...registration, expectedManifestDigest: previous.data.expectedManifestDigest }, liveManifest.id);
+        // Retain the verified old slot for an operator-controlled rollback.
+        await this.store.compareAndSet(`${key}:backup:${previous.data.expectedManifestDigest}`, null, verified);
+        const migrated = this.seedState(registration, liveManifest);
+        const signed = this.signState({ ...this.unsignedState(migrated), enabled: verified.enabled });
+        await this.store.compareAndSet(key, stored.revision, signed);
+        const refreshed = await this.store.read(key);
+        if (!refreshed) throw new RequestError(503, 'Der Plugin-Zustand konnte nicht gespeichert werden.');
+        stored = refreshed;
+      }
       state = this.validatePersistedState(stored.value, registration, liveManifest.id);
     } else {
       if (digest(liveManifest) !== registration.expectedManifestDigest) throw new RequestError(409, 'Plugin-Freigabe oder Version stimmt nicht überein.');

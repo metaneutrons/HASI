@@ -119,7 +119,9 @@ automatically.
 
 - Vercel project `hasi`, team `metaneutrons`, root directory `apps/web`.
 - Node.js 24.x, `fra1`, and version-pinned pnpm 12.11.2 install/build commands
-  are configured in `apps/web/vercel.json`.
+  are declared in `apps/web/vercel.json`. The project function default must
+  also be `fra1`; CLI deployments from the repository root use that setting
+  unless passed `--regions fra1`. Check deployment metadata after publication.
 - Set `NEXT_PUBLIC_HASI_PUBLIC_DEMO=1` for both Preview and Production builds.
   Changing this public flag requires a rebuild.
 - Set `HASI_DEMO_MODE=1`, `DATABASE_URL` and a separately provisioned
@@ -153,6 +155,12 @@ For local server-backed demo mode, configure `NEXT_PUBLIC_HASI_PUBLIC_DEMO=1`,
 local PostgreSQL database. It is separate from `pnpm dev`, which continues to
 start the multi-process in-memory reference stack.
 
-Deployment and live qualification, including the acceptance checks in
-[`server-demo-parity.md`](../plans/server-demo-parity.md), remain outstanding.
-No production or preview readiness claim is made here.
+The [server-demo parity criteria](../plans/server-demo-parity.md) are supported
+by the dated verification report. Institutional rollout remains separate work.
+
+Rollback promotes a previously verified deployment. Keep the synthetic store
+and namespace intact; never import browser-supplied booking state. A rollback
+to the former browser simulator cannot display the new server-held bookings.
+No real institutional data or external business action needs migration.
+
+The knowledge MCP and imported room catalog add an intentional anny 0.1.0 → 0.2.0 contract migration. See [knowledge MCP](knowledge-mcp.md) for the verified old-pin migration and the rollback requirement; an alias-only rollback to a deployment using the old pin cannot read migrated workspace registry state.

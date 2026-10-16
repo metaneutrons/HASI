@@ -8,6 +8,7 @@ import {
   type ModelProfileId,
   type WireMessage,
 } from "./chat-contract";
+import { knowledgeDocumentSchema, type KnowledgeDocument } from "./knowledge";
 import type { RoomRequest } from "./chat-demo";
 import type { Booking, Resource, TimeInterval } from "./types";
 
@@ -37,6 +38,7 @@ export type ChatMessage = {
   text: string;
   tool?: string;
   rooms?: ChatRoomOption[];
+  sources?: KnowledgeDocument[];
   proposal?: ChatProposal;
   bookings?: Booking[];
   confirmed?: boolean;
@@ -97,7 +99,7 @@ const resourceSchema = z.strictObject({
   id: idSchema,
   name: plainTextSchema(160),
   description: plainTextSchema(320),
-  capacity: z.number().int().min(1).max(10_000),
+  capacity: z.number().int().min(1).max(10_000).nullable(),
   location: plainTextSchema(140),
   features: z.array(plainTextSchema(48)).max(12),
   serviceId: idSchema,
@@ -147,6 +149,7 @@ const chatMessageSchema = z.strictObject({
     )
     .max(8)
     .optional(),
+  sources: z.array(knowledgeDocumentSchema).max(5).optional(),
   proposal: proposalSchema.optional(),
   bookings: z.array(bookingSchema).max(10).optional(),
   confirmed: z.boolean().optional(),

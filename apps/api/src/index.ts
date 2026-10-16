@@ -9,8 +9,9 @@ import { MockIdentityProvider, personas, type Persona, type IdentityProvider } f
 export { PluginRegistry, compatibleUpdate, RequestError } from './registry.js';
 export { assertMockMode, MockIdentityProvider } from './identity.js';
 const ANNY = 'de.hsh.hasi.anny';
+const annyId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/);
 const time = z.iso.datetime({ offset: true });
-const roomRequest = z.strictObject({ resourceId: z.uuid(), serviceId: z.uuid(), startDate: time, endDate: time }).refine(value => Date.parse(value.endDate) > Date.parse(value.startDate) && Date.parse(value.endDate) - Date.parse(value.startDate) <= 86400000, 'Invalid interval');
+const roomRequest = z.strictObject({ resourceId: annyId, serviceId: annyId, startDate: time, endDate: time }).refine(value => Date.parse(value.endDate) > Date.parse(value.startDate) && Date.parse(value.endDate) - Date.parse(value.startDate) <= 86400000, 'Invalid interval');
 const draftSchema = z.strictObject({ executionTool: z.string(), arguments: z.record(z.string(), z.unknown()), resourceName: z.string().max(200) });
 interface Proposal { id: string; subject: string; pluginId: string; pluginVersion: string; executionTool: string; args: Record<string, unknown>; resourceName: string; startDate: string; endDate: string; expiresAt: string; status: 'pending' | 'executing' | 'confirmed' | 'failed' | 'outcome_unknown'; result?: Record<string, unknown>; executionId?: string; executionStartedAt?: number }
 const publicUser = (user: Persona) => ({ id: user.id, displayName: user.displayName, role: user.role });
@@ -73,10 +74,19 @@ export async function createApi(options: ApiOptions) {
   app.post('/api/admin/plugins/:id/check-update', async request => { await requireAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); return options.registry.checkUpdate(id); });
   app.post('/api/admin/plugins/:id/activate-update', async request => { await requireAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); await options.registry.activateUpdate(id); return { ok: true }; });
   app.get('/api/resources', async request => { const user = await requireUser(request.cookies[cookieName]); return options.registry.invoke(ANNY, 'anny.search_resources', {}, user.actor); });
+  app.get('/api/knowledge/documents/:id', async request => {
+    const user = await requireUser(request.cookies[cookieName]);
+    const { id } = z.strictObject({ id: z.string().regex(/^(svc|int)-[0-9]{3}$/) }).parse(request.params);
+    try { return await options.registry.invoke('de.hsh.hasi.knowledge', 'knowledge.get_document', { documentId: id }, user.actor); }
+    catch (error) {
+      if (error instanceof RequestError && error.status === 409) throw error;
+      throw new RequestError(404, 'Dokument nicht verfügbar oder nicht freigegeben.');
+    }
+  });
   app.get('/api/bookings', async request => { const user = await requireUser(request.cookies[cookieName]); return options.registry.invoke(ANNY, 'anny.list_my_bookings', {}, user.actor); });
   app.post('/api/availability', async request => {
     const user = await requireUser(request.cookies[cookieName]);
-    const args = z.strictObject({ resourceId: z.uuid(), serviceId: z.uuid(), startDate: time, durationMinutes: z.number().int().min(15).max(1440) }).parse(request.body);
+    const args = z.strictObject({ resourceId: annyId, serviceId: annyId, startDate: time, durationMinutes: z.number().int().min(15).max(1440) }).parse(request.body);
     if (!user.actor.resourceIds.includes(args.resourceId)) throw new RequestError(403, 'Dieser Raum ist für das Testkonto nicht freigegeben.');
     return options.registry.invoke(ANNY, 'anny.get_availability', args, user.actor);
   });

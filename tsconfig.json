@@ -1,6 +1,22 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": {"noEmit": true},
-  "include": ["packages/**/*.ts", "apps/api/**/*.ts", "apps/anny-plugin/**/*.ts", "apps/anny-mock/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts", "vitest.config.ts"],
-  "exclude": ["**/dist/**", "node_modules", "**/node_modules/**"]
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "packages/**/*.ts",
+    "apps/api/**/*.ts",
+    "apps/anny-plugin/**/*.ts",
+    "apps/anny-mock/**/*.ts",
+    "scripts/**/*.ts",
+    "tests/**/*.ts",
+    "vitest.config.ts",
+    "apps/knowledge-plugin/**/*.ts",
+    "fixtures/catalog.ts"
+  ],
+  "exclude": [
+    "**/dist/**",
+    "node_modules",
+    "**/node_modules/**"
+  ]
 }

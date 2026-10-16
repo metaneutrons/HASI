@@ -181,6 +181,9 @@ importers:
       '@hasi/demo-runtime':
         specifier: workspace:*
         version: link:packages/demo-runtime
+      '@hasi/knowledge-plugin':
+        specifier: workspace:*
+        version: link:apps/knowledge-plugin
       '@hasi/plugin-sdk':
         specifier: workspace:*
         version: link:packages/plugin-sdk
@@ -245,6 +248,9 @@ importers:
 
   apps/anny-mock:
     dependencies:
+      '@hasi/demo-fixtures':
+        specifier: workspace:*
+        version: link:../../fixtures
       '@hasi/state':
         specifier: workspace:*
         version: link:../../packages/state
@@ -260,6 +266,9 @@ importers:
       '@hasi/anny-client':
         specifier: workspace:*
         version: link:../../packages/anny-client
+      '@hasi/demo-fixtures':
+        specifier: workspace:*
+        version: link:../../fixtures
       '@hasi/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
@@ -275,6 +284,9 @@ importers:
       '@fastify/cookie':
         specifier: 11.1.3
         version: 11.1.3
+      '@hasi/demo-fixtures':
+        specifier: workspace:*
+        version: link:../../fixtures
       '@hasi/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
@@ -304,11 +316,29 @@ importers:
         specifier: 7.8.0
         version: 7.8.0
 
+  apps/knowledge-plugin:
+    dependencies:
+      '@hasi/demo-fixtures':
+        specifier: workspace:*
+        version: link:../../fixtures
+      '@hasi/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      fastify:
+        specifier: 5.12.7
+        version: 5.12.7
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
   apps/web:
     dependencies:
       '@ai-sdk/groq':
         specifier: 4.0.62
         version: 4.0.62(zod@4.6.7)
+      '@hasi/demo-fixtures':
+        specifier: workspace:*
+        version: link:../../fixtures
       '@hasi/demo-runtime':
         specifier: workspace:*
         version: link:../../packages/demo-runtime
@@ -359,6 +389,8 @@ importers:
         specifier: 16.4.2
         version: 16.4.2(@typescript-eslint/parser@8.71.2(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
 
+  fixtures: {}
+
   packages/anny-client:
     dependencies:
       zod:
@@ -379,6 +411,12 @@ importers:
       '@hasi/api':
         specifier: workspace:*
         version: link:../../apps/api
+      '@hasi/demo-fixtures':
+        specifier: workspace:*
+        version: link:../../fixtures
+      '@hasi/knowledge-plugin':
+        specifier: workspace:*
+        version: link:../../apps/knowledge-plugin
       '@hasi/plugin-sdk':
         specifier: workspace:*
         version: link:../plugin-sdk

@@ -138,6 +138,34 @@ describe('plugin registry runtime updates', () => {
     await expect(first.invoke(pluginId, 'records.read', {}, actor)).resolves.toEqual({ value: 'served-0.1.1' });
   });
 
+  it('requires an explicit verified old pin for a contract migration and preserves disabled state', async () => {
+    const oldManifest = manifest('0.1.0');
+    const firstServer = createServer(oldManifest);
+    const endpoint = await listenOnEphemeralPort(firstServer);
+    const store = new MemoryJsonStore('registry-migration');
+    const options = { store, scope: 'migration' };
+    const oldRegistration = { endpoint, serviceToken, expectedManifestDigest: digest(oldManifest), allowLoopback: true };
+    const first = new PluginRegistry(privateKey, options);
+    await first.install(oldRegistration);
+    await first.setEnabled(pluginId, false);
+    await firstServer.close();
+    const nextManifest = manifest('0.2.0', ['records:read', 'records:extra']);
+    const nextServer = createServer(nextManifest);
+    await nextServer.listen({ host: '127.0.0.1', port: getPort(endpoint) });
+    const nextRegistration = { ...oldRegistration, expectedManifestDigest: digest(nextManifest) };
+    await expect(new PluginRegistry(privateKey, options).install(nextRegistration)).rejects.toMatchObject({ status: 409 });
+    const migrated = new PluginRegistry(privateKey, options);
+    await migrated.install({ ...nextRegistration, approvedPreviousManifestDigests: [digest(oldManifest)] });
+    expect(migrated.version(pluginId)).toBe('0.2.0');
+    expect((await store.read(`${stateKey('migration')}:backup:${digest(oldManifest)}`))?.value).toMatchObject({ enabled: false, expectedManifestDigest: digest(oldManifest) });
+    expect(migrated.list()[0]?.enabled).toBe(false);
+    await expect(migrated.invoke(pluginId, 'records.read', {}, actor)).rejects.toMatchObject({ status: 409 });
+    const persisted = await store.read(stateKey('migration'));
+    if (!persisted || typeof persisted.value !== 'object' || persisted.value === null) throw new Error('Missing state');
+    await store.compareAndSet(stateKey('migration'), persisted.revision, { ...persisted.value, enabled: true });
+    await expect(new PluginRegistry(privateKey, options).install({ ...nextRegistration, approvedPreviousManifestDigests: [digest(oldManifest)] })).rejects.toMatchObject({ status: 409 });
+  });
+
   it('rejects altered durable state before invoking a plugin', async () => {
     const pluginManifest = manifest('0.1.0');
     const server = createServer(pluginManifest);

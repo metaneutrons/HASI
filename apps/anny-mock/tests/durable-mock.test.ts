@@ -38,7 +38,7 @@ function postOrder(app: ReturnType<typeof createAnnyMock>, customerId: string, s
 function customerBookings(app: ReturnType<typeof createAnnyMock>, customerId: string) {
   return app.inject({
     method: 'GET',
-    url: `/api/v1/customers/${customerId}/bookings?o=${MOCK_IDS.organization}&page%5Bsize%5D=100`,
+    url: `/api/v1/customers/${customerId}/bookings?o=${MOCK_IDS.organization}&page%5Bsize%5D=50`,
     headers: { authorization: `Bearer ${TOKEN}` }
   });
 }

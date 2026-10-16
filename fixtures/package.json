@@ -1,0 +1,24 @@
+{
+  "name": "@hasi/demo-fixtures",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./knowledge-demo-v1.json": "./knowledge-demo-v1.json",
+    "./anny-hsh-rooms-v1.json": "./anny-hsh-rooms-v1.json",
+    "./catalog": {
+      "types": "./dist/catalog.d.ts",
+      "import": "./dist/catalog.js"
+    }
+  },
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "author": "Fabian Schmieder",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/metaneutrons/HASI.git",
+    "directory": "fixtures"
+  }
+}

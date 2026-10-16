@@ -47,7 +47,7 @@ const MAX_MODEL_OUTPUT_CHARS = 8_000;
 const MAX_RESOURCES = 8;
 const MAX_INTERVALS = 8;
 const MAX_BOOKINGS = 10;
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const ANNY_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u;
 const OFFSET_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/u;
 
 type CachedSlot = { startDate: string; endDate: string; serviceId: string };
@@ -56,8 +56,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isUuid(value: unknown): value is string {
-  return typeof value === "string" && UUID_PATTERN.test(value);
+function isAnnyId(value: unknown): value is string {
+  return typeof value === "string" && ANNY_ID_PATTERN.test(value);
 }
 
 function isOffsetDateTime(value: unknown): value is string {
@@ -73,15 +73,14 @@ function intervalCacheKey(startDate: string, endDate: string): string | null {
 
 function isResource(value: unknown): value is Resource {
   return isRecord(value)
-    && isUuid(value.id)
+    && isAnnyId(value.id)
     && typeof value.name === "string"
     && typeof value.description === "string"
-    && Number.isInteger(value.capacity)
-    && Number(value.capacity) > 0
+    && (value.capacity === null || Number.isInteger(value.capacity) && Number(value.capacity) > 0)
     && typeof value.location === "string"
     && Array.isArray(value.features)
     && value.features.every((feature) => typeof feature === "string")
-    && isUuid(value.serviceId);
+    && isAnnyId(value.serviceId);
 }
 
 function isTimeInterval(value: unknown): value is TimeInterval {

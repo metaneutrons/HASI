@@ -1,7 +1,9 @@
 # Server-backed demo parity
 
 Date: 2026-10-16. This requirement supersedes the browser-only demo execution mode.
-Implementation work is on the server-backed demo branch; qualification and publication are separate gates.
+Implementation: [PR #12](https://github.com/metaneutrons/HASI/pull/12).
+[Qualification and publication evidence](../verification/2026-10-16/verification.md)
+records the exact verified revisions and deployment; criteria remain below.
 
 ## Outcome and boundaries
 
