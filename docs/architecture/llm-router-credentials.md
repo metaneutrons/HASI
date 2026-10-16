@@ -45,7 +45,7 @@ An illustrative server-owned connection is:
 }
 ```
 
-The GWDG connection is fixed to its SAIA endpoint and has two approved profiles.
+The GWDG connection is fixed to its SAIA endpoint and has one selectable profile.
 The custom connection uses `CUSTOM_ENDPOINT` and `CUSTOM_MODEL_ID` supplied by
 the operator in the server environment; it is shown only when the HTTPS
 endpoint and model ID validate. Its key is resolved through the same allowlisted
@@ -54,8 +54,11 @@ The router allowlists Groq GPT-OSS 120B, 20B and Qwen3.8 27B Preview, the GWDG
 `qwen3-30b-a3b-instruct-2507` profile, and one custom model profile. The GWDG
 GPT-OSS 120B profile is deferred after protected Preview probes returned
 upstream HTTP 500; its cause is not established. Qwen passed Preview checks for
-knowledge retrieval and anny room search on 2026-10-16. This runtime result
-does not establish Production qualification or approval for protected HsH data.
+knowledge retrieval and anny room search on 2026-10-16. Production greeting
+generation also passed, but a knowledge question omitted retrieval and invented
+a citation identifier. The profile is labelled Experimental; see the
+[dated evaluation observations](../evaluation/gwdg-preview-2026-10-16.md).
+These checks do not establish reliable source grounding or approval for protected HsH data.
 Configured custom providers must be independently qualified for native tool
 calls before room workflows are enabled. Production data-policy approval and
 durable budgets remain required. HASI's router
