@@ -10,6 +10,19 @@ function memory() {
 afterEach(() => vi.useRealTimers());
 
 describe("mounted chat workspace isolation", () => {
+  it("does not reorder existing chats merely because fields arrive in a different object order after mounting", () => {
+    vi.useFakeTimers();
+    const storage = memory();
+    const store = createChatWorkspaceStore("student", storage);
+    const chat = store.getSnapshot().workspace.sessions[0]!;
+    const { input, history, ...other } = chat.snapshot;
+    vi.advanceTimersByTime(10_000);
+    store.update(chat.id, { input, history, ...other }, false);
+    expect(store.getSnapshot().workspace.sessions[0]!.updatedAt).toBe(chat.updatedAt);
+    expect(store.getSnapshot().workspace).toBe(store.getSnapshot().workspace);
+    store.flush();
+  });
+
   it("routes background completions to their own chat, keeping the selected draft and profile", () => {
     vi.useFakeTimers();
     const storage = memory();

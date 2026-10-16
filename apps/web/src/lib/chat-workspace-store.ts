@@ -48,8 +48,9 @@ export function createChatWorkspaceStore(ownerId: string, storage?: StorageLike)
       if (!session) return;
       let next: ChatWorkspace;
       try {
-        next = JSON.stringify(session.snapshot) === JSON.stringify(snapshot)
-          ? view.workspace : updateChatSnapshot(view.workspace, sessionId, snapshot);
+        const candidate = updateChatSnapshot(view.workspace, sessionId, snapshot);
+        const normalized = candidate.sessions.find((item) => item.id === sessionId)!.snapshot;
+        next = JSON.stringify(session.snapshot) === JSON.stringify(normalized) ? view.workspace : candidate;
       } catch {
         view = { ...view, busy: { ...view.busy, [sessionId]: busy }, notice: "Dieser Chat überschreitet die Speichergrenzen und kann gerade nicht gespeichert werden. Beginne für weitere Fragen einen neuen Chat." }; emit(); return;
       }
