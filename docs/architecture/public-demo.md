@@ -170,3 +170,9 @@ to the former browser simulator cannot display the new server-held bookings.
 No real institutional data or external business action needs migration.
 
 The knowledge MCP and imported room catalog add an intentional anny 0.1.0 → 0.2.0 contract migration. See [knowledge MCP](knowledge-mcp.md) for the verified old-pin migration and the rollback requirement; an alias-only rollback to a deployment using the old pin cannot read migrated workspace registry state.
+
+The subsequent anny 0.3.0 contract distinguishes individual workplaces from
+whole meeting/lecture rooms and retains each desk's actual office relationship.
+Office containers are excluded from demo identity grants and booking targets.
+The explicit old-pin migration and calendar boundary are documented in
+[booking units](anny-booking-units.md).

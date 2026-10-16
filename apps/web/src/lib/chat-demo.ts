@@ -1,6 +1,7 @@
-import type { Resource } from "./types";
+import type { Resource, ResourceKind } from "./types";
 
 export type RoomRequest = {
+  kind?: ResourceKind;
   date?: string;
   time?: string;
   durationMinutes?: number;
@@ -9,6 +10,12 @@ export type RoomRequest = {
   location?: string;
   query?: string;
 };
+
+export function workplaceGroupQuestion(request: RoomRequest): string | null {
+  return request.kind === 'workplace' && request.capacity !== undefined && request.capacity > 1
+    ? 'Möchtest du einzelne Arbeitsplätze für mehrere Personen oder einen gemeinsamen Besprechungsraum? Arbeitsplätze werden einzeln ausgewählt und bestätigt.'
+    : null;
+}
 
 const TIME_ZONE = "Europe/Berlin";
 const INVALID = "__invalid__";
@@ -291,6 +298,8 @@ function parseLocation(text: string): { found: boolean; value?: string } {
 function parseQuery(text: string): string | undefined {
   let residual = text;
   const patterns = [
+    /\b(?:\d+|ein(?:e|en|em|er)?|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s+(?:arbeitsplätz(?:e|en)|arbeitsplaetz(?:e|en)|schreibtisch(?:e|en)|desks?)\b/giu,
+    /\b(?:arbeitsplätz(?:e|en)?|arbeitsplatz|schreibtisch(?:e|en)?|büros?|bueros?|büroraum|büroräume|bueroraum|bueroraeume|flex[-\s]?büros?|flex[-\s]?bueros?|desks?|besprechungsräum(?:e|en)|besprechungsraum|meetingräum(?:e|en)|meetingraum|hörsäle|hörsaal|hoersaele|hoersaal)\b/giu,
     /(?<![\p{L}\p{N}_])(?:übermorgen|morgen|heute)(?![\p{L}\p{N}_])/giu,
     /(?<!\d)\d{4}-\d{1,2}-\d{1,2}(?!\d)/gu,
     /(?<!\d)\d{1,2}\.\d{1,2}\.(?:\d{4})?(?!\d)/gu,
@@ -302,7 +311,7 @@ function parseQuery(text: string): string | undefined {
     /\b(?:display|beamer|whiteboard|videokonferenz|wlan)\b/giu,
     /\b(?:expo[\s-]*plaza|linden)\b/giu,
     /\b(?:ich\s+)?(?:such(?:e|en)?|brauche|benötige|benoetige|möchte|moechte|hätte\s+gern|haette\s+gern|finde|finden|reserviere|buch(?:e|en)?|gibt\s+es|haben\s+sie)\b/giu,
-    /\b(?:kannst|kann|können|koennen|könnt|koennt|du|mir|mich|uns|ihnen|zeig|zeige|zeigen|gib|gibt|einmal|mal|einen?|einer|einem|der|die|das|welche|welcher|welchen|was|bitte|doch|lieber|stattdessen|campus|raumbuchung(?:en)?|raum|räume|raeume|zimmer|für|fuer|mit|ohne|am|im|in|und|oder|wir|sind|zu|person(?:en)?|leute|gruppe|morgen|heute|übermorgen|uebermorgen)\b/giu,
+    /\b(?:kannst|kann|können|koennen|könnt|koennt|du|mir|mich|uns|ihnen|zeig|zeige|zeigen|gib|gibt|einmal|mal|ein(?:e|en|em|er)?|der|die|das|welche|welcher|welchen|was|nach|einzeln(?:e|en|er)?|bitte|doch|lieber|stattdessen|campus|raumbuchung(?:en)?|raum|räume|raeume|zimmer|für|fuer|mit|ohne|am|im|in|und|oder|wir|sind|zu|person(?:en)?|leute|gruppe|morgen|heute|übermorgen|uebermorgen)\b/giu,
   ];
   for (const pattern of patterns) residual = residual.replace(pattern, " ");
   const words = normalize(residual).match(/[a-z0-9]+/gu)?.filter((word) => word.length > 2) ?? [];
@@ -312,6 +321,15 @@ function parseQuery(text: string): string | undefined {
 export function mergeRoomRequest(text: string, previous: RoomRequest, now = new Date()): RoomRequest {
   const boundedText = text.slice(0, 2_000);
   const next: RoomRequest = { ...previous };
+  const normalized = normalize(boundedText);
+  const kind: ResourceKind | undefined = /\b(?:arbeitsplatz|arbeitsplatz(?:e|en)?|buros?|flex[-\s]?buros?|buroraum|buroraume|bueroraum|bueroraeume|schreibtisch(?:e|en)?|desks?)\b/u.test(normalized) ? 'workplace'
+    : /\b(?:besprechungsraum|besprechungsraume|meetingraum|meetingraume)\b/u.test(normalized) ? 'meeting_room'
+      : /\b(?:horsaal|horsale|hoersaal|hoersaele)\b/u.test(normalized) ? 'lecture_hall'
+        : /\b(?:raum|raume|raeume|raumbuchung(?:en)?)\b/u.test(normalized) ? 'room' : undefined;
+  if (kind) {
+    if (kind === 'workplace' && (previous.kind !== kind || /\b(?:einzelne|einzelnen)\s+arbeitsplatz(?:e|en)?\b/u.test(normalized))) next.capacity = undefined;
+    next.kind = kind;
+  }
   const dates = parseDateCandidates(boundedText, now);
   if (dates.candidates.length || dates.invalid) {
     next.date = dates.invalid ? INVALID : dates.candidates[0]?.value;
@@ -347,7 +365,7 @@ export function classifyIntent(text: string, hasRoomContext: boolean): "rooms" |
   const normalized = normalize(text).trim();
   if (/\b(?:meine|eigene)\s+buchungen?\b|\bbuchungen?\s+(?:anzeigen|auflisten|zeigen)\b|\bwas\s+habe\s+ich\s+gebucht\b|\bmy\s+bookings\b/iu.test(normalized)) return "bookings";
 
-  const hasRoomWording = /\b(?:raum|raume|raeume|raumbuchung|raumbuchungen|zimmer|seminarraum|projektraum|medienstudio|computerraum|reservier\w*|raumplanung)\b/iu.test(normalized);
+  const hasRoomWording = /\b(?:raum|raume|raeume|raumbuchung|raumbuchungen|zimmer|seminarraum|projektraum|medienstudio|computerraum|reservier\w*|raumplanung|arbeitsplatz|arbeitsplatz(?:e|en)?|buros?|flex[-\s]?buros?|buroraum|buroraume|bueroraum|bueroraeume|schreibtisch(?:e|en)?|besprechungsraum|besprechungsraume|horsaal|horsale|hoersaal|hoersaele)\b/iu.test(normalized);
   if (hasRoomWording) return "rooms";
 
   const knowledgeTerms = /\b(?:eduroam|wlan|vpn|intranet|service[-\s]*it|it[-\s]*service|passwort|multifaktor|mfa|account|zugangsdaten|softwareportal|zeiterfassung|urlaub|fortbildung|bibliothek|campuscard)\b/iu;
@@ -383,11 +401,17 @@ export function matchingResources(resources: Resource[], request: RoomRequest): 
   const requiredFeatures = request.features ?? [];
   const requiredQuery = queryTokens(request.query ?? "").map(stemGermanWord).filter(Boolean);
   return resources.filter((resource) => {
-    if (request.capacity !== undefined && (resource.capacity === null || resource.capacity < request.capacity)) return false;
+    const kind = resource.kind ?? 'room';
+    if (request.kind === 'room' ? kind === 'workplace' : request.kind && kind !== request.kind) return false;
+    if (request.capacity !== undefined) {
+      if (kind === 'workplace') {
+        if (request.kind !== 'workplace' || request.capacity !== 1) return false;
+      } else if (resource.capacity === null || resource.capacity < request.capacity) return false;
+    }
     const features = new Set(resource.features.map(normalize));
     if (!requiredFeatures.every((feature) => features.has(normalize(feature)))) return false;
     if (request.location && !normalize(resource.location).includes(normalize(request.location))) return false;
-    const searchable = normalize(`${resource.name} ${resource.description} ${resource.features.join(" ")}`);
+    const searchable = normalize(`${resource.name} ${resource.parentName ?? ''} ${resource.description} ${resource.features.join(" ")}`);
     if (!requiredQuery.every((token) => searchable.split(/[^a-z0-9]+/u).some((candidate) => stemGermanWord(candidate) === token))) return false;
     return true;
   });
@@ -469,5 +493,7 @@ export function roomRequestSummary(request: RoomRequest): string {
   else if (request.features?.length) parts.push(`mit ${request.features.join(" und ")}`);
   if (request.location) parts.push(`in ${request.location === INVALID ? "ungeklärtem Standort" : request.location}`);
   if (request.query) parts.push(`für „${request.query}“`);
-  return parts.length ? `Raumsuche ${parts.join(", ")}.` : "Ich habe noch keine Raumanforderungen erkannt.";
+  const label = request.kind === 'workplace' ? 'Arbeitsplatzsuche' : request.kind === 'lecture_hall' ? 'Hörsaalsuche' : request.kind === 'meeting_room' ? 'Besprechungsraumsuche' : 'Raumsuche';
+  const summary = parts.length ? `${label} ${parts.join(", ")}.` : `${label}: Nenne mir den gewünschten Zeitraum.`;
+  return request.kind === 'workplace' ? `${summary} Jede Buchung reserviert genau einen Arbeitsplatz; weitere Plätze wählst und bestätigst du separat.` : summary;
 }

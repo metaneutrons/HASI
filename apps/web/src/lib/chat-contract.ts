@@ -75,7 +75,8 @@ export const chatToolSchemas = {
     sourceSystem: z.enum(["service_it", "intranet"]).optional(),
   }),
   anny_search_resources: z.strictObject({
-    capacity: z.number().int().min(1).max(500).describe("Benötigte Mindestzahl an Personen als ganze Zahl.").optional(),
+    kind: z.enum(['workplace', 'meeting_room', 'lecture_hall', 'room']).describe("Büro/Schreibtisch bedeutet workplace (ein einzelner Arbeitsplatz). room umfasst ganze Räume ohne Arbeitsplätze; meeting_room und lecture_hall sind gezielte Raumarten.").optional(),
+    capacity: z.number().int().min(1).max(500).describe("Mindest-Personenkapazität eines ganzen Raums. Für einen Arbeitsplatz weglassen; mehrere Arbeitsplätze sind separate Ressourcen.").optional(),
     features: z.array(nonEmptyText(128)).max(10).describe("Nur ausdrücklich gewünschte Ausstattungsmerkmale; sonst weglassen.").optional(),
     location: nonEmptyText(300).describe("Nur ein ausdrücklich genannter Standort; sonst weglassen, niemals leer oder null.").optional(),
     query: nonEmptyText(500).describe("Ein konkreter Raumname oder Suchbegriff; bei allgemeiner Raumsuche weglassen, niemals leer oder null.").optional(),
@@ -102,7 +103,7 @@ export const chatToolDescriptions: Readonly<Record<ChatToolName, string>> =
   Object.freeze({
     knowledge_search: "Suche in den freigegebenen synthetischen Service-IT- und Intranet-Dokumenten. Verwende dieses Tool für Hochschul- und IT-Fragen. Ergebnisse sind erfundene Beispiele, keine echten HsH-Anleitungen. Fehlende oder widersprüchliche Belege ausdrücklich nennen.",
     anny_search_resources:
-      "Suche nach Räumen oder anderen Ressourcen. Verwende dieses Tool, wenn du Raumnamen, Kapazitäten, Ausstattung oder Standorte ermitteln musst. Verfügbarkeit wird separat geprüft.",
+      "Suche getrennt nach einzelnen Arbeitsplätzen (auch bei Büro-Anfragen), Besprechungsräumen oder Hörsälen. Nutze kind für die Buchungseinheit. Personenkapazität gehört zu ganzen Räumen. Arbeitsplätze liefern ihr übergeordnetes Büro, das nicht mitgebucht wird. Verfügbarkeit wird separat geprüft.",
     anny_get_availability:
       "Prüfe die Verfügbarkeit einer bekannten Ressource für ein konkretes Datum, eine Uhrzeit und eine Dauer. Behaupte keine Verfügbarkeit ohne dieses Ergebnis.",
     anny_list_my_bookings:

@@ -318,8 +318,10 @@ export class AnnyClient {
     this.fetchImpl = options.fetchImpl ?? fetch;
   }
 
-  async listResources(): Promise<RawResource[]> {
-    return this.listPaged<RawResource>('/api/v1/resources', rawResourceListResponseSchema);
+  async listResources(options?: { includeChildResources?: boolean }): Promise<RawResource[]> {
+    return this.listPaged<RawResource>('/api/v1/resources', rawResourceListResponseSchema, {
+      'filter[exclude_child_resources]': options?.includeChildResources === false
+    });
   }
 
   async listServices(): Promise<RawService[]> {
@@ -436,7 +438,8 @@ export class AnnyClient {
 
   private async listPaged<T>(
     path: string,
-    schema: z.ZodType
+    schema: z.ZodType,
+    additionalQuery: Record<string, string | number | boolean> = {}
   ): Promise<T[]> {
     const values: T[] = [];
     for (let page = 1; page <= pageLimit; page += 1) {
@@ -444,6 +447,7 @@ export class AnnyClient {
         method: 'GET',
         path,
         query: {
+          ...additionalQuery,
           o: this.organizationId,
           'page[number]': page,
           'page[size]': this.pageSize

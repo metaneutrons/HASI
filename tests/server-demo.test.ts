@@ -7,7 +7,8 @@ import { createDemoRuntime } from '@hasi/demo-runtime';
 
 const url = process.env.TEST_DATABASE_URL;
 
-for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres'] : [])]) {
+for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres', 'snapshot-postgres'] : [])]) {
+  const snapshot = adapter === 'snapshot' || adapter === 'snapshot-postgres';
   describe(`deployed demo HTTP/MCP parity (${adapter})`, () => {
     let server: Server;
     let origin: string;
@@ -20,7 +21,7 @@ for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres'] : [])]) {
     const cookies = new Map<string, Map<string, string>>();
 
     beforeAll(async () => {
-      if (adapter === 'postgres') {
+      if (adapter.endsWith('postgres')) {
         database = new PostgresJsonStore(`demo-test:${randomUUID()}`, { poolConfig: { connectionString: url } });
         await database.initialize(); store = database;
       } else store = new MemoryJsonStore('demo-http');
@@ -42,7 +43,7 @@ for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres'] : [])]) {
       });
       await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
       origin = `http://127.0.0.1:${String((server.address() as { port: number }).port)}`;
-      runtimes.push(createDemoRuntime({ origin, store, secret, ...(adapter === 'snapshot' ? { catalog: hshDemoCatalog } : {}) }), createDemoRuntime({ origin, store, secret, ...(adapter === 'snapshot' ? { catalog: hshDemoCatalog } : {}) }));
+      runtimes.push(createDemoRuntime({ origin, store, secret, ...(snapshot ? { catalog: hshDemoCatalog } : {}) }), createDemoRuntime({ origin, store, secret, ...(snapshot ? { catalog: hshDemoCatalog } : {}) }));
     });
 
     afterAll(async () => {
@@ -67,7 +68,7 @@ for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres'] : [])]) {
       expect(login.status).toBe(200);
       const resources = await request('a', '/api/resources');
       expect(resources.status).toBe(200);
-      expect((await resources.json() as { resources: unknown[] }).resources).toHaveLength(adapter === 'snapshot' ? 30 : 2);
+      expect((await resources.json() as { resources: unknown[] }).resources).toHaveLength(snapshot ? 43 : 2);
       expect(paths).toContain('/mcp'); expect(paths).toContain('/api/v1/resources');
       expect((await fetch(`${origin}/mcp`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).status).toBe(401);
       expect((await fetch(`${origin}/api/v1/resources`)).status).toBe(401);
@@ -92,9 +93,43 @@ for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres'] : [])]) {
       expect((await request('knowledge', '/api/knowledge/documents/svc-001')).status).toBe(401);
     });
 
+    if (snapshot) it('books one desk without reserving the office or its sibling, and rejects office containers', async () => {
+      await request('desks', '/api/dev/login', { personaId: 'employee' });
+      const catalog = await request('desks', '/api/resources');
+      const { resources } = await catalog.json() as { resources: { id: string; kind: string; parentId: string | null; parentName: string | null; serviceId: string; capacity: number | null }[] };
+      expect(resources.filter(r => r.kind === 'workplace')).toHaveLength(37);
+      expect(resources.filter(r => r.kind === 'meeting_room')).toHaveLength(6);
+      expect(resources.some(r => r.id === '179669')).toBe(false);
+      const first = resources.find(r => r.id === '180116')!;
+      const sibling = resources.find(r => r.id === '180117')!;
+      expect(first).toMatchObject({ parentId: '179669', capacity: null, serviceId: '76878' });
+      expect(sibling.parentId).toBe(first.parentId);
+      const start = new Date(Date.now() + 8 * 86400000); start.setUTCHours(9, 0, 0, 0);
+      const args = { resourceId: first.id, serviceId: first.serviceId, startDate: start.toISOString(), endDate: new Date(start.getTime() + 3600000).toISOString() };
+      expect((await request('desks', '/api/proposals', { ...args, resourceId: '179669' })).status).toBe(403);
+      expect((await request('desks', '/api/availability', { resourceId: '179669', serviceId: first.serviceId, startDate: args.startDate, durationMinutes: 60 })).status).toBe(403);
+      const prepared = await request('desks', '/api/proposals', args);
+      expect(prepared.status).toBe(200);
+      const { proposal } = await prepared.json() as { proposal: { id: string; resourceName: string } };
+      expect(proposal.resourceName).toContain('Arbeitsplatz');
+      expect(proposal.resourceName).toContain('Amrum 1');
+      expect(proposal.resourceName).toContain(first.parentName);
+      expect((await request('desks', `/api/proposals/${proposal.id}/confirm`, {})).status).toBe(200);
+      const availability = async (resourceId: string) => {
+        const result = await request('desks', '/api/availability', { resourceId, serviceId: first.serviceId, startDate: args.startDate, durationMinutes: 60 });
+        return (await result.json() as { intervals: { startDate: string; available: boolean }[] }).intervals.find(slot => Date.parse(slot.startDate) === start.getTime())?.available;
+      };
+      expect(await availability(first.id)).toBe(false);
+      expect(await availability(sibling.id)).toBe(true);
+      const list = await request('desks', '/api/bookings');
+      const { bookings } = await list.json() as { bookings: { resourceName: string }[] };
+      expect(bookings).toHaveLength(1);
+      expect(bookings[0]?.resourceName).toBe(proposal.resourceName);
+    });
+
     it('atomically confirms once, persists across cold runtimes and blocks foreign or altered confirmation', async () => {
       const start = new Date(Date.now() + 86400000); start.setUTCHours(9, 0, 0, 0);
-      const args = { resourceId: adapter === 'snapshot' ? '180224' : '00000000-0000-4000-8000-000000000101', serviceId: adapter === 'snapshot' ? '65625' : '00000000-0000-4000-8000-000000000201', startDate: start.toISOString(), endDate: new Date(start.getTime() + 3600000).toISOString() };
+      const args = { resourceId: snapshot ? '180224' : '00000000-0000-4000-8000-000000000101', serviceId: snapshot ? '65625' : '00000000-0000-4000-8000-000000000201', startDate: start.toISOString(), endDate: new Date(start.getTime() + 3600000).toISOString() };
       expect((await request('a', '/api/tools/call', { pluginId: 'de.hsh.hasi.anny', name: 'anny.execute_booking', arguments: args })).status).toBe(403);
       const prepared = await request('a', '/api/proposals', args);
       expect(prepared.status).toBe(200);
@@ -106,7 +141,7 @@ for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres'] : [])]) {
       const race = await Promise.all([request('a', confirm, {}), request('a', confirm, {})]);
       expect(race.some(response => response.status === 200)).toBe(true);
       expect(race.every(response => [200, 409].includes(response.status))).toBe(true);
-      runtimes.push(createDemoRuntime({ origin, store, secret, ...(adapter === 'snapshot' ? { catalog: hshDemoCatalog } : {}) }));
+      runtimes.push(createDemoRuntime({ origin, store, secret, ...(snapshot ? { catalog: hshDemoCatalog } : {}) }));
       const repeated = await request('a', confirm, {});
       expect((await repeated.json() as { proposal: { status: string } }).proposal.status).toBe('confirmed');
       const bookings = await request('a', '/api/bookings');

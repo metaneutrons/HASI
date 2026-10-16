@@ -1,32 +1,80 @@
-# Anny HsH room catalog snapshot
+# Anny HsH resource catalog snapshot
 
-This fixture contains all 30 room resources with complete detail records in the read-only HsH Anny catalog snapshot from 2026-10-16. The same snapshot includes the full catalog of 9 services. All resource detail IDs match the 30 resource IDs in the listing.
+Snapshot date: 2026-10-16. This fixture contains 61 sanitized resource records,
+including 30 roots and 31 actual parent-child links, plus all 9 service catalog
+records. The read-only Admin query used
+`/api/v1/resources?filter[exclude_child_resources]=false&include=parent`.
+Including children returned the full catalog. The `include=parent` relationship
+was observed working in Anny Admin even though it is absent from the published
+API specification; treat that behavior as an observation to recheck, not as a
+documented API guarantee. No booking or availability operation was used to
+produce this fixture.
 
-The fixture preserves room catalog metadata from Anny. Its `availability` and `bookings` markers are `synthetic`: the snapshot contains no live availability or booking state. Demo availability and booking writes are simulations. Demo grants do not establish real booking authorization.
+## Resource kinds and units
 
-## Field provenance and curation
+`kind` follows source category ID and the actual child links. Category `60`
+(`Flex Desk`) with children is an `office` container; a category 60 leaf is a
+`workplace`. Category `6` is a `meeting_room`. Other categories map to `room`.
+The schema allows `lecture_hall`, but this snapshot contains none. The 18 office
+containers, 37 workplace leaves and 6 meeting rooms retain their source IDs,
+names, category IDs and names, parent IDs, source `quantity`, and `hasChildren`
+state. Parent IDs come from the resource tree; no name-based relationships are
+inferred. The snapshot has no duplicate IDs, missing parents, cycles or
+disagreement between `hasChildren` and actual child links.
 
-- `resources[].id` and `name` come from each detailed resource’s `data.id` and `data.attributes.name`. All `description` values are empty. Four source descriptions were discarded because they included operational or booking-access statements that must not be presented as current policy in a simulated booking flow.
-- `capacity` comes only from the related property labeled `Kapazität` when its declared type is `number` and the value is a positive integer. 6 capacities meet that rule; 24 are `null`. The source's `quantity` field and room-name text such as “2er” or “3er” were not treated as seat counts.
-- `location` comes only from the related property labeled `Gebäude`, after a short plain-text check. 23 locations are included; 7 are empty strings because no safe building string was available. Address records, coordinates, and other free-form location fields were omitted.
-- `features` contains only these allowlisted equipment-property labels, and only when their value signals presence:
-  - `Beamer`: 2 rooms
-  - `Docking Station`: 0 rooms
-  - `Flip-Chart`: 2 rooms
-  - `Hybride Besprechungstechnik`: 1 room
-  - `Höhenverstellbarer Schreibtisch`: 24 rooms
-  - `Kinderspielzeug`: 1 room
-  - `Metaplanwand`: 1 room
-  - `Monitor`: 23 rooms
-  - `Whiteboard (Wand)`: 1 room
-  - `XL-Monitor`: 1 room
-  Property values are not copied into the fixture. Missing, negative, and unrecognized values do not create a feature.
-- `services` contains all 9 service catalog records, using only each record's `id` and `attributes.name`. 8 catalog services are directly linked from at least one room; 1 catalog service is not linked by these 30 resources. `serviceIds` preserves every actual direct relation for each resource in source order. `serviceId` is populated only where a resource has exactly one linked service (8 rooms); it is `null` for 22 rooms with multiple linked services. Every ID in either field resolves to `services`. A demo adapter may select the first `serviceIds` entry only under its explicit synthetic policy; that choice does not establish real booking permission.
+`quantity` is the source catalog quantity, not a seat count. The 37 workplaces
+and 6 meeting rooms each have quantity 1; office containers have quantities 1,
+2 or 3. `capacity` is populated only from a positive integer `Kapazität`
+property declared as type `number`. Six meeting rooms have a known capacity;
+capacity is null for all offices and workplaces. Names and quantities are not
+used to estimate people capacity. The composed demo resource list omits
+`quantity` and asserts quantity 1 for each included leaf.
 
-## Excluded source data
+## Curated fields
 
-The export omits service configuration and booking rules, access credentials and tokens, personal or contact data, custom-form payloads, GPS and street-address details, all non-allowlisted properties, and booking quantity. No credential values are included. These omissions keep the fixture limited to public room-catalog information; they do not imply that the source system's booking policy was inspected or that a demo user may make a live booking.
+- All descriptions are blank. The 30 root entries retain their already-curated
+  safe location and feature fields. The 31 children use their own resource
+  properties; features are not inherited from a parent. A missing child
+  `Gebäude` property may use its parent's curated location, but every child in
+  this snapshot has its own safe building string, so no location inheritance
+  was needed. In total, 54 resources have a location and 7 have none.
+- `features` contains only allowlisted property labels whose own value signals
+  presence. Raw property values are excluded. Counts across all 61 resources:
 
-## Snapshot limitations
+  | Feature | Resources |
+  | --- | ---: |
+  | Beamer | 2 |
+  | Docking Station | 0 |
+  | Flip-Chart | 2 |
+  | Hybride Besprechungstechnik | 1 |
+  | Höhenverstellbarer Schreibtisch | 55 |
+  | Kinderspielzeug | 2 |
+  | Metaplanwand | 1 |
+  | Monitor | 53 |
+  | Whiteboard (Wand) | 1 |
+  | XL-Monitor | 1 |
 
-The room names and selected catalog fields reflect the read-only snapshot date. Current availability, bookings, access rights, and booking eligibility are not represented. Runtime integration is not established by the presence of this fixture.
+- `serviceIds` preserves each actual direct resource-service relation in source
+  order. All 9 service records are retained; 8 are linked by at least one
+  resource and 1 currently has no direct resource link. `serviceId` is set only
+  when a resource has exactly one linked service: 9 resources have one and 52
+  have multiple. The demo catalog explicitly prefers service `76878` for a
+  workplace when linked; otherwise it chooses that resource's first linked
+  service. Meeting rooms and other leaf kinds use their first linked service.
+  This is a deterministic simulation choice, not a live eligibility or
+  booking-rights determination.
+- `hshDemoCatalog.resources` contains only 43 leaf resources: 37 workplaces
+  and 6 meeting rooms. Office containers are excluded. The presentation map
+  carries each leaf's kind and actual parent ID/name alongside its existing
+  capacity, location, features and selected demo service.
+
+## Exclusions and limits
+
+The fixture excludes service configuration, booking rules and flags, maximum
+booking quantities, credentials, personal/contact data, custom-form payloads,
+addresses, coordinates, and non-allowlisted properties. It contains no live
+availability or booking state; the top-level markers are `synthetic`. Current
+availability, booking rights and booking eligibility are not represented.
+Mock personas and the selected demo service do not establish authority to make
+a live booking. The fixture documents a read-only catalog snapshot and does not
+verify a production Anny integration.

@@ -129,15 +129,18 @@ async function main() {
 
   const roomsResult = await request("room catalog", "/api/resources");
   const rooms = roomsResult.data?.resources;
-  assert(Array.isArray(rooms) && rooms.length === 30, "room catalog: expected 30 snapshot rooms.");
+  assert(Array.isArray(rooms) && rooms.length === 43, "resource catalog: expected 43 bookable snapshot resources.");
   const knownRooms = rooms.filter((room) => Number.isInteger(room.capacity));
   const unknownRooms = rooms.filter((room) => room.capacity === null);
-  assert(knownRooms.length === 6 && unknownRooms.length === 24, "room catalog: expected six known and 24 unknown capacities.");
+  assert(knownRooms.length === 6 && unknownRooms.length === 37, "resource catalog: person capacity belongs to six meeting rooms, not the 37 workplaces.");
+  assert(rooms.filter(room => room.kind === 'workplace').length === 37 && rooms.filter(room => room.kind === 'meeting_room').length === 6, "resource catalog: booking units are not distinguished.");
+  assert(!rooms.some(room => room.id === '179669'), "resource catalog: office containers must not be bookable.");
+  assert(rooms.find(room => room.id === '180116')?.parentId === '179669', "resource catalog: desk/office relationship missing.");
   const selectedFixtureRooms = knownRooms.filter((room) => room.id === "180224");
   assert(selectedFixtureRooms.length === 1, "room catalog: expected the selected fixture room exactly once.");
   const bookableRoom = selectedFixtureRooms[0];
   assert(bookableRoom.capacity === 8 && bookableRoom.serviceId === "65625", "room catalog: selected booking fixture metadata changed.");
-  passed("30 fixture rooms preserve six known and 24 unknown capacities");
+  passed("37 individual workplaces and six meeting rooms preserve booking units and person capacities");
 
   const studentTools = await request("student tools", "/api/tools");
   assert(studentTools.data?.tools?.some((tool) => tool.pluginId === KNOWLEDGE_PLUGIN_ID && tool.name === "knowledge.search"), "student tools: expected the enabled knowledge search tool.");

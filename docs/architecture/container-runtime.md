@@ -111,7 +111,8 @@ docker compose --env-file .env.container-demo -f compose.demo.yaml down --volume
 
 The backend-only smoke script uses Node built-ins and a loopback URL. It checks
 anonymous denial, explicit student and admin personas, the 30-room fixture
-(including six known and 24 unknown capacities), synthetic knowledge search,
+(including 37 individual workplaces, six meeting rooms with person capacities,
+and desk-to-office relationships), synthetic knowledge search,
 student access denial, admin retrieval, a single confirmed room booking after
 confirmation replay and reload, disabled-plugin enforcement, and logout. It
 creates a fresh demo workspace in the configured database and uses only the
