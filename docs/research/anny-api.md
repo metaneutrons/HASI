@@ -1,0 +1,75 @@
+# Anny REST API research for HsH assistant MVP
+
+Research snapshot: 2026-10-09. The public vendor documentation is at [docs.anny.co/developers](https://docs.anny.co/developers). It publishes separate OpenAPI 3.1 specifications for the Admin and Customer APIs. I downloaded the original JSON files without modification:
+
+- Admin API OpenAPI 3.1 — source: [admin.openapi.json](https://docs.anny.co/developers/openapi/admin.openapi.json), 1,270,963 bytes, SHA-256 `17168f489c9d995385b8b6a113a1727c790a5641dc538479fd14e4cc038f24c4`.
+- Customer API OpenAPI 3.1 — source: [customer.openapi.json](https://docs.anny.co/developers/openapi/customer.openapi.json), 859,386 bytes, SHA-256 `ade9ee85f17f1ec7430e5489c8a5c14a586f2e5ae5282b3e0bc812949fafc98e`.
+
+Publication update, 2026-10-16: vendor specifications remain local and are not
+redistributed under HASI's GPL license. `pnpm research:anny` downloads the
+current checksum-pinned references into the ignored `anny/current/` directory.
+The only structural change from the original snapshots is the additional
+optional `bookings.v1.attributes.is_recurring` property in both specifications.
+Current Admin pin: `7c7fe9113259802381c6e7b9d6cb350cba6b2638d54b2630f7f2ea2b836bd1d7`
+(1,271,245 bytes); Customer pin:
+`0097bae66aa5fdb29232a81a6b7027f48bf0db8295dfdff4b00648489476b976`
+(859,668 bytes). Tests validate the mock against those references.
+
+These are the public, vendor-hosted API specs, rather than schemas inferred from the web client. Both list production (`https://b.anny.co`) and Gov-Cloud (`https://b.anny.eu`) servers.
+
+## Authentication and caller rights
+
+The APIs share the Bearer header but have different caller identities and access boundaries:
+
+| Surface | Authentication and scope | Consequence for HsH |
+| --- | --- | --- |
+| Admin API | Admin API token or OAuth2 Bearer token; pass `?o={organization_id}` on every request. A long-lived token is created under Organization Settings → API, with selected scopes. The docs describe full organization read/write access, subject to the principal's permissions. | Suitable for a server-side HsH service acting for the organization. It can create orders/bookings for a specified customer. It is not documented as an end-user/customer token. |
+| Customer API | Many discovery and availability calls are anonymous. Personal bookings, account data, and community actions use a customer Bearer token. Custom OAuth2 clients for authenticating an integrator's own users require Anny support. | `POST /bookings/instant` acts in the authenticated customer's context; its body has no customer ID. Do not assume an Admin token supplies this customer context. |
+
+The Admin OpenAPI security scheme does not enumerate named scopes. The booking-creation guide says `orders/from-config` requires order-creation permission and, when updating, order-update permission; insufficient permission returns 403. The docs describe OAuth2 authorization-code flow and an optional organization restriction: a selected organization is represented by a `tenant` claim. See [Authentication](https://docs.anny.co/developers/guides/authentication), [Admin API](https://docs.anny.co/developers/api-reference/admin), and [Customer API](https://docs.anny.co/developers/api-reference/customer).
+
+## MVP endpoint matrix
+
+| Need | Method and path | Auth, inputs, and relevant behavior |
+| --- | --- | --- |
+| Admin resource catalog | `GET /api/v1/resources?o={org_id}` | Admin Bearer. Supports `page[number]`, `page[size]`, `include`, and filters such as `filter[groups]`, `filter[categories]`, and `filter[tags]`. Resource records include stable IDs plus `name`, `slug`, `timezone`, `quantity`, `bookings_enabled`, `requires_quota`, `viewing_requires_community`, and `booking_requires_community`. See [resource list](https://docs.anny.co/developers/api-reference/admin/endpoints/resources/get-a-list-of-resources). |
+| Public resource discovery | `GET /api/v1/organizations/{organization_slug}/resources` | Customer API; organization context is derived from the slug. Supports filters and pagination. Customer resource records use slugs and may include community-related flags/relationships. |
+| Availability | `GET /api/v1/availability/upcoming-intervals?service_id={uuid}&resource_id={uuid}&start_date={ISO-8601}` | Customer API; the guide says public availability needs no authentication and derives organization context from the resource/service. `service_id` is required; `resource_id`, `start_date`, `duration`, and `include_unavailable` are optional. Response contains validated intervals and paging metadata (`page_start_date`, `page_end_date`, `has_more`, `interval_count`). An interval includes start/end, availability, capacity, resource IDs, and messages. See [availability guide](https://docs.anny.co/developers/guides/availability) and [upcoming intervals](https://docs.anny.co/developers/api-reference/customer/endpoints/availability/get-upcoming-available-intervals). |
+| Admin customer lookup | `GET /api/v1/customers?o={org_id}&filter[email]={exact_email}` | Admin Bearer. The exact-email filter is documented; `include` can request `customer_account` and `communities`. The response's Customer model has `meta.external_id` and `meta.idp_user_id`, but the list filter set does not document lookup by those fields. See [customer list](https://docs.anny.co/developers/api-reference/admin/endpoints/customers/get-a-list-of-customers). |
+| Admin customer creation | `POST /api/v1/customers?o={org_id}` | JSON:API. Documented attributes include `email`, `given_name`, `family_name`, `mobile`, `company`, locale, birth date, and custom fields. The request schema leaves `meta` generic and does not document writable `meta.external_id`/`meta.idp_user_id`; verify that with Anny before relying on it for HsH identity mapping. |
+| Anny admin-user lookup | `GET /api/v1/user`; `GET /api/v1/organizations/{organization_id}/organization-users` | These return the current API principal and organization-user memberships/roles/abilities. They concern Anny team/admin users, not the customer account that makes a booking. Customer accounts are separate API models. |
+| Customer-account lookup | `GET /api/v1/customer-account` | Described as the customer account identified by the Bearer token. The CustomerAccount model exposes `idp_user_id` and relationships including `community_accounts` and `communities`. Its update endpoint says attributes are managed by the authentication system, so it is not documented as a way to set HsH's IDP identifier directly. |
+| Admin booking list | `GET /api/v1/bookings?o={org_id}` | Admin Bearer. Supports pagination, includes (`resource`, `service`, `customer`, etc.), filters for resource/service/status/community and date ranges. The date filters accept keywords such as `today`, `this_week`, `next_7_days`, or inclusive `YYYY-MM-DD:YYYY-MM-DD` ranges. See [booking list](https://docs.anny.co/developers/api-reference/admin/endpoints/bookings/get-a-list-of-bookings). |
+| Admin create on behalf of a customer | `POST /api/v1/orders/from-config?o={org_id}` | Admin Bearer with order-creation permission; JSON body. The guide's booking object uses `resource_id`, `service_id` as `{service_uuid: quantity}`, `start_date`, and `end_date`; top-level `order_customer_id` selects the order customer, while per-booking `customer_id` overrides it. `complete_order` and `check_availability` default to `true`; `notify_customer` defaults to `true`. It creates bookings directly without public checkout. Include `order_id` to update an existing order; without it, the request creates a new order. See [Admin Booking Creation](https://docs.anny.co/developers/guides/admin/booking-creation). |
+| Customer instant booking | `POST /api/v1/bookings/instant` | Customer Bearer required. JSON body requires `start_date`, `end_date`, `resource_id`, and `service_id` (UUIDs/date-times). It books in the authenticated customer's context and completes immediately. See [instant booking](https://docs.anny.co/developers/api-reference/customer/endpoints/bookings/create-an-instant-booking). |
+| Customer cancellation | `GET /api/v1/bookings/{booking_id}/cancel` | The Customer API describes auth as optional: customer login or an `access_token` for the associated order. The lifecycle guide says this runs the cancellation/refund policy flow. See [customer cancellation](https://docs.anny.co/developers/api-reference/customer/endpoints/bookings/cancel-a-booking) and [customer lifecycle](https://docs.anny.co/developers/guides/customer/booking-lifecycle). |
+| Admin cancellation | `GET /api/v1/bookings/{booking_id}/cancel?o={org_id}` | Admin lifecycle guide says this runs cancellation and configured refund/invoice adjustments. **The route is absent from the downloaded Admin OpenAPI JSON**, although it is documented in the guide. Confirm against Anny's current tenant/API before implementation. Do not substitute `DELETE /api/v1/bookings/{booking_id}`: the OpenAPI names that a delete operation, while the guide documents a separate cancel action. See [Admin Booking Lifecycle](https://docs.anny.co/developers/guides/admin/booking-lifecycle). |
+
+The admin `POST /api/v1/bookings` endpoint is also documented, but is a simpler booking-or-blocker operation whose published body does not include a customer relationship. The Admin Booking Creation guide is the relevant documented flow when HsH must associate the booking with an existing customer.
+
+## SSO identity and community access
+
+Anny distinguishes three records: Admin `users`/`organization-users`, Admin `customers`, and Customer API `customer-accounts`. The customer account has an `idp_user_id` attribute; the Admin Customer response model has `meta.external_id` and `meta.idp_user_id`. The public API documents exact-email customer filtering, but does not state that these identity fields are accepted on customer create/update or searchable as filters. The CustomerAccount update docs say its attributes are managed by authentication. For HsH's own SSO mapping, use a verified mapping outside these fields unless Anny confirms their write semantics.
+
+Anny's SSO documentation separately supports mapping IdP attributes to communities, profile fields, and custom customer fields, and describes SCIM provisioning. This is Anny's SSO/provisioning feature, distinct from the REST calls above; see [Attribute Mapping](https://docs.anny.co/en/attribute-mapping) and [SCIM provisioning](https://docs.anny.co/en/scim-user-provisioning).
+
+The Customer API exposes `GET /api/v1/resources/{resource_slug}/community-restrictions`; resource examples expose `viewing_requires_community`, `booking_requires_community`, and a `communities` relationship. However, the published response schema for `community-restrictions` is only `{type: object}`: no fields or evaluation rules are specified. The Customer API also exposes `GET /api/v1/communities` for communities visible to the authenticated customer, and `GET /api/v1/communities/{community_id}` for a community that customer can access. The docs do not say whether the Admin `orders/from-config` flow enforces the selected customer's community membership. Therefore, the public docs do not establish a complete per-user permission check that HsH can apply before an Admin booking. Confirm with Anny whether Admin-created bookings enforce community access, and what response/endpoint is authoritative for an individual customer. See [community restrictions](https://docs.anny.co/developers/api-reference/customer/endpoints/resources/get-community-access-restrictions-for-a-resource) and [communities guide](https://docs.anny.co/developers/guides/customer/communities).
+
+## Webhooks, rate limits, and retries
+
+- Create a subscription with `POST /api/v1/webhook-subscriptions?o={org_id}` using an Admin Bearer and JSON:API `data.type=webhook-subscriptions`, `attributes.name`, `url`, and `events`. Optional fields include `custom_headers` and `is_active`. The response includes a generated signing key; the `Signature` header is HMAC-SHA256 over the raw request body. Verify it before processing.
+- Payloads include `event_id`, `webhook_id`, `triggered_at`, and event data. The same event can be delivered more than once, so deduplicate on `event_id`. Booking events include created/updated/started/ended/checked-in/checked-out/deleted; community membership events include `community-accounts.joined` and `.left`.
+- Anny retries a webhook if no 2xx arrives within 10 seconds; it abandons a delivery after three failed attempts and deactivates a subscription after five consecutive failures across events. Backoff is described as exponential, with no exact delays published. See [Webhooks & Events](https://docs.anny.co/developers/guides/admin/webhooks).
+- Default API rate limits are per organization and per identity/operation: Admin 400 reads and 100 writes per 60 seconds; Customer 150 reads and 60 writes per 60 seconds; Anonymous 150 reads and 60 writes per 60 seconds. A duplicate-request guard caps identical method/path/query/body combinations at 4 per second. A limit response is 429 with `Retry-After`; successful responses do not include `X-RateLimit-*` headers. See [Rate Limiting](https://docs.anny.co/developers/guides/rate-limiting).
+- The API docs and OpenAPI schemas do not define an `Idempotency-Key` header, create-request idempotency contract, or general API request timeout/retry policy. The duplicate-request guard is a rate control, not a documented exactly-once guarantee. In particular, omitting `order_id` from `orders/from-config` creates a new order; the guide explicitly warns that dropping it duplicates an existing order. If an HTTP timeout leaves creation outcome unknown, reconcile through the order/booking list before retrying. Updating an existing order is serialized but not atomic; on partial failure, the guide says to re-read the order config before retrying.
+
+## Reproduce the checks
+
+The public documentation index is [llms.txt](https://docs.anny.co/llms.txt).
+Download and verify the current references without overwriting local originals:
+
+```sh
+pnpm research:anny
+```
+
+Endpoint pages are also readable as Markdown by appending `.md`, e.g. [booking creation guide Markdown](https://docs.anny.co/developers/guides/admin/booking-creation.md). To inspect a route in the downloaded specs, query its `paths` entry, for example `jq '.paths["/api/v1/orders/from-config"].post' docs/research/anny/current/admin.openapi.json`. No credentials or live booking endpoints were used in this research.

@@ -1,0 +1,20 @@
+HASI
+Copyright (C) 2026 Fabian Schmieder
+
+The original software and authored documentation in this repository are
+licensed under the GNU General Public License, version 3 only (GPL-3.0-only).
+See LICENSE for the complete license terms.
+
+Third-party dependencies retain their respective licenses. Installing this
+project does not relicense those dependencies. Lucide icons are supplied by
+the lucide-react dependency under its upstream license.
+
+anny API specifications are third-party reference material, downloaded from
+https://docs.anny.co/developers/openapi/ for local contract verification. They
+are excluded from Git and are not relicensed or redistributed by this project.
+Use `pnpm research:anny` to obtain the checksum-pinned references separately.
+
+Hochschule Hannover and anny names identify the intended integrations. This
+prototype does not represent an operational institutional service or an
+endorsement by those organizations. Public demo identities and room data are
+synthetic. Local authenticated research captures are not distributed.

@@ -1,0 +1,55 @@
+{
+  "name": "hasi-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build:backend": "pnpm --filter '!@hasi/web' -r build",
+    "build": "pnpm -r build",
+    "dev": "pnpm build:backend && tsx scripts/dev.ts",
+    "preview": "pnpm build && tsx scripts/dev.ts --preview",
+    "typecheck": "tsc --noEmit && pnpm --filter @hasi/web typecheck",
+    "lint": "eslint packages apps/api apps/anny-plugin apps/anny-mock scripts tests --max-warnings=0 && pnpm --filter @hasi/web lint",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "research:anny": "tsx scripts/fetch-anny-specs.ts",
+    "prepare": "node scripts/install-hooks.mjs"
+  },
+  "dependencies": {
+    "@hasi/plugin-sdk": "workspace:*",
+    "@hasi/anny-client": "workspace:*",
+    "@hasi/anny-plugin": "workspace:*",
+    "@hasi/anny-mock": "workspace:*",
+    "@modelcontextprotocol/client": "2.3.1",
+    "@modelcontextprotocol/core": "2.3.1",
+    "@fastify/cookie": "11.1.3",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "fastify": "5.12.7",
+    "jose": "6.2.12",
+    "semver": "7.8.5",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/node": "24.19.2",
+    "@types/semver": "7.8.0",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "9.39.5",
+    "tsx": "4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "8.71.2",
+    "vitest": "5.0.5",
+    "lefthook": "2.2.2"
+  },
+  "license": "GPL-3.0-only",
+  "author": "Fabian Schmieder",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/metaneutrons/HASI.git"
+  }
+}

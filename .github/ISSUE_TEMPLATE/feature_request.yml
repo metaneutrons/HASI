@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose a change to the public prototype.
+title: "feat: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep the request within the public prototype. Do not include real identities, credentials, booking details, or confidential Hochschule data.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Who encounters the problem, and in what synthetic prototype scenario?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints or open questions
+    validations:
+      required: false

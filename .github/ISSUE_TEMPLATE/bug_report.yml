@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible problem in the public prototype.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include real identities, credentials, booking details, or confidential Hochschule data.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the test account and sample data only when they are synthetic.
+      placeholder: "1. Start the prototype\n2. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Runtime and browser
+      placeholder: "Node 24, macOS 15, Firefox 140"
+    validations:
+      required: false

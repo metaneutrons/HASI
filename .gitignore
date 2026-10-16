@@ -1,0 +1,22 @@
+# Local research captures can contain authenticated content and page chrome.
+docs/research/service-it/authenticated/
+docs/research/service-it/authenticated-discovery.json
+docs/research/service-it/public-corpus.jsonl
+docs/research/service-it/
+docs/research/anny/
+
+__pycache__/
+*.py[cod]
+node_modules/
+dist/
+.next/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.DS_Store
+.env*
+!.env.example
+.vercel/
+*.log
+docs/verification/**/*.png

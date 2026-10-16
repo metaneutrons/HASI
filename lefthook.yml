@@ -1,0 +1,48 @@
+commit-msg:
+  commands:
+    conventional-commits:
+      run: sh scripts/hooks/check-commit-message.sh {1}
+
+pre-commit:
+  parallel: true
+  commands:
+    staged-guards:
+      run: sh scripts/hooks/check-staged.sh
+    secrets:
+      run: gitleaks git --pre-commit --redact --staged --verbose
+    eslint:
+      glob: "*.{ts,tsx,mts,cts}"
+      run: node scripts/hooks/lint-staged.mjs {staged_files}
+      stage_fixed: true
+    lockfile:
+      glob:
+        - "package.json"
+        - "**/package.json"
+        - "pnpm-lock.yaml"
+        - "pnpm-workspace.yaml"
+        - ".pnpmfile.*"
+        - "patches/**"
+      run: |
+        tmp=$(mktemp -d) || exit 1
+        trap 'rm -rf "$tmp"' EXIT
+        git ls-files -z -- ':(glob)**/package.json' pnpm-lock.yaml \
+            pnpm-workspace.yaml .npmrc ':(glob).pnpmfile.*' ':(glob)patches/**' \
+          | git checkout-index -z --stdin --prefix="$tmp/" || exit 1
+        if ! out=$(cd "$tmp" && pnpm install --frozen-lockfile --lockfile-only \
+            --offline --ignore-scripts --config.trust-lockfile=true 2>&1); then
+          printf '%s\n' "$out" >&2
+          echo "Staged pnpm-lock.yaml does not match the staged manifests. Run pnpm install and stage pnpm-lock.yaml." >&2
+          exit 1
+        fi
+
+pre-push:
+  parallel: false
+  commands:
+    secrets:
+      run: sh scripts/hooks/check-push-secrets.sh
+    build-backend:
+      run: pnpm build:backend
+    typecheck:
+      run: pnpm typecheck
+    tests:
+      run: pnpm test
