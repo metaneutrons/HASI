@@ -22,6 +22,38 @@ test("fails immediately when a responding health endpoint returns a failure stat
   }), /HTTP 503/);
 });
 
+test("retries an early Undici socket closure before the first healthy response", async () => {
+  let attempts = 0;
+  assert.equal(await waitForHttpReady("http://127.0.0.1:3000/health", {
+    intervalMs: 1,
+    request: async () => {
+      if (++attempts === 1) {
+        throw new TypeError("fetch failed", { cause: { code: "UND_ERR_SOCKET" } });
+      }
+      return new Response("ready");
+    },
+  }), true);
+  assert.equal(attempts, 2);
+});
+
+test("waits through a real socket close during server startup", async () => {
+  let attempts = 0;
+  const server = createServer((request, response) => {
+    if (++attempts === 1) request.socket.destroy();
+    else response.writeHead(200).end("ready");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const { port } = server.address();
+    assert.equal(await waitForHttpReady(`http://127.0.0.1:${port}/health`, {
+      timeoutMs: 1_000, intervalMs: 1,
+    }), true);
+    assert.ok(attempts >= 2);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
 test("bounds connection retries and redacts secrets and database credentials from logs", async () => {
   let clock = 0;
   await assert.rejects(waitForHttpReady("http://127.0.0.1:3000/health", {
