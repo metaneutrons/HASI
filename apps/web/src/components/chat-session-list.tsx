@@ -11,6 +11,7 @@ export function ChatSessionList({ view, store, close }: { view: View; store: Cha
   const [editing, setEditing] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [removing, setRemoving] = useState<string | null>(null);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
   const sessions = [...view.workspace.sessions].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   function rename(event: FormEvent<HTMLFormElement>, sessionId: string) {
@@ -36,10 +37,11 @@ export function ChatSessionList({ view, store, close }: { view: View; store: Cha
               <span className="chat-session-symbol">{busy ? <span className="spinner" aria-label="Antwort läuft" /> : <MessageCircle size={16} />}</span>
               <span className="chat-session-copy"><strong>{session.title}</strong><span>{busy ? "HASI antwortet …" : preview}</span></span>
             </button>
-            <details className="chat-session-menu"><summary className="icon-button" aria-label={`Aktionen für ${session.title}`}><MoreHorizontal size={17} /></summary><div>
-              <button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setTitle(session.title); setEditing(session.id); }}><Pencil size={14} /> Umbenennen</button>
-              <button type="button" disabled={busy} onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setRemoving(session.id); }}><Trash2 size={14} /> Löschen</button>
-            </div></details>
+            <button type="button" className="icon-button chat-session-menu" aria-label={`Aktionen für ${session.title}`} aria-expanded={menuFor === session.id} aria-controls={`actions-${session.id}`} onClick={() => setMenuFor(menuFor === session.id ? null : session.id)}><MoreHorizontal size={17} /></button>
+            {menuFor === session.id && <div className="chat-session-actions" id={`actions-${session.id}`} role="group" aria-label={`Aktionen für ${session.title}`}>
+              <button type="button" onClick={() => { setMenuFor(null); setRemoving(null); setTitle(session.title); setEditing(session.id); }}><Pencil size={14} /> Umbenennen</button>
+              <button type="button" disabled={busy} onClick={() => { setMenuFor(null); setRemoving(session.id); }}><Trash2 size={14} /> Löschen</button>
+            </div>}
           </>}
           {removing === session.id && <div className="chat-delete-check" role="group" aria-label="Chat löschen bestätigen"><p>Diesen Chat löschen? Buchungen bleiben erhalten.</p><div><button type="button" onClick={() => setRemoving(null)}>Abbrechen</button><button type="button" disabled={busy} onClick={() => { store.remove(session.id); setRemoving(null); }}>Chat löschen</button></div></div>}
         </div>;
