@@ -204,16 +204,17 @@ jobs:
           fi
 
       - name: Run the application container and end-to-end smoke checks
-        env:
-          HASI_DEMO_SECRET: release-smoke-only-not-a-credential-123456789
         run: |
           set -euo pipefail
+          HASI_DEMO_SECRET="$(node --input-type=module -e 'import { randomBytes } from "node:crypto"; process.stdout.write(randomBytes(32).toString("base64url"));')"
+          echo "::add-mask::$HASI_DEMO_SECRET"
+          export HASI_DEMO_SECRET
           docker run --detach \
             --name hasi-release-app \
             --network hasi-release-smoke \
             --publish 127.0.0.1:3000:3000 \
             --env HASI_DEMO_MODE=1 \
-            --env HASI_DEMO_SECRET="$HASI_DEMO_SECRET" \
+            --env HASI_DEMO_SECRET \
             --env HASI_DEMO_ORIGIN=http://127.0.0.1:3000 \
             --env DATABASE_URL=postgresql://postgres:release-smoke-only@postgres:5432/hasi \
             "$LOCAL_IMAGE"
