@@ -75,7 +75,9 @@ describe('AnnyClient', () => {
       const headers = new Headers(init?.headers);
       requests.push({ url, authorization: headers.get('authorization'), redirect: init?.redirect });
       return Promise.resolve(new Response(JSON.stringify({
-        data: resources.slice((page - 1) * 50, page * 50),
+        data: resources.slice((page - 1) * 50, page * 50).map(resource =>
+          url.searchParams.get('include') === 'parent' ? resource : { id: resource.id, type: resource.type, attributes: resource.attributes }
+        ),
         meta: { page: { 'current-page': page, 'last-page': 2 } }
       }), { status: 200, headers: { 'content-type': 'application/vnd.api+json' } }));
     };
@@ -96,6 +98,7 @@ describe('AnnyClient', () => {
       expect(url.searchParams.get('o')).toBe('test-tenant');
       expect(url.searchParams.get('page[size]')).toBe('50');
       expect(url.searchParams.get('filter[exclude_child_resources]')).toBe('false');
+      expect(url.searchParams.get('include')).toBe('parent');
       expect(url.toString()).not.toContain(token);
       expect(authorization).toBe(`Bearer ${token}`);
       expect(redirect).toBe('error');
