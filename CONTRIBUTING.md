@@ -53,3 +53,12 @@ scanning. Install Gitleaks locally (`brew install gitleaks`). In a local Git
 checkout, `pnpm install` installs Lefthook; CI and deployment source uploads
 without a `.git` directory skip hook installation. Do not use hook bypasses for
 routine work.
+
+## Substantial initiatives
+
+For work with independently reviewable stages, keep goals and acceptance criteria
+in a versioned `docs/plans/` document, link one epic and one issue per milestone,
+and record execution state and measured evidence in those issues. Small fixes
+need no epic. Implementation PRs link their milestone without closing it while
+required post-merge or publication checks remain open. See the
+[delivery plan](docs/plans/releases-and-demo.md) for the current example.

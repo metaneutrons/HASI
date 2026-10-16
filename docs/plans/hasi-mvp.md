@@ -6,19 +6,25 @@ requirements. The local implementation is an initial slice of the MVP.
 
 ## Current implementation slice
 
-The local prototype implements server-owned test identities, a shared user/admin
-interface with light/dark/system themes, an MCP plugin SDK and separate anny
-plugin process. The actual anny HTTP client talks to a contract-based mock.
-Room search, availability, own-booking lookup and exact-proposal confirmation
-work with synthetic data. Runtime registry activation supports compatible
-plugin versions independently of a core rebuild.
+The prototype includes a server-side Groq model router/profile set, an
+independently deployed synthetic knowledge MCP with 60 fictional documents,
+and a Vercel demo whose workspace state persists in Postgres. The anny flow
+uses synthetic data, including a 30-room and 9-service catalog snapshot, for
+search, availability, own-booking lookup and room-specific proposal and
+confirmation. The actual anny HTTP client still talks to a contract-based
+mock. The existing proposal path remains booking-specific.
 
-Real SSO, source connectors, permission-aware knowledge retrieval, model
-integration/evaluation, authoritative anny mapping, cancellation, persistence
-and uncertain-outcome reconciliation remain open. This prototype therefore does
-not complete any milestone whose exit criteria include those capabilities.
-See [prototype architecture](../architecture/plugins-and-prototype.md) and the
-[README](../../README.md) for the executable scope and verification commands.
+Real HsH SSO, production permission-aware retrieval from Intranet and
+Service-IT, current IT incident information, authoritative anny customer and
+resource mapping, production booking/cancellation writes, and verified
+uncertain-outcome reconciliation remain open. Formal model evaluation and
+institutional approval of profiles for protected data also remain open.
+Synthetic knowledge fixtures and selectable mock personas do not establish
+institutional access rights.
+This prototype therefore does not complete any milestone whose exit criteria
+include those capabilities. See [prototype architecture](../architecture/plugins-and-prototype.md)
+and the [README](../../README.md) for the executable scope and verification
+commands.
 
 ## Product scope
 
@@ -126,3 +132,13 @@ requirements and designs, not implemented functionality.
 See [technical basis](../architecture/technical-basis.md) and the linked
 [Service-IT](../research/service-it.md), [anny](../research/anny-api.md) and
 [identity](../research/hsh-identity.md) reports for evidence and limits.
+
+## Future roadmap beyond the mandatory MVP
+
+Zammad ticket creation is a proposed later integration for topic-routed support
+requests across administrator-defined security domains. It does not defer or
+replace the mandatory Intranet, Service-IT and anny integrations defined above.
+The configurable taxonomy and routing, identity mapping, domain isolation,
+approval requirements and acceptance gates are described in the
+[Zammad MCP architecture](../architecture/zammad-mcp.md). No Zammad connector,
+credentials or queue mappings are currently implemented or configured.

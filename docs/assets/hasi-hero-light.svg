@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" role="img" aria-labelledby="title desc">
+  <title id="title">HASI — Hochschule Hannover · Assistant</title>
+  <desc id="desc">A custom chat-window mark with an H and assistant dot, alongside the HASI wordmark and the caption Hochschule Hannover · Assistant.</desc>
+  <g transform="translate(52 50)">
+    <path d="M48 18h74a19 19 0 0 1 19 19v70a19 19 0 0 1-19 19H83l-34 22v-22h-1a19 19 0 0 1-19-19V37a19 19 0 0 1 19-19Z" fill="#f5f0e9" stroke="#ded8ce" stroke-width="2"/>
+    <path d="M61 100V56m54 44V56M61 78h54" fill="none" stroke="#46715a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="130" cy="49" r="7" fill="#cf6b43"/>
+  </g>
+  <g transform="translate(270 89)" fill="none" stroke="#26322b" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M5 8v78m63-78v78M5 47h63"/>
+    <path d="M94 86 122 13q3-8 6 0l28 73m-49-28h36"/>
+    <path d="M232 19c-8-8-19-12-33-12-19 0-30 9-30 23 0 15 13 20 32 23 19 3 31 8 31 21 0 14-12 22-32 22-14 0-27-4-35-12"/>
+    <path d="M252 8v78m-11-78h22m-22 78h22"/>
+  </g>
+  <path d="M623 79v122" stroke="#d8dcd5" stroke-width="2"/>
+  <circle cx="663" cy="140" r="5" fill="#cf6b43"/>
+  <text x="682" y="148" fill="#657068" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="23" font-weight="500" letter-spacing="0.15">Hochschule Hannover · Assistant</text>
+</svg>
