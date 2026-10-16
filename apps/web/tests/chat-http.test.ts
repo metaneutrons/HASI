@@ -53,7 +53,7 @@ describe("public chat admission and error boundary", () => {
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("60");
     expect(await response.text()).not.toContain("private provider payload");
-    expect(warning).toHaveBeenCalledWith("HASI model request failed", { code: "provider_rate_limited", providerStatus: 429 });
+    expect(warning).toHaveBeenCalledWith("HASI model request failed", JSON.stringify({ code: "provider_rate_limited", providerStatus: 429 }));
     warning.mockRestore();
   });
 

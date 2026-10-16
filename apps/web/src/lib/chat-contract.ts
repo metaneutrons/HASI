@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const MODEL_PROFILE_IDS = ["groq-oss-120b", "groq-oss-20b"] as const;
+export const MODEL_PROFILE_IDS = ["groq-oss-120b", "groq-oss-20b", "groq-qwen-3.8-27b"] as const;
 export type ModelProfileId = (typeof MODEL_PROFILE_IDS)[number];
 
 export const CHAT_TOOL_NAMES = [
@@ -35,10 +35,10 @@ const offsetDateTimeSchema = z.iso.datetime({ offset: true });
 
 export const chatToolSchemas = {
   anny_search_resources: z.strictObject({
-    capacity: z.number().int().min(1).max(500).optional(),
-    features: z.array(nonEmptyText(128)).max(10).optional(),
-    location: nonEmptyText(300).optional(),
-    query: nonEmptyText(500).optional(),
+    capacity: z.number().int().min(1).max(500).describe("Benötigte Mindestzahl an Personen als ganze Zahl.").optional(),
+    features: z.array(nonEmptyText(128)).max(10).describe("Nur ausdrücklich gewünschte Ausstattungsmerkmale; sonst weglassen.").optional(),
+    location: nonEmptyText(300).describe("Nur ein ausdrücklich genannter Standort; sonst weglassen, niemals leer oder null.").optional(),
+    query: nonEmptyText(500).describe("Ein konkreter Raumname oder Suchbegriff; bei allgemeiner Raumsuche weglassen, niemals leer oder null.").optional(),
   }),
   anny_get_availability: z.strictObject({
     resourceId: z.uuid(),

@@ -15,8 +15,10 @@ export function groqErrorDiagnostics(responseBody: string | undefined): GroqErro
     const error = payload.error;
     const result: GroqErrorDiagnostics = {};
     if (CODES.includes(error.code as ProviderCode)) result.providerCode = error.code as ProviderCode;
-    if (typeof error.failed_generation !== "string" || error.failed_generation.length > 20_000) return result;
-    const generated = error.failed_generation;
+    const generated = typeof error.failed_generation === "string"
+      ? error.failed_generation
+      : record(error.failed_generation) ? JSON.stringify(error.failed_generation) : undefined;
+    if (!generated || generated.length > 20_000) return result;
     result.tool = CHAT_TOOL_NAMES.find((name) => generated.includes(name));
     const first = generated.indexOf("{");
     const last = generated.lastIndexOf("}");
@@ -27,7 +29,7 @@ export function groqErrorDiagnostics(responseBody: string | undefined): GroqErro
     result.format = first === 0 ? "json" : "tagged";
     if (!result.tool || !record(body)) return result;
     const callable = record(body.function) ? body.function : body;
-    let args: unknown = callable.arguments ?? callable.parameters ?? body;
+    let args: unknown = callable.arguments ?? callable.parameters ?? callable.attempted_arguments ?? body;
     if (typeof args === "string") { try { args = JSON.parse(args); } catch { return result; } }
     const checked = chatToolSchemas[result.tool].safeParse(args);
     if (!checked.success) result.argumentIssues = checked.error.issues.slice(0, 10).map((issue) => ({

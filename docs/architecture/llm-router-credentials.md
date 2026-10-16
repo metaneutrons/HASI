@@ -43,7 +43,7 @@ An illustrative server-owned connection is:
 ```
 
 The first router implements this connection internally and allowlists GPT-OSS
-120B and 20B profiles. Production data-policy approval and durable budgets remain
+120B, 20B and the explicitly selected Qwen3.8 27B Preview comparison profile. Production data-policy approval and durable budgets remain
 required. HASI's router
 is a server-side application module; introducing an external routing service
 would require a separate trust and credential-storage decision.

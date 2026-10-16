@@ -15,6 +15,17 @@ do not establish fitness for hasi or a production data-processing approval.
 
 ## Proposed first candidate profiles
 
+Update 2026-10-16: the public synthetic-data prototype's immediate comparison is
+Groq GPT-OSS 120B, GPT-OSS 20B and `qwen/qwen3.8-27b`. Groq lists Qwen3.8 27B as
+Preview with tool calling; it is an additional explicit selection, not an
+automatic fallback or an established quality winner. Verify German dialogue,
+the reported room request, missing parameters, availability and proposals on
+the same fixtures before changing the default. Record the non-thinking Qwen
+and low-reasoning GPT-OSS settings as distinct profile parameters.
+See [Groq Qwen model documentation](https://console.groq.com/docs/model/qwen/qwen3.8-27b).
+The wider multi-provider candidate plan below remains separate from this
+configured prototype comparison.
+
 Documentation checked on 2026-10-15. These are proposed candidates, not verified
 account deployments or claims that any model is already best for HsH.
 
