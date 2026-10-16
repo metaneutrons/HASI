@@ -1,3 +1,4 @@
+import { MemoryJsonStore } from '@hasi/state';
 import { generateKeyPairSync, randomUUID } from 'node:crypto';
 import { SignJWT } from 'jose';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -196,6 +197,22 @@ describe('plugin server', () => {
     expect(handler).toHaveBeenCalledOnce();
   });
 
+  it('rejects invocation replay across independent plugin instances', async () => {
+    const store = new MemoryJsonStore('shared-invocations');
+    const consume = (jti: string, expiresAt: number) => store.compareAndSet(jti, null, true, expiresAt * 1000);
+    const handler = vi.fn(() => Promise.resolve({ updated: true }));
+    const first = createServer(handler, consume);
+    const second = createServer(handler, consume);
+    const args = { recordId: 'r-1', value: 'new value' };
+    const token = await createInvocationToken({ actor, pluginId: manifest.id, pluginVersion: manifest.version, tool: 'update-record', args }, keys.privateKey);
+    const headers = { authorization: 'Bearer service-secret', 'x-hasi-invocation': token, accept: 'application/json, text/event-stream' };
+    const accepted = await first.inject({ method: 'POST', url: '/mcp', headers, payload: toolCallPayload(args) });
+    expect(getRpcResponse(accepted.body).result.structuredContent).toEqual({ updated: true });
+    const replay = await second.inject({ method: 'POST', url: '/mcp', headers, payload: toolCallPayload(args, 2) });
+    expect(getRpcResponse(replay.body).result.isError).toBe(true);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
   it('rejects incompatible JSON Schemas when creating the server', () => {
     const incompatibleManifest = {
       ...manifest,
@@ -212,12 +229,13 @@ describe('plugin server', () => {
   });
 });
 
-function createServer(handler: PluginToolHandler): ReturnType<typeof createPluginServer> {
+function createServer(handler: PluginToolHandler, consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>): ReturnType<typeof createPluginServer> {
   const app = createPluginServer({
     manifest,
     publicKey: keys.publicKey,
     serviceToken: 'service-secret',
     handlers: { 'update-record': handler },
+    ...(consumeInvocation ? { consumeInvocation } : {}),
   });
   activeApps.push(app);
   return app;

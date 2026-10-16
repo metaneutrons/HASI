@@ -33,6 +33,8 @@ export interface CreatePluginServerOptions {
   publicKey: KeyObject;
   serviceToken: string;
   handlers: Record<string, PluginToolHandler>;
+  allowedHosts?: string[];
+  consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>;
 }
 
 interface ToolCallBinding {
@@ -140,7 +142,7 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
   }
 
   const replayGuard = new InvocationReplayGuard();
-  const app = createMcpFastifyApp();
+  const app = createMcpFastifyApp(options.allowedHosts ? { allowedHosts: options.allowedHosts } : {});
   app.setErrorHandler((error, _request, reply) => {
     const errorStatus = getStatusCode(error);
     const statusCode = errorStatus === 413 ? 413 : errorStatus && errorStatus < 500 ? errorStatus : 500;
@@ -268,7 +270,7 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
           if (!hasRequiredPermissions(verifiedInvocation.actor, definition)) {
             throw new Error('Forbidden');
           }
-          if (!replayGuard.consume(verifiedInvocation.jti, verifiedInvocation.expiresAt)) {
+          if (!await (options.consumeInvocation ? options.consumeInvocation(verifiedInvocation.jti, verifiedInvocation.expiresAt) : replayGuard.consume(verifiedInvocation.jti, verifiedInvocation.expiresAt))) {
             throw new Error('Invocation already used');
           }
 

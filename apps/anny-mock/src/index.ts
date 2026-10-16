@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { MemoryJsonStore, updateJson, type JsonStore } from '@hasi/state';
 
 export const MOCK_IDS = {
   organization: '00000000-0000-4000-8000-000000000001',
@@ -46,6 +48,8 @@ export interface AnnyMockResourceView {
 
 export interface CreateAnnyMockOptions {
   token?: string;
+  store?: JsonStore;
+  scope?: string;
 }
 
 interface MockResource {
@@ -405,7 +409,7 @@ const seedBookings = [
   makeBooking(MOCK_IDS.bookings.studentA, MOCK_IDS.customers.student, MOCK_IDS.resources.seminarRoom, MOCK_IDS.services.students2, MOCK_IDS.orders.studentA, 2),
   makeBooking(MOCK_IDS.bookings.studentB, MOCK_IDS.customers.student, MOCK_IDS.resources.projectRoom, MOCK_IDS.services.hybridMeeting, MOCK_IDS.orders.studentB, 4, 'requested'),
   makeBooking(MOCK_IDS.bookings.employeeA, MOCK_IDS.customers.employee, MOCK_IDS.resources.mediaStudio, MOCK_IDS.services.staffOnly, MOCK_IDS.orders.employeeA, 3),
-  makeBooking(MOCK_IDS.bookings.adminA, MOCK_IDS.customers.admin, MOCK_IDS.resources.computerLab, MOCK_IDS.services.students2, MOCK_IDS.orders.adminA, 5)
+  makeBooking(MOCK_IDS.bookings.adminA, MOCK_IDS.customers.admin, MOCK_IDS.resources.computerLab, MOCK_IDS.services.hybridMeeting, MOCK_IDS.orders.adminA, 5)
 ];
 
 const seedOrders = seedBookings.map((booking) => {
@@ -497,25 +501,46 @@ function requireOrganization(query: PageQuery, reply: FastifyReply): boolean {
   return true;
 }
 
-function availabilityIntervals(resourceIds: string[], startDate: string, duration: number): Record<string, unknown>[] {
+function intervalsOverlap(firstStart: string, firstEnd: string, secondStart: string, secondEnd: string): boolean {
+  return Date.parse(firstStart) < Date.parse(secondEnd) && Date.parse(secondStart) < Date.parse(firstEnd);
+}
+
+function availabilityIntervals(
+  resourceIds: string[],
+  startDate: string,
+  duration: number,
+  bookings: MockBooking[]
+): Record<string, unknown>[] {
   const base = new Date(startDate);
   const day = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate()));
-  return [9, 13].map((hour) => {
+  const requestedStart = Date.parse(startDate);
+  const now = Date.now();
+  return [9, 13].flatMap((hour) => {
     const start = new Date(day);
     start.setUTCHours(hour, 0, 0, 0);
     const end = new Date(start.getTime() + duration * 60_000);
     const startIso = start.toISOString();
     const endIso = end.toISOString();
+    if (start.getTime() < requestedStart || start.getTime() < now) return [];
+    const availableResourceIds = resourceIds.filter((resourceId) => !bookings.some((booking) => (
+      booking.relationships.resource.data.id === resourceId
+      && intervalsOverlap(
+        startIso,
+        endIso,
+        booking.attributes.start_date,
+        booking.attributes.end_date
+      )
+    )));
     return {
       start_date: startIso,
       end_date: endIso,
       unit: 'minute',
-      available: resourceIds.length > 0,
-      number_available: resourceIds.length,
-      remaining_number_available: resourceIds.length,
+      available: availableResourceIds.length > 0,
+      number_available: availableResourceIds.length,
+      remaining_number_available: availableResourceIds.length,
       quota: null,
-      unavailability_type: '',
-      resource_ids: resourceIds,
+      unavailability_type: availableResourceIds.length > 0 ? '' : 'resource',
+      resource_ids: availableResourceIds,
       messages: [],
       series_periods: null,
       timeslot_series_id: null,
@@ -527,15 +552,74 @@ function availabilityIntervals(resourceIds: string[], startDate: string, duratio
   });
 }
 
+interface MockAggregate {
+  orders: MockOrder[];
+  bookings: MockBooking[];
+}
+
+const MOCK_STATE_KEY_PREFIX = 'orders-bookings:';
+const MOCK_STATE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function initialAggregate(): MockAggregate {
+  return structuredClone({ orders: seedOrders, bookings: seedBookings });
+}
+
+function createOrder(orderId: string, customerId: string, plans: PlannedBooking[], bookings: MockBooking[]): MockOrder {
+  const firstBookingPlan = plans[0];
+  if (!firstBookingPlan) throw new TypeError('At least one booking is required to create a mock order.');
+  return {
+    id: orderId,
+    type: 'orders',
+    attributes: {
+      number: `O-${orderId.slice(-4)}`,
+      currency: 'EUR',
+      total: 0,
+      modification_total: 0,
+      net_amount: 0,
+      tax_amount: 0,
+      discount_amount: 0,
+      status: 'completed',
+      access_token: null,
+      has_payment: false,
+      manually_created: true,
+      expires_at: firstBookingPlan.endDate,
+      start_date: plans.reduce((first, item) => item.startDate < first ? item.startDate : first, firstBookingPlan.startDate),
+      end_date: plans.reduce((last, item) => item.endDate > last ? item.endDate : last, firstBookingPlan.endDate)
+    },
+    relationships: {
+      bookings: { data: bookings.map((booking) => ({ type: 'bookings', id: booking.id })) },
+      customer: { data: { type: 'customers', id: customerId } }
+    }
+  };
+}
+
+interface PlannedBooking {
+  resourceId: string;
+  serviceId: string;
+  customerId: string;
+  startDate: string;
+  endDate: string;
+}
+
 export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInstance {
   const token = options.token ?? process.env.ANNY_MOCK_TOKEN ?? 'anny-mock-token';
   if (!token.trim()) throw new TypeError('Mock token must not be empty.');
+  const store = options.store ?? new MemoryJsonStore('anny-mock');
+  const scope = options.scope ?? 'local';
+  if (!scope.trim()) throw new TypeError('Mock scope must not be empty.');
+  const stateKey = `${MOCK_STATE_KEY_PREFIX}${scope}`;
+  const expiresAt = (): number => Date.now() + MOCK_STATE_TTL_MS;
+  const updateAggregate = <R>(update: (current: MockAggregate) => { value: MockAggregate; result: R }): Promise<R> => (
+    updateJson(store, stateKey, initialAggregate, update, expiresAt())
+  );
+  const readAggregate = async (): Promise<MockAggregate> => {
+    const record = await store.read(stateKey);
+    if (record) return record.value as MockAggregate;
+    return updateAggregate(current => ({ value: current, result: current }));
+  };
 
   const app = Fastify({ logger: false });
   app.get('/health', () => ({ status: 'ok', mode: 'synthetic' }));
-  const orders = [...seedOrders];
-  const bookings = [...seedBookings];
-  let creationSequence = 0;
 
   app.get('/api/v1/resources', async (request, reply) => {
     if (!requireAdmin(request, reply, token)) return;
@@ -581,7 +665,8 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
       .filter((resource) => resourceId ? resource.id === resourceId : true)
       .filter((resource) => resourceServiceIds.get(resource.id)?.has(serviceId) === true)
       .map((resource) => resource.id);
-    const data = availabilityIntervals(availableResources, startDate, duration);
+    const aggregate = await readAggregate();
+    const data = availabilityIntervals(availableResources, startDate, duration, aggregate.bookings);
     const periodStart = new Date(startDate);
     const periodEnd = new Date(periodStart);
     periodEnd.setUTCDate(periodEnd.getUTCDate() + 1);
@@ -607,9 +692,10 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
       return;
     }
 
-    const customerBookings = bookings.filter((booking) => booking.relationships.customer.data.id === customerId);
+    const aggregate = await readAggregate();
+    const customerBookings = aggregate.bookings.filter((booking) => booking.relationships.customer.data.id === customerId);
     const customerBookingIds = new Set(customerBookings.map((booking) => booking.id));
-    const customerOrders = orders.filter((order) => order.relationships.customer.data.id === customerId);
+    const customerOrders = aggregate.orders.filter((order) => order.relationships.customer.data.id === customerId);
     const page = pageSlice(customerOrders, query, request, reply);
     if (!page) return;
     return reply.type('application/vnd.api+json').send({
@@ -633,7 +719,7 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
       sendError(reply, 404, 'Not Found', 'Unknown mock order customer.');
       return;
     }
-    const plannedBookings: { resourceId: string; serviceId: string; customerId: string; startDate: string; endDate: string }[] = [];
+    const plannedBookings: PlannedBooking[] = [];
     for (const item of config.bookings) {
       if (!resourceById.has(item.resource_id)) {
         sendError(reply, 404, 'Not Found', 'Unknown resource_id in order configuration.');
@@ -667,17 +753,14 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
       });
     }
 
-    creationSequence += 1;
-    const sequence = String(5_000 + creationSequence).padStart(12, '0');
-    const orderId = `00000000-0000-4000-8000-${sequence}`;
-    const created: MockBooking[] = plannedBookings.map((planned, index) => {
-      const bookingSequence = String(6_000 + (creationSequence * 10) + index).padStart(12, '0');
-      const id = `00000000-0000-4000-8000-${bookingSequence}`;
+    const orderId = randomUUID();
+    const created: MockBooking[] = plannedBookings.map((planned) => {
+      const id = randomUUID();
       return {
         id,
         type: 'bookings',
         attributes: {
-          number: `M-${bookingSequence.slice(-4)}`,
+          number: `M-${id.slice(-8)}`,
           status: 'accepted',
           is_blocker: false,
           start_date: planned.startDate,
@@ -701,37 +784,35 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
         }
       };
     });
-    const firstBookingPlan = plannedBookings[0];
-    if (!firstBookingPlan) {
-      sendError(reply, 400, 'Bad Request', 'At least one booking is required to create a mock order.');
+    const order = createOrder(orderId, config.order_customer_id, plannedBookings, created);
+    const result = await updateAggregate((current) => {
+      const hasInternalConflict = plannedBookings.some((planned, index) => plannedBookings.some((other, otherIndex) => (
+        otherIndex < index
+        && planned.resourceId === other.resourceId
+        && intervalsOverlap(planned.startDate, planned.endDate, other.startDate, other.endDate)
+      )));
+      const hasExistingConflict = current.bookings.some((existing) => plannedBookings.some((planned) => (
+        existing.relationships.resource.data.id === planned.resourceId
+        && intervalsOverlap(
+          existing.attributes.start_date,
+          existing.attributes.end_date,
+          planned.startDate,
+          planned.endDate
+        )
+      )));
+      if (hasInternalConflict || hasExistingConflict) return { value: current, result: 'conflict' as const };
+      return {
+        value: {
+          bookings: [...current.bookings, ...created],
+          orders: [...current.orders, order]
+        },
+        result: 'created' as const
+      };
+    });
+    if (result === 'conflict') {
+      sendError(reply, 409, 'Conflict', 'A mock booking already occupies this resource during the requested interval.');
       return;
     }
-    const order: MockOrder = {
-      id: orderId,
-      type: 'orders',
-      attributes: {
-        number: `O-${orderId.slice(-4)}`,
-        currency: 'EUR',
-        total: 0,
-        modification_total: 0,
-        net_amount: 0,
-        tax_amount: 0,
-        discount_amount: 0,
-        status: 'completed',
-        access_token: null,
-        has_payment: false,
-        manually_created: true,
-        expires_at: firstBookingPlan.endDate,
-        start_date: plannedBookings.reduce((first, item) => item.startDate < first ? item.startDate : first, firstBookingPlan.startDate),
-        end_date: plannedBookings.reduce((last, item) => item.endDate > last ? item.endDate : last, firstBookingPlan.endDate)
-      },
-      relationships: {
-        bookings: { data: created.map((booking) => ({ type: 'bookings', id: booking.id })) },
-        customer: { data: { type: 'customers', id: config.order_customer_id } }
-      }
-    };
-    bookings.push(...created);
-    orders.push(order);
 
     return reply.code(200).type('application/vnd.api+json').send({
       data: order,

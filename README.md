@@ -6,13 +6,21 @@ independently running anny plugin. This is an incomplete implementation of the
 agreed MVP, not a production service.
 
 **Public demo:** [hasi.metaneutrons.cc](https://hasi.metaneutrons.cc)
-connects the chat to GroqCloud through a server-side model router. GPT-OSS 120B
-and 20B plus Qwen3.8 27B (Preview) can be selected in the chat; an explicit offline dialogue mode is also
-available. Messages and selected tool results are sent to GroqCloud. Use test
-data only. All accounts are selectable test personas; anny bookings and
-administrator changes remain browser simulations. No real SSO, anny account or
-institutional knowledge source is connected. The local reference below exercises
-the separate core/plugin/HTTP-client architecture.
+is the configured domain for the Vercel demonstration. Its server-backed mode
+uses the same core API, signed MCP plugin, AnnyClient and synthetic HTTP service
+as the local reference. Vercel co-locates their Node.js entry points; Neon
+Postgres stores isolated demo sessions, proposals, registry state and synthetic
+bookings. The runtime is implemented; deployment and live qualification remain
+outstanding.
+GPT-OSS 120B and 20B plus Qwen3.8 27B (Preview) can be selected in chat; an
+explicit offline dialogue mode is also available. Messages and selected tool
+results are sent to GroqCloud. Use test data only. Student, employee and
+administrator personas are intentionally selectable by every visitor inside
+their own signed demo workspace. They do not establish institutional identity
+or permissions. Workspace cookies expire after seven days; a later visit gets
+a new workspace with synthetic defaults. Chat history remains in browser
+storage. No real SSO, anny tenant or institutional knowledge source is
+connected.
 
 ## Run locally
 
@@ -44,9 +52,10 @@ IT/intranet retrieval remains unavailable; model answers are not verified
 institutional advice or evidence of an internal source search.
 See [chat-first interaction](docs/architecture/chat-first.md).
 
-For an optimized web preview, use `pnpm preview`. This builds the application
-first and runs the same mock backend with Next.js in production build mode;
-it does not enable real SSO or live integration credentials.
+For an optimized local preview, use `pnpm preview`. This builds the application
+first and runs the separate core, plugin, HTTP mock and Next.js processes in
+production build mode. The local launcher keeps demo data in memory and does
+not enable real SSO or live integration credentials.
 
 The launcher creates ephemeral signing keys and service tokens automatically.
 It starts the web UI on port 3001, core API on 4100, MCP plugin on 4101 and anny
@@ -55,7 +64,8 @@ are not stopped. `HASI_WEB_PORT=3002 pnpm dev` changes the UI port and allowed
 origin together. Stop the launcher with Ctrl-C.
 
 All identities, rooms, access grants and bookings are synthetic. State is held
-in memory and resets on restart. No HsH credentials or real anny token is needed.
+in memory and resets on restart. The Vercel server demo has separate scoped
+Postgres state. No HsH credentials or real anny token is needed.
 The included launcher connects only to the local anny mock and sends no real
 bookings or notifications.
 
@@ -78,16 +88,24 @@ also check fixtures against the pinned official anny OpenAPI specification.
 The explicit research command fetches those third-party specifications and
 verifies their SHA-256 pins; they are not redistributed in this repository.
 
-To run only the public browser demo locally:
+To run the server-backed demo locally, configure these values in
+`apps/web/.env.local`, using a local PostgreSQL database and a newly generated
+32-byte base64url `HASI_DEMO_SECRET`:
 
-```sh
-NEXT_PUBLIC_HASI_PUBLIC_DEMO=1 pnpm --filter @hasi/web build
-pnpm --filter @hasi/web start
+```dotenv
+NEXT_PUBLIC_HASI_PUBLIC_DEMO=1
+HASI_DEMO_MODE=1
+HASI_DEMO_ORIGIN=http://127.0.0.1:3001
+DATABASE_URL=
+HASI_DEMO_SECRET=
+GROQ_API_KEY=
 ```
 
-Use a free port if the full-stack prototype is already running. See
-[public demo architecture](docs/architecture/public-demo.md) for its limits
-and Vercel configuration.
+Then run `pnpm --filter @hasi/web dev`. This one-process mode uses the same
+server-backed demo runtime with PostgreSQL. It is separate from `pnpm dev`,
+which continues to launch the local multi-process, in-memory reference stack.
+See [public demo architecture](docs/architecture/public-demo.md) for Vercel
+configuration, data boundaries and current qualification status.
 
 ## Packages and boundaries
 
@@ -99,6 +117,8 @@ and Vercel configuration.
 | `apps/anny-plugin` | Separately running room tools and anny customer/resource checks |
 | `packages/anny-client` | Actual anny HTTP paths, query context and request/response contracts |
 | `apps/anny-mock` | Synthetic external API for the same HTTP client |
+| `packages/demo-runtime` | Server-backed demo workspaces and co-located HTTP/MCP handlers |
+| `packages/state` | Memory and PostgreSQL JSON stores with atomic updates |
 
 The core has no runtime dependency on the anny plugin implementation. Plugins
 advertise a manifest and MCP tools; the host controls identity and permissions.
@@ -112,9 +132,12 @@ isolation for third-party plugins remain production work.
 The mandatory MVP still includes permission-aware knowledge search with source
 citations across both `intranet.hs-hannover.de` and `service.it.hs-hannover.de`,
 plus anny. Knowledge retrieval, production model-profile policy/approval and
-institutional integration remain incomplete. Real SSO, authoritative customer linking/rights, persistent
-state, reconciliation, cancellation and real-device mobile qualification remain
-open. Microsoft 365 Bookings is deferred.
+institutional integration remain incomplete. Real SSO, authoritative anny
+tenant/account linking and permission mapping, full API coverage, production
+third-party artifact isolation, cancellation, reconciliation and real-device
+mobile qualification remain open. The Vercel demo's durable synthetic state
+does not provide institutional authorization or booking reconciliation.
+Microsoft 365 Bookings is deferred.
 
 - [Plugin contract, prototype boundaries and qualification criteria](docs/architecture/plugins-and-prototype.md)
 - [Technical basis](docs/architecture/technical-basis.md)

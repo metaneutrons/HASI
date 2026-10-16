@@ -44,8 +44,7 @@ function PluginCard({
   onCheck: (plugin: Plugin) => void;
   onActivate: (plugin: Plugin) => void;
 }) {
-  const publicDemo = process.env.NEXT_PUBLIC_HASI_PUBLIC_DEMO === "1";
-  const statusText = publicDemo ? "Browser-Simulation" : plugin.healthy ? "Verbindung aktiv" : "Verbindung prüfen";
+  const statusText = plugin.healthy ? "Verbindung aktiv" : "Verbindung prüfen";
   return (
     <article className={`plugin-card${plugin.enabled ? " plugin-card--enabled" : " plugin-card--disabled"}`}>
       <div className="plugin-card-head">
@@ -54,10 +53,8 @@ function PluginCard({
         </div>
         <div className="plugin-title-wrap">
           <div className="plugin-title-row"><h3>{plugin.name}</h3><span className="plugin-version">v{plugin.version}</span></div>
-          <span className={`plugin-health${publicDemo ? "" : plugin.healthy ? " is-healthy" : " is-unhealthy"}`}>
-            {publicDemo
-              ? <Clock3 size={14} aria-hidden="true" />
-              : plugin.healthy
+          <span className={`plugin-health${plugin.healthy ? " is-healthy" : " is-unhealthy"}`}>
+            {plugin.healthy
                 ? <CircleCheck size={14} aria-hidden="true" />
                 : <CircleAlert size={14} aria-hidden="true" />}
             {statusText}
