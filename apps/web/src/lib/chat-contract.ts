@@ -1,7 +1,41 @@
 import { z } from "zod";
 
-export const MODEL_PROFILE_IDS = ["groq-oss-120b", "groq-oss-20b", "groq-qwen-3.8-27b"] as const;
+export const MODEL_PROFILE_IDS = [
+  "groq-oss-120b",
+  "groq-oss-20b",
+  "groq-qwen-3.8-27b",
+  "gwdg-qwen3-30b",
+  "custom-default",
+] as const;
 export type ModelProfileId = (typeof MODEL_PROFILE_IDS)[number];
+
+export const chatProfileIdSchema = z.union([z.enum(MODEL_PROFILE_IDS), z.literal("offline")]);
+
+export const modelProfileSchema = z.strictObject({
+  id: z.enum(MODEL_PROFILE_IDS),
+  label: z.string().trim().min(1).max(100),
+  modelId: z.string().trim().min(1).max(128),
+  provider: z.enum(["groq", "gwdg", "custom"]),
+  configured: z.boolean(),
+});
+
+export const modelProfilesResponseSchema = z
+  .strictObject({
+    configured: z.boolean(),
+    profiles: z.array(modelProfileSchema),
+    defaultProfileId: z.enum(MODEL_PROFILE_IDS),
+  })
+  .superRefine(({ configured, profiles }, context) => {
+    if (configured !== profiles.some((profile) => profile.configured)) {
+      context.addIssue({
+        code: "custom",
+        path: ["configured"],
+        message: "The overall readiness must match profile readiness.",
+      });
+    }
+  });
+export type ModelProfile = z.infer<typeof modelProfileSchema>;
+export type ModelProfilesResponse = z.infer<typeof modelProfilesResponseSchema>;
 
 export const CHAT_TOOL_NAMES = [
   "knowledge_search",
@@ -266,7 +300,7 @@ export const modelReplySchema = z
       id: z.enum(MODEL_PROFILE_IDS),
       label: nonEmptyText(100),
       modelId: nonEmptyText(128),
-      provider: z.literal("groq"),
+      provider: z.enum(["groq", "gwdg", "custom"]),
     }),
     usage: z.strictObject({
       inputTokens: z.number().int().nonnegative(),

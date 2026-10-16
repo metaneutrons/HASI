@@ -1,13 +1,14 @@
 # LLM router credentials
 
-Date: 2026-10-16. Status: agreed architecture with a first server-side Groq adapter.
+Date: 2026-10-16. Status: agreed architecture with server-side Groq, GWDG SAIA
+and optional administrator-configured OpenAI-compatible connections.
 
-GroqCloud is the first provider for the HASI prototype. Fabian has confirmed
-that `GROQ_API_KEY` was added to the Vercel project `hasi`, team `metaneutrons`,
-for Production and Preview; metadata checks confirm the Secret in both scopes.
-The prototype now has a server-side router using AI SDK Core and Groq provider
-adapters. Credential presence and successful inference are separate states;
-neither approves GroqCloud for protected HsH information.
+GroqCloud is the original provider for the HASI prototype. `GROQ_API_KEY` is a
+Vercel Secret for project `hasi`, team `metaneutrons`, in Production and Preview.
+`GWDG_API_KEY` is likewise configured for both environments. Credential
+presence and successful inference are separate states; neither approves a
+provider for protected HsH information. This status does not claim a live
+inference test or institutional approval.
 
 ## Separate providers, model profiles and secrets
 
@@ -27,6 +28,8 @@ replace that resolver without changing model profiles or the chat interface.
 | Connection example | Credential reference | State |
 | --- | --- | --- |
 | GroqCloud demo | `env:GROQ_API_KEY` | First selected provider; provisioned by operator |
+| GWDG SAIA demo | `env:GWDG_API_KEY` | Optional selectable connection; key is provisioned by operator |
+| Custom OpenAI-compatible | `env:CUSTOM_API_KEY` | Optional; requires valid server-side endpoint, model ID and key |
 | OpenAI | `env:OPENAI_API_KEY` | Naming example; not configured or approved |
 | Anthropic | `env:ANTHROPIC_API_KEY` | Naming example; not configured or approved |
 | Mistral | `env:MISTRAL_API_KEY` | Naming example; not configured or approved |
@@ -42,9 +45,20 @@ An illustrative server-owned connection is:
 }
 ```
 
-The first router implements this connection internally and allowlists GPT-OSS
-120B, 20B and the explicitly selected Qwen3.8 27B Preview comparison profile. Production data-policy approval and durable budgets remain
-required. HASI's router
+The GWDG connection is fixed to its SAIA endpoint and has two approved profiles.
+The custom connection uses `CUSTOM_ENDPOINT` and `CUSTOM_MODEL_ID` supplied by
+the operator in the server environment; it is shown only when the HTTPS
+endpoint and model ID validate. Its key is resolved through the same allowlisted
+secret resolver. No custom connection values are accepted from a chat request.
+The router allowlists Groq GPT-OSS 120B, 20B and Qwen3.8 27B Preview, the GWDG
+`qwen3-30b-a3b-instruct-2507` profile, and one custom model profile. The GWDG
+GPT-OSS 120B profile is deferred after protected Preview probes returned
+upstream HTTP 500; its cause is not established. Qwen passed Preview checks for
+knowledge retrieval and anny room search on 2026-10-16. This runtime result
+does not establish Production qualification or approval for protected HsH data.
+Configured custom providers must be independently qualified for native tool
+calls before room workflows are enabled. Production data-policy approval and
+durable budgets remain required. HASI's router
 is a server-side application module; introducing an external routing service
 would require a separate trust and credential-storage decision.
 
@@ -55,8 +69,10 @@ would require a separate trust and credential-storage decision.
    provider eligibility, capabilities and budget before a provider call.
 2. Resolve `credentialRef` from the validated, server-owned connection. Client
    input, model output, documents and plugins cannot choose a secret name or
-   override a provider endpoint. Do not perform arbitrary `process.env` lookups
-   from request parameters. A missing credential makes the connection unavailable.
+   override a provider endpoint. Custom endpoint and model settings come only
+   from server environment configuration and are validated before use. Do not
+   perform arbitrary `process.env` lookups from request parameters. A missing
+   credential makes its profile unavailable.
 3. The trusted provider adapter uses the resolved credential only for requests
    to its approved destination. Reject redirects that could forward credentials
    to another destination. Never send provider credentials to integration plugins.
@@ -90,6 +106,15 @@ vercel env add GROQ_API_KEY production,preview \
   --scope metaneutrons
 ```
 
+Provision GWDG SAIA credentials the same way, using interactive secret entry:
+
+```sh
+vercel env add GWDG_API_KEY production,preview \
+  --type secret \
+  --project hasi \
+  --scope metaneutrons
+```
+
 Keep secret values out of command arguments and shell history. Local development
 uses an ignored environment file in the executing server application's directory
 or an injected process environment; `.env.example` contains placeholders only.
@@ -99,7 +124,7 @@ Document each executing service's environment loader when implementing the route
 Environment changes apply to new deployments. Routine rotation provisions a new
 provider key, updates the secret, deploys and verifies it, then revokes the old
 key and retires deployments that still depend on it. Revoke a compromised key
-immediately. Audit records contain connection ID, environment, operation, actor
+immediately. Rotate `GWDG_API_KEY` at least every six months. Audit records contain connection ID, environment, operation, actor
 and time, never credential values. A rollback must account for revoked keys.
 
 The public prototype enforces shared regional Vercel WAF request limits,
@@ -121,5 +146,6 @@ readiness result distinguishes configured, verified, unavailable and failed.
 See [security and model evaluation](security-and-models.md) for context eligibility
 and prompt-injection boundaries. Provider and platform references:
 [Groq quickstart](https://console.groq.com/docs/quickstart),
-[Groq API compatibility](https://console.groq.com/docs/openai), and
+[Groq API compatibility](https://console.groq.com/docs/openai),
+[GWDG SAIA and custom provider integration](gwdg-saia.md), and
 [Vercel Config and Secret variables](https://vercel.com/docs/environment-variables/sensitive-environment-variables).

@@ -58,12 +58,12 @@ bookings. Browser chat history is not authenticated institutional evidence and
 is not copied to Postgres.
 
 The UI is built with `NEXT_PUBLIC_HASI_PUBLIC_DEMO=1`. Server handlers require
-`HASI_DEMO_MODE=1`, `DATABASE_URL` and a dedicated `HASI_DEMO_SECRET`. Groq
-inference continues through the server-side `/api/chat` route with
-`GROQ_API_KEY`; no credential is sent to the browser or plugin. An explicit
-offline profile retains the bounded German dialogue parser. Provider failures
-do not trigger a silent fallback. IT/intranet retrieval and institutional
-citations remain unavailable.
+`HASI_DEMO_MODE=1`, `DATABASE_URL` and a dedicated `HASI_DEMO_SECRET`. Groq,
+GWDG SAIA or an explicitly configured custom profile may run through the
+server-side `/api/chat` route with its own credential; no credential is sent to
+the browser or plugin. An explicit offline profile retains the bounded German
+dialogue parser. Provider failures do not trigger a silent fallback.
+IT/intranet retrieval and institutional citations remain unavailable.
 
 Real SSO, institutional permissions, anny tenant and customer linking, full
 anny API coverage, third-party artifact isolation, cancellation and booking
@@ -80,17 +80,21 @@ facing. A host-owned confirmation card performs the separately authorized
 booking execution. Prepared intervals must match a previously observed
 available interval.
 
-The default profile is Groq GPT-OSS 120B. GPT-OSS 20B and Qwen3.8 27B are also
-available; Qwen is labelled Preview and uses non-thinking mode, while GPT-OSS
-uses low reasoning effort. Each assistant response records the resolved
-profile. Messages and bounded tool results are sent to GroqCloud, as stated in
-the UI.
+The default profile remains Groq GPT-OSS 120B. GPT-OSS 20B and Qwen3.8 27B are
+also available; Qwen is labelled Preview and uses non-thinking mode, while
+GPT-OSS uses low reasoning effort. The currently exposed GWDG profile is Qwen3
+30B A3B Instruct 2507. A protected Preview check passed short text, a cited
+knowledge answer and an anny room search. GWDG GPT-OSS 120B is deferred after
+upstream HTTP 500 responses. Each assistant response records the selected
+profile. Messages and bounded tool results are sent to the selected model
+provider, as stated in the UI.
 
-The chat handler allows a maximum 30-second invocation, a shared 20-second
-generation deadline, 1,536 output tokens per generation, a 60,000-byte request
+The chat handler allows a maximum 60-second invocation. Generation deadlines
+are 20 seconds for Groq and custom connections and 45 seconds for GWDG. It
+allows 1,536 output tokens per generation, a 60,000-byte request
 body, 30,000 message-content characters and four validated tool calls per
 inference step. Native HTTP 400 `tool_use_failed` permits one regeneration with
-the same selected profile, lower temperature and a fixed schema reminder.
+the same selected Groq profile, lower temperature and a fixed schema reminder.
 Failed generated content is discarded. Other errors, including
 transport/auth/quota failures, have no automatic retry, and business actions
 are never retried. One admitted HTTP request can make at most two provider
@@ -127,9 +131,11 @@ automatically.
 - Set `HASI_DEMO_MODE=1`, `DATABASE_URL` and a separately provisioned
   `HASI_DEMO_SECRET` for both Preview and Production. The secret must encode 32
   random bytes as 43 base64url characters. Keep it server-side.
-- Set `GROQ_API_KEY` as a server-side Vercel Secret in the required environments.
-  `GET /api/chat` reports configuration presence and approved profiles; a
-  successful inference is a separate runtime check.
+- Set each enabled provider credential as a server-side Vercel Secret in the
+  required environments. GWDG uses `GWDG_API_KEY`. A custom provider also needs
+  server-only `CUSTOM_ENDPOINT` and `CUSTOM_MODEL_ID`. `GET /api/chat` reports
+  configuration presence and approved profiles; a successful inference is a
+  separate runtime check.
 - Production self-requests use the pinned origin `https://hasi.metaneutrons.cc`
   and the `production:v1` database namespace. Preview uses its Vercel deployment
   URL as origin and a `preview:<commit SHA>` namespace, with the deployment URL

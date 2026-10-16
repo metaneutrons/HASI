@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createGroq } from "@ai-sdk/groq";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { APICallError, generateText, isStepCount, tool, type ModelMessage, type ToolSet } from "ai";
 import { ModelRouterError } from "./model-router-error";
 import { groqErrorDiagnostics } from "./groq-error-diagnostics";
@@ -20,18 +21,32 @@ import {
 
 const GROQ_CONNECTION = Object.freeze({
   id: "groq-demo",
-  adapter: "groq",
+  adapter: "groq" as const,
   baseURL: "https://api.groq.com/openai/v1",
   credentialRef: "env:GROQ_API_KEY" as const,
 });
+const GWDG_CONNECTION = Object.freeze({
+  id: "gwdg-demo",
+  adapter: "openai-compatible" as const,
+  baseURL: "https://chat-ai.academiccloud.de/v1",
+  credentialRef: "env:GWDG_API_KEY" as const,
+});
+const CUSTOM_CREDENTIAL_REF = "env:CUSTOM_API_KEY" as const;
+type SecretReference = typeof GROQ_CONNECTION.credentialRef | typeof GWDG_CONNECTION.credentialRef | typeof CUSTOM_CREDENTIAL_REF;
+type ProviderConnection = {
+  id: string;
+  adapter: "groq" | "openai-compatible";
+  baseURL: string;
+  credentialRef: SecretReference;
+};
 
 type ServerModelProfile = {
   id: ModelProfileId;
   label: string;
   modelId: string;
-  provider: "groq";
-  connectionId: typeof GROQ_CONNECTION.id;
-  reasoningEffort: "low" | "none";
+  provider: "groq" | "gwdg" | "custom";
+  connection: ProviderConnection;
+  reasoningEffort?: "low" | "none";
 };
 
 const MODEL_PROFILES: readonly ServerModelProfile[] = Object.freeze([
@@ -40,7 +55,7 @@ const MODEL_PROFILES: readonly ServerModelProfile[] = Object.freeze([
     label: "Groq GPT-OSS 120B",
     modelId: "openai/gpt-oss-120b",
     provider: "groq",
-    connectionId: GROQ_CONNECTION.id,
+    connection: GROQ_CONNECTION,
     reasoningEffort: "low",
   }),
   Object.freeze({
@@ -48,7 +63,7 @@ const MODEL_PROFILES: readonly ServerModelProfile[] = Object.freeze([
     label: "Groq GPT-OSS 20B",
     modelId: "openai/gpt-oss-20b",
     provider: "groq",
-    connectionId: GROQ_CONNECTION.id,
+    connection: GROQ_CONNECTION,
     reasoningEffort: "low",
   }),
   Object.freeze({
@@ -56,8 +71,15 @@ const MODEL_PROFILES: readonly ServerModelProfile[] = Object.freeze([
     label: "Groq Qwen3.8 27B · Preview",
     modelId: "qwen/qwen3.8-27b",
     provider: "groq",
-    connectionId: GROQ_CONNECTION.id,
+    connection: GROQ_CONNECTION,
     reasoningEffort: "none",
+  }),
+  Object.freeze({
+    id: "gwdg-qwen3-30b",
+    label: "GWDG SAIA · Qwen3 30B A3B Instruct 2507",
+    modelId: "qwen3-30b-a3b-instruct-2507",
+    provider: "gwdg",
+    connection: GWDG_CONNECTION,
   }),
 ]);
 
@@ -65,20 +87,28 @@ export const DEFAULT_PROFILE_ID: ModelProfileId = "groq-oss-120b";
 
 type SecretEnvironment = Readonly<{
   GROQ_API_KEY?: string;
+  GWDG_API_KEY?: string;
+  CUSTOM_API_KEY?: string;
+  CUSTOM_ENDPOINT?: string;
+  CUSTOM_MODEL_ID?: string;
 }>;
-
-type SecretReference = typeof GROQ_CONNECTION.credentialRef;
 
 interface SecretResolver {
   resolve(reference: SecretReference): string | undefined;
 }
 
+const SECRET_ENVIRONMENT_NAMES = Object.freeze({
+  [GROQ_CONNECTION.credentialRef]: "GROQ_API_KEY",
+  [GWDG_CONNECTION.credentialRef]: "GWDG_API_KEY",
+  [CUSTOM_CREDENTIAL_REF]: "CUSTOM_API_KEY",
+} as const satisfies Record<SecretReference, keyof SecretEnvironment>);
+
 class EnvironmentSecretResolver implements SecretResolver {
   constructor(private readonly environment: SecretEnvironment) {}
 
   resolve(reference: SecretReference): string | undefined {
-    if (reference !== "env:GROQ_API_KEY") return undefined;
-    const value = this.environment.GROQ_API_KEY;
+    const variableName = SECRET_ENVIRONMENT_NAMES[reference];
+    const value = this.environment[variableName];
     return typeof value === "string" && value.trim().length > 0
       ? value
       : undefined;
@@ -111,9 +141,9 @@ const CHAT_TOOLS = {
   }),
 } satisfies ToolSet;
 
-const GROQ_ENDPOINT = new URL(GROQ_CONNECTION.baseURL);
-
-function createPinnedFetch(upstream: typeof fetch): typeof fetch {
+function createPinnedFetch(connection: ProviderConnection, upstream: typeof fetch): typeof fetch {
+  const endpoint = new URL(connection.baseURL);
+  const basePath = endpoint.pathname.replace(/\/+$/u, "");
   return async (input, init) => {
     const requestUrl =
       typeof input === "string"
@@ -124,8 +154,10 @@ function createPinnedFetch(upstream: typeof fetch): typeof fetch {
 
     if (
       requestUrl.protocol !== "https:" ||
-      requestUrl.origin !== GROQ_ENDPOINT.origin ||
-      !requestUrl.pathname.startsWith(`${GROQ_ENDPOINT.pathname}/`)
+      requestUrl.origin !== endpoint.origin ||
+      requestUrl.username.length > 0 ||
+      requestUrl.password.length > 0 ||
+      !requestUrl.pathname.startsWith(`${basePath}/`)
     ) {
       throw new Error("Rejected provider destination.");
     }
@@ -149,24 +181,78 @@ function isChatToolName(value: string): value is ChatToolName {
   return Object.hasOwn(chatToolSchemas, value);
 }
 
-function getProfile(profileId: ModelProfileId): ServerModelProfile | undefined {
+function customProfile(environment: SecretEnvironment): ServerModelProfile | undefined {
+  const configuredModelId = environment.CUSTOM_MODEL_ID;
+  if (typeof configuredModelId !== "string" || /[\u0000-\u001f\u007f]/u.test(configuredModelId)) return undefined;
+  const modelId = configuredModelId.trim();
+  if (!modelId || modelId.length > 128) return undefined;
+
+  const endpointValue = environment.CUSTOM_ENDPOINT;
+  if (typeof endpointValue !== "string" || /[\u0000-\u001f\u007f]/u.test(endpointValue)) return undefined;
+  const configuredEndpoint = endpointValue.trim();
+  if (!configuredEndpoint || configuredEndpoint.includes("?") || configuredEndpoint.includes("#")) return undefined;
+
+  let endpoint: URL;
+  try {
+    endpoint = new URL(configuredEndpoint);
+  } catch {
+    return undefined;
+  }
+  if (
+    endpoint.protocol !== "https:" ||
+    endpoint.hostname.length === 0 ||
+    endpoint.username.length > 0 ||
+    endpoint.password.length > 0 ||
+    endpoint.search.length > 0 ||
+    endpoint.hash.length > 0
+  ) return undefined;
+
+  endpoint.pathname = endpoint.pathname.replace(/\/+$/u, "");
+  const displayModelId = modelId.length > 72 ? `${modelId.slice(0, 71)}…` : modelId;
+  return {
+    id: "custom-default",
+    label: `Custom · ${displayModelId}`,
+    modelId,
+    provider: "custom",
+    connection: {
+      id: "custom-demo",
+      adapter: "openai-compatible",
+      baseURL: endpoint.toString().replace(/\/+$/u, ""),
+      credentialRef: CUSTOM_CREDENTIAL_REF,
+    },
+  };
+}
+
+function getProfile(profileId: ModelProfileId, environment: SecretEnvironment): ServerModelProfile | undefined {
+  if (profileId === "custom-default") return customProfile(environment);
   return MODEL_PROFILES.find((profile) => profile.id === profileId);
 }
 
 function currentSecretEnvironment(): SecretEnvironment {
-  return { GROQ_API_KEY: process.env.GROQ_API_KEY };
+  return {
+    GROQ_API_KEY: process.env.GROQ_API_KEY,
+    GWDG_API_KEY: process.env.GWDG_API_KEY,
+    CUSTOM_API_KEY: process.env.CUSTOM_API_KEY,
+    CUSTOM_ENDPOINT: process.env.CUSTOM_ENDPOINT,
+    CUSTOM_MODEL_ID: process.env.CUSTOM_MODEL_ID,
+  };
 }
 
 export function listModelProfiles(env?: SecretEnvironment) {
-  const resolver = new EnvironmentSecretResolver(env ?? currentSecretEnvironment());
+  const environment = env ?? currentSecretEnvironment();
+  const resolver = new EnvironmentSecretResolver(environment);
+  const custom = customProfile(environment);
+  const serverProfiles = custom ? [...MODEL_PROFILES, custom] : MODEL_PROFILES;
+  const profiles = serverProfiles.map(({ id, label, modelId, provider, connection }) => ({
+    id,
+    label,
+    modelId,
+    provider,
+    configured: resolver.resolve(connection.credentialRef) !== undefined,
+  }));
   return {
-    configured: resolver.resolve(GROQ_CONNECTION.credentialRef) !== undefined,
-    profiles: MODEL_PROFILES.map(({ id, label, modelId, provider }) => ({
-      id,
-      label,
-      modelId,
-      provider,
-    })),
+    configured: profiles.some((profile) => profile.configured),
+    profiles,
     defaultProfileId: DEFAULT_PROFILE_ID,
   };
 }
@@ -272,17 +358,18 @@ export async function runModelStep(
   }
 
   const request = requestResult.data;
-  const profile = getProfile(request.profileId);
-  if (!profile || profile.connectionId !== GROQ_CONNECTION.id) {
+  const environment = options.env ?? currentSecretEnvironment();
+  const profile = getProfile(request.profileId, environment);
+  if (!profile) {
     throw new ModelRouterError(
       "profile_not_approved",
       "The selected model profile is not approved.",
     );
   }
 
-  const environment = options.env ?? currentSecretEnvironment();
+  const connection = profile.connection;
   const resolver = new EnvironmentSecretResolver(environment);
-  const apiKey = resolver.resolve(GROQ_CONNECTION.credentialRef);
+  const apiKey = resolver.resolve(connection.credentialRef);
   if (!apiKey) {
     throw new ModelRouterError(
       "missing_credentials",
@@ -290,24 +377,34 @@ export async function runModelStep(
     );
   }
 
-  const groq = createGroq({
-    apiKey,
-    baseURL: GROQ_CONNECTION.baseURL,
-    fetch: createPinnedFetch(options.fetch ?? fetch),
-  });
+  const pinnedFetch = createPinnedFetch(connection, options.fetch ?? fetch);
+  const model = connection.adapter === "groq"
+    ? createGroq({
+      apiKey,
+      baseURL: connection.baseURL,
+      fetch: pinnedFetch,
+    })(profile.modelId)
+    : createOpenAICompatible({
+      name: profile.provider,
+      apiKey,
+      baseURL: connection.baseURL,
+      fetch: pinnedFetch,
+    }).chatModel(profile.modelId);
 
   const instructions = buildSystemPrompt(getNow(options.now));
   const messages = toModelMessages(request.messages);
-  const deadline = Date.now() + 20_000;
+  const deadline = Date.now() + (profile.provider === "gwdg" ? 45_000 : 20_000);
   const generate = (retry: boolean) => generateText({
-    model: groq(profile.modelId),
+    model,
     instructions: retry
       ? `${instructions}\n\nDer vorige Generierungsversuch enthielt einen ungültigen Tool-Aufruf und wurde verworfen. Erzeuge die Antwort erneut gemäß den bereitgestellten Schemata. Verwende nur definierte Tool-Namen und Felder; lasse nicht benötigte optionale Felder weg.`
       : instructions,
     messages,
     tools: CHAT_TOOLS,
     temperature: retry ? 0 : 0.2,
-    providerOptions: { groq: { reasoningEffort: profile.reasoningEffort, parallelToolCalls: false } },
+    ...(connection.adapter === "groq"
+      ? { providerOptions: { groq: { reasoningEffort: profile.reasoningEffort ?? "low", parallelToolCalls: false } } }
+      : {}),
     maxOutputTokens: 1536,
     maxRetries: 0,
     timeout: Math.max(1, deadline - Date.now()),
@@ -320,7 +417,7 @@ export async function runModelStep(
     } catch (cause) {
       // Retry only failed native tool generation, never transport/auth/quota
       // failures or any business action. Failed output is never replayed.
-      if (!APICallError.isInstance(cause) || cause.statusCode !== 400 ||
+      if (connection.adapter !== "groq" || !APICallError.isInstance(cause) || cause.statusCode !== 400 ||
         groqErrorDiagnostics(cause.responseBody).providerCode !== "tool_use_failed" ||
         Date.now() >= deadline) throw cause;
       result = await generate(true);
@@ -331,7 +428,9 @@ export async function runModelStep(
       status === 429 ? "provider_rate_limited" : "provider_unavailable",
       "The model service could not complete this request.",
       status,
-      APICallError.isInstance(cause) ? groqErrorDiagnostics(cause.responseBody) : undefined,
+      connection.adapter === "groq" && APICallError.isInstance(cause)
+        ? groqErrorDiagnostics(cause.responseBody)
+        : undefined,
     );
   }
 
