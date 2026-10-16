@@ -1125,7 +1125,5 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 @media (max-height: 600px) and (max-width: 760px) {
   .app-frame--chat .app-content { padding-bottom: env(safe-area-inset-bottom); }
   .app-frame--chat .public-demo-notice { display: none; }
-  .chat-footnote { display: none; }
   .chat-composer textarea { min-height: 24px; height: 24px; }
-  .chat-toolbar { display: none; }
 }
