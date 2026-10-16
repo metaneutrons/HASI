@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleChatPost } from "../src/lib/server/chat-http";
 import type { ModelReply } from "../src/lib/chat-contract";
+import { ModelRouterError } from "../src/lib/server/model-router-error";
 
 const origin = "https://hasi.metaneutrons.cc";
 const validBody = { profileId: "groq-oss-120b", messages: [{ role: "user", content: "Hallo" }] };
@@ -37,10 +38,23 @@ describe("public chat admission and error boundary", () => {
   });
 
   it("returns only the sanitized provider failure and disables caches", async () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
     const response = await handleChatPost(request(), { run: async () => { throw new Error("Authorization: Bearer fake-test-credential request payload"); }, admit: async () => true, allowedOrigins: [origin] });
     expect(response.status).toBe(503);
     expect(await response.text()).not.toMatch(/fake-test-credential|Authorization|payload/u);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(JSON.stringify(warning.mock.calls)).not.toMatch(/fake-test-credential|Authorization|payload/u);
+    warning.mockRestore();
+  });
+
+  it("distinguishes a provider quota from other failures without leaking provider details", async () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const response = await handleChatPost(request(), { run: async () => { throw new ModelRouterError("provider_rate_limited", "private provider payload", 429); }, admit: async () => true, allowedOrigins: [origin] });
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("60");
+    expect(await response.text()).not.toContain("private provider payload");
+    expect(warning).toHaveBeenCalledWith("HASI model request failed", { code: "provider_rate_limited", providerStatus: 429 });
+    warning.mockRestore();
   });
 
   it("passes a valid request to the selected model after admission", async () => {

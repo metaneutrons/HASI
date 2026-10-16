@@ -1,4 +1,5 @@
 import { chatRequestSchema, type ChatRequest, type ModelReply } from "../chat-contract";
+import { ModelRouterError } from "./model-router-error";
 
 const MAX_BODY_BYTES = 60_000;
 const headers = { "cache-control": "private, no-store", "x-content-type-options": "nosniff" };
@@ -62,8 +63,15 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
   }
   try {
     return Response.json(await dependencies.run(input), { headers });
-  } catch {
+  } catch (cause) {
     // Provider/SDK errors can contain request bodies, headers or credentials.
+    // Log only host-owned categories and a numeric HTTP status, never the cause.
+    console.warn("HASI model request failed", cause instanceof ModelRouterError
+      ? { code: cause.code, providerStatus: cause.providerStatus }
+      : { code: "unexpected_provider_failure" });
+    if (cause instanceof ModelRouterError && cause.code === "provider_rate_limited") {
+      return Response.json({ error: "Das Anfragelimit bei GroqCloud ist erreicht. Bitte warte eine Minute und versuche es erneut. Vorhandene Buchungskarten kannst du weiter nutzen." }, { status: 429, headers: { ...headers, "retry-after": "60" } });
+    }
     return error("GroqCloud konnte die Anfrage nicht abschließen. Bitte versuche es erneut oder wähle ausdrücklich die Dialog-Demo.", 503);
   }
 }

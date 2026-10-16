@@ -302,6 +302,14 @@ describe("Groq model router", () => {
     expect(error.message).not.toContain(providerFailure);
   });
 
+  it("classifies Groq rate limits without retaining provider payloads", async () => {
+    const provider = fakeProvider({ error: { message: `private quota payload ${FAKE_KEY}` } }, 429);
+    const error = await expectRouterError(runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW }), "provider_rate_limited");
+    expect(error.providerStatus).toBe(429);
+    expect(JSON.stringify(error)).not.toContain(FAKE_KEY);
+    expect(provider.calls).toHaveLength(1);
+  });
+
   it("rejects orphan, duplicate, mismatched, and incomplete tool-result sequences", () => {
     const call = {
       role: "assistant" as const,

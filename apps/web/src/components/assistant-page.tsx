@@ -109,6 +109,11 @@ function Conversation({ name }: { name: string }) {
     return messageId;
   }
 
+  function addActionResult(message: Omit<Message, "id" | "role">) {
+    if (!offline) appendChatText(history.current, "assistant", message.text);
+    return add({ ...message, role: "assistant" });
+  }
+
   function start(label: string) {
     if (lock.current) return false;
     lock.current = true;
@@ -172,6 +177,7 @@ function Conversation({ name }: { name: string }) {
         history.current.push(reply.message);
         if (reply.message.content.trim()) add({ role: "assistant", text: reply.message.content, model: reply.profile.label });
         if (!reply.message.toolCalls?.length) return;
+        let actionableResult = false;
         for (const call of reply.message.toolCalls) {
           setActivity(`anny · ${call.name === "anny_propose_booking" ? "Buchung vorbereiten" : "Testdaten abfragen"}`);
           let output: Record<string, unknown>;
@@ -179,12 +185,16 @@ function Conversation({ name }: { name: string }) {
             const result = await tools().run(call.name, call.arguments);
             output = result.output;
             showToolResult(result, interactionId, reply.profile.label);
+            actionableResult ||= Boolean(result.proposal || result.bookings || result.rooms?.some((room) => room.checked && room.intervals.length > 0));
           } catch (cause) {
             output = { error: cause instanceof Error ? cause.message : "Das Tool konnte die Anfrage nicht abschließen." };
             add({ role: "assistant", text: String(output.error), tool: "anny · Anfrage fehlgeschlagen" });
           }
           history.current.push({ role: "tool", toolCallId: call.id, name: call.name, content: JSON.stringify(output) });
         }
+        // Host-rendered cards already provide the answer and next action.
+        // Avoid a redundant generation after availability, proposals or bookings.
+        if (actionableResult) return;
       }
       add({ role: "assistant", text: "Die maximale Zahl an Modellschritten für diese Nachricht ist erreicht. Du kannst die angezeigten Karten nutzen oder eine weitere Nachricht schreiben." });
     } finally { pendingRequest.current = null; }
@@ -298,9 +308,9 @@ function Conversation({ name }: { name: string }) {
         : await tools().run("anny_propose_booking", args);
       if (!result.proposal) throw new Error("Es wurde kein Buchungsvorschlag zurückgegeben.");
       if (!offline && "output" in result) recordTool("anny_propose_booking", args, result.output);
-      add({ role: "assistant", text: "Der Buchungsvorschlag ist vorbereitet. Bitte prüfe die Angaben und bestätige die Buchung ausdrücklich.", tool: "anny · Buchungsvorschlag", proposal: result.proposal });
+      addActionResult({ text: "Der Buchungsvorschlag ist vorbereitet. Bitte prüfe die Angaben und bestätige die Buchung ausdrücklich.", tool: "anny · Buchungsvorschlag", proposal: result.proposal });
       setActiveProposal(result.proposal.id);
-    } catch (cause) { add({ role: "assistant", text: cause instanceof Error ? cause.message : "Der Buchungsvorschlag konnte nicht erstellt werden." }); }
+    } catch (cause) { addActionResult({ text: cause instanceof Error ? cause.message : "Der Buchungsvorschlag konnte nicht erstellt werden." }); }
     finally { finish(); }
   }
 
@@ -316,13 +326,12 @@ function Conversation({ name }: { name: string }) {
         setRoomContext(false);
         setRequest({});
         setChosenRoom(null);
-        add({ role: "assistant", text: `Die Testbuchung für ${result.proposal.resourceName} ist bestätigt. ${formatDateTime(result.proposal.startDate)} bis ${formatTime(result.proposal.endDate)} Uhr.`, tool: "anny · Buchung ausgeführt", confirmed: true });
-        if (!offline) appendChatText(history.current, "assistant", `Die Oberfläche meldet eine bestätigte Testbuchung für ${result.proposal.resourceName}, ${result.proposal.startDate} bis ${result.proposal.endDate}. Bei Rückfragen die aktuellen Buchungen mit dem anny-Tool prüfen.`);
+        addActionResult({ text: `Die Testbuchung für ${result.proposal.resourceName} ist bestätigt. ${formatDateTime(result.proposal.startDate)} bis ${formatTime(result.proposal.endDate)} Uhr.`, tool: "anny · Buchung ausgeführt", confirmed: true });
       } else {
         setActiveProposal(null);
-        add({ role: "assistant", text: result.proposal.status === "outcome_unknown" ? "Der Buchungsdienst hat nicht eindeutig geantwortet. Prüfe deine Buchungen, bevor du erneut buchst." : "Die Buchung konnte nicht bestätigt werden. Bitte suche erneut nach freien Zeiten." });
+        addActionResult({ text: result.proposal.status === "outcome_unknown" ? "Der Buchungsdienst hat nicht eindeutig geantwortet. Prüfe deine Buchungen, bevor du erneut buchst." : "Die Buchung konnte nicht bestätigt werden. Bitte suche erneut nach freien Zeiten." });
       }
-    } catch (cause) { add({ role: "assistant", text: cause instanceof Error ? cause.message : "Die Bestätigung konnte nicht abgeschlossen werden. Prüfe vor einem erneuten Versuch deine Buchungen." }); }
+    } catch (cause) { addActionResult({ text: cause instanceof Error ? cause.message : "Die Bestätigung konnte nicht abgeschlossen werden. Prüfe vor einem erneuten Versuch deine Buchungen." }); }
     finally { finish(); }
   }
 
