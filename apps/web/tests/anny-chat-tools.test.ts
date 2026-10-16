@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createAnnyChatTools,
+  availabilityInputForSlot,
   type AnnyChatToolResult,
 } from "../src/lib/anny-chat-tools";
 import {
@@ -56,6 +57,23 @@ function outputIntervals(result: AnnyChatToolResult): TimeInterval[] {
 }
 
 describe("bounded Anny chat tools", () => {
+  it("rechecks a restored slot in Berlin time using a fresh bridge before proposing", async () => {
+    const harness = createHarness();
+    await login(harness.request, "student");
+    const first = createAnnyChatTools(harness.request, { now: harness.now });
+    const search = await first.run("anny_search_resources", { capacity: 4 });
+    const resource = search.rooms![0]!.resource;
+    const availability = await first.run("anny_get_availability", { resourceId: resource.id, date: "2030-01-03", time: "09:00", durationMinutes: 60 });
+    const slot = availability.rooms![0]!.intervals[0]!;
+    const restored = createAnnyChatTools(harness.request, { now: harness.now });
+    const args = { resourceId: resource.id, startDate: slot.startDate, endDate: slot.endDate };
+    await expect(restored.run("anny_propose_booking", args)).rejects.toThrow(/nicht als verfügbar/);
+    const check = availabilityInputForSlot(resource.id, slot);
+    expect(check).toMatchObject({ date: "2030-01-03", time: "10:00", durationMinutes: 60 });
+    await restored.run("anny_get_availability", check);
+    expect((await restored.run("anny_propose_booking", args)).proposal?.status).toBe("pending");
+    expect(harness.calls.some(({ path }) => path.endsWith("/confirm"))).toBe(false);
+  });
   it("searches, checks a visible interval, and prepares a proposal without executing a booking", async () => {
     const harness = createHarness();
     await login(harness.request, "student");
