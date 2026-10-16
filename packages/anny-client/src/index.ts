@@ -320,7 +320,10 @@ export class AnnyClient {
 
   async listResources(options?: { includeChildResources?: boolean }): Promise<RawResource[]> {
     return this.listPaged<RawResource>('/api/v1/resources', rawResourceListResponseSchema, {
-      'filter[exclude_child_resources]': options?.includeChildResources === false
+      'filter[exclude_child_resources]': options?.includeChildResources === false,
+      // The HsH Admin index omits parent relationships unless expanded.
+      // Verified vendor behavior; the Admin include enum currently omits it.
+      include: 'parent'
     });
   }
 

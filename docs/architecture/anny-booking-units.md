@@ -43,6 +43,10 @@ only 43 leaves to the mock API, plugin presentation and identity grants. A
 forged proposal or availability request for an office container is rejected
 server-side. Searching by office name matches its actual workplaces through
 their `parentName`; it never manufactures child IDs from a desk count or name.
+For workplaces, a `location` filter also searches that actual office name.
+This handles models that express a requested office as a location instead of a
+query without dropping the user's requirement or treating an office as a room
+booking. Whole-room location filters still use the room's location only.
 
 The anny plugin emits `kind` (`workplace`, `meeting_room`, `lecture_hall`, or
 generic `room`), `parentId`, `parentName`, and the separate nullable `capacity`.
