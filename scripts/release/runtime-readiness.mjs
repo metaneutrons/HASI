@@ -3,7 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 
-const transientCodes = new Set(["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "UND_ERR_CONNECT_TIMEOUT"]);
+const transientCodes = new Set(["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "UND_ERR_CONNECT_TIMEOUT", "UND_ERR_SOCKET"]);
 
 function fail(message) {
   throw new Error(message);
