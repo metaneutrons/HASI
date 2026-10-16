@@ -21,7 +21,9 @@
     "@hasi/plugin-sdk": "workspace:*",
     "@hasi/state": "workspace:*",
     "fastify": "5.12.7",
-    "zod": "4.6.7"
+    "zod": "4.6.7",
+    "@hasi/knowledge-plugin": "workspace:*",
+    "@hasi/demo-fixtures": "workspace:*"
   },
   "license": "GPL-3.0-only",
   "author": "Fabian Schmieder",

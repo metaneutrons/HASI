@@ -3,6 +3,7 @@
 import {
   ArrowRight,
   Check,
+  ChevronDown,
   CircleAlert,
   MessageCircle,
   LaptopMinimal,
@@ -13,12 +14,15 @@ import {
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useRef, useState, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { ChatSessionList } from "@/components/chat-session-list";
+import { ChatWorkspaceStoreProvider } from "@/components/chat-sidebar-context";
 import { useSession } from "@/components/session-provider";
 import { PublicDemoNotice } from "@/components/public-demo-notice";
 import { useChatViewport } from "@/components/use-chat-viewport";
 import { useTheme, type Theme } from "@/components/theme-provider";
+import { browserChatStorage, createChatWorkspaceStore, type ChatWorkspaceStore } from "@/lib/chat-workspace-store";
 import type { Role } from "@/lib/types";
 
 const navItems = [
@@ -305,14 +309,54 @@ function NavLink({
   );
 }
 
-function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
+function ChatSessionsInSidebar({ store, onOpenChat }: { store: ChatWorkspaceStore; onOpenChat: () => void }) {
+  const view = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  return <ChatSessionList view={view} store={store} onOpenChat={onOpenChat} variant="embedded" />;
+}
+
+function ChatNavigation({ active, store, onOpenChat }: { active: boolean; store: ChatWorkspaceStore; onOpenChat: () => void }) {
+  const [expanded, setExpanded] = useState(true);
+  return (
+    <div className={`primary-nav-chat${expanded ? " is-expanded" : " is-collapsed"}`}>
+      <div className="primary-nav-chat-row">
+        <NavLink href="/" label="Chat" icon={MessageCircle} active={active} />
+        <button
+          className="primary-nav-chat-toggle"
+          type="button"
+          aria-label={expanded ? "Chatverläufe ausblenden" : "Chatverläufe einblenden"}
+          aria-expanded={expanded}
+          aria-controls="primary-chat-sessions"
+          onClick={() => setExpanded((value) => !value)}
+        >
+          <ChevronDown size={16} strokeWidth={1.8} aria-hidden="true" />
+        </button>
+      </div>
+      <div className="primary-nav-chat-sessions" id="primary-chat-sessions" hidden={!expanded}>
+        <ChatSessionsInSidebar store={store} onOpenChat={onOpenChat} />
+      </div>
+    </div>
+  );
+}
+
+function AppFrame({ children, ownerId }: Readonly<{ children: ReactNode; ownerId: string }>) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, mode, logout } = useSession();
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [chatStore] = useState(() => createChatWorkspaceStore(ownerId, browserChatStorage()));
   const activeKey = pathname === "/bookings" ? "bookings" : pathname === "/admin" ? "admin" : "assistant";
   const frameRef = useChatViewport(activeKey === "assistant");
   const initial = user ? initials(user.displayName) : "H";
+
+  useEffect(() => {
+    const flush = () => chatStore.flush();
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      chatStore.flush();
+    };
+  }, [chatStore]);
 
   async function handleLogout(): Promise<boolean> {
     setLoggingOut(true);
@@ -329,14 +373,14 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
   }
 
   return (
+    <ChatWorkspaceStoreProvider store={chatStore}>
     <div ref={frameRef} className={`app-frame${activeKey === "assistant" ? " app-frame--chat" : ""}`}>
       <aside className="side-nav" aria-label="HASI Navigation">
         <WordmarkLink />
         <div className="side-nav-label">CAMPUS</div>
         <nav className="primary-nav" aria-label="Hauptnavigation">
-          {navItems.map((item) => (
-            <NavLink key={item.key} href={item.href} label={item.label} icon={item.icon} active={activeKey === item.key} />
-          ))}
+          <ChatNavigation active={activeKey === "assistant"} store={chatStore} onOpenChat={() => { if (activeKey !== "assistant") router.push("/"); }} />
+          <NavLink href="/bookings" label="Buchungen" icon={PanelTop} active={activeKey === "bookings"} />
           {user?.role === "admin" && (
             <NavLink href="/admin" label="Verwaltung" icon={PanelTop} active={activeKey === "admin"} />
           )}
@@ -387,6 +431,7 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
         </nav>
       </div>
     </div>
+    </ChatWorkspaceStoreProvider>
   );
 }
 
@@ -397,7 +442,7 @@ export function WorkspaceShell({ children }: Readonly<{ children: ReactNode }>) 
   if (!user) return <LoginScreen />;
   if (pathname === "/admin" && user.role !== "admin") {
     return (
-      <AppFrame>
+      <AppFrame key={user.id} ownerId={user.id}>
         <div className="access-denied">
           <span className="access-icon"><CircleAlert size={23} aria-hidden="true" /></span>
           <p className="eyebrow">KEIN ZUGRIFF</p>
@@ -407,5 +452,5 @@ export function WorkspaceShell({ children }: Readonly<{ children: ReactNode }>) 
       </AppFrame>
     );
   }
-  return <AppFrame>{children}</AppFrame>;
+  return <AppFrame key={user.id} ownerId={user.id}>{children}</AppFrame>;
 }

@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - apps/*
+  - fixtures
 
 minimumReleaseAgeExclude:
   - '@next/env@16.4.2'

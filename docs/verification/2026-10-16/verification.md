@@ -131,3 +131,45 @@ proxy was verified on port 3018. Production dependency audit is clean.
 
 Preview/production runtime qualification and required CI remain pending at this
 local verification checkpoint. No real HsH or anny data were used.
+
+
+### Published server runtime qualification
+
+- Implementation merged as [PR #12](https://github.com/metaneutrons/HASI/pull/12),
+  main revision `22180ec4bddace1c0cc9c9342b0d893eff02bb8e`. Required CI passed
+  under Node 24 and 26 in [run 38911403261](https://github.com/metaneutrons/HASI/actions/runs/38911403261);
+  post-merge CI also passed in [run 38911680959](https://github.com/metaneutrons/HASI/actions/runs/38911680959).
+- Preview `hasi-cowt581iv-metaneutrons.vercel.app` passed 18 API checks through
+  actual deployed core/MCP/mock routes, including one booking, repeated exact
+  confirmation without another booking, admin disable/read-back/re-enable and
+  update checking. Anonymous chat was denied; authenticated real Groq GPT-OSS
+  120B inference returned successfully. The platform preview requires Vercel
+  authentication, so these remote preview checks used the authorized CLI.
+- Production deployment `dpl_CTRLngv2FeEAunMzcZEbpJ7CQAaT`,
+  `hasi-gl6pdik5v-metaneutrons.vercel.app`, is READY and serves
+  `https://hasi.metaneutrons.cc`. Deployment metadata confirms `fra1`; the project
+  function default was also explicitly corrected to `fra1`. The earlier CLI
+  deployment used the project's previous `iad1` default despite the nested
+  web configuration. No real HsH data were sent in these checks.
+- At 390×844 on the public domain, GPT-OSS 120B performed real room search and
+  availability tools. A proposal prepared before the deployment/region change
+  was explicitly confirmed after it, demonstrating that the signed workspace,
+  session and proposal survived the replacement server runtime.
+- Live booking list retained the new UUID booking after reload. Admin disable →
+  reload retained the disabled setting; re-enable and actual manifest update
+  checking succeeded. Page/card scroll widths matched 390px and 320px viewports.
+  Dark 568×320 chat retained its composer and navigation with no horizontal
+  overflow; the prototype notice is hidden in the compact layout.
+
+## Knowledge MCP, room snapshot and integrated chat navigation
+
+Local qualification on 2026-10-16 covers the next demo delivery:
+
+- 60 entirely fictional knowledge documents (30 Service IT / 30 Intranet), 80 draft evaluation cases, stable IDs and citations; no protected original bodies or private URLs in the public fixture. Corpus checks include invalid/unauthorized references, original-source URL and duplicate-citation counter-probes.
+- Signed `knowledge.search` / `knowledge.get_document` MCP through the registry. Search filters by signed test audience before ranking or exposing metadata. Source cards resolve strict IDs to the authenticated demo document reader; unknown and denied reads have the same generic 404. Logout denies subsequent reads.
+- Actual loopback HTTP/MCP tests use two independent runtime instances and a third cold instance with both legacy and imported catalogs. The 30-room catalog snapshot and 9 services are curated from the user-authorized read-only API import. Unknown capacity stays null; availability, access grants and writes remain synthetic.
+- Local PostgreSQL 18.6 tests: 135 passed across 22 files; coverage 91.77% lines, 85.70% statements, 92.09% functions and 76.68% branches. This includes the approved-pin backup and final fixture curation; CI requalifies the final candidate.
+- Lint, TypeScript and the public-demo production build passed. Production dependency audit found no known vulnerabilities. Independent code review found no high/medium issues in the knowledge boundary or signed-state migration. Publication review found operational booking statements in four room descriptions; all room descriptions were removed before publication.
+- Browser checks: desktop 1280px uses the single left navigation with collapsible chats; 390px uses the chat drawer. Knowledge search displays source cards; the 390px reader displays fictional text; a student cannot open the admin-only document, and the admin test account can. At 320px the two plug-in cards and controls remain within the viewport. Imported-room search → proposal → explicit simulated booking completed at 390px.
+
+These are responsive-browser checks, not native iPhone/Safari keyboard qualification. Full model evaluation against the 80 draft cases, real HsH source adapters/SSO rights, original-source URL resolution and institutional model-provider approval remain open. Deployment IDs and required CI results belong in the implementation pull request evidence; local work is not represented as already published.

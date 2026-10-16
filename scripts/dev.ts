@@ -3,13 +3,14 @@ import { generateKeyPairSync, randomBytes } from 'node:crypto';
 import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { annyManifest } from '@hasi/anny-plugin';
+import { knowledgeManifest } from '@hasi/knowledge-plugin';
 import { digest } from '@hasi/plugin-sdk';
 
 const children: ChildProcess[] = [];
 const preview = process.argv.includes('--preview');
 let stopping = false;
 const webPort = Number(process.env.HASI_WEB_PORT ?? '3001');
-if (!Number.isInteger(webPort) || webPort < 1024 || webPort > 65535 || [4100, 4101, 4102].includes(webPort)) throw new Error('HASI_WEB_PORT must be a free unprivileged port, separate from the backend ports.');
+if (!Number.isInteger(webPort) || webPort < 1024 || webPort > 65535 || [4100, 4101, 4102, 4103].includes(webPort)) throw new Error('HASI_WEB_PORT must be a free unprivileged port, separate from the backend ports.');
 const webOrigin = `http://127.0.0.1:${String(webPort)}`;
 const stop = () => { if (stopping) return; stopping = true; for (const child of children) child.kill('SIGTERM'); };
 process.on('SIGINT', stop);
@@ -38,15 +39,18 @@ async function ready(url: string) {
 }
 
 try {
-  for (const port of [webPort, 4100, 4101, 4102]) await portFree(port);
+  for (const port of [webPort, 4100, 4101, 4102, 4103]) await portFree(port);
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
   const pluginToken = randomBytes(32).toString('base64url');
+  const knowledgeToken = randomBytes(32).toString('base64url');
   const mockToken = randomBytes(32).toString('base64url');
   start('anny API mock', 'apps/anny-mock/src/server.ts', { HASI_MODE: 'development', ANNY_MOCK_TOKEN: mockToken });
   await ready('http://127.0.0.1:4102/health');
   start('anny plugin', 'apps/anny-plugin/src/server.ts', { HASI_MODE: 'development', HASI_PUBLIC_KEY: publicKey.export({ type: 'spki', format: 'pem' }).toString(), HASI_PLUGIN_TOKEN: pluginToken, ANNY_MOCK_TOKEN: mockToken });
   await ready('http://127.0.0.1:4101/health');
-  start('HASI API', 'apps/api/src/server.ts', { HASI_MODE: 'development', HASI_WEB_ORIGIN: webOrigin, HASI_PRIVATE_KEY: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(), HASI_PLUGIN_TOKEN: pluginToken, HASI_PLUGIN_DIGEST: digest(annyManifest) });
+  start('knowledge plugin', 'apps/knowledge-plugin/src/server.ts', { HASI_MODE: 'development', HASI_PUBLIC_KEY: publicKey.export({ type: 'spki', format: 'pem' }).toString(), HASI_KNOWLEDGE_TOKEN: knowledgeToken });
+  await ready('http://127.0.0.1:4103/health');
+  start('HASI API', 'apps/api/src/server.ts', { HASI_MODE: 'development', HASI_WEB_ORIGIN: webOrigin, HASI_PRIVATE_KEY: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(), HASI_PLUGIN_TOKEN: pluginToken, HASI_PLUGIN_DIGEST: digest(annyManifest), HASI_KNOWLEDGE_TOKEN: knowledgeToken, HASI_KNOWLEDGE_DIGEST: digest(knowledgeManifest) });
   await ready('http://127.0.0.1:4100/api/session');
   const web = spawn('pnpm', ['--filter', '@hasi/web', preview ? 'start' : 'dev', '--hostname', '127.0.0.1', '--port', String(webPort)], { stdio: 'inherit', env: { ...baseEnv, NODE_ENV: preview ? 'production' : 'development' } });
   children.push(web);

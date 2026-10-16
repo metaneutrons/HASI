@@ -182,6 +182,7 @@ describe("Groq model router", () => {
     expect(sentBody.messages[0]?.role).toBe("system");
     expect(sentBody.messages[0]?.content).toContain("Europe/Berlin");
     expect(sentBody.tools.map(({ function: definition }) => definition.name)).toEqual([
+      "knowledge_search",
       "anny_search_resources",
       "anny_get_availability",
       "anny_list_my_bookings",
@@ -278,7 +279,7 @@ describe("Groq model router", () => {
     const body = JSON.parse(String(provider.calls[0]?.init?.body));
     expect(body.model).toBe("qwen/qwen3.8-27b");
     expect(body.reasoning_effort).toBe("none");
-    expect(body.tools).toHaveLength(4);
+    expect(body.tools).toHaveLength(5);
     expect(reply.profile.id).toBe("groq-qwen-3.8-27b");
   });
 

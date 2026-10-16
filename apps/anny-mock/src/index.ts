@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { MemoryJsonStore, updateJson, type JsonStore } from '@hasi/state';
@@ -39,17 +39,39 @@ export interface AnnyMockResourceView {
   id: string;
   name: string;
   description: string | null;
-  capacity: number;
+  capacity: number | null;
   location: string;
   features: string[];
   serviceId: string;
   serviceIds: string[];
 }
 
+export interface AnnyMockCatalogResource {
+  id: string;
+  name: string;
+  description: string;
+  capacity: number | null;
+  location: string;
+  features: string[];
+  serviceId: string;
+}
+
+export interface AnnyMockCatalogService {
+  id: string;
+  name: string;
+}
+
+export interface AnnyMockCatalog {
+  resources: AnnyMockCatalogResource[];
+  services: AnnyMockCatalogService[];
+}
+
 export interface CreateAnnyMockOptions {
   token?: string;
   store?: JsonStore;
   scope?: string;
+  /** Optional sanitized catalog supplied by the local demo composition. */
+  catalog?: AnnyMockCatalog;
 }
 
 interface MockResource {
@@ -82,7 +104,7 @@ interface MockService {
     duration: number;
     currency: string;
     price: number;
-    is_protected: boolean;
+    is_protected: boolean | 0 | 1;
     requires_quota: boolean;
     auto_accept_bookings: boolean;
   };
@@ -144,13 +166,14 @@ interface MockOrder {
   };
 }
 
+const annyIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/);
 const uuidSchema = z.uuid();
-const serviceQuantitySchema = z.record(z.uuid(), z.number().int().positive());
+const serviceQuantitySchema = z.record(annyIdSchema, z.number().int().positive());
 
 const orderFromConfigSchema = z.object({
   order_customer_id: uuidSchema,
   bookings: z.array(z.object({
-    resource_id: uuidSchema,
+    resource_id: annyIdSchema,
     service_id: serviceQuantitySchema,
     start_date: z.iso.datetime({ offset: true }),
     end_date: z.iso.datetime({ offset: true }),
@@ -418,12 +441,83 @@ const seedOrders = seedBookings.map((booking) => {
 });
 
 const customerIds = new Set<string>(Object.values(MOCK_IDS.customers));
-const resourceById = new Map(resources.map((resource) => [resource.id, resource]));
-const serviceById = new Map(services.map((service) => [service.id, service]));
-const resourceServiceIds = new Map(resources.map((resource) => [
-  resource.id,
-  new Set(resource.relationships.services.data.map((entry) => entry.id))
-]));
+
+const catalogResourceSchema = z.strictObject({
+  id: annyIdSchema,
+  name: z.string().min(1),
+  description: z.string(),
+  capacity: z.number().int().min(1).nullable(),
+  location: z.string(),
+  features: z.array(z.string()),
+  serviceId: annyIdSchema
+});
+const catalogServiceSchema = z.strictObject({ id: annyIdSchema, name: z.string().min(1) });
+const catalogSchema = z.strictObject({
+  resources: z.array(catalogResourceSchema).min(1),
+  services: z.array(catalogServiceSchema).min(1)
+});
+
+function catalogSlug(name: string, id: string): string {
+  const normalized = name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return normalized || `resource-${id}`;
+}
+
+function recordsForCatalog(catalog: AnnyMockCatalog): { resources: MockResource[]; services: MockService[] } {
+  const parsed = catalogSchema.parse(catalog);
+  const resourceIds = new Set(parsed.resources.map(({ id }) => id));
+  const serviceIds = new Set(parsed.services.map(({ id }) => id));
+  if (resourceIds.size !== parsed.resources.length || serviceIds.size !== parsed.services.length) {
+    throw new TypeError('Catalog resource and service IDs must be unique.');
+  }
+  for (const resource of parsed.resources) {
+    if (!serviceIds.has(resource.serviceId)) {
+      throw new TypeError(`Catalog resource ${resource.id} references an unknown service.`);
+    }
+  }
+
+  const resources: MockResource[] = parsed.resources.map((resource) => ({
+    id: resource.id,
+    type: 'resources',
+    attributes: {
+      name: resource.name,
+      slug: catalogSlug(resource.name, resource.id),
+      description: resource.description,
+      plain_description: resource.description,
+      quantity: 1,
+      timezone: 'Europe/Berlin',
+      bookings_enabled: true,
+      requires_quota: false,
+      live: true,
+      public_listing: true
+    },
+    relationships: {
+      services: { data: [{ type: 'services', id: resource.serviceId }] }
+    }
+  }));
+  const services: MockService[] = parsed.services.map((service) => ({
+    id: service.id,
+    type: 'services',
+    attributes: {
+      name: service.name,
+      slug: catalogSlug(service.name, service.id),
+      description: service.name,
+      duration: 60,
+      currency: 'EUR',
+      price: 0,
+      is_protected: 0,
+      requires_quota: false,
+      auto_accept_bookings: true
+    },
+    relationships: {
+      resources: {
+        data: parsed.resources
+          .filter((resource) => resource.serviceId === service.id)
+          .map((resource) => ({ type: 'resources', id: resource.id }))
+      }
+    }
+  }));
+  return { resources, services };
+}
 
 type PageQuery = Record<string, unknown>;
 
@@ -440,9 +534,9 @@ function pageSlice<T>(
   reply: FastifyReply
 ): { data: T[]; meta: Record<string, unknown>; links: Record<string, string> } | undefined {
   const pageNumber = parsedPositiveInteger(query['page[number]'], 1, 10_000);
-  const pageSize = parsedPositiveInteger(query['page[size]'], 15, 100);
+  const pageSize = parsedPositiveInteger(query['page[size]'], 15, 50);
   if (pageNumber === undefined || pageSize === undefined) {
-    sendError(reply, 400, 'Bad Request', 'page[number] must be positive and page[size] must be between 1 and 100.');
+    sendError(reply, 400, 'Bad Request', 'page[number] must be positive and page[size] must be between 1 and 50.');
     return undefined;
   }
   const lastPage = Math.max(1, Math.ceil(items.length / pageSize));
@@ -560,8 +654,8 @@ interface MockAggregate {
 const MOCK_STATE_KEY_PREFIX = 'orders-bookings:';
 const MOCK_STATE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-function initialAggregate(): MockAggregate {
-  return structuredClone({ orders: seedOrders, bookings: seedBookings });
+function initialAggregate(bookings: MockBooking[], orders: MockOrder[]): MockAggregate {
+  return structuredClone({ orders, bookings });
 }
 
 function createOrder(orderId: string, customerId: string, plans: PlannedBooking[], bookings: MockBooking[]): MockOrder {
@@ -607,10 +701,27 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
   const store = options.store ?? new MemoryJsonStore('anny-mock');
   const scope = options.scope ?? 'local';
   if (!scope.trim()) throw new TypeError('Mock scope must not be empty.');
-  const stateKey = `${MOCK_STATE_KEY_PREFIX}${scope}`;
+  const catalogRecords = options.catalog === undefined ? undefined : recordsForCatalog(options.catalog);
+  const mockResources = catalogRecords?.resources ?? resources;
+  const mockServices = catalogRecords?.services ?? services;
+  const initialBookings = options.catalog === undefined ? seedBookings : [];
+  const initialOrders = options.catalog === undefined ? seedOrders : [];
+  const resourceById = new Map(mockResources.map((resource) => [resource.id, resource]));
+  const serviceById = new Map(mockServices.map((service) => [service.id, service]));
+  const resourceServiceIds = new Map(mockResources.map((resource) => [
+    resource.id,
+    new Set(resource.relationships.services.data.map((entry) => entry.id))
+  ]));
+  const catalogStateSuffix = catalogRecords === undefined
+    ? ''
+    : `:catalog:${createHash('sha256').update(JSON.stringify({
+      resources: catalogRecords.resources.map(({ id }) => id),
+      services: catalogRecords.services.map(({ id }) => id)
+    })).digest('hex').slice(0, 16)}`;
+  const stateKey = `${MOCK_STATE_KEY_PREFIX}${scope}${catalogStateSuffix}`;
   const expiresAt = (): number => Date.now() + MOCK_STATE_TTL_MS;
   const updateAggregate = <R>(update: (current: MockAggregate) => { value: MockAggregate; result: R }): Promise<R> => (
-    updateJson(store, stateKey, initialAggregate, update, expiresAt())
+    updateJson(store, stateKey, () => initialAggregate(initialBookings, initialOrders), update, expiresAt())
   );
   const readAggregate = async (): Promise<MockAggregate> => {
     const record = await store.read(stateKey);
@@ -625,7 +736,7 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
     if (!requireAdmin(request, reply, token)) return;
     const query = request.query as PageQuery;
     if (!requireOrganization(query, reply)) return;
-    const page = pageSlice(resources, query, request, reply);
+    const page = pageSlice(mockResources, query, request, reply);
     if (!page) return;
     return reply.type('application/vnd.api+json').send(page);
   });
@@ -634,7 +745,7 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
     if (!requireAdmin(request, reply, token)) return;
     const query = request.query as PageQuery;
     if (!requireOrganization(query, reply)) return;
-    const page = pageSlice(services, query, request, reply);
+    const page = pageSlice(mockServices, query, request, reply);
     if (!page) return;
     return reply.type('application/vnd.api+json').send(page);
   });
@@ -661,7 +772,7 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
       return reply.code(400).type('application/json').send({ errors: [{ title: 'Bad Request', detail: 'duration must be a positive integer no greater than 1440.' }] });
     }
 
-    const availableResources = resources
+    const availableResources = mockResources
       .filter((resource) => resourceId ? resource.id === resourceId : true)
       .filter((resource) => resourceServiceIds.get(resource.id)?.has(serviceId) === true)
       .map((resource) => resource.id);
@@ -728,7 +839,7 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
       const serviceIds = Object.keys(item.service_id);
       const serviceId = serviceIds[0];
       if (serviceIds.length !== 1 || serviceId === undefined || !serviceById.has(serviceId)) {
-        sendError(reply, 422, 'Unprocessable Entity', 'Each mock booking must identify one known service UUID in service_id.');
+        sendError(reply, 422, 'Unprocessable Entity', 'Each mock booking must identify one known service ID in service_id.');
         return;
       }
       if (resourceServiceIds.get(item.resource_id)?.has(serviceId) !== true) {

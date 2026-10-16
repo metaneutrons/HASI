@@ -350,7 +350,7 @@ export function classifyIntent(text: string, hasRoomContext: boolean): "rooms" |
   const hasRoomWording = /\b(?:raum|raume|raeume|raumbuchung|raumbuchungen|zimmer|seminarraum|projektraum|medienstudio|computerraum|reservier\w*|raumplanung)\b/iu.test(normalized);
   if (hasRoomWording) return "rooms";
 
-  const knowledgeTerms = /\b(?:eduroam|vpn|intranet|service\s*it|it[-\s]*service|passwort|multifaktor|mfa|account|zugangsdaten|softwareportal)\b/iu;
+  const knowledgeTerms = /\b(?:eduroam|wlan|vpn|intranet|service[-\s]*it|it[-\s]*service|passwort|multifaktor|mfa|account|zugangsdaten|softwareportal|zeiterfassung|urlaub|fortbildung|bibliothek|campuscard)\b/iu;
   if (knowledgeTerms.test(normalized)) return "knowledge";
 
   const greetingOnly = /^(?:(?:hallo|hi|hey|guten\s+(?:morgen|tag|abend)|moin|servus|gruss\s+gott)[!,.:;\s]*)+$/iu.test(normalized);
@@ -383,7 +383,7 @@ export function matchingResources(resources: Resource[], request: RoomRequest): 
   const requiredFeatures = request.features ?? [];
   const requiredQuery = queryTokens(request.query ?? "").map(stemGermanWord).filter(Boolean);
   return resources.filter((resource) => {
-    if (request.capacity !== undefined && resource.capacity < request.capacity) return false;
+    if (request.capacity !== undefined && (resource.capacity === null || resource.capacity < request.capacity)) return false;
     const features = new Set(resource.features.map(normalize));
     if (!requiredFeatures.every((feature) => features.has(normalize(feature)))) return false;
     if (request.location && !normalize(resource.location).includes(normalize(request.location))) return false;

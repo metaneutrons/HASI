@@ -12,7 +12,7 @@ export type Resource = {
   id: string;
   name: string;
   description: string;
-  capacity: number;
+  capacity: number | null;
   location: string;
   features: string[];
   serviceId: string;

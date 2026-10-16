@@ -9,12 +9,12 @@ const tokenKey = (token: string) => `session:${createHash('sha256').update(token
 
 /** Selectable fixtures, restricted to one server-issued synthetic workspace. */
 export class DurableDemoIdentity implements IdentityProvider {
-  constructor(private readonly store: JsonStore, private readonly workspaceId: string) { z.uuid().parse(workspaceId); }
+  constructor(private readonly store: JsonStore, private readonly workspaceId: string, private readonly resourceIds?: readonly string[]) { z.uuid().parse(workspaceId); }
 
   private persona(id: string): Persona {
     const template = personas.find(persona => persona.id === id);
     if (!template) throw new RequestError(400, 'Unbekanntes Testkonto.');
-    return { ...structuredClone(template), id: `${this.workspaceId}:${id}`, actor: { ...structuredClone(template.actor), subject: `demo:${this.workspaceId}:${id}` } };
+    return { ...structuredClone(template), id: `${this.workspaceId}:${id}`, actor: { ...structuredClone(template.actor), subject: `demo:${this.workspaceId}:${id}`, ...(this.resourceIds ? { resourceIds: [...this.resourceIds] } : {}) } };
   }
 
   async login(id: string): Promise<{ token: string; user: Persona }> {

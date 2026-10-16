@@ -1,0 +1,515 @@
+{
+  "schemaVersion": 1,
+  "datasetId": "hasi-anny-hsh-rooms-v1",
+  "snapshotAt": "2026-10-16",
+  "origin": "anny-readonly-snapshot",
+  "availability": "synthetic",
+  "bookings": "synthetic",
+  "resources": [
+    {
+      "id": "190288",
+      "name": "2er Flex-Büro \"Johann Amos Comenius\" (3E.0.25)",
+      "description": "",
+      "capacity": null,
+      "location": "Kleefeld 3E",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "190263",
+      "name": "2er Flex-Büro \"KITE\" (2C.0.04)",
+      "description": "",
+      "capacity": null,
+      "location": "EP4",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "192942",
+      "name": "2er Flex-Büro \"Stephanie Kwolek\" (4G.1.03)",
+      "description": "",
+      "capacity": null,
+      "location": "Ahlem 4G",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "190291",
+      "name": "3er Flex-Büro \"Kurt Lewin\" (3E.0.24)",
+      "description": "",
+      "capacity": null,
+      "location": "",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "89080",
+        "89081"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "180224",
+      "name": "Besprechungsraum 1J.1.18",
+      "description": "",
+      "capacity": 8,
+      "location": "",
+      "features": [
+        "Flip-Chart"
+      ],
+      "serviceIds": [
+        "65625"
+      ],
+      "serviceId": "65625"
+    },
+    {
+      "id": "180226",
+      "name": "Besprechungsraum 1J.1.41",
+      "description": "",
+      "capacity": 16,
+      "location": "",
+      "features": [
+        "Beamer",
+        "Hybride Besprechungstechnik"
+      ],
+      "serviceIds": [
+        "65625"
+      ],
+      "serviceId": "65625"
+    },
+    {
+      "id": "173420",
+      "name": "Besprechungsraum 1J.2.17",
+      "description": "",
+      "capacity": 10,
+      "location": "",
+      "features": [
+        "Beamer"
+      ],
+      "serviceIds": [
+        "65625"
+      ],
+      "serviceId": "65625"
+    },
+    {
+      "id": "180222",
+      "name": "Besprechungsraum 1J.2.47",
+      "description": "",
+      "capacity": 10,
+      "location": "",
+      "features": [],
+      "serviceIds": [
+        "65625"
+      ],
+      "serviceId": "65625"
+    },
+    {
+      "id": "180207",
+      "name": "Eltern-Kind-Flex-Büro \"Jane Goodall\" (1J.1.26)",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Kinderspielzeug",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "190259",
+      "name": "Flex-Büro \"Dorothy Vaughan\" (2C.0.06)",
+      "description": "",
+      "capacity": null,
+      "location": "Expo Plaza 4",
+      "features": [
+        "Höhenverstellbarer Schreibtisch"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "180211",
+      "name": "Flex-Büro \"Grace Hopper\" (1J.1.29)",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "180208",
+      "name": "Flex-Büro \"Isaac Newton\" (1J.1.28)",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "180205",
+      "name": "Flex-Büro \"Marie Curie\" (1J.2.53)",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "180210",
+      "name": "Flex-Büro \"Max Planck\" (1J.1.02)",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "180189",
+      "name": "Flex-Büro \"Rosalind Franklin\" (1J.2.02)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "180187",
+      "name": "Kombi-Flex-Büro EVASYS (1J.2.05)",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "91271"
+      ],
+      "serviceId": "91271"
+    },
+    {
+      "id": "180188",
+      "name": "Kombi-Flex-Büro VIDEO-LAB (1J.2.07)",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "91271"
+      ],
+      "serviceId": "91271"
+    },
+    {
+      "id": "179669",
+      "name": "S1 2er Flexbüro Amrum (1J.2.34)",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "173423",
+      "name": "S1 2er Flexbüro Föhr (1J.2.27)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "179671",
+      "name": "S1 2er Flexbüro Langeoog (1J.2.22)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "179670",
+      "name": "S1 2er Flexbüro Norderney (1J.2.35)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "179673",
+      "name": "S1 3er Flexbüro Pellworm (1J.2.26)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "179665",
+      "name": "S1 3er Flexbüro Sylt (1J.2.24)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "179675",
+      "name": "S1 Flexbüro Fehmarn (1J.2.21)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "179676",
+      "name": "S1 Flexbüro Hiddensee (1J.2.32)",
+      "description": "",
+      "capacity": null,
+      "location": "1J",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "179677",
+      "name": "S1 Flexbüro Insel Poel (1J.2.25)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "179663",
+      "name": "S1 Flexbüro Rügen (1J.2.33)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "179674",
+      "name": "S1 Flexbüro Usedom (1J.2.23)",
+      "description": "",
+      "capacity": null,
+      "location": "J1",
+      "features": [
+        "Höhenverstellbarer Schreibtisch",
+        "Monitor"
+      ],
+      "serviceIds": [
+        "65624",
+        "76878"
+      ],
+      "serviceId": null
+    },
+    {
+      "id": "173414",
+      "name": "S1 MeetUp (1J.2.30)",
+      "description": "",
+      "capacity": 5,
+      "location": "",
+      "features": [
+        "Whiteboard (Wand)"
+      ],
+      "serviceIds": [
+        "83057"
+      ],
+      "serviceId": "83057"
+    },
+    {
+      "id": "180223",
+      "name": "Workshop-Raum Z3 (Eingeschränkt buchbar)",
+      "description": "",
+      "capacity": 20,
+      "location": "",
+      "features": [
+        "Flip-Chart",
+        "Metaplanwand",
+        "XL-Monitor"
+      ],
+      "serviceIds": [
+        "83059"
+      ],
+      "serviceId": "83059"
+    }
+  ],
+  "services": [
+    {
+      "id": "65624",
+      "name": "Tagesbuchung"
+    },
+    {
+      "id": "65625",
+      "name": "Flex-Buchung"
+    },
+    {
+      "id": "76878",
+      "name": "Flex-Buchung | Arbeitsplätze"
+    },
+    {
+      "id": "83057",
+      "name": "Flex-Buchung (S1)"
+    },
+    {
+      "id": "83059",
+      "name": "Flex-Buchung | auf Anfrage Meetingräume"
+    },
+    {
+      "id": "89080",
+      "name": "Tagesbuchung | auf Anfrage"
+    },
+    {
+      "id": "89081",
+      "name": "Halbtags-Buchung | auf Anfrage"
+    },
+    {
+      "id": "91271",
+      "name": "Kombi-Flex-Büros"
+    },
+    {
+      "id": "91876",
+      "name": "Flex-Buchung | auf Anfrage BÜROS"
+    }
+  ]
+}

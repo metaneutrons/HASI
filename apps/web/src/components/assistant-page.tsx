@@ -6,12 +6,13 @@ import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEven
 import { apiRequest, formatDateTime, formatTime } from "@/lib/api";
 import { classifyIntent, matchingResources, mergeRoomRequest, missingRoomDetails, requestStartDate, roomRequestSummary, type RoomRequest } from "@/lib/chat-demo";
 import type { Booking, Resource, TimeInterval, User } from "@/lib/types";
+import { useChatWorkspaceStore } from "@/components/chat-sidebar-context";
 import { useSession } from "@/components/session-provider";
 import { availabilityInputForSlot, createAnnyChatTools, type AnnyChatToolResult } from "@/lib/anny-chat-tools";
+import { searchKnowledge, knowledgeDocumentHref, knowledgeSourceLabel } from "@/lib/knowledge";
 import { MODEL_PROFILE_IDS, modelReplySchema, type WireMessage } from "@/lib/chat-contract";
 import { appendChatText } from "@/lib/chat-history";
 import type { ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
-import { browserChatStorage, createChatWorkspaceStore } from "@/lib/chat-workspace-store";
 import { ChatSessionList } from "@/components/chat-session-list";
 
 type ModelProfile = { id: string; label: string; modelId: string; provider: "groq" };
@@ -19,7 +20,7 @@ type ModelConfiguration = { profiles: ModelProfile[]; ready: boolean; loading: b
 
 const suggestions = [
   { icon: Search, title: "Einen Raum finden", text: "Ich brauche morgen um 14 Uhr einen Raum für vier Personen für eine Stunde.", caption: "Gemeinsam planen und buchen" },
-  { icon: BookOpen, title: "Eine IT-Frage stellen", text: "Wie richte ich eduroam ein?", caption: "Wissenssuche ist in Vorbereitung" },
+  { icon: BookOpen, title: "Eine IT-Frage stellen", text: "Wie prüfe ich in der Service-IT-Demo den WLAN-Zugang Morgenstern-Lab?", caption: "Service IT und Intranet mit Quellen" },
   { icon: CalendarDays, title: "Meine Buchungen", text: "Zeige mir meine Buchungen.", caption: "Deine Reservierungen im Überblick" },
 ];
 
@@ -32,7 +33,7 @@ export function AssistantPage() {
 
 function ChatWorkspace({ user }: { user: User }) {
   // SessionProvider establishes the account on the client before this mounts.
-  const [store] = useState(() => createChatWorkspaceStore(user.id, browserChatStorage()));
+  const store = useChatWorkspaceStore();
   const view = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   const drawer = useRef<HTMLDialogElement>(null);
   const [configuration, setConfiguration] = useState<ModelConfiguration>({ profiles: [], ready: false, loading: true, error: null });
@@ -45,15 +46,18 @@ function ChatWorkspace({ user }: { user: User }) {
     }).then((result) => {
       if (active) setConfiguration({ profiles: result.profiles, ready: result.configured, loading: false, error: result.configured ? null : "GroqCloud ist noch nicht konfiguriert. Du kannst ausdrücklich die Dialog-Demo wählen." });
     }).catch(() => { if (active) setConfiguration({ profiles: [], ready: false, loading: false, error: "GroqCloud ist gerade nicht erreichbar. Die Dialog-Demo kann separat ausgewählt werden." }); });
-    const flush = () => store.flush();
-    window.addEventListener("pagehide", flush);
-    return () => { active = false; window.removeEventListener("pagehide", flush); store.flush(); };
+    return () => {
+      active = false;
+      const latest = store.getSnapshot();
+      for (const session of latest.workspace.sessions) {
+        if (latest.busy[session.id]) store.update(session.id, { ...session.snapshot, interrupted: true }, false);
+      }
+    };
   }, [store]);
 
   function newChat() { store.create(); drawer.current?.close(); }
 
   return <section className="chat-workspace" aria-label="Deine Chatverläufe">
-    <aside className="chat-session-panel" aria-label="Chatliste"><ChatSessionList view={view} store={store} /></aside>
     <dialog className="chat-history-dialog" ref={drawer} aria-label="Chatliste" onClick={(event) => { if (event.target === event.currentTarget) drawer.current?.close(); }}><div className="chat-history-dialog-body"><ChatSessionList view={view} store={store} close={() => drawer.current?.close()} /></div></dialog>
     <div className="chat-conversations">
       {view.notice && <div className="chat-storage-notice" role="status"><span>{view.notice}</span><button className="icon-button" type="button" aria-label="Hinweis schließen" onClick={store.dismissNotice}><X size={16} /></button></div>}
@@ -204,13 +208,20 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
           setActivity(`anny · ${call.name === "anny_propose_booking" ? "Buchung vorbereiten" : "Testdaten abfragen"}`);
           let output: Record<string, unknown>;
           try {
+            if (call.name === "knowledge_search") {
+              setActivity("Wissensdienst · Demoquellen suchen");
+              const result = await searchKnowledge(requestForChat, call.arguments as { query: string; sourceSystem?: "service_it" | "intranet" });
+              output = { ...result };
+              add({ role: "assistant", text: result.documents.length ? "Gefundene Demoquellen. Die folgende Antwort wertet diese Beispiele aus." : "Keine passenden, für dein Testkonto freigegebenen Demoquellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents, model: reply.profile.label });
+            } else {
             const result = await tools().run(call.name, call.arguments);
             output = result.output;
             showToolResult(result, interactionId, reply.profile.label);
             actionableResult ||= Boolean(result.proposal || result.bookings || result.rooms?.some((room) => room.checked && room.intervals.length > 0));
+            }
           } catch (cause) {
             output = { error: cause instanceof Error ? cause.message : "Das Tool konnte die Anfrage nicht abschließen." };
-            add({ role: "assistant", text: String(output.error), tool: "anny · Anfrage fehlgeschlagen" });
+            add({ role: "assistant", text: String(output.error), tool: call.name === "knowledge_search" ? "Wissensdienst · Anfrage fehlgeschlagen" : "anny · Anfrage fehlgeschlagen" });
           }
           history.current.push({ role: "tool", toolCallId: call.id, name: call.name, content: JSON.stringify(output) });
         }
@@ -286,7 +297,9 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         setRoomContext(false);
       } else if (intent === "knowledge") {
         setRoomContext(false);
-        add({ role: "assistant", text: "Die Wissenssuche in Service IT und im Intranet gehört zu HASI. Diese Quellen sind in diesem Prototyp noch nicht angebunden. Deshalb kann ich deine Frage hier noch nicht mit geprüften Quellen und den passenden Zugriffsrechten beantworten. Du kannst bereits Raumsuche und Buchung im Chat ausprobieren." });
+        setActivity("Wissensdienst · Demoquellen suchen");
+        const result = await searchKnowledge(requestForChat, { query: trimmed });
+        add({ role: "assistant", text: result.documents.length ? "Diese synthetischen Dokumente passen zu deiner Frage. In der Dialog-Demo kannst du die Quellen lesen; für eine formulierte Antwort wähle ein Sprachmodell." : "Keine passenden, für dein Testkonto freigegebenen Demoquellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents });
       } else if (intent === "rooms") {
         const reset = !roomContext || /(?:neue|andere)\s+(?:raum)?suche|(?:anderen|neuen)\s+raum|von vorne/i.test(trimmed);
         const next = mergeRoomRequest(trimmed, reset ? {} : request);
@@ -297,7 +310,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         await searchRooms(next, selected);
       } else {
         setRoomContext(false);
-        add({ role: "assistant", text: intent === "greeting" ? `Hallo ${name}. Was möchtest du erledigen? Ich kann in dieser Demo Räume suchen, Buchungen vorbereiten und deine Reservierungen anzeigen.` : "Ich kann in dieser Dialog-Demo Räume suchen und buchen sowie deine Buchungen anzeigen. Schreib zum Beispiel: „Morgen um 14 Uhr einen Raum für vier Personen für eine Stunde.“ Die IT- und Intranet-Wissenssuche wird später ebenfalls über diesen Chat erreichbar." });
+        add({ role: "assistant", text: intent === "greeting" ? `Hallo ${name}. Was möchtest du erledigen? Ich kann in dieser Demo Räume suchen, Buchungen vorbereiten und deine Reservierungen anzeigen.` : "Ich kann in dieser Dialog-Demo Räume suchen und buchen sowie deine Buchungen anzeigen. Schreib zum Beispiel: „Morgen um 14 Uhr einen Raum für vier Personen für eine Stunde.“ Zu IT- und Intranet-Fragen kann ich außerdem synthetische Demoquellen suchen." });
       }
     } catch (cause) {
       add({ role: "assistant", text: cause instanceof Error ? cause.message : "Die Anfrage konnte nicht abgeschlossen werden. Bitte versuche es erneut." });
@@ -393,9 +406,10 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                   <p>{message.text}</p>
                   {message.rooms && <div className="chat-room-list">{message.rooms.map(({ resource, intervals, checked }) => <article className="chat-tool-card" key={resource.id}>
                     <div className="chat-room-heading"><span className="chat-room-icon"><CalendarDays size={20} strokeWidth={1.5} aria-hidden="true" /></span><div><h2>{resource.name}</h2><span><MapPin size={12} aria-hidden="true" /> {resource.location}</span></div></div>
-                    <p className="chat-room-details"><Users size={14} aria-hidden="true" /> Bis {resource.capacity} Personen <span>·</span> {resource.features.join(" · ")}</p>
+                    <p className="chat-room-details"><Users size={14} aria-hidden="true" /> {resource.capacity === null ? "Personenzahl nicht hinterlegt" : `Bis ${resource.capacity} Personen`} {resource.features.length > 0 && <><span>·</span> {resource.features.join(" · ")}</>}</p>
                     {checked ? intervals.length ? <div className="chat-slots">{intervals.map((interval) => <button type="button" disabled={busy || activeResult !== message.id && activeResult !== message.interactionId} onClick={() => void prepare(resource, interval)} key={interval.startDate} aria-label={`${resource.name} am ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} vorbereiten`}><Clock3 size={14} aria-hidden="true" /><span>{formatDateTime(interval.startDate)}–{formatTime(interval.endDate)}</span><ArrowRight size={14} aria-hidden="true" /></button>)}</div> : <p className="chat-no-slots">Keine freien Zeiten zu diesen Anforderungen.</p> : <button className="chat-card-action" type="button" disabled={busy || activeResult !== message.id && activeResult !== message.interactionId} onClick={() => void chooseRoom(resource)}>Diesen Raum planen <ArrowRight size={15} aria-hidden="true" /></button>}
                   </article>)}</div>}
+                  {message.sources && message.sources.length > 0 && <div className="chat-source-list" aria-label="Gefundene Demoquellen">{message.sources.map((source) => <Link className="chat-source-card" href={knowledgeDocumentHref(source.id)} target="_blank" rel="noreferrer" key={source.id}><BookOpen size={18} aria-hidden="true" /><span><small>{knowledgeSourceLabel(source.sourceSystem)} · Fassung {source.revision}</small><strong>{source.title}</strong><code>{source.citationId}</code></span><ArrowRight size={16} aria-hidden="true" /></Link>)}</div>}
                   {message.proposal && <div className="chat-tool-card chat-proposal"><span className="chat-proposal-label">BITTE PRÜFEN UND BESTÄTIGEN</span><h2>{message.proposal.resourceName}</h2><p>{formatDateTime(message.proposal.startDate)} bis {formatTime(message.proposal.endDate)} Uhr</p><small>Gültig bis {formatTime(message.proposal.expiresAt)} Uhr · Testumgebung</small><button className="button button--primary button--wide" type="button" disabled={busy || activeProposal !== message.proposal.id} onClick={() => void confirm(message.proposal!)}>{activeProposal === message.proposal.id ? "Buchung bestätigen" : "Vorschlag abgeschlossen oder ersetzt"}<Check size={16} aria-hidden="true" /></button></div>}
                   {message.bookings && message.bookings.length > 0 && <div className="chat-booking-list">{message.bookings.map((booking) => <div className="chat-tool-card" key={booking.id}><h2>{booking.resourceName}</h2><p>{formatDateTime(booking.startDate)} bis {formatTime(booking.endDate)} Uhr</p><span className="chat-booking-status">{booking.status === "confirmed" || booking.status === "accepted" ? "Bestätigt" : booking.status}</span></div>)}</div>}
                   {message.confirmed && <Link className="chat-card-action" href="/bookings">Meine Buchungen öffnen <ArrowRight size={15} aria-hidden="true" /></Link>}
@@ -412,7 +426,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
           <textarea id={inputId} ref={composer} rows={2} maxLength={2000} value={input} onChange={(event) => setInput(event.currentTarget.value)} placeholder="Frag HASI oder beschreibe, was du vorhast …" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(input); } }} />
           <div className="chat-composer-bottom"><span><span className="status-dot" /> {offline ? "Dialog-Demo · ohne Sprachmodell" : modelLoading ? "GroqCloud wird verbunden …" : modelReady ? "GroqCloud · anny-Testdaten" : "GroqCloud nicht verfügbar"}</span><button type="submit" aria-label="Nachricht senden" disabled={busy || !canSend || !input.trim()}><ArrowUp size={20} aria-hidden="true" /></button></div>
         </form>
-        <p className="chat-footnote">{offline ? "Dialog-Demo mit Testdaten · IT- und Intranet-Wissen folgt" : "Nachrichten und Toolergebnisse gehen an GroqCloud. Bitte nur Testdaten eingeben."}</p>
+        <p className="chat-footnote">{offline ? "Dialog-Demo mit Testdaten · synthetisches IT- und Intranet-Wissen" : "Nachrichten und Toolergebnisse gehen an GroqCloud. Bitte nur Testdaten eingeben."}</p>
       </div>
     </section>
   );

@@ -4,6 +4,7 @@ export const MODEL_PROFILE_IDS = ["groq-oss-120b", "groq-oss-20b", "groq-qwen-3.
 export type ModelProfileId = (typeof MODEL_PROFILE_IDS)[number];
 
 export const CHAT_TOOL_NAMES = [
+  "knowledge_search",
   "anny_search_resources",
   "anny_get_availability",
   "anny_list_my_bookings",
@@ -31,9 +32,14 @@ const clockTimeSchema = z
   .string()
   .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/u);
 
+const annyId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u);
 const offsetDateTimeSchema = z.iso.datetime({ offset: true });
 
 export const chatToolSchemas = {
+  knowledge_search: z.strictObject({
+    query: z.string().trim().min(2).max(500).describe("Konkrete Suchbegriffe zur IT- oder Intranet-Frage, keine Anweisungen an den Dienst."),
+    sourceSystem: z.enum(["service_it", "intranet"]).optional(),
+  }),
   anny_search_resources: z.strictObject({
     capacity: z.number().int().min(1).max(500).describe("Benötigte Mindestzahl an Personen als ganze Zahl.").optional(),
     features: z.array(nonEmptyText(128)).max(10).describe("Nur ausdrücklich gewünschte Ausstattungsmerkmale; sonst weglassen.").optional(),
@@ -41,7 +47,7 @@ export const chatToolSchemas = {
     query: nonEmptyText(500).describe("Ein konkreter Raumname oder Suchbegriff; bei allgemeiner Raumsuche weglassen, niemals leer oder null.").optional(),
   }),
   anny_get_availability: z.strictObject({
-    resourceId: z.uuid(),
+    resourceId: annyId,
     date: calendarDateSchema,
     time: clockTimeSchema,
     durationMinutes: z.number().int().min(15).max(1440),
@@ -49,7 +55,7 @@ export const chatToolSchemas = {
   anny_list_my_bookings: z.strictObject({}),
   anny_propose_booking: z
     .strictObject({
-      resourceId: z.uuid(),
+      resourceId: annyId,
       startDate: offsetDateTimeSchema,
       endDate: offsetDateTimeSchema,
     })
@@ -60,6 +66,7 @@ export const chatToolSchemas = {
 
 export const chatToolDescriptions: Readonly<Record<ChatToolName, string>> =
   Object.freeze({
+    knowledge_search: "Suche in den freigegebenen synthetischen Service-IT- und Intranet-Dokumenten. Verwende dieses Tool für Hochschul- und IT-Fragen. Ergebnisse sind erfundene Beispiele, keine echten HsH-Anleitungen. Fehlende oder widersprüchliche Belege ausdrücklich nennen.",
     anny_search_resources:
       "Suche nach Räumen oder anderen Ressourcen. Verwende dieses Tool, wenn du Raumnamen, Kapazitäten, Ausstattung oder Standorte ermitteln musst. Verfügbarkeit wird separat geprüft.",
     anny_get_availability:

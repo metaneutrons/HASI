@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url';
+import { hshDemoCatalog } from '@hasi/demo-fixtures/catalog';
 import { createAnnyMock } from './index.js';
 
 export async function startAnnyMock(): Promise<void> {
@@ -9,7 +10,7 @@ export async function startAnnyMock(): Promise<void> {
   }
   const host = process.env.ANNY_MOCK_HOST ?? '127.0.0.1';
   const token = process.env.ANNY_MOCK_TOKEN;
-  const app = createAnnyMock(token === undefined ? {} : { token });
+  const app = createAnnyMock({ catalog: hshDemoCatalog, ...(token === undefined ? {} : { token }) });
   await app.listen({ host, port });
   app.log.info(`Anny contract mock listening on http://${host}:${String(port)}`);
 }

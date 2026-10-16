@@ -2,11 +2,12 @@ import { createServer, type Server } from 'node:http';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MemoryJsonStore, PostgresJsonStore, type JsonStore } from '@hasi/state';
+import { hshDemoCatalog } from '../fixtures/catalog.js';
 import { createDemoRuntime } from '@hasi/demo-runtime';
 
 const url = process.env.TEST_DATABASE_URL;
 
-for (const adapter of ['memory', ...(url ? ['postgres'] : [])]) {
+for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres'] : [])]) {
   describe(`deployed demo HTTP/MCP parity (${adapter})`, () => {
     let server: Server;
     let origin: string;
@@ -32,7 +33,7 @@ for (const adapter of ['memory', ...(url ? ['postgres'] : [])]) {
           for (const [name, value] of Object.entries(incoming.headers)) if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(', ') : value);
           const request = new Request(`${origin}${path}`, { method: incoming.method ?? 'GET', headers, ...(chunks.length ? { body: Buffer.concat(chunks) } : {}) });
           const runtime = runtimes[next++ % runtimes.length]!;
-          const response = path.startsWith('/api/v1/') ? await runtime.handleMock(request) : path === '/mcp' || path.startsWith('/.well-known/') ? await runtime.handlePlugin(request) : await runtime.handleCore(request);
+          const response = path.startsWith('/plugins/knowledge/') ? await runtime.handleKnowledgePlugin(request) : path.startsWith('/api/v1/') ? await runtime.handleMock(request) : path === '/mcp' || path.startsWith('/.well-known/') ? await runtime.handlePlugin(request) : await runtime.handleCore(request);
           outgoing.statusCode = response.status;
           response.headers.forEach((value, name) => { if (name !== 'set-cookie') outgoing.setHeader(name, value); });
           if (response.headers.getSetCookie().length) outgoing.setHeader('set-cookie', response.headers.getSetCookie());
@@ -41,7 +42,7 @@ for (const adapter of ['memory', ...(url ? ['postgres'] : [])]) {
       });
       await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
       origin = `http://127.0.0.1:${String((server.address() as { port: number }).port)}`;
-      runtimes.push(createDemoRuntime({ origin, store, secret }), createDemoRuntime({ origin, store, secret }));
+      runtimes.push(createDemoRuntime({ origin, store, secret, ...(adapter === 'snapshot' ? { catalog: hshDemoCatalog } : {}) }), createDemoRuntime({ origin, store, secret, ...(adapter === 'snapshot' ? { catalog: hshDemoCatalog } : {}) }));
     });
 
     afterAll(async () => {
@@ -66,15 +67,34 @@ for (const adapter of ['memory', ...(url ? ['postgres'] : [])]) {
       expect(login.status).toBe(200);
       const resources = await request('a', '/api/resources');
       expect(resources.status).toBe(200);
-      expect((await resources.json() as { resources: unknown[] }).resources).toHaveLength(2);
+      expect((await resources.json() as { resources: unknown[] }).resources).toHaveLength(adapter === 'snapshot' ? 30 : 2);
       expect(paths).toContain('/mcp'); expect(paths).toContain('/api/v1/resources');
       expect((await fetch(`${origin}/mcp`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).status).toBe(401);
       expect((await fetch(`${origin}/api/v1/resources`)).status).toBe(401);
     });
 
+    it('retrieves synthetic sources through MCP and rechecks document access after a persona change', async () => {
+      await request('knowledge', '/api/dev/login', { personaId: 'admin' });
+      const allowed = await request('knowledge', '/api/knowledge/documents/int-013');
+      expect(allowed.status).toBe(200);
+      expect(allowed.headers.get('cache-control')).toBe('private, no-store');
+      expect((await allowed.json() as { document: { id: string; synthetic: boolean } }).document).toMatchObject({ id: 'int-013', synthetic: true });
+      const search = await request('knowledge', '/api/tools/call', { pluginId: 'de.hsh.hasi.knowledge', name: 'knowledge.search', arguments: { query: 'WLAN Morgenstern' } });
+      expect(search.status).toBe(200);
+      expect(JSON.stringify(await search.json())).toContain('svc-001');
+      expect(paths).toContain('/plugins/knowledge/mcp');
+      await request('knowledge', '/api/dev/login', { personaId: 'student' });
+      const denied = await request('knowledge', '/api/knowledge/documents/int-013');
+      const absent = await request('knowledge', '/api/knowledge/documents/int-999');
+      expect(denied.status).toBe(404); expect(absent.status).toBe(404);
+      expect(await denied.json()).toEqual(await absent.json());
+      await request('knowledge', '/api/logout', {});
+      expect((await request('knowledge', '/api/knowledge/documents/svc-001')).status).toBe(401);
+    });
+
     it('atomically confirms once, persists across cold runtimes and blocks foreign or altered confirmation', async () => {
       const start = new Date(Date.now() + 86400000); start.setUTCHours(9, 0, 0, 0);
-      const args = { resourceId: '00000000-0000-4000-8000-000000000101', serviceId: '00000000-0000-4000-8000-000000000201', startDate: start.toISOString(), endDate: new Date(start.getTime() + 3600000).toISOString() };
+      const args = { resourceId: adapter === 'snapshot' ? '180224' : '00000000-0000-4000-8000-000000000101', serviceId: adapter === 'snapshot' ? '65625' : '00000000-0000-4000-8000-000000000201', startDate: start.toISOString(), endDate: new Date(start.getTime() + 3600000).toISOString() };
       expect((await request('a', '/api/tools/call', { pluginId: 'de.hsh.hasi.anny', name: 'anny.execute_booking', arguments: args })).status).toBe(403);
       const prepared = await request('a', '/api/proposals', args);
       expect(prepared.status).toBe(200);
@@ -86,7 +106,7 @@ for (const adapter of ['memory', ...(url ? ['postgres'] : [])]) {
       const race = await Promise.all([request('a', confirm, {}), request('a', confirm, {})]);
       expect(race.some(response => response.status === 200)).toBe(true);
       expect(race.every(response => [200, 409].includes(response.status))).toBe(true);
-      runtimes.push(createDemoRuntime({ origin, store, secret }));
+      runtimes.push(createDemoRuntime({ origin, store, secret, ...(adapter === 'snapshot' ? { catalog: hshDemoCatalog } : {}) }));
       const repeated = await request('a', confirm, {});
       expect((await repeated.json() as { proposal: { status: string } }).proposal.status).toBe('confirmed');
       const bookings = await request('a', '/api/bookings');

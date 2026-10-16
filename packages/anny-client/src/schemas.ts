@@ -36,7 +36,11 @@ const serviceAttributesSchema = z.object({
   description: z.string().nullable().optional(),
   plain_description: z.string().nullable().optional(),
   duration: z.number().int().optional(),
-  is_protected: z.boolean().optional(),
+  // Anny currently returns this flag as integer 0/1 on some endpoints and as
+  // a JSON boolean on others. Reject arbitrary numbers and string coercions.
+  is_protected: z.union([z.boolean(), z.literal(0), z.literal(1)])
+    .transform((value) => value === true || value === 1)
+    .optional(),
   requires_quota: z.boolean().optional(),
   auto_accept_bookings: z.boolean().optional()
 }).loose();

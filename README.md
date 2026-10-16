@@ -2,7 +2,7 @@
 
 Hochschule Hannover assistant: a chat-first, mobile-first TypeScript prototype with a shared
 light/dark design system for users and administrators, mock identity, and an
-independently running anny plugin. This is an incomplete implementation of the
+independently running anny and knowledge MCP plug-ins. This is an incomplete implementation of the
 agreed MVP, not a production service.
 
 **Public demo:** [hasi.metaneutrons.cc](https://hasi.metaneutrons.cc)
@@ -10,8 +10,8 @@ is the configured domain for the Vercel demonstration. Its server-backed mode
 uses the same core API, signed MCP plugin, AnnyClient and synthetic HTTP service
 as the local reference. Vercel co-locates their Node.js entry points; Neon
 Postgres stores isolated demo sessions, proposals, registry state and synthetic
-bookings. The runtime is implemented; deployment and live qualification remain
-outstanding.
+bookings. The shared server runtime is live on the public domain;
+[verification](docs/verification/2026-10-16/verification.md) records its scope.
 GPT-OSS 120B and 20B plus Qwen3.8 27B (Preview) can be selected in chat; an
 explicit offline dialogue mode is also available. Messages and selected tool
 results are sent to GroqCloud. Use test data only. Student, employee and
@@ -19,8 +19,7 @@ administrator personas are intentionally selectable by every visitor inside
 their own signed demo workspace. They do not establish institutional identity
 or permissions. Workspace cookies expire after seven days; a later visit gets
 a new workspace with synthetic defaults. Chat history remains in browser
-storage. No real SSO, anny tenant or institutional knowledge source is
-connected.
+storage. The room catalog is an authorized read-only HsH anny snapshot; availability and bookings are simulated. Knowledge documents are entirely fictional. No live anny tenant, real SSO or institutional knowledge source is connected.
 
 ## Run locally
 
@@ -40,7 +39,7 @@ details and embeds room results, available times and a booking proposal in the
 conversation. Select a time and confirm the exact proposal on its card. View
 the result in the chat or under **Buchungen**. **Neuer Chat** opens a separate
 conversation. Switch, rename or delete saved chats in the chat list (drawer on
-mobile). Drafts, profiles and contexts persist per test account in this browser;
+mobile), grouped under the collapsible Chat navigation on desktop. Drafts, profiles and contexts persist per test account in this browser;
 ongoing replies finish in their original chat. The
 administrator can enable/disable the integration and check/activate compatible
 plugin releases under **Verwaltung**. Theme selection offers Light, Dark and
@@ -48,8 +47,7 @@ System. Without a local Groq credential, explicitly select **Dialog-Demo · ohne
 Modell** to use the bounded German parser. To use Groq locally, set
 `GROQ_API_KEY` in the server process environment or `apps/web/.env.local`;
 Next.js loads that file from the web application's directory. Never commit it.
-IT/intranet retrieval remains unavailable; model answers are not verified
-institutional advice or evidence of an internal source search.
+IT/Intranet questions search 60 synthetic documents through the knowledge MCP. Source cards open the authenticated demo reader, which repeats document access checks. These fictional procedures are not institutional advice. Try “Wie prüfe ich in der Service-IT-Demo den WLAN-Zugang Morgenstern-Lab?”
 See [chat-first interaction](docs/architecture/chat-first.md).
 
 For an optimized local preview, use `pnpm preview`. This builds the application
@@ -58,12 +56,11 @@ production build mode. The local launcher keeps demo data in memory and does
 not enable real SSO or live integration credentials.
 
 The launcher creates ephemeral signing keys and service tokens automatically.
-It starts the web UI on port 3001, core API on 4100, MCP plugin on 4101 and anny
-mock on 4102, all on loopback. An occupied port stops startup; existing services
+It starts the web UI on port 3001, core API on 4100, anny MCP plug-in on 4101, anny mock on 4102 and knowledge MCP on 4103, all on loopback. An occupied port stops startup; existing services
 are not stopped. `HASI_WEB_PORT=3002 pnpm dev` changes the UI port and allowed
 origin together. Stop the launcher with Ctrl-C.
 
-All identities, rooms, access grants and bookings are synthetic. State is held
+Identity and access grants, availability and bookings are synthetic. Room names and available catalog metadata come from the 2026-10-16 HsH anny snapshot; unknown seat counts remain unknown. The demo selects the first linked service as a simulation policy, not as real booking authorization. State is held
 in memory and resets on restart. The Vercel server demo has separate scoped
 Postgres state. No HsH credentials or real anny token is needed.
 The included launcher connects only to the local anny mock and sends no real
@@ -114,6 +111,8 @@ configuration, data boundaries and current qualification status.
 | `apps/web` | Next.js UI, user and administrator surfaces |
 | `apps/api` | Server-owned identity, authorization, registry, exact proposal confirmation |
 | `packages/plugin-sdk` | Versioned HASI manifest, MCP transport, signed actor capabilities |
+| `apps/knowledge-plugin` | Permission-filtered synthetic knowledge search and document retrieval over MCP |
+| `fixtures` | Curated demo corpora and room snapshot, excluding private source captures |
 | `apps/anny-plugin` | Separately running room tools and anny customer/resource checks |
 | `packages/anny-client` | Actual anny HTTP paths, query context and request/response contracts |
 | `apps/anny-mock` | Synthetic external API for the same HTTP client |
@@ -131,7 +130,7 @@ isolation for third-party plugins remain production work.
 
 The mandatory MVP still includes permission-aware knowledge search with source
 citations across both `intranet.hs-hannover.de` and `service.it.hs-hannover.de`,
-plus anny. Knowledge retrieval, production model-profile policy/approval and
+plus anny. Synthetic knowledge retrieval is implemented; real source adapters, production model-profile policy/approval and
 institutional integration remain incomplete. Real SSO, authoritative anny
 tenant/account linking and permission mapping, full API coverage, production
 third-party artifact isolation, cancellation, reconciliation and real-device
@@ -145,6 +144,9 @@ Microsoft 365 Bookings is deferred.
 - [Prompt injection defenses and model evaluation](docs/architecture/security-and-models.md)
 - [LLM router credentials and provider configuration](docs/architecture/llm-router-credentials.md)
 - [First model comparison and dataset plan](docs/evaluation/benchmark-v1.md)
+- [Synthetic Service-IT/Intranet corpus and test questions](docs/evaluation/synthetic-knowledge-seed.md) — entirely fictional fixtures and draft evaluation cases
+- [Knowledge MCP and authenticated document delivery](docs/architecture/knowledge-mcp.md)
+- [HsH room snapshot provenance](docs/evaluation/anny-room-snapshot.md)
 - [Service-IT source research](docs/research/service-it.md)
 - [anny API research and pinned specifications](docs/research/anny-api.md)
 - [HsH identity evidence and open attribute contract](docs/research/hsh-identity.md)

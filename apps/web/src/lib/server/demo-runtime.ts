@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { createDemoRuntime } from '@hasi/demo-runtime';
+import { hshDemoCatalog } from '@hasi/demo-fixtures/catalog';
 import { PostgresJsonStore } from '@hasi/state';
 
 let pending: Promise<ReturnType<typeof createDemoRuntime>> | undefined;
@@ -36,10 +37,10 @@ async function initialize() {
     if (preview && process.env.VERCEL_AUTOMATION_BYPASS_SECRET) headers.set('x-vercel-protection-bypass', process.env.VERCEL_AUTOMATION_BYPASS_SECRET);
     return fetch(input, { ...init, headers, redirect: 'error' });
   };
-  return createDemoRuntime({ origin, store, secret: requiredSecret('HASI_DEMO_SECRET'), fetch: internalFetch });
+  return createDemoRuntime({ origin, store, secret: requiredSecret('HASI_DEMO_SECRET'), fetch: internalFetch, catalog: hshDemoCatalog });
 }
 
-export async function demoResponse(request: Request, target: 'handleCore' | 'handlePlugin' | 'handleMock'): Promise<Response> {
+export async function demoResponse(request: Request, target: 'handleCore' | 'handlePlugin' | 'handleMock' | 'handleKnowledgePlugin'): Promise<Response> {
   try {
     const origin = new URL(configuredOrigin());
     // Next.js may use an internal localhost origin in request.url. Only the
