@@ -7,7 +7,7 @@ agreed MVP, not a production service.
 
 **Public demo:** [hasi.metaneutrons.cc](https://hasi.metaneutrons.cc)
 connects the chat to GroqCloud through a server-side model router. GPT-OSS 120B
-and 20B can be selected in the chat; an explicit offline dialogue mode is also
+and 20B plus Qwen3.8 27B (Preview) can be selected in the chat; an explicit offline dialogue mode is also
 available. Messages and selected tool results are sent to GroqCloud. Use test
 data only. All accounts are selectable test personas; anny bookings and
 administrator changes remain browser simulations. No real SSO, anny account or

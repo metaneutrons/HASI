@@ -13,4 +13,12 @@ describe("safe Groq error diagnostics", () => {
     expect(groqErrorDiagnostics("private-secret")).toEqual({});
     expect(groqErrorDiagnostics("x".repeat(64_001))).toEqual({});
   });
+  it("handles object-form failed generations without logging reasons or attempted values", () => {
+    const result = groqErrorDiagnostics(JSON.stringify({ error: {
+      code: "tool_use_failed",
+      failed_generation: { tool_name: "anny_search_resources", reason: "private provider detail", tool_call_id: "private-call-id", attempted_arguments: '{"location":null,"date":"private-date"}' },
+    } }));
+    expect(result).toMatchObject({ providerCode: "tool_use_failed", tool: "anny_search_resources", format: "json", argumentIssues: [{ code: "invalid_type", fields: ["location"] }, { code: "unrecognized_keys", fields: ["date"] }] });
+    expect(JSON.stringify(result)).not.toMatch(/private|attempted_arguments|tool_call_id/);
+  });
 });
