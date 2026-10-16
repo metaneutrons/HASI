@@ -28,7 +28,8 @@ IT/intranet source retrieval and source citations remain unavailable.
 
 The server validates the complete wire message/tool sequence and executes one
 inference step. The browser performs at most four such steps per user turn,
-running only the four typed anny read/prepare tools through the existing
+stopping once host-rendered availability, proposal or booking cards supply the
+answer and next action. It runs only the four typed anny read/prepare tools through the existing
 transport. Their data are synthetic and client-controlled in this mode. The
 browser sends messages and bounded tool outputs to GroqCloud, as stated in the
 UI. Client-side tool results/history are not authenticated institutional
@@ -72,6 +73,9 @@ explicitly. Independent MCP updates are verified by local integration tests.
   budget. Input/output and request caps bound prototype throughput; provider
   quotas remain separate. Durable per-user/day accounting and a hard monetary
   ceiling require further infrastructure before an institutional pilot.
+- Provider HTTP 429 responses produce a distinct quota notice. Diagnostics log
+  only host-owned failure categories and HTTP status codes, never provider error
+  payloads, messages, headers, prompts or credentials.
 - Local Vercel metadata, environment files and private research are ignored by
   Git. `.vercelignore` also excludes research/documents and test/build artifacts
   from CLI deployment uploads.

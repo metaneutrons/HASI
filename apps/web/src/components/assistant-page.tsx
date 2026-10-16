@@ -177,6 +177,7 @@ function Conversation({ name }: { name: string }) {
         history.current.push(reply.message);
         if (reply.message.content.trim()) add({ role: "assistant", text: reply.message.content, model: reply.profile.label });
         if (!reply.message.toolCalls?.length) return;
+        let actionableResult = false;
         for (const call of reply.message.toolCalls) {
           setActivity(`anny · ${call.name === "anny_propose_booking" ? "Buchung vorbereiten" : "Testdaten abfragen"}`);
           let output: Record<string, unknown>;
@@ -184,12 +185,16 @@ function Conversation({ name }: { name: string }) {
             const result = await tools().run(call.name, call.arguments);
             output = result.output;
             showToolResult(result, interactionId, reply.profile.label);
+            actionableResult ||= Boolean(result.proposal || result.bookings || result.rooms?.some((room) => room.checked && room.intervals.length > 0));
           } catch (cause) {
             output = { error: cause instanceof Error ? cause.message : "Das Tool konnte die Anfrage nicht abschließen." };
             add({ role: "assistant", text: String(output.error), tool: "anny · Anfrage fehlgeschlagen" });
           }
           history.current.push({ role: "tool", toolCallId: call.id, name: call.name, content: JSON.stringify(output) });
         }
+        // Host-rendered cards already provide the answer and next action.
+        // Avoid a redundant generation after availability, proposals or bookings.
+        if (actionableResult) return;
       }
       add({ role: "assistant", text: "Die maximale Zahl an Modellschritten für diese Nachricht ist erreicht. Du kannst die angezeigten Karten nutzen oder eine weitere Nachricht schreiben." });
     } finally { pendingRequest.current = null; }

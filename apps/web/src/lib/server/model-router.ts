@@ -1,7 +1,9 @@
 import "server-only";
 
 import { createGroq } from "@ai-sdk/groq";
-import { generateText, isStepCount, tool, type ModelMessage, type ToolSet } from "ai";
+import { APICallError, generateText, isStepCount, tool, type ModelMessage, type ToolSet } from "ai";
+import { ModelRouterError } from "./model-router-error";
+export { ModelRouterError } from "./model-router-error";
 import {
   MODEL_PROFILE_IDS,
   chatRequestSchema,
@@ -76,20 +78,6 @@ type RouterOptions = {
   fetch?: typeof fetch;
   now?: Date | (() => Date);
 };
-
-type ModelRouterErrorCode =
-  | "invalid_request"
-  | "profile_not_approved"
-  | "missing_credentials"
-  | "provider_unavailable"
-  | "invalid_model_response";
-
-export class ModelRouterError extends Error {
-  constructor(readonly code: ModelRouterErrorCode, message: string) {
-    super(message);
-    this.name = "ModelRouterError";
-  }
-}
 
 const CHAT_TOOLS = {
   anny_search_resources: tool({
@@ -311,10 +299,12 @@ export async function runModelStep(
       timeout: 20_000,
       stopWhen: isStepCount(1),
     });
-  } catch {
+  } catch (cause) {
+    const status = APICallError.isInstance(cause) ? cause.statusCode : undefined;
     throw new ModelRouterError(
-      "provider_unavailable",
+      status === 429 ? "provider_rate_limited" : "provider_unavailable",
       "The model service could not complete this request.",
+      status,
     );
   }
 
