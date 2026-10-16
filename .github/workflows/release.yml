@@ -248,7 +248,6 @@ jobs:
         uses: actions/attest-build-provenance@e4d4f7c39adfa4c260fb5c147f0622000aa14b99 # v4.0.0
         with:
           subject-path: release-assets/hasi-${{ env.RELEASE_TAG }}-linux-${{ env.ARCHITECTURE }}.oci.tar
-          predicate-type: https://slsa.dev/provenance/v1
 
       - name: Verify the qualified archive signature and provenance
         env:
@@ -569,7 +568,6 @@ jobs:
         with:
           subject-name: ${{ env.IMAGE }}
           subject-digest: ${{ steps.index.outputs.digest }}
-          predicate-type: https://slsa.dev/provenance/v1
 
       - name: Add a keyless cosign signature to the exact image index
         run: cosign sign --yes "${IMAGE}@${{ steps.index.outputs.digest }}"
