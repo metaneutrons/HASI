@@ -3,6 +3,7 @@ import "server-only";
 import { createGroq } from "@ai-sdk/groq";
 import { APICallError, generateText, isStepCount, tool, type ModelMessage, type ToolSet } from "ai";
 import { ModelRouterError } from "./model-router-error";
+import { groqErrorDiagnostics } from "./groq-error-diagnostics";
 export { ModelRouterError } from "./model-router-error";
 import {
   MODEL_PROFILE_IDS,
@@ -305,6 +306,7 @@ export async function runModelStep(
       status === 429 ? "provider_rate_limited" : "provider_unavailable",
       "The model service could not complete this request.",
       status,
+      APICallError.isInstance(cause) ? groqErrorDiagnostics(cause.responseBody) : undefined,
     );
   }
 
