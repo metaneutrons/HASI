@@ -89,6 +89,23 @@ describe("public browser demo transport", () => {
     ]);
   });
 
+  it.each([
+    ["2026-10-17T00:30:00+02:00", "2026-10-17"],
+    ["2026-12-17T00:30:00+01:00", "2026-12-17"],
+  ])("keeps early Berlin requests on the requested campus day: %s", async (startDate, day) => {
+    const { request } = createHarness();
+    await login(request, "student");
+    const result = await post<{ intervals: { startDate: string }[] }>(request, "/api/availability", {
+      resourceId: "00000000-0000-4000-8000-000000000101",
+      serviceId: "00000000-0000-4000-8000-000000000201",
+      startDate,
+      durationMinutes: 60,
+    });
+    expect(result.intervals.map((interval) => interval.startDate)).toEqual([
+      `${day}T09:00:00.000Z`, `${day}T13:00:00.000Z`,
+    ]);
+  });
+
   it("confirms the exact proposal once and replays the same booking result", async () => {
     const { request } = createHarness();
     await login(request, "student");

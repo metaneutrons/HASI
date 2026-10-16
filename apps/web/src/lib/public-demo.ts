@@ -370,10 +370,15 @@ function availabilityIntervals(
   now: Date,
 ): TimeInterval[] {
   const startMs = Date.parse(requestStart);
-  const requestDate = new Date(startMs);
-  const year = requestDate.getUTCFullYear();
-  const month = requestDate.getUTCMonth();
-  const day = requestDate.getUTCDate();
+  // Select the requested campus calendar day, including when its first hours
+  // still fall on the preceding UTC date. The two synthetic slots remain UTC.
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date(startMs));
+  const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((value) => value.type === type)?.value);
+  const year = part("year");
+  const month = part("month") - 1;
+  const day = part("day");
   const intervals: TimeInterval[] = [];
 
   for (const hour of [9, 13]) {

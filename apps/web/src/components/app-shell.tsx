@@ -4,7 +4,7 @@ import {
   ArrowRight,
   Check,
   CircleAlert,
-  Command,
+  MessageCircle,
   LaptopMinimal,
   LogOut,
   Moon,
@@ -21,7 +21,7 @@ import { useTheme, type Theme } from "@/components/theme-provider";
 import type { Role } from "@/lib/types";
 
 const navItems = [
-  { href: "/", label: "Assistent", icon: Command, key: "assistant" },
+  { href: "/", label: "Chat", icon: MessageCircle, key: "assistant" },
   { href: "/bookings", label: "Buchungen", icon: PanelTop, key: "bookings" },
 ];
 const prototypeLabel = process.env.NEXT_PUBLIC_HASI_PUBLIC_DEMO === "1" ? "Browser-Demo" : "Lokaler Prototyp";
@@ -186,8 +186,8 @@ function LoginScreen() {
           <div className="eyebrow"><span className="eyebrow-rule" /> CAMPUS, KLARER ORGANISIERT</div>
           <h1>Was steht<br /><span>heute an?</span></h1>
           <p className="welcome-lede">
-            Räume finden, Termine planen, Services entdecken. HASI bringt die Dinge zusammen,
-            die deinen Hochschulalltag einfacher machen.
+            Frag HASI. Finde Informationen, plane deinen nächsten Schritt und erledige
+            Aufgaben direkt im Gespräch. Raumsuche und Buchung kannst du bereits ausprobieren.
           </p>
           <div className="welcome-note">
             <span className="welcome-note-icon"><UserRound size={17} strokeWidth={1.8} /></span>
@@ -293,7 +293,7 @@ function NavLink({
 }: {
   href: string;
   label: string;
-  icon: typeof Command;
+  icon: typeof MessageCircle;
   active: boolean;
 }) {
   return (
@@ -327,7 +327,7 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
   }
 
   return (
-    <div className="app-frame">
+    <div className={`app-frame${activeKey === "assistant" ? " app-frame--chat" : ""}`}>
       <aside className="side-nav" aria-label="HASI Navigation">
         <WordmarkLink />
         <div className="side-nav-label">CAMPUS</div>

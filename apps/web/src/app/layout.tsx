@@ -5,9 +5,9 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://hasi.metaneutrons.cc"),
-  title: "HASI — Dein Campus, klarer organisiert",
+  title: "HASI — Dein Hochschulassistent im Chat",
   description:
-    "Der Hochschulassistent für Räume, Services und den Alltag an der Hochschule Hannover.",
+    "Dein Hochschulassistent im Chat. Fragen stellen, Räume suchen und Aufgaben im Gespräch erledigen.",
   applicationName: "HASI",
   robots: { index: false, follow: false },
 };

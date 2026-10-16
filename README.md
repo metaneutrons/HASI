@@ -1,6 +1,6 @@
 # HASI
 
-Hochschule Hannover assistant: a mobile-first TypeScript prototype with a shared
+Hochschule Hannover assistant: a chat-first, mobile-first TypeScript prototype with a shared
 light/dark design system for users and administrators, mock identity, and an
 independently running anny plugin. This is an incomplete implementation of the
 agreed MVP, not a production service.
@@ -23,11 +23,16 @@ pnpm dev
 ```
 
 Open <http://127.0.0.1:3001>. Choose a student, employee or administrator test
-account. Search rooms, select a room, check availability, prepare a booking and
-confirm the exact proposal. View the result under **Buchungen**. The
+account. Start in **Chat**: describe a task, for example “Ich brauche morgen um
+14 Uhr einen Raum für vier Personen für eine Stunde.” HASI asks for missing
+details and embeds room results, available times and a booking proposal in the
+conversation. Select a time and confirm the exact proposal on its card. View
+the result in the chat or under **Buchungen**. The
 administrator can enable/disable the integration and check/activate compatible
 plugin releases under **Verwaltung**. Theme selection offers Light, Dark and
-System.
+System. The dialogue currently uses a bounded German demo parser, not an LLM.
+IT questions explicitly explain that knowledge sources are not connected yet.
+See [chat-first interaction](docs/architecture/chat-first.md).
 
 For an optimized web preview, use `pnpm preview`. This builds the application
 first and runs the same mock backend with Next.js in production build mode;
