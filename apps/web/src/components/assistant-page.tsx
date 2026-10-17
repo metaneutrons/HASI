@@ -14,6 +14,7 @@ import { chatProfileIdSchema, modelProfilesResponseSchema, modelReplySchema, typ
 import { createChatMessageClock } from "@/lib/chat-message-clock";
 import { appendChatText } from "@/lib/chat-history";
 import type { ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
+import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError } from "@/lib/chat-room-time";
 import { canStartNewChat } from "@/lib/chat-workspace-store";
 import { ChatSessionList } from "@/components/chat-session-list";
 import { ChatRoomResults } from "@/components/chat-room-results";
@@ -121,6 +122,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   const [busy, setBusy] = useState(false);
   const [activity, setActivity] = useState("");
   const [request, setRequest] = useState<RoomRequest>(initial.request);
+  const roomIntent = useRef<RoomRequest>(initial.request);
   const [roomContext, setRoomContext] = useState(initial.roomContext);
   const [chosenRoom, setChosenRoom] = useState<Resource | null>(initial.chosenRoom);
   const [activeResult, setActiveResult] = useState<string | null>(initial.activeResult);
@@ -166,6 +168,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     ? configuration.userChoiceEnabled
     : !configuration.error && (configuration.userChoiceEnabled || isDefaultProfile) && selectedProfile?.configured === true);
   const staticProfileLabel = offline ? "Dialog-Demo" : selectedProfile?.label ?? (isDefaultProfile ? defaultProfile?.label ?? configuration.defaultProfileId : "Gespeichertes Modell nicht verfügbar");
+
+  function updateRequest(next: RoomRequest) { roomIntent.current = next; setRequest(next); }
 
   function tools() {
     toolBridge.current ??= createAnnyChatTools(requestForChat);
@@ -214,6 +218,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     const timestamps = await messageClock.current!.flush();
     if (timestamps.size) history.current = history.current.map(message => message.id && timestamps.has(message.id) ? { ...message, timestamp: timestamps.get(message.id)! } : message);
     if (timestamps.size) setMessages(previous => previous.map(message => timestamps.has(message.id) ? { ...message, timestamp: timestamps.get(message.id)! } : message));
+    return timestamps;
   }
 
   function add(message: Omit<Message, "id">, messageId = id()) {
@@ -331,6 +336,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
               output = { ...result };
               add({ role: "assistant", text: result.documents.length ? "Gefundene Demoquellen. Die folgende Antwort wertet diese Beispiele aus." : "Keine passenden, für dein Testkonto freigegebenen Demoquellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents, model: actualLabel });
             } else {
+            assertRequestedRoomTime(call.name, call.arguments, roomIntent.current);
             const result = await tools().run(call.name, call.arguments);
             output = result.output;
             showToolResult(result, interactionId, actualLabel);
@@ -339,7 +345,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
               || result.rooms?.some((room) => room.checked && room.intervals.length > 0));
             }
           } catch (cause) {
-            output = { error: cause instanceof Error ? cause.message : "Das Tool konnte die Anfrage nicht abschließen." };
+            output = { error: cause instanceof Error ? cause.message : "Das Tool konnte die Anfrage nicht abschließen.", ...(cause instanceof RoomTimeMismatchError ? { requestedInterval: cause.expectedInterval } : {}) };
             add({ role: "assistant", text: String(output.error), tool: call.name === "knowledge_search" ? "Wissensdienst · Anfrage fehlgeschlagen" : "anny · Anfrage fehlgeschlagen" });
           }
           history.current.push(remember({ role: "tool", toolCallId: call.id, name: call.name, content: JSON.stringify(output) }));
@@ -435,6 +441,14 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         return;
       }
       if (!offline) {
+        if (classifyIntent(trimmed, roomContext) === "rooms") {
+          const timestamp = history.current.find(message => message.id === eventId)?.timestamp;
+          if (timestamp) {
+            const reset = !roomContext || /(?:neue|andere)\s+(?:raum)?suche|(?:anderen|neuen)\s+raum|von vorne/i.test(trimmed);
+            updateRequest(mergeRoomRequest(trimmed, reset ? {} : roomIntent.current, new Date(timestamp.createdAt)));
+            setRoomContext(true);
+          }
+        }
         await runModel();
         return;
       }
@@ -462,7 +476,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         const next = mergeRoomRequest(trimmed, reset ? {} : request);
         const selected = reset || next.query !== request.query ? null : chosenRoom;
         if (!selected) setChosenRoom(null);
-        setRequest(next);
+        updateRequest(next);
         setRoomContext(true);
         await searchRooms(next, selected);
       } else {
@@ -478,11 +492,30 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
 
   async function chooseRoom(resource: Resource) {
     const label = `${resource.kind === 'workplace' ? 'einen einzelnen Arbeitsplatz: ' : ''}${resource.name}${resource.parentName ? ` im Büro ${resource.parentName}` : ''}`;
-    if (!offline) { await send(`Ich möchte ${label} buchen (resourceId: ${resource.id}). Verwende genau diese Ressource und frage nach noch fehlenden Angaben.`); return; }
+    if (!offline) {
+      const interval = requestedRoomInterval(roomIntent.current);
+      if (!interval) { await send(`Ich möchte ${label} buchen (resourceId: ${resource.id}). Verwende genau diese Ressource und frage nach noch fehlenden Angaben.`); return; }
+      if (!start("anny · Gewünschten Zeitraum prüfen")) return;
+      setChosenRoom(resource);
+      setActiveResult(null);
+      setActiveProposal(null);
+      const selection = `Bitte prüfe ${label} am ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} Uhr.`;
+      const eventId = add({ role: "user", text: selection });
+      appendHistory("user", selection, eventId);
+      try {
+        await stampMessages();
+        const args = availabilityInputForSlot(resource.id, { ...interval, available: false });
+        const result = await tools().run("anny_get_availability", args);
+        recordTool("anny_get_availability", args, result.output);
+        showToolResult(result, id(), "");
+      } catch (cause) { addActionResult({ text: cause instanceof Error ? cause.message : "Der Zeitraum konnte nicht geprüft werden." }); }
+      finally { await finish(); }
+      return;
+    }
     if (!start("Raum auswählen")) return;
     setChosenRoom(resource);
     const next = { ...request, kind: resource.kind ?? 'room' as const };
-    setRequest(next);
+    updateRequest(next);
     setRoomContext(true);
     setActiveResult(null);
     setActiveProposal(null);
@@ -591,7 +624,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
           addActionResult({ text: `Die Stornierung der Testbuchung für ${result.proposal.resourceName} wurde bestätigt. ${formatDateTime(result.proposal.startDate)} bis ${formatTime(result.proposal.endDate)} Uhr.`, tool: "anny · Stornierung ausgeführt" });
         } else {
           setRoomContext(false);
-          setRequest({});
+          updateRequest({});
           setChosenRoom(null);
           addActionResult({ text: `Die Testbuchung für ${result.proposal.resourceName} ist bestätigt. ${formatDateTime(result.proposal.startDate)} bis ${formatTime(result.proposal.endDate)} Uhr.`, tool: "anny · Buchung ausgeführt", confirmed: true });
         }
