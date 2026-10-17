@@ -155,6 +155,21 @@ write begins as a server-bound proposal that shows its exact target and effect;
 execution requires the user's explicit confirmation and a fresh check of rights,
 eligibility, deadlines, and current source state.
 
+### Restricted public web search
+
+Add a read-only MCP for public web discovery and reading within server-owned,
+predefined URL scopes, including configurable anchored regex rules. A possible
+scope is the HsH apex and its subdomains. Source restrictions must hold for
+search-result metadata, document fetches, redirects, caches and crawler requests;
+provider-side `site:` filters alone are insufficient. Public search cannot bypass
+SSO/source permissions or replace protected Intranet/Service-IT adapters.
+
+Evaluate Brave for a first external adapter and a TypeScript crawler plus local
+index for an institution-controlled corpus. SearXNG is an optional metasearch
+adapter, not an automatic university index. No service is commissioned or
+connector implemented. See [restricted web search](../architecture/restricted-web-search.md)
+for the provider comparison, URL/network policy and acceptance scenarios.
+
 ### Examination-regulations knowledge base for all degree programmes
 
 Build a future, separately maintained knowledge corpus covering the complete
