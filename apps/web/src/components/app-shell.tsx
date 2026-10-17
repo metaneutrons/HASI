@@ -295,16 +295,19 @@ function NavLink({
   label,
   icon: Icon,
   active,
+  count,
 }: {
   href: string;
   label: string;
   icon: typeof MessageCircle;
   active: boolean;
+  count?: number;
 }) {
   return (
-    <Link className={`nav-link${active ? " is-active" : ""}`} href={href} aria-current={active ? "page" : undefined}>
+    <Link className={`nav-link${active ? " is-active" : ""}`} href={href} aria-label={count && count > 1 ? `${label}, ${count} Unterhaltungen` : undefined} aria-current={active ? "page" : undefined}>
       <Icon size={19} strokeWidth={active ? 2 : 1.8} aria-hidden="true" />
       <span>{label}</span>
+      {count !== undefined && count > 1 && <small className="chat-count-badge" aria-hidden="true">{count}</small>}
     </Link>
   );
 }
@@ -315,11 +318,12 @@ function ChatSessionsInSidebar({ store, onOpenChat }: { store: ChatWorkspaceStor
 }
 
 function ChatNavigation({ active, store, onOpenChat }: { active: boolean; store: ChatWorkspaceStore; onOpenChat: () => void }) {
+  const view = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   const [expanded, setExpanded] = useState(true);
   return (
     <div className={`primary-nav-chat${expanded ? " is-expanded" : " is-collapsed"}`}>
       <div className={`primary-nav-chat-row${active ? " is-active" : ""}`}>
-        <NavLink href="/" label="Chats" icon={MessageCircle} active={active} />
+        <NavLink href="/" label="Chats" icon={MessageCircle} active={active} count={view.workspace.sessions.length} />
         <button
           className="primary-nav-chat-toggle"
           type="button"

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { hshDemoCatalog } from "../../../fixtures/catalog";
 import {
   classifyIntent,
   matchingResources,
@@ -152,6 +153,31 @@ describe("bounded German chat demo parser", () => {
     });
   });
 
+  it("parses a coming weekday in the Berlin calendar and keeps ambiguity fail-safe", () => {
+    const now = new Date("2026-10-17T09:30:00.000Z");
+    const request = mergeRoomRequest(
+      "Ich brauche am kommenden Montag ein Büro im Gebäude 1J von 8-16 Uhr",
+      {},
+      now,
+    );
+
+    expect(request).toMatchObject({
+      kind: "workplace",
+      location: "1J",
+      date: "2026-10-19",
+      time: "08:00",
+      durationMinutes: 480,
+    });
+    expect(request.query).toBeUndefined();
+    expect(mergeRoomRequest("am Montag oder Dienstag", {}, now).date).toBe("__invalid__");
+    expect(mergeRoomRequest("nicht am kommenden Montag", {}, now).date).toBe("__invalid__");
+    expect(mergeRoomRequest("am vergangenen Montag", {}, now).date).toBe("__invalid__");
+    const monday = new Date("2026-10-19T09:00:00.000Z");
+    expect(mergeRoomRequest("am Montag", {}, monday).date).toBe("__invalid__");
+    expect(mergeRoomRequest("am kommenden Montag", {}, monday).date).toBe("2026-10-26");
+    expect(mergeRoomRequest("im Gebäude 1J.1.02", {}, now).location).toBe("1J.1.02");
+  });
+
   it("uses Berlin calendar dates and refuses nonexistent or ambiguous DST times", () => {
     const beforeSpringShift = new Date("2026-03-29T00:30:00.000Z");
     const springDate = mergeRoomRequest("heute um 14 Uhr", {}, beforeSpringShift);
@@ -225,6 +251,26 @@ describe("bounded German chat demo parser", () => {
     expect(matchingResources(rooms, { query: "Seminarraum" }).map(({ id }) => id)).toEqual(["seminar"]);
     expect(matchingResources(rooms, { query: "ruhigen Projektraum" }).map(({ id }) => id)).toEqual(["project"]);
     expect(matchingResources(rooms, { capacity: 0 })).toEqual([]);
+  });
+
+  it("normalizes building wording and searches workplace location metadata without dropping other filters", () => {
+    const workplaces = hshDemoCatalog.resources;
+    const buildingQuery = { kind: "workplace" as const, query: "Büro im Gebäude 1J" };
+
+    expect(matchingResources(workplaces, { kind: "workplace", location: "Gebäude 1J" })).toHaveLength(27);
+    expect(matchingResources(workplaces, { kind: "workplace", location: "Geb. 1J" })).toHaveLength(27);
+    expect(matchingResources(workplaces, { kind: "workplace", location: "Building 1J" })).toHaveLength(27);
+    expect(matchingResources(workplaces, { kind: "workplace", location: "Gebäude 1" })).toEqual([]);
+    expect(matchingResources([{ ...rooms[0]!, kind: "workplace", name: "Desk", location: "11J", parentName: "Office 11J.1.03" }], { kind: "workplace", location: "Gebäude 1J" })).toEqual([]);
+    expect(matchingResources(workplaces, buildingQuery)).toHaveLength(27);
+    expect(matchingResources(workplaces, { kind: "workplace", query: "Schreibtischarbeitsplatz im Gebäude 1J" })).toHaveLength(27);
+    expect(matchingResources(workplaces, { kind: "workplace", query: "J1" })).toHaveLength(17);
+
+    expect(matchingResources(workplaces, { kind: "workplace", query: "Büro Gebäude 99Z" })).toEqual([]);
+    expect(matchingResources(workplaces, { ...buildingQuery, location: "Gebäude 1K" })).toEqual([]);
+    expect(matchingResources(workplaces, { ...buildingQuery, location: "Expo Plaza" })).toEqual([]);
+    expect(matchingResources(workplaces, { ...buildingQuery, features: ["Whiteboard"] })).toEqual([]);
+    expect(matchingResources(workplaces, { ...buildingQuery, features: ["Kinderspielzeug"] })).toHaveLength(1);
   });
 
   it("classifies focused intents and sends unrelated follow-ups to help", () => {

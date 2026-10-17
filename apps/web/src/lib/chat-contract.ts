@@ -77,8 +77,8 @@ export const chatToolSchemas = {
     kind: z.enum(['workplace', 'meeting_room', 'lecture_hall', 'room']).describe("Büro/Schreibtisch bedeutet workplace (ein einzelner Arbeitsplatz). room umfasst ganze Räume ohne Arbeitsplätze; meeting_room und lecture_hall sind gezielte Raumarten.").optional(),
     capacity: z.number().int().min(1).max(500).describe("Mindest-Personenkapazität eines ganzen Raums. Für einen Arbeitsplatz weglassen; mehrere Arbeitsplätze sind separate Ressourcen.").optional(),
     features: z.array(nonEmptyText(128)).max(10).describe("Nur ausdrücklich gewünschte Ausstattungsmerkmale; sonst weglassen.").optional(),
-    location: nonEmptyText(300).describe("Nur ein ausdrücklich genannter Standort, ein Gebäude oder bei Arbeitsplätzen das zugehörige Büro; sonst weglassen, niemals leer oder null.").optional(),
-    query: nonEmptyText(500).describe("Ein konkreter Raumname oder Suchbegriff; bei allgemeiner Raumsuche weglassen, niemals leer oder null.").optional(),
+    location: nonEmptyText(300).describe("Nur ein ausdrücklich genannter Standort, ein Gebäudecode (z. B. 1J, ohne das Wort Gebäude) oder bei Arbeitsplätzen das zugehörige Büro; sonst weglassen, niemals leer oder null.").optional(),
+    query: nonEmptyText(500).describe("Ein konkreter Raum- oder Büroname, z. B. Amrum. Gebäudecodes gehören in location. Allgemeine Wörter wie Büro, Arbeitsplatz oder Gebäude sind keine Namen: query dann weglassen, niemals leer oder null.").optional(),
   }),
   anny_get_availability: z.strictObject({
     resourceId: annyId,

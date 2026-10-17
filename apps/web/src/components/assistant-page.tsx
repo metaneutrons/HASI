@@ -224,7 +224,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
       anny_propose_booking: "anny · Buchungsvorschlag",
     };
     const text = result.proposal ? "Bitte prüfe den Buchungsvorschlag. Erst die Bestätigung auf dieser Karte löst die Testbuchung aus."
-      : result.rooms ? (result.rooms.length ? "Ergebnisse aus den anny-Testdaten." : "Keine Räume entsprechen diesen Anforderungen.")
+      : result.rooms ? (result.rooms.length ? "Ergebnisse aus den anny-Testdaten." : "Keine Treffer für diese Suchfilter. Die Verfügbarkeit wurde noch nicht geprüft.")
       : result.bookings ? (result.bookings.length ? "Deine Buchungen aus der Testumgebung." : "Du hast noch keine Testbuchungen.") : "Tool-Abfrage abgeschlossen.";
     add({ role: "assistant", text, tool: labels[result.name], rooms: result.rooms, bookings: result.bookings, proposal: result.proposal, model, interactionId });
     if (result.rooms) setActiveResult(interactionId);

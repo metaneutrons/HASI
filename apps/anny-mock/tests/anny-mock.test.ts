@@ -75,8 +75,8 @@ describe('Anny mock contract', () => {
     });
     expect(reply.statusCode).toBe(200);
     const body = reply.json<{ data: Record<string, unknown>[]; meta: { has_more: boolean; interval_count: number } }>();
-    expect(body.data).toHaveLength(2);
-    expect(body.meta).toMatchObject({ has_more: false, interval_count: 2 });
+    expect(body.data).toHaveLength(3);
+    expect(body.meta).toMatchObject({ has_more: false, interval_count: 3 });
     const validateInterval = validatorFor(customerOpenApi, 'customer', 'validated-interval.v1');
     for (const interval of body.data) expect(validateInterval(interval)).toBe(true);
   });
@@ -182,6 +182,55 @@ describe('Anny mock contract', () => {
       expect(bookings.statusCode).toBe(200);
       expect(bookings.json<{ included: { relationships: { resource: { data: { id: string } } } }[] }>().included[0]?.relationships.resource.data.id)
         .toBe('1234567');
+    } finally {
+      await catalogApp.close();
+    }
+  });
+
+  it('includes the exact requested Berlin start for an eight-hour workplace slot and rejects its booked overlap', async () => {
+    const catalog: AnnyMockCatalog = {
+      resources: [{
+        id: '1234567',
+        name: 'Arbeitsplatz 1J',
+        description: 'Synthetic workplace for availability tests.',
+        capacity: null,
+        location: '1J',
+        features: [],
+        serviceId: '543210',
+        kind: 'workplace'
+      }],
+      services: [{ id: '543210', name: 'Workplace booking' }]
+    };
+    const catalogApp = createAnnyMock({ token: 'workplace-test-token', catalog });
+    const start = '2030-01-07T07:00:00.000Z'; // Monday, 08:00 Europe/Berlin.
+    const end = '2030-01-07T15:00:00.000Z'; // 16:00 Europe/Berlin.
+    const availabilityUrl = `/api/v1/availability/upcoming-intervals?service_id=543210&resource_id=1234567&start_date=${encodeURIComponent(start)}&duration=480`;
+    try {
+      await catalogApp.ready();
+      const availability = await catalogApp.inject({ method: 'GET', url: availabilityUrl });
+      expect(availability.statusCode).toBe(200);
+      const intervals = availability.json<{ data: { start_date: string; end_date: string; available: boolean; resource_ids: string[] }[] }>().data;
+      expect(intervals.map(({ start_date }) => start_date)).toEqual([
+        start,
+        '2030-01-07T09:00:00.000Z',
+        '2030-01-07T13:00:00.000Z'
+      ]);
+      expect(intervals[0]).toMatchObject({ start_date: start, end_date: end, available: true, resource_ids: ['1234567'] });
+
+      const booking = await catalogApp.inject({
+        method: 'POST',
+        url: `/api/v1/orders/from-config?o=${MOCK_IDS.organization}`,
+        headers: { authorization: 'Bearer workplace-test-token', 'content-type': 'application/json' },
+        payload: {
+          order_customer_id: MOCK_IDS.customers.student,
+          bookings: [{ resource_id: '1234567', service_id: { '543210': 1 }, start_date: start, end_date: end }]
+        }
+      });
+      expect(booking.statusCode).toBe(200);
+
+      const afterBooking = await catalogApp.inject({ method: 'GET', url: availabilityUrl });
+      const blocked = afterBooking.json<{ data: { start_date: string; end_date: string; available: boolean; resource_ids: string[] }[] }>().data[0];
+      expect(blocked).toMatchObject({ start_date: start, end_date: end, available: false, resource_ids: [] });
     } finally {
       await catalogApp.close();
     }

@@ -25,10 +25,10 @@ export function ChatSessionList({ view, store, close, onOpenChat, variant = "dra
   }
 
   return <div className={`chat-session-list${embedded ? " chat-session-list--embedded" : " chat-session-list--drawer"}`}>
-    <div className="chat-list-heading">
-      <h2 id={`${idPrefix}-heading`}>Unterhaltungen <small aria-label={`${sessions.length} ${sessions.length === 1 ? "Chat" : "Chats"}`}>{sessions.length}</small></h2>
+    {embedded ? <h2 className="sr-only" id={`${idPrefix}-heading`}>Chats</h2> : <div className="chat-list-heading">
+      <h2 id={`${idPrefix}-heading`}>Chats {sessions.length > 1 && <small className="chat-count-badge" aria-label={`${sessions.length} Chats`}>{sessions.length}</small>}</h2>
       {close && <button className="icon-button" type="button" aria-label="Unterhaltungen schließen" onClick={close}><X size={20} aria-hidden="true" /></button>}
-    </div>
+    </div>}
     <button className="chat-list-create" type="button" aria-label={sessions.length >= MAX_CHAT_SESSIONS ? `Neuer Chat. Maximal ${MAX_CHAT_SESSIONS} Chats.` : "Neuer Chat"} disabled={sessions.length >= MAX_CHAT_SESSIONS} onClick={() => { store.create(); close?.(); onOpenChat?.(); }}><SquarePen size={17} strokeWidth={1.8} aria-hidden="true" /><span>Neuer Chat</span></button>
     <div className="chat-session-items" role="list" aria-labelledby={`${idPrefix}-heading`}>
       {sessions.map((session) => {
