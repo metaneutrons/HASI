@@ -60,6 +60,29 @@ function withSession(workspace: ChatWorkspace, session = createChatSession()): C
 }
 
 describe("chat session persistence", () => {
+  it.each(["gwdg-qwen3-30b", "offline"] as const)("replaces the final %s chat with a fresh Groq chat", profileId => {
+    const initial = createChatWorkspace("user-1");
+    const session = initial.sessions[0]!;
+    const selected = updateChatSnapshot(initial, session.id, makeSnapshot({ profileId }));
+    const next = deleteChat(selected, session.id);
+    expect(next.sessions[0]!.snapshot.profileId).toBe("groq-oss-120b");
+    expect(next.sessions[0]!.id).not.toBe(session.id);
+  });
+
+  it("roundtrips server metadata and leaves legacy message times absent", () => {
+    const initial = createChatWorkspace("user-1");
+    const session = initial.sessions[0]!;
+    const id = "ae93bd5b-49b1-40a9-8250-370d6c355fa7";
+    const timestamp = { createdAt: "2026-10-17T09:00:00.000Z", receipt: "A".repeat(43) };
+    const snapshot = makeSnapshot({ messages: [{ id, role: "user", text: "Morgen", timestamp }, textMessage("old", "assistant", "Alt")], history: [{ id, role: "user", content: "Morgen", timestamp }, { role: "assistant", content: "Alt" }] });
+    const storage = new MemoryStorage();
+    saveChatWorkspace(updateChatSnapshot(initial, session.id, snapshot), storage);
+    const restored = loadChatWorkspace("user-1", storage).workspace.sessions[0]!.snapshot;
+    expect(restored.messages[0]!.timestamp).toEqual(timestamp);
+    expect(restored.history[0]!.timestamp).toEqual(timestamp);
+    expect(restored.messages[1]!.timestamp).toBeUndefined();
+    expect(restored.history[1]!.timestamp).toBeUndefined();
+  });
   it("keeps multiple sessions, drafts, profiles, and history independent", () => {
     const initial = createChatWorkspace("user-1");
     const first = initial.sessions[0]!;

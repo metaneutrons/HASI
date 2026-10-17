@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleChatPost } from "../src/lib/server/chat-http";
+import { handleChatPost, handleTimestampPost } from "../src/lib/server/chat-http";
 import type { ModelReply } from "../src/lib/chat-contract";
 import { ModelRouterError } from "../src/lib/server/model-router-error";
+
+import { createMessageClock } from "../src/lib/server/message-timestamps";
 
 const origin = "https://hasi.metaneutrons.cc";
 const validBody = { profileId: "groq-oss-120b", messages: [{ role: "user", content: "Hallo" }] };
@@ -63,5 +65,39 @@ describe("public chat admission and error boundary", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(reply);
     expect(run).toHaveBeenCalledWith(validBody);
+  });
+});
+
+describe("server message time boundary", () => {
+  const now = new Date("2026-10-17T00:15:00.000Z");
+  const clock = createMessageClock("test-only-clock-key", "account:a", () => now);
+  const message = { id: "ae93bd5b-49b1-40a9-8250-370d6c355fa7", role: "user" as const, content: "Morgen um 14 Uhr" };
+  const dependencies = { clock, admit: async () => true, allowedOrigins: [origin] };
+
+  it("stamps only the current server receipt time, ignoring a forged historic claim", async () => {
+    const claimed = { ...message, timestamp: { createdAt: "2020-01-01T00:00:00.000Z", receipt: "A".repeat(43) } };
+    const response = await handleTimestampPost(request({ messages: [claimed] }), dependencies);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.timestamps[0].timestamp.createdAt).toBe(now.toISOString());
+    expect(clock.verify(message, body.timestamps[0].timestamp)).toBe(now.toISOString());
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    const replay = await handleTimestampPost(request({ messages: [{ ...message, timestamp: body.timestamps[0].timestamp }] }), dependencies);
+    expect(await replay.json()).toEqual(body);
+  });
+
+  it("requires origin, IDs, bounded batches and admission without accepting client clock options", async () => {
+    expect((await handleTimestampPost(request({ messages: [message] }, "https://other.example"), dependencies)).status).toBe(403);
+    expect((await handleTimestampPost(request({ messages: [{ role: "user", content: "old" }] }), dependencies)).status).toBe(400);
+    expect((await handleTimestampPost(request({ messages: [message, message] }), dependencies)).status).toBe(400);
+    expect((await handleTimestampPost(request({ messages: [message], now: now.toISOString() }), dependencies)).status).toBe(400);
+    expect((await handleTimestampPost(request({ messages: [message] }), { ...dependencies, admit: async () => false })).status).toBe(429);
+  });
+
+  it("assigns a server UUID and signed completion time after model generation", async () => {
+    const response = await handleChatPost(request(), { ...dependencies, run: async () => structuredClone(reply) });
+    const body = await response.json();
+    expect(body.message.id).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(clock.verify(body.message, body.message.timestamp)).toBe(now.toISOString());
   });
 });

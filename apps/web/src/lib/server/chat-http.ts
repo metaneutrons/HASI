@@ -1,10 +1,14 @@
-import { chatRequestSchema, type ChatRequest, type ModelReply } from "../chat-contract";
+import { randomUUID } from "node:crypto";
+import { timestampRequestSchema, chatRequestSchema, type ChatRequest, type ModelReply } from "../chat-contract";
 import { ModelRouterError } from "./model-router-error";
+
+import type { createMessageClock } from "./message-timestamps";
 
 const MAX_BODY_BYTES = 60_000;
 const headers = { "cache-control": "private, no-store", "x-content-type-options": "nosniff" };
 
 export interface ChatHttpDependencies {
+  clock?: ReturnType<typeof createMessageClock>;
   run: (input: ChatRequest) => Promise<ModelReply>;
   admit: (request: Request) => Promise<boolean>;
   allowedOrigins: readonly string[];
@@ -62,7 +66,12 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
     return error("Der Anfrageschutz ist vorübergehend nicht verfügbar. Bitte versuche es später erneut.", 503);
   }
   try {
-    return Response.json(await dependencies.run(input), { headers });
+    const reply = await dependencies.run(input);
+    if (dependencies.clock) {
+      reply.message.id = randomUUID();
+      reply.message.timestamp = dependencies.clock.stamp(reply.message);
+    }
+    return Response.json(reply, { headers });
   } catch (cause) {
     // Provider/SDK errors can contain request bodies, headers or credentials.
     // Serialize allowlisted metadata so nested schema issue names remain visible.
@@ -74,5 +83,20 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
       return Response.json({ error: "Das Anfragelimit des ausgewählten Modellanbieters ist erreicht. Bitte warte eine Minute und versuche es erneut. Vorhandene Buchungskarten kannst du weiter nutzen." }, { status: 429, headers: { ...headers, "retry-after": "60" } });
     }
     return error("Der ausgewählte Modellanbieter konnte die Anfrage nicht abschließen. Bitte versuche es erneut oder wähle ausdrücklich die Dialog-Demo.", 503);
+  }
+}
+
+/** Receipts certify server receipt time, not the truth of client-carried text. */
+export async function handleTimestampPost(request: Request, dependencies: Pick<ChatHttpDependencies, "allowedOrigins" | "admit"> & { clock: ReturnType<typeof createMessageClock> }): Promise<Response> {
+  const origin = request.headers.get("origin");
+  if (!origin || !dependencies.allowedOrigins.includes(origin) || origin !== new URL(request.url).origin) return error("Unzulässiger Ursprung.", 403);
+  if (request.headers.get("content-type")?.split(";", 1)[0]?.trim() !== "application/json") return error("Die Anfrage muss JSON enthalten.", 415);
+  try {
+    const result = timestampRequestSchema.safeParse(await readBody(request));
+    if (!result.success) return error("Ungültige Nachrichten für die Zeiterfassung.", 400);
+    if (!await dependencies.admit(request)) return error("Das Anfragelimit ist erreicht. Bitte versuche es später erneut.", 429);
+    return Response.json({ timestamps: result.data.messages.map(message => ({ id: message.id, timestamp: dependencies.clock.verify(message, message.timestamp) ? message.timestamp : dependencies.clock.stamp(message) })) }, { headers });
+  } catch {
+    return error("Die Serverzeit konnte nicht erfasst werden.", 503);
   }
 }

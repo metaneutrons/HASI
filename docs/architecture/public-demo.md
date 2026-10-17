@@ -104,6 +104,12 @@ usage; this is not monetary accounting.
 The chat route uses Vercel Firewall rule `hasi-chat`, configured for 60
 inference requests per 600-second fixed window. It uses a server-owned shared
 rate-limit key and pins the WAF callback host to `hasi.metaneutrons.cc`.
+Timestamp batches use the same WAF rule with a separate server-derived
+workspace/account key (`hasi:timestamps:v1:<scope hash>`); they never consume
+the shared inference bucket. The endpoint accepts at most 16 bounded events
+and the same 60,000-byte request limit. It requires the current demo login and
+same-origin JSON requests. These are server receipt times, not proof of the
+truth or execution status of client-carried content.
 Preview's WAF check uses that public project callback. It does not use the
 Vercel automation bypass credential. Missing or failed limiter checks fail
 closed before inference. Local execution has no distributed WAF. The counter

@@ -126,13 +126,18 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
     try { return await forward(app, request); } finally { await app.close(); }
   }
 
-  async function hasSession(request: Request): Promise<boolean> {
+  async function chatScope(request: Request): Promise<string | null> {
     const space = workspace(request);
-    if (space.cookie) return false;
-    return Boolean(await new DurableDemoIdentity(workspaceStore(space.id), space.id, options.catalog?.resources.map(resource => resource.id)).resolve(cookieValue(request.headers.get('cookie'), sessionName)));
+    if (space.cookie) return null;
+    const user = await new DurableDemoIdentity(workspaceStore(space.id), space.id, options.catalog?.resources.map(resource => resource.id)).resolve(cookieValue(request.headers.get('cookie'), sessionName));
+    return user ? `${space.id}:${user.id}` : null;
   }
 
-  return { handleCore, handleMock, hasSession, handleKnowledgePlugin, handlePlugin: (request: Request) => forward(plugin, request), close: async () => { await Promise.all([plugin.close(), knowledge.close()]); } };
+  async function hasSession(request: Request): Promise<boolean> {
+    return (await chatScope(request)) !== null;
+  }
+
+  return { handleCore, handleMock, hasSession, chatScope, handleKnowledgePlugin, handlePlugin: (request: Request) => forward(plugin, request), close: async () => { await Promise.all([plugin.close(), knowledge.close()]); } };
 }
 
 function failure(status: number) { return Response.json({ error: 'Die Anfrage konnte nicht abgeschlossen werden.' }, { status, headers: { 'cache-control': 'private, no-store' } }); }

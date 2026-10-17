@@ -5,13 +5,14 @@ const mocks = vi.hoisted(() => ({
   createDemoRuntime: vi.fn(),
   deleteExpired: vi.fn(),
   handleChatPost: vi.fn(),
+  handleTimestampPost: vi.fn(),
   initialize: vi.fn(),
   close: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@vercel/firewall", () => ({ checkRateLimit: mocks.checkRateLimit }));
-vi.mock("@/lib/server/chat-http", () => ({ handleChatPost: mocks.handleChatPost }));
+vi.mock("@/lib/server/chat-http", () => ({ handleChatPost: mocks.handleChatPost, handleTimestampPost: mocks.handleTimestampPost }));
 vi.mock("@/lib/server/model-router", () => ({
   listModelProfiles: vi.fn(() => ({ configured: false, profiles: [] })),
   runModelStep: vi.fn(),
@@ -101,7 +102,7 @@ describe("chat route demo boundary", () => {
 
   it("rejects anonymous visitors before invoking chat", async () => {
     setPreviewEnv();
-    mocks.createDemoRuntime.mockReturnValue({ hasSession: vi.fn().mockResolvedValue(false) });
+    mocks.createDemoRuntime.mockReturnValue({ chatScope: vi.fn().mockResolvedValue(null) });
 
     const response = await postChat(chatRequest());
 
@@ -137,7 +138,7 @@ describe("chat route demo boundary", () => {
 
   it("passes an authenticated visitor through the existing chat handler", async () => {
     setPreviewEnv();
-    mocks.createDemoRuntime.mockReturnValue({ hasSession: vi.fn().mockResolvedValue(true) });
+    mocks.createDemoRuntime.mockReturnValue({ chatScope: vi.fn().mockResolvedValue("workspace:student") });
     mocks.handleChatPost.mockResolvedValue(new Response("handled by chat", { status: 202 }));
 
     const response = await postChat(chatRequest());
@@ -145,6 +146,31 @@ describe("chat route demo boundary", () => {
     expect(response.status).toBe(202);
     expect(await response.text()).toBe("handled by chat");
     expect(mocks.handleChatPost).toHaveBeenCalledOnce();
+  });
+});
+
+describe("timestamp route session and admission boundary", () => {
+  it("rejects anonymous receipt requests", async () => {
+    setPreviewEnv();
+    mocks.createDemoRuntime.mockReturnValue({ chatScope: vi.fn().mockResolvedValue(null) });
+    const { POST } = await import("../src/app/api/chat/timestamps/route");
+    expect((await POST(chatRequest())).status).toBe(401);
+    expect(mocks.handleTimestampPost).not.toHaveBeenCalled();
+  });
+
+  it("keeps receipt and inference rate buckets separate", async () => {
+    setPreviewEnv();
+    mocks.createDemoRuntime.mockReturnValue({ chatScope: vi.fn().mockResolvedValue("workspace:student") });
+    mocks.checkRateLimit.mockResolvedValue({ rateLimited: false });
+    mocks.handleChatPost.mockImplementation(async (_request: Request, deps: { admit: () => Promise<boolean> }) => { await deps.admit(); return new Response(); });
+    mocks.handleTimestampPost.mockImplementation(async (_request: Request, deps: { admit: () => Promise<boolean> }) => { await deps.admit(); return new Response(); });
+    await postChat(chatRequest());
+    const { POST } = await import("../src/app/api/chat/timestamps/route");
+    await POST(chatRequest());
+    const keys = mocks.checkRateLimit.mock.calls.map(call => call[1].rateLimitKey);
+    expect(keys[0]).toBe("hasi:groq:shared:v1");
+    expect(keys[1]).toMatch(/^hasi:timestamps:v1:[0-9a-f]{64}$/u);
+    expect(keys[1]).not.toContain("workspace:student");
   });
 });
 

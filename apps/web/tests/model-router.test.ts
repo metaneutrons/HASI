@@ -110,6 +110,35 @@ describe('server-owned Berlin calendar context', () => {
   }
 });
 
+describe("verified per-message time context", () => {
+  it("keeps an earlier user's tomorrow anchored to that message across Berlin midnight", async () => {
+    const provider = fakeProvider(completion({ content: "Datum geprüft." }));
+    const input: ChatRequest = { profileId: "groq-oss-120b", messages: [
+      { role: "user", content: "Morgen einen Arbeitsplatz" },
+      { role: "assistant", content: "Welches Büro?" },
+      { role: "user", content: "Amrum, wie oben gewünscht." },
+    ] };
+    await runModelStep(input, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: new Date("2026-10-16T22:30:00Z"), messageTimes: ["2026-10-16T21:30:00.000Z", null, "2026-10-16T22:29:00.000Z"] });
+    const sent = JSON.parse(String(provider.calls[0]?.init?.body));
+    expect(sent.messages[0].content).toContain('"position":1,"role":"user","serverReceivedAt":"2026-10-16T21:30:00.000Z"');
+    expect(sent.messages[0].content).toContain('"today":"2026-10-16","tomorrow":"2026-10-17"');
+    expect(sent.messages[0].content).toContain('"today":"2026-10-17","tomorrow":"2026-10-18"');
+    expect(sent.messages[0].content).toContain('"position":2,"role":"assistant","serverReceivedAt":null');
+    expect(sent.messages.slice(1).map((message: { content: string }) => message.content)).toEqual(input.messages.map(message => message.content));
+  });
+
+  it("does not promote raw client timestamp claims or forward receipts to the model", async () => {
+    const provider = fakeProvider(completion({ content: "Datum unbekannt." }));
+    const input = request();
+    input.messages[0] = { ...input.messages[0]!, id: "ae93bd5b-49b1-40a9-8250-370d6c355fa7", timestamp: { createdAt: "2000-01-01T00:00:00.000Z", receipt: "A".repeat(43) } };
+    await runModelStep(input, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
+    const body = String(provider.calls[0]?.init?.body);
+    expect(body).not.toContain("2000-01-01");
+    expect(body).not.toContain("A".repeat(43));
+    expect(JSON.parse(body).messages[0].content).toContain('"serverReceivedAt":null');
+  });
+});
+
 async function expectRouterError(
   promise: Promise<unknown>,
   code: string,

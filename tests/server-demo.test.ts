@@ -74,6 +74,21 @@ for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres', 'snapshot-po
       expect((await fetch(`${origin}/api/v1/resources`)).status).toBe(401);
     });
 
+    it('resolves stable chat-time scopes across instances and separates accounts/workspaces', async () => {
+      const scoped = (visitor: string) => new Request(`${origin}/api/chat`, { headers: { cookie: [...(cookies.get(visitor) ?? new Map<string, string>())].map(([key, value]) => `${key}=${value}`).join('; ') } });
+      expect(await runtimes[0]!.chatScope(scoped('clock-a'))).toBeNull();
+      await request('clock-a', '/api/dev/login', { personaId: 'student' });
+      const first = await runtimes[0]!.chatScope(scoped('clock-a'));
+      expect(first).not.toBeNull();
+      expect(await runtimes[1]!.chatScope(scoped('clock-a'))).toBe(first);
+      await request('clock-b', '/api/dev/login', { personaId: 'student' });
+      expect(await runtimes[1]!.chatScope(scoped('clock-b'))).not.toBe(first);
+      await request('clock-a', '/api/dev/login', { personaId: 'employee' });
+      expect(await runtimes[0]!.chatScope(scoped('clock-a'))).not.toBe(first);
+      await request('clock-a', '/api/logout', {});
+      expect(await runtimes[1]!.chatScope(scoped('clock-a'))).toBeNull();
+    });
+
     it('retrieves synthetic sources through MCP and rechecks document access after a persona change', async () => {
       await request('knowledge', '/api/dev/login', { personaId: 'admin' });
       const allowed = await request('knowledge', '/api/knowledge/documents/int-013');
