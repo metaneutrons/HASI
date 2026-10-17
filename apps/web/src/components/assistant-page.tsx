@@ -327,7 +327,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         if (!reply.message.toolCalls?.length) return;
         let actionableResult = false;
         for (const call of reply.message.toolCalls) {
-          setActivity(`anny · ${call.name === "anny_propose_booking" ? "Buchung vorbereiten" : call.name === "anny_propose_cancellation" ? "Stornierung vorbereiten" : "Testdaten abfragen"}`);
+          setActivity(`anny · ${call.name === "anny_propose_booking" ? "Buchung vorbereiten" : call.name === "anny_propose_cancellation" ? "Stornierung beginnen" : "Testdaten abfragen"}`);
           let output: Record<string, unknown>;
           try {
             if (call.name === "knowledge_search") {
@@ -463,7 +463,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         setActivity("anny · Eigene Buchungen laden");
         const result = await requestForChat<{ bookings: Booking[] }>("/api/bookings");
         const text = cancellationIntent
-          ? result.bookings.length ? "Hier sind deine eigenen Buchungen. Bei einer aktiven zukünftigen Buchung kannst du eine Stornierung vorbereiten; ausgeführt wird sie erst nach Prüfung und Bestätigung auf der Vorschlagskarte." : "Du hast in der Testumgebung keine eigenen Buchungen, die du stornieren kannst."
+          ? result.bookings.length ? "Hier sind deine eigenen Buchungen. Bei einer aktiven zukünftigen Buchung kannst du eine Stornierung beginnen; ausgeführt wird sie erst nach Prüfung und Bestätigung auf der Vorschlagskarte." : "Du hast in der Testumgebung keine eigenen Buchungen, die du stornieren kannst."
           : result.bookings.length ? "Hier sind deine Buchungen aus der Testumgebung." : "Du hast in der Testumgebung noch keine Testbuchungen. Soll ich einen Raum für dich suchen?";
         add({ role: "assistant", tool: "anny · Eigene Buchungen", text, bookings: result.bookings });
         setRoomContext(false);
@@ -560,10 +560,10 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   }
 
   async function prepareCancellation(booking: Booking) {
-    if (!canRequestCancellation(booking) || !start("anny · Stornierung vorbereiten")) return;
+    if (!canRequestCancellation(booking) || !start("anny · Stornierung beginnen")) return;
     setActiveResult(null);
     setActiveProposal(null);
-    const selection = `Stornierung vorbereiten: ${booking.resourceName}, ${formatDateTime(booking.startDate)} bis ${formatTime(booking.endDate)} Uhr.`;
+    const selection = `Stornierung beginnen: ${booking.resourceName}, ${formatDateTime(booking.startDate)} bis ${formatTime(booking.endDate)} Uhr.`;
     const eventId = add({ role: "user", text: selection });
     if (!offline) appendHistory("user", selection, eventId);
     try {
@@ -721,7 +721,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                       <Check size={16} aria-hidden="true" />
                     </button>
                   </div>}
-                  {message.bookings && message.bookings.length > 0 && <div className="chat-booking-list">{message.bookings.map((booking) => <div className="chat-tool-card" key={booking.id}><h2>{booking.resourceName}</h2><p>{formatDateTime(booking.startDate)} bis {formatTime(booking.endDate)} Uhr</p><span className="chat-booking-status">{bookingStatusLabel(booking.status)}</span>{canRequestCancellation(booking) && <button className="chat-card-action" type="button" disabled={busy} onClick={() => void prepareCancellation(booking)}>Stornierung vorbereiten <ArrowRight size={15} aria-hidden="true" /></button>}</div>)}</div>}
+                  {message.bookings && message.bookings.length > 0 && <div className="chat-booking-list">{message.bookings.map((booking) => <div className="chat-tool-card" key={booking.id}><h2>{booking.resourceName}</h2><p>{formatDateTime(booking.startDate)} bis {formatTime(booking.endDate)} Uhr</p><div className="chat-booking-footer"><span className="chat-booking-status">{bookingStatusLabel(booking.status)}</span>{canRequestCancellation(booking) && <button className="chat-card-action" type="button" disabled={busy} onClick={() => void prepareCancellation(booking)}>Stornierung beginnen <ArrowRight size={15} aria-hidden="true" /></button>}</div></div>)}</div>}
                   {message.confirmed && <Link className="chat-card-action" href="/bookings">Meine Buchungen öffnen <ArrowRight size={15} aria-hidden="true" /></Link>}
                 </div>
               </article>

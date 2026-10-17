@@ -1152,7 +1152,9 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .chat-proposal-label { display: block; margin-bottom: 10px; color: var(--accent-ink); font-size: 10px; font-weight: 650; letter-spacing: 0.09em; }
 .chat-tool-card > p:not(.chat-room-details) { margin: 8px 0; color: var(--ink-soft); font-size: 14px; }
 .chat-proposal small { display: block; margin-bottom: 17px; color: var(--muted); font-size: 12px; }
-.chat-booking-status { display: inline-block; margin-top: 5px; color: var(--green); font-size: 12px; }
+.chat-booking-footer { display: flex; flex-wrap: wrap; align-items: center; column-gap: 20px; row-gap: 4px; margin-top: 12px; }
+.chat-booking-footer > .chat-card-action { margin-top: 0; }
+.chat-booking-status { display: inline-block; color: var(--green); font-size: 12px; }
 .chat-activity { display: flex; width: min(100% - 48px, 790px); align-items: center; gap: 9px; margin: 0 auto; padding-bottom: 22px; color: var(--muted); font-size: 13px; }
 .chat-composer-dock { width: min(100% - 48px, 830px); flex-shrink: 0; margin: 0 auto; padding: 8px 0 18px; }
 .chat-composer { padding: 15px 15px 10px; border: 1px solid var(--line-strong); border-radius: 23px; background: var(--surface-raised); box-shadow: var(--shadow-small); transition: border-color 150ms; }
