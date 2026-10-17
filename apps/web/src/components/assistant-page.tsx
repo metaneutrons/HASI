@@ -268,7 +268,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     const question = result.output.refinementRequired === true
       ? refinementQuestion ?? clarificationQuestion ?? "Bitte präzisiere, ob du ein Einzelbüro oder ein gemeinsames Büro suchst."
       : clarificationQuestion;
-    const questionText = question && notice && !question.includes(notice) ? `${question}\n${notice}` : question ?? notice;
+    const questionText = result.output.refinementRequired === true ? question
+      : question && notice && !question.includes(notice) ? `${question}\n${notice}` : question ?? notice;
     const returned = typeof result.output.returned === "number" && Number.isInteger(result.output.returned) && result.output.returned >= 0 ? result.output.returned : 0;
     const truncated = typeof result.output.truncated === "number" && Number.isInteger(result.output.truncated) && result.output.truncated > 0 ? result.output.truncated : 0;
     const truncatedSearchText = result.name === "anny_search_resources" && truncated > 0
