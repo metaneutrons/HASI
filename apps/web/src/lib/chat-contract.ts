@@ -118,25 +118,38 @@ const toolCallSchema = z.strictObject({
   arguments: z.record(z.string(), z.unknown()),
 });
 
+export const messageTimestampSchema = z.strictObject({
+  createdAt: z.iso.datetime(),
+  receipt: z.string().regex(/^[A-Za-z0-9_-]{43}$/u),
+});
+export type MessageTimestamp = z.infer<typeof messageTimestampSchema>;
+export const messageMetadataShape = {
+  id: z.uuid().optional(),
+  timestamp: messageTimestampSchema.optional(),
+};
+
 const userMessageSchema = z.strictObject({
+  ...messageMetadataShape,
   role: z.literal("user"),
   content: z.string().min(1).max(4000),
 });
 
 const assistantMessageSchema = z.strictObject({
+  ...messageMetadataShape,
   role: z.literal("assistant"),
   content: z.string().max(4000),
   toolCalls: z.array(toolCallSchema).min(1).max(4).optional(),
 });
 
 const toolMessageSchema = z.strictObject({
+  ...messageMetadataShape,
   role: z.literal("tool"),
   content: z.string().max(8000),
   toolCallId: z.string().trim().min(1).max(128),
   name: z.enum(CHAT_TOOL_NAMES),
 });
 
-const wireMessageSchema = z.discriminatedUnion("role", [
+export const wireMessageSchema = z.discriminatedUnion("role", [
   userMessageSchema,
   assistantMessageSchema,
   toolMessageSchema,
@@ -334,3 +347,10 @@ export const modelReplySchema = z
   });
 
 export type ModelReply = z.infer<typeof modelReplySchema>;
+
+export const timestampRequestSchema = z.strictObject({
+  messages: z.array(wireMessageSchema).min(1).max(16),
+}).refine(({ messages }) => messages.every(message => message.id !== undefined) && new Set(messages.map(message => message.id)).size === messages.length);
+export const timestampResponseSchema = z.strictObject({
+  timestamps: z.array(z.strictObject({ id: z.uuid(), timestamp: messageTimestampSchema })).max(16),
+});

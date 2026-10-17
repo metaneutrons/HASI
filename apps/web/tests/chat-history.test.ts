@@ -3,6 +3,11 @@ import { appendChatText } from "../src/lib/chat-history";
 import { chatRequestSchema, type WireMessage } from "../src/lib/chat-contract";
 
 describe("chat history across UI actions and model switches", () => {
+  it("invalidates an old time receipt when status text is coalesced", () => {
+    const history: WireMessage[] = [{ role: "assistant", content: "Alt", id: "ae93bd5b-49b1-40a9-8250-370d6c355fa7", timestamp: { createdAt: "2026-10-16T09:30:00.000Z", receipt: "A".repeat(43) } }];
+    appendChatText(history, "assistant", "Neu");
+    expect(history[0]).toEqual({ role: "assistant", content: "Alt\nNeu" });
+  });
   it("keeps manual proposal and confirmation events valid for the next model turn", () => {
     const history: WireMessage[] = [
       { role: "user", content: "Suche einen Raum" },

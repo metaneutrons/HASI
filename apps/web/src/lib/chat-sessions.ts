@@ -2,6 +2,9 @@ import { z } from "zod";
 import {
   CHAT_TOOL_NAMES,
   MODEL_PROFILE_IDS,
+  messageMetadataShape,
+  messageTimestampSchema,
+  type MessageTimestamp,
   chatRequestSchema,
   chatToolSchemas,
   type ChatToolName,
@@ -34,6 +37,7 @@ export type ChatRoomOption = {
 
 export type ChatMessage = {
   id: string;
+  timestamp?: MessageTimestamp;
   role: "user" | "assistant";
   text: string;
   tool?: string;
@@ -138,6 +142,7 @@ const bookingSchema = z
   .refine(({ startDate, endDate }) => Date.parse(endDate) > Date.parse(startDate));
 
 const chatMessageSchema = z.strictObject({
+  timestamp: messageTimestampSchema.optional(),
   id: idSchema,
   role: z.enum(["user", "assistant"]),
   text: plainTextSchema(8_000),
@@ -210,12 +215,14 @@ const incompleteToolCallSchema = z.strictObject({
 });
 
 const incompleteAssistantToolMessageSchema = z.strictObject({
+  ...messageMetadataShape,
   role: z.literal("assistant"),
   content: plainTextSchema(4_000),
   toolCalls: z.array(incompleteToolCallSchema).min(1).max(4),
 });
 
 const incompleteToolResultSchema = z.strictObject({
+  ...messageMetadataShape,
   role: z.literal("tool"),
   content: plainTextSchema(8_000),
   toolCallId: z.string().trim().min(1).max(128),
@@ -223,6 +230,7 @@ const incompleteToolResultSchema = z.strictObject({
 });
 
 const finalAssistantMessageSchema = z.strictObject({
+  ...messageMetadataShape,
   role: z.literal("assistant"),
   content: plainTextSchema(4_000),
   toolCalls: z.never().optional(),
@@ -585,7 +593,7 @@ export function deleteChat(workspace: ChatWorkspace, id: string, now = new Date(
 
   const sessions = workspace.sessions.filter((session) => session.id !== id);
   if (sessions.length === 0) {
-    const freshSession = createChatSession(removed.snapshot.profileId, now);
+    const freshSession = createChatSession(undefined, now);
     return { ...workspace, activeId: freshSession.id, sessions: [freshSession] };
   }
 

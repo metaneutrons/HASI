@@ -60,8 +60,7 @@ export function createChatWorkspaceStore(ownerId: string, storage?: StorageLike)
       if (view.workspace.sessions.length >= MAX_CHAT_SESSIONS) {
         view = { ...view, notice: `Du kannst bis zu ${MAX_CHAT_SESSIONS} Chats speichern. Lösche einen nicht mehr benötigten Verlauf, um einen neuen Chat zu beginnen.` }; emit(); return;
       }
-      const selected = view.workspace.sessions.find((session) => session.id === view.workspace.activeId);
-      const session = createChatSession(selected?.snapshot.profileId);
+      const session = createChatSession();
       publish({ ...view.workspace, activeId: session.id, sessions: [...view.workspace.sessions, session] });
     },
     select(sessionId: string) { publish(selectChat(view.workspace, sessionId)); },

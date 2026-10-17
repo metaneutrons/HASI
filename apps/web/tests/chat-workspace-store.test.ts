@@ -49,6 +49,25 @@ describe("mounted chat workspace isolation", () => {
     store.flush();
   });
 
+  it("starts new chats with the default profile while preserving existing profile selections", () => {
+    const store = createChatWorkspaceStore("student", memory());
+    const first = store.getSnapshot().workspace.sessions[0]!;
+
+    store.update(first.id, { ...first.snapshot, profileId: "gwdg-qwen3-30b" }, false);
+    store.create();
+
+    const second = store.getSnapshot().workspace.sessions.find((session) => session.id === store.getSnapshot().workspace.activeId)!;
+    expect(store.getSnapshot().workspace.sessions.find((session) => session.id === first.id)!.snapshot.profileId).toBe("gwdg-qwen3-30b");
+    expect(second.snapshot.profileId).toBe("groq-oss-120b");
+
+    store.update(second.id, { ...second.snapshot, profileId: "offline" }, false);
+    store.create();
+
+    const third = store.getSnapshot().workspace.sessions.find((session) => session.id === store.getSnapshot().workspace.activeId)!;
+    expect(store.getSnapshot().workspace.sessions.find((session) => session.id === second.id)!.snapshot.profileId).toBe("offline");
+    expect(third.snapshot.profileId).toBe("groq-oss-120b");
+  });
+
   it("debounces storage and makes write failures visible without throwing or dropping in-memory chats", () => {
     vi.useFakeTimers();
     const storage = memory();

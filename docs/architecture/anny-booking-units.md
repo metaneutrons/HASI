@@ -73,9 +73,9 @@ Each model call receives the current server time in `Europe/Berlin` and
 explicit ISO calendar dates for today, tomorrow and the day after tomorrow.
 These advance Berlin calendar days rather than 24-hour durations, including
 across daylight-saving changes. The same context is supplied to Groq, GWDG and
-custom profiles. Earlier chat messages do not yet have individual trusted
-timestamps in the model context; an ambiguous reference to an older relative
-date requires clarification. Calendar context does not make model output
+custom profiles. New events carry [verified server receipt times](chat-message-time.md)
+and per-user-message calendar anchors. Legacy messages keep unknown times; an
+ambiguous reference to an older relative date requires clarification. Calendar context does not make model output
 authoritative: the exact absolute date remains visible on the proposal and
 requires user confirmation.
 

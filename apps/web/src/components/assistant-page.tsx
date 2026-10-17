@@ -11,6 +11,7 @@ import { useSession } from "@/components/session-provider";
 import { availabilityInputForSlot, createAnnyChatTools, type AnnyChatToolResult } from "@/lib/anny-chat-tools";
 import { searchKnowledge, knowledgeDocumentHref, knowledgeSourceLabel } from "@/lib/knowledge";
 import { chatProfileIdSchema, modelProfilesResponseSchema, modelReplySchema, type ModelProfile, type WireMessage } from "@/lib/chat-contract";
+import { createChatMessageClock } from "@/lib/chat-message-clock";
 import { appendChatText } from "@/lib/chat-history";
 import type { ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
 import { ChatSessionList } from "@/components/chat-session-list";
@@ -24,6 +25,9 @@ const suggestions = [
 ];
 
 function id() { return crypto.randomUUID(); }
+function formatMessageTime(value: string) {
+  return new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
 
 export function AssistantPage() {
   const { user } = useSession();
@@ -91,6 +95,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   const scroller = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
   const inputId = useId();
+  const messageClock = useRef<ReturnType<typeof createChatMessageClock> | null>(null);
+  messageClock.current ??= createChatMessageClock(events => postForChat("/api/chat/timestamps", { messages: events }));
   const latestMessage = messages.at(-1)?.id;
   const offline = profileId === "offline";
   const selectedProfile = profiles.find((profile) => profile.id === profileId);
@@ -133,16 +139,34 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
 
   function postForChat<T>(path: string, body: unknown) { return requestForChat<T>(path, { method: "POST", body: JSON.stringify(body) }); }
 
-  function add(message: Omit<Message, "id">) {
-    if (offline) appendChatText(history.current, message.role, message.text);
-    const messageId = id();
+  function remember<T extends WireMessage>(message: T): T {
+    return messageClock.current!.track(message);
+  }
+
+  function appendHistory(role: "user" | "assistant", text: string, eventId = id()) {
+    const previous = history.current.at(-1);
+    // A combined history status is a separate event from the visible new text.
+    const historyId = role === "assistant" && previous?.role === "assistant" && !previous.toolCalls?.length ? id() : eventId;
+    const message = appendChatText(history.current, role, text, historyId);
+    if (message) remember(message);
+  }
+
+  async function stampMessages() {
+    const timestamps = await messageClock.current!.flush();
+    if (timestamps.size) history.current = history.current.map(message => message.id && timestamps.has(message.id) ? { ...message, timestamp: timestamps.get(message.id)! } : message);
+    if (timestamps.size) setMessages(previous => previous.map(message => timestamps.has(message.id) ? { ...message, timestamp: timestamps.get(message.id)! } : message));
+  }
+
+  function add(message: Omit<Message, "id">, messageId = id()) {
+    if (offline) appendHistory(message.role, message.text, messageId);
+    remember({ id: messageId, role: message.role, content: message.text, ...(message.timestamp ? { timestamp: message.timestamp } : {}) });
     if (messages.length >= 200) setMessagesTruncated(true);
     setMessages((previous) => [...previous.slice(-199), { ...message, id: messageId }]);
     return messageId;
   }
 
   function addActionResult(message: Omit<Message, "id" | "role">) {
-    if (!offline) appendChatText(history.current, "assistant", message.text);
+    if (!offline) appendHistory("assistant", message.text);
     return add({ ...message, role: "assistant" });
   }
 
@@ -156,7 +180,10 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     return true;
   }
 
-  function finish() {
+  async function finish() {
+    try { await stampMessages(); }
+    catch { /* Preserve the conversation with unknown times if the clock is unavailable. */ }
+
     lock.current = false;
     pendingRequest.current = null;
     setBusy(false);
@@ -164,8 +191,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
 
   function recordTool(name: import("@/lib/chat-contract").ChatToolName, arguments_: Record<string, unknown>, output: Record<string, unknown>) {
     const callId = id();
-    history.current.push({ role: "assistant", content: "", toolCalls: [{ id: callId, name, arguments: arguments_ }] });
-    history.current.push({ role: "tool", content: JSON.stringify(output), toolCallId: callId, name });
+    history.current.push(remember({ role: "assistant", content: "", toolCalls: [{ id: callId, name, arguments: arguments_ }] }));
+    history.current.push(remember({ role: "tool", content: JSON.stringify(output), toolCallId: callId, name }));
   }
 
   function showToolResult(result: AnnyChatToolResult, interactionId: string, model: string) {
@@ -183,19 +210,19 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     if (result.proposal) setActiveProposal(result.proposal.id);
   }
 
-  async function runModel(text: string) {
+  async function runModel() {
     // Drop complete oldest turns only; never separate a tool call from its result.
     while (history.current.length > 36 || JSON.stringify(history.current).length > 22_000) {
       const nextTurn = history.current.findIndex((message, index) => index > 0 && message.role === "user");
       if (nextTurn < 0) { history.current = []; break; }
       history.current.splice(0, nextTurn);
     }
-    history.current.push({ role: "user", content: text });
     const interactionId = id();
     const controller = pendingRequest.current!;
     try {
       for (let step = 0; step < 4; step += 1) {
         setActivity(`${providerLabel ?? "Das Modell"} antwortet …`);
+        await stampMessages();
         const response = await fetch("/api/chat", {
           method: "POST", headers: { "content-type": "application/json" },
           body: JSON.stringify({ profileId, messages: history.current }), signal: controller.signal,
@@ -209,7 +236,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         if (!validated.success) throw new Error("Die Modellantwort entspricht nicht dem erwarteten Format. Bitte versuche es erneut.");
         const reply = validated.data;
         history.current.push(reply.message);
-        if (reply.message.content.trim()) add({ role: "assistant", text: reply.message.content, model: reply.profile.label });
+        if (reply.message.content.trim()) add({ role: "assistant", text: reply.message.content, model: reply.profile.label, timestamp: reply.message.timestamp }, reply.message.id);
         if (!reply.message.toolCalls?.length) return;
         let actionableResult = false;
         for (const call of reply.message.toolCalls) {
@@ -231,7 +258,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
             output = { error: cause instanceof Error ? cause.message : "Das Tool konnte die Anfrage nicht abschließen." };
             add({ role: "assistant", text: String(output.error), tool: call.name === "knowledge_search" ? "Wissensdienst · Anfrage fehlgeschlagen" : "anny · Anfrage fehlgeschlagen" });
           }
-          history.current.push({ role: "tool", toolCallId: call.id, name: call.name, content: JSON.stringify(output) });
+          history.current.push(remember({ role: "tool", toolCallId: call.id, name: call.name, content: JSON.stringify(output) }));
         }
         // Host-rendered cards already provide the answer and next action.
         // Avoid a redundant generation after availability, proposals or bookings.
@@ -239,7 +266,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
       }
       add({ role: "assistant", text: "Die maximale Zahl an Modellschritten für diese Nachricht ist erreicht. Du kannst die angezeigten Karten nutzen oder eine weitere Nachricht schreiben." });
     } catch (cause) {
-      appendChatText(history.current, "assistant", "Die Verarbeitung der letzten Nachricht wurde durch einen technischen Fehler unterbrochen. Offene Schritte wurden nicht automatisch fortgesetzt; berücksichtige die bereits vorliegenden Tool-Ergebnisse.");
+      appendHistory("assistant", "Die Verarbeitung der letzten Nachricht wurde durch einen technischen Fehler unterbrochen. Offene Schritte wurden nicht automatisch fortgesetzt; berücksichtige die bereits vorliegenden Tool-Ergebnisse.");
       throw cause;
     }
   }
@@ -281,23 +308,24 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     const trimmed = text.trim();
     if (!trimmed || trimmed.length > 2000 || !canSend || !start("Anfrage wird verarbeitet")) return;
     setInput("");
-    add({ role: "user", text: trimmed });
+    const eventId = add({ role: "user", text: trimmed });
+    if (!offline) appendHistory("user", trimmed, eventId);
     setActiveResult(null);
     const pendingProposal = activeProposal;
     setActiveProposal(null);
     try {
+      await stampMessages();
       if (/^(ja|ok(?:ay)?|bestätigen|buche(?:n)?|mach das)[.!\s]*$/i.test(trimmed) && pendingProposal) {
         setActiveProposal(pendingProposal);
         const text = "Bitte prüfe Raum und Zeitraum im Buchungsvorschlag und nutze dort „Buchung bestätigen“. Erst dieser Schritt löst die Buchung aus.";
         if (!offline) {
-          appendChatText(history.current, "user", trimmed);
-          appendChatText(history.current, "assistant", text);
+          appendHistory("assistant", text);
         }
         add({ role: "assistant", text });
         return;
       }
       if (!offline) {
-        await runModel(trimmed);
+        await runModel();
         return;
       }
       const intent = classifyIntent(trimmed, roomContext);
@@ -326,7 +354,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     } catch (cause) {
       add({ role: "assistant", text: cause instanceof Error ? cause.message : "Die Anfrage konnte nicht abgeschlossen werden. Bitte versuche es erneut." });
     } finally {
-      finish();
+      await finish();
     }
   }
 
@@ -341,9 +369,9 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     setActiveResult(null);
     setActiveProposal(null);
     add({ role: "user", text: `Ich möchte ${label} buchen.` });
-    try { await searchRooms(next, resource); }
+    try { await stampMessages(); await searchRooms(next, resource); }
     catch (cause) { add({ role: "assistant", text: cause instanceof Error ? cause.message : "Der Raum konnte nicht geprüft werden." }); }
-    finally { finish(); if (active) composer.current?.focus(); }
+    finally { await finish(); if (active) composer.current?.focus(); }
   }
 
   async function prepare(resource: Resource, interval: TimeInterval) {
@@ -351,9 +379,10 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     setActiveResult(null);
     setActiveProposal(null);
     const selection = `${resource.kind === 'workplace' ? 'Einzelner Arbeitsplatz: ' : ''}${resource.name}${resource.parentName ? ` · ${resource.parentName}` : ''}, ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} Uhr. Bitte vorbereiten.`;
-    if (!offline) appendChatText(history.current, "user", selection);
-    add({ role: "user", text: selection });
+    const eventId = add({ role: "user", text: selection });
+    if (!offline) appendHistory("user", selection, eventId);
     try {
+      await stampMessages();
       const args = { resourceId: resource.id, startDate: interval.startDate, endDate: interval.endDate };
       if (!offline) {
         const check = availabilityInputForSlot(resource.id, interval);
@@ -369,15 +398,16 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
       addActionResult({ text: "Der Buchungsvorschlag ist vorbereitet. Bitte prüfe die Angaben und bestätige die Buchung ausdrücklich.", tool: "anny · Buchungsvorschlag", proposal: { id, resourceName, startDate, endDate, status, expiresAt } });
       setActiveProposal(result.proposal.id);
     } catch (cause) { addActionResult({ text: cause instanceof Error ? cause.message : "Der Buchungsvorschlag konnte nicht erstellt werden." }); }
-    finally { finish(); }
+    finally { await finish(); }
   }
 
   async function confirm(proposal: Proposal) {
     if (activeProposal !== proposal.id || !start("anny · Bestätigte Buchung ausführen")) return;
     const action = `Ich bestätige den angezeigten Buchungsvorschlag für ${proposal.resourceName}, ${formatDateTime(proposal.startDate)} bis ${formatTime(proposal.endDate)} Uhr über die Schaltfläche.`;
-    if (!offline) appendChatText(history.current, "user", action);
-    add({ role: "user", text: action });
+    const eventId = add({ role: "user", text: action });
+    if (!offline) appendHistory("user", action, eventId);
     try {
+      await stampMessages();
       const result = await postForChat<{ proposal: Proposal; bookingId?: string }>(`/api/proposals/${encodeURIComponent(proposal.id)}/confirm`, {});
       if (result.proposal.status === "confirmed") {
         setActiveProposal(null);
@@ -390,7 +420,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         addActionResult({ text: result.proposal.status === "outcome_unknown" ? "Der Buchungsdienst hat nicht eindeutig geantwortet. Prüfe deine Buchungen, bevor du erneut buchst." : "Die Buchung konnte nicht bestätigt werden. Bitte suche erneut nach freien Zeiten." });
       }
     } catch (cause) { addActionResult({ text: cause instanceof Error ? cause.message : "Die Bestätigung konnte nicht abgeschlossen werden. Prüfe vor einem erneuten Versuch deine Buchungen." }); }
-    finally { finish(); }
+    finally { await finish(); }
   }
 
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void send(input); }
@@ -415,6 +445,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
             {messages.map((message) => (
               <article key={message.id} className={`chat-message chat-message--${message.role}`} aria-label={message.role === "user" ? "Du" : "HASI"}>
                 <span className="chat-speaker">{message.role === "user" ? "Du" : <><Sparkles size={14} aria-hidden="true" /> HASI {message.model && <small>{message.model}</small>}</>}</span>
+                {message.timestamp ? <time className="chat-message-time" dateTime={message.timestamp.createdAt} title="Servereingang · Europe/Berlin">{formatMessageTime(message.timestamp.createdAt)}</time> : <span className="chat-message-time">Zeitpunkt unbekannt</span>}
                 <div className="chat-message-body">
                   {message.tool && <span className="chat-tool-label"><Check size={13} aria-hidden="true" /> {message.tool}</span>}
                   <p>{message.text}</p>

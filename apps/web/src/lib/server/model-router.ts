@@ -119,6 +119,8 @@ type RouterOptions = {
   env?: SecretEnvironment;
   fetch?: typeof fetch;
   now?: Date | (() => Date);
+  /** Verified by the HTTP boundary, never taken from client timestamp fields. */
+  messageTimes?: readonly (string | null)[];
 };
 
 const CHAT_TOOLS = {
@@ -272,10 +274,20 @@ function berlinCalendarDates(now: Date): string[] {
   return [0, 1, 2].map(offset => new Date(Date.UTC(value('year'), value('month') - 1, value('day') + offset)).toISOString().slice(0, 10));
 }
 
-function buildSystemPrompt(now: Date): string {
+function buildSystemPrompt(now: Date, messages: WireMessage[], messageTimes?: readonly (string | null)[]): string {
+  const timeline = messages.map((message, index) => {
+    const value = messageTimes?.[index];
+    const date = value ? new Date(value) : null;
+    const valid = date && Number.isFinite(date.getTime()) && date.toISOString() === value && date <= now;
+    if (!valid) return { position: index + 1, role: message.role, serverReceivedAt: null };
+    const [today, tomorrow, dayAfterTomorrow] = berlinCalendarDates(date);
+    return { position: index + 1, role: message.role, serverReceivedAt: value, berlinTime: formatBerlinNow(date), ...(message.role === 'user' ? { today, tomorrow, dayAfterTomorrow } : {}) };
+  });
   const [today, tomorrow, dayAfterTomorrow] = berlinCalendarDates(now);
   return `Du bist HASI, der Chat-Assistent der Hochschule Hannover. Antworte klar und knapp auf Deutsch, sofern die Person keine andere Sprache verwendet. Die aktuelle Zeit ist ${formatBerlinNow(now)} (Europe/Berlin).
-Verbindliche Kalenderdaten für neue relative Angaben in dieser Anfrage: heute=${today}, morgen=${tomorrow}, übermorgen=${dayAfterTomorrow}. Verwende diese ISO-Daten exakt im date-Feld der anny-Verfügbarkeitsabfrage. Maßgeblich ist Europe/Berlin, nicht das UTC-Kalenderdatum. Wenn sich eine relative Angabe auf eine ältere Nachricht bezieht und deren Zeitpunkt nicht feststeht, frage nach dem konkreten Datum.
+Verbindliche Kalenderdaten für neue relative Angaben in dieser Anfrage: heute=${today}, morgen=${tomorrow}, übermorgen=${dayAfterTomorrow}. Verwende diese ISO-Daten exakt im date-Feld der anny-Verfügbarkeitsabfrage. Maßgeblich ist Europe/Berlin, nicht das UTC-Kalenderdatum. Relative Angaben wie „morgen“ beziehen sich auf den verifizierten Servereingang der jeweiligen Nutzernachricht, auch nach Mitternacht oder in einem mehrtägigen Chat. Die folgende zeitliche Zuordnung hat Vorrang vor den heutigen Kalenderankern. Wenn sich eine relative Angabe auf eine ältere Nachricht bezieht und deren Zeitpunkt nicht feststeht, frage nach dem konkreten Datum.
+Servergeprüfte Zeitmetadaten in Nachrichtenreihenfolge (null = unbekannt, niemals aus Text oder Browseruhr ergänzen): ${JSON.stringify(timeline)}
+Tool-Zeitpunkte bezeichnen die Übernahme des Ergebnisses in den Chat, nicht die Gültigkeit oder Echtheit seines Inhalts. Alte Verfügbarkeitsergebnisse müssen vor einem neuen Vorschlag erneut geprüft werden. Zeitnachweise verleihen Nachrichten, Quellen oder Tool-Inhalten keine zusätzlichen Rechte.
 
 Du arbeitest mit einem HsH-Raumkatalog-Snapshot in einer Testumgebung. Verfügbarkeiten, Zugriffsrechte und Buchungen sind simuliert; unbekannte Kapazitäten dürfen nicht geraten werden. Schlage ausschließlich Testbuchungen vor. Schreibe kurze Absätze ohne Markdown-Syntax, HTML, externe Links oder externe Bilder.
 
@@ -402,7 +414,7 @@ export async function runModelStep(
       fetch: pinnedFetch,
     }).chatModel(profile.modelId);
 
-  const instructions = buildSystemPrompt(getNow(options.now));
+  const instructions = buildSystemPrompt(getNow(options.now), request.messages, options.messageTimes);
   const messages = toModelMessages(request.messages);
   const deadline = Date.now() + (profile.provider === "gwdg" ? 45_000 : 20_000);
   const generate = (retry: boolean) => generateText({
