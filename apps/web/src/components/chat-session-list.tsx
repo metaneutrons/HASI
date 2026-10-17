@@ -3,7 +3,7 @@
 import { MoreHorizontal, Pencil, SquarePen, Trash2, X } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
 import { MAX_CHAT_SESSIONS } from "@/lib/chat-sessions";
-import type { ChatWorkspaceStore } from "@/lib/chat-workspace-store";
+import { canStartNewChat, type ChatWorkspaceStore } from "@/lib/chat-workspace-store";
 
 type View = ReturnType<ChatWorkspaceStore["getSnapshot"]>;
 
@@ -17,6 +17,7 @@ export function ChatSessionList({ view, store, close, onOpenChat, variant = "dra
     return b.updatedAt.localeCompare(a.updatedAt);
   });
   const embedded = variant === "embedded";
+  const canStart = canStartNewChat(view);
 
   function rename(event: FormEvent<HTMLFormElement>, sessionId: string) {
     event.preventDefault();
@@ -29,7 +30,7 @@ export function ChatSessionList({ view, store, close, onOpenChat, variant = "dra
       <h2 id={`${idPrefix}-heading`}>Chats {sessions.length > 1 && <small className="chat-count-badge" aria-label={`${sessions.length} Chats`}>{sessions.length}</small>}</h2>
       {close && <button className="icon-button" type="button" aria-label="Unterhaltungen schließen" onClick={close}><X size={20} aria-hidden="true" /></button>}
     </div>}
-    <button className="chat-list-create" type="button" aria-label={sessions.length >= MAX_CHAT_SESSIONS ? `Neuer Chat. Maximal ${MAX_CHAT_SESSIONS} Chats.` : "Neuer Chat"} disabled={sessions.length >= MAX_CHAT_SESSIONS} onClick={() => { store.create(); close?.(); onOpenChat?.(); }}><SquarePen size={17} strokeWidth={1.8} aria-hidden="true" /><span>Neuer Chat</span></button>
+    <button className="chat-list-create" type="button" aria-label={!canStart && sessions.length >= MAX_CHAT_SESSIONS ? `Neuer Chat. Maximal ${MAX_CHAT_SESSIONS} Chats.` : "Neuer Chat"} disabled={!canStart} title={canStart ? undefined : "Dieser Chat ist noch leer oder das Chatlimit ist erreicht."} onClick={() => { store.create(); close?.(); onOpenChat?.(); }}><SquarePen size={17} strokeWidth={1.8} aria-hidden="true" /><span>Neuer Chat</span></button>
     <div className="chat-session-items" role="list" aria-labelledby={`${idPrefix}-heading`}>
       {sessions.map((session) => {
         const active = session.id === view.workspace.activeId;

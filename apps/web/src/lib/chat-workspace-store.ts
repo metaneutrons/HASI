@@ -8,6 +8,19 @@ import { modelProfileIdSchema, type ModelProfileId } from "./chat-contract";
 type StorageLike = Pick<Storage, "getItem" | "setItem">;
 type View = { workspace: ChatWorkspace; busy: Readonly<Record<string, boolean>>; notice: string | null };
 
+function unusedChat(view: View) {
+  const empty = (session: ChatWorkspace["sessions"][number]) => !view.busy[session.id]
+    && !session.snapshot.messages.length && !session.snapshot.history.length && !session.snapshot.input.trim();
+  const active = view.workspace.sessions.find(session => session.id === view.workspace.activeId);
+  return active && empty(active) ? active : view.workspace.sessions.find(empty);
+}
+
+/** Shared admission for the toolbar, sidebar, drawer and store mutation. */
+export function canStartNewChat(view: View): boolean {
+  const unused = unusedChat(view);
+  return unused ? unused.id !== view.workspace.activeId : view.workspace.sessions.length < MAX_CHAT_SESSIONS;
+}
+
 export function browserChatStorage(): StorageLike | undefined {
   try { return typeof window === "undefined" ? undefined : window.localStorage; }
   catch { return undefined; }
@@ -74,6 +87,11 @@ export function createChatWorkspaceStore(ownerId: string, storage?: StorageLike)
       configuredDefault = nextDefault;
     },
     create(defaultProfileId: ModelProfileId = configuredDefault) {
+      const unused = unusedChat(view);
+      if (unused) {
+        if (unused.id !== view.workspace.activeId) publish(selectChat(view.workspace, unused.id));
+        return;
+      }
       if (view.workspace.sessions.length >= MAX_CHAT_SESSIONS) {
         view = { ...view, notice: `Du kannst bis zu ${MAX_CHAT_SESSIONS} Chats speichern. Lösche einen nicht mehr benötigten Verlauf, um einen neuen Chat zu beginnen.` }; emit(); return;
       }
