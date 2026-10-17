@@ -615,9 +615,14 @@ function availabilityIntervals(
   const day = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate()));
   const requestedStart = Date.parse(startDate);
   const now = Date.now();
-  return [9, 13].flatMap((hour) => {
+  const candidateStarts = new Set([requestedStart]);
+  for (const hour of [9, 13]) {
     const start = new Date(day);
     start.setUTCHours(hour, 0, 0, 0);
+    candidateStarts.add(start.getTime());
+  }
+  return [...candidateStarts].sort((first, second) => first - second).flatMap((timestamp) => {
+    const start = new Date(timestamp);
     const end = new Date(start.getTime() + duration * 60_000);
     const startIso = start.toISOString();
     const endIso = end.toISOString();

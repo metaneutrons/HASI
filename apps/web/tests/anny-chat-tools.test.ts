@@ -117,6 +117,25 @@ describe("bounded Anny chat tools", () => {
     await expect(tools.run('anny_get_availability', { resourceId: '179669', date: '2030-01-03', time: '09:00', durationMinutes: 60 })).rejects.toThrow(/zugänglichen Ressourcen/);
     expect(harness.calls.map(c => c.path)).toEqual(['/api/resources']);
   });
+  it("finds 1J workplaces and prepares the requested eight-hour interval without committing", async () => {
+    const harness = createHarness('2030-01-01T10:30:00.000Z', hshDemoCatalog);
+    await login(harness.request, 'employee');
+    const tools = createAnnyChatTools(harness.request, { now: harness.now });
+    const search = await tools.run('anny_search_resources', { kind: 'workplace', location: 'Gebäude 1J' });
+    expect(search.rooms).toHaveLength(8);
+    expect(search.output).toMatchObject({ returned: 8, truncated: 19, availabilityChecked: false });
+    const resource = search.rooms![0]!.resource;
+    const availability = await tools.run('anny_get_availability', { resourceId: resource.id, date: '2030-01-07', time: '08:00', durationMinutes: 480 });
+    const slot = availability.rooms![0]!.intervals.find(interval => interval.startDate === '2030-01-07T07:00:00.000Z');
+    expect(slot).toMatchObject({ endDate: '2030-01-07T15:00:00.000Z', available: true });
+    const proposal = await tools.run('anny_propose_booking', { resourceId: resource.id, startDate: slot!.startDate, endDate: slot!.endDate });
+    expect(proposal.proposal?.status).toBe('pending');
+    expect(harness.calls.some(({ path }) => path.endsWith('/confirm'))).toBe(false);
+    const missing = await tools.run('anny_search_resources', { kind: 'workplace', location: 'Gebäude 99Z' });
+    expect(missing.output).toMatchObject({ returned: 0, availabilityChecked: false });
+    expect(missing.output.notice).toMatch(/keine Verfügbarkeitsprüfung|Verfügbarkeit wurde nicht geprüft/u);
+  });
+
   it("rechecks a restored slot in Berlin time using a fresh bridge before proposing", async () => {
     const harness = createHarness();
     await login(harness.request, "student");
@@ -129,7 +148,7 @@ describe("bounded Anny chat tools", () => {
     const args = { resourceId: resource.id, startDate: slot.startDate, endDate: slot.endDate };
     await expect(restored.run("anny_propose_booking", args)).rejects.toThrow(/nicht als verfügbar/);
     const check = availabilityInputForSlot(resource.id, slot);
-    expect(check).toMatchObject({ date: "2030-01-03", time: "10:00", durationMinutes: 60 });
+    expect(check).toMatchObject({ date: "2030-01-03", time: "09:00", durationMinutes: 60 });
     await restored.run("anny_get_availability", check);
     expect((await restored.run("anny_propose_booking", args)).proposal?.status).toBe("pending");
     expect(harness.calls.some(({ path }) => path.endsWith("/confirm"))).toBe(false);
@@ -244,7 +263,7 @@ describe("bounded Anny chat tools", () => {
       time: "09:00",
       durationMinutes: 60,
     });
-    const slot = outputIntervals(availability).find(({ available }) => available);
+    const slot = outputIntervals(availability).find(({ available, startDate }) => available && startDate === "2030-01-15T09:00:00.000Z");
     expect(slot).toBeDefined();
 
     const equivalent = await tools.run("anny_propose_booking", {
@@ -300,10 +319,10 @@ describe("bounded Anny chat tools", () => {
     });
     const modelIntervals = outputIntervals(result);
 
-    expect(modelIntervals).toHaveLength(2);
+    expect(modelIntervals).toHaveLength(3);
     expect(modelIntervals.some(({ available }) => !available)).toBe(true);
     expect(result.rooms?.[0]?.intervals.every(({ available }) => available)).toBe(true);
-    expect(result.rooms?.[0]?.intervals).toHaveLength(1);
+    expect(result.rooms?.[0]?.intervals).toHaveLength(2);
   });
 
   it("bounds result counts and metadata size", async () => {

@@ -240,6 +240,8 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
     while (modelResources.length > 0) {
       const output = {
         resources: modelResources,
+        availabilityChecked: false,
+        ...(total === 0 ? { notice: "Keine Treffer für die angegebenen Suchfilter. Das ist keine Verfügbarkeitsprüfung und kein Nachweis, dass an diesem Standort keine Ressourcen existieren. Prüfe die Filter." } : {}),
         returned: modelResources.length,
         truncated: Math.max(0, total - modelResources.length),
       };
@@ -254,7 +256,7 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
       shown.pop();
     }
 
-    const output = boundedOutput({ resources: [], returned: 0, truncated: total });
+    const output = boundedOutput({ resources: [], availabilityChecked: false, returned: 0, truncated: total, notice: "Keine Treffer für diese Suchfilter; Verfügbarkeit wurde nicht geprüft. Dies belegt keinen leeren Standortkatalog." });
     return { name: "anny_search_resources", output, rooms: [] };
   }
 

@@ -204,7 +204,7 @@ describe('AnnyClient', () => {
       duration: 60
     });
 
-    expect(response.data).toHaveLength(2);
+    expect(response.data).toHaveLength(3);
     expect(response.data[0]?.resource_ids).toEqual([MOCK_IDS.resources.seminarRoom]);
     expect(authHeaders).toEqual([null]);
   });

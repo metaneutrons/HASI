@@ -1036,7 +1036,7 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .chat-session-list--drawer { gap: 12px; }
 .chat-list-heading { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 9px; }
 .chat-list-heading h2 { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ink); font-size: 16px; font-weight: 630; letter-spacing: -0.025em; }
-.chat-list-heading h2 small { display: inline-flex; min-width: 20px; height: 20px; align-items: center; justify-content: center; border-radius: 999px; background: var(--surface-soft); color: var(--muted); font-size: 10px; font-weight: 560; letter-spacing: 0; }
+.chat-count-badge, .chat-list-heading h2 small { display: inline-flex; min-width: 20px; height: 20px; flex-shrink: 0; padding: 0 5px; align-items: center; justify-content: center; border-radius: 999px; background: var(--surface-soft); color: var(--muted); font-size: 10px; font-weight: 560; letter-spacing: 0; }
 .chat-list-heading .icon-button { flex: 0 0 auto; }
 .chat-list-create { display: flex; width: 100%; min-height: 44px; align-items: center; justify-content: flex-start; gap: 9px; margin: 0 0 4px; padding: 8px 10px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 560; cursor: pointer; text-align: left; }
 .chat-list-create svg { flex: 0 0 auto; color: var(--accent); }
@@ -1057,9 +1057,6 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .chat-session-actions button { display: flex; min-height: 44px; flex: 1; align-items: center; justify-content: center; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink-soft); cursor: pointer; font-size: 13px; }
 .chat-session-actions button:hover { background: var(--accent-wash); }
 .chat-session-actions button:last-child { color: var(--red); }
-.chat-session-list--embedded .chat-list-heading { min-height: 32px; padding: 0 7px; }
-.chat-session-list--embedded .chat-list-heading h2 { gap: 7px; color: var(--muted); font-size: 11px; font-weight: 650; letter-spacing: 0.005em; }
-.chat-session-list--embedded .chat-list-heading h2 small { min-width: 18px; height: 18px; font-size: 9px; }
 .chat-session-list--embedded .chat-list-create { margin: 0 0 3px; padding: 7px 8px; font-size: 12px; }
 .chat-session-list--embedded .chat-session-items { max-height: min(40svh, 330px); flex: none; overflow: auto; overscroll-behavior: contain; padding: 1px 2px; }
 .chat-session-list--embedded .chat-session-row { border-radius: 9px; }

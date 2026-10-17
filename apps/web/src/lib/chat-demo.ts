@@ -63,6 +63,16 @@ const ZU_CAPACITY: Record<string, number> = {
 };
 
 const FEATURES = ["Display", "Beamer", "Whiteboard", "Videokonferenz", "WLAN"] as const;
+const WEEKDAY_DATE_PATTERN = /(?<![\p{L}\p{N}_])(?:(?:am|zum)\s+)?(?:(?:kommend(?:e|en|er|es)?|nächste(?:n|r|s)?|naechste(?:n|r|s)?|next|coming)\s+)?(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)(?![\p{L}\p{N}_])/giu;
+const WEEKDAY_NUMBERS: Record<string, number> = {
+  sonntag: 0,
+  montag: 1,
+  dienstag: 2,
+  mittwoch: 3,
+  donnerstag: 4,
+  freitag: 5,
+  samstag: 6,
+};
 
 type DateCandidate = { value: string; start: number; end: number };
 
@@ -99,6 +109,16 @@ function formatDate(year: number, month: number, day: number): string {
   return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+function nextBerlinWeekday(now: Date, weekday: string): string | undefined {
+  const targetWeekday = WEEKDAY_NUMBERS[normalize(weekday)];
+  if (targetWeekday === undefined) return undefined;
+  const today = berlinParts(now);
+  const localDate = new Date(Date.UTC(today.year, today.month - 1, today.day));
+  const daysUntil = (targetWeekday - localDate.getUTCDay() + 7) % 7 || 7;
+  const targetDate = new Date(Date.UTC(today.year, today.month - 1, today.day + daysUntil));
+  return formatDate(targetDate.getUTCFullYear(), targetDate.getUTCMonth() + 1, targetDate.getUTCDate());
+}
+
 function dateIsValid(value: string | undefined): value is string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [year, month, day] = value.split("-").map(Number);
@@ -132,7 +152,22 @@ function parseDateCandidates(text: string, now: Date): { candidates: DateCandida
     candidates.push({ value: dateIsValid(value) ? value : INVALID, start: match.index ?? 0, end: (match.index ?? 0) + match[0].length });
   }
 
-  const unsupportedDate = /\b(?:nächste[nrms]?\s+woche|kommende[rn]?\s+woche|am\s+(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)|(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag))\b/iu.test(text);
+  for (const match of text.matchAll(new RegExp(WEEKDAY_DATE_PATTERN.source, WEEKDAY_DATE_PATTERN.flags))) {
+    const start = match.index ?? 0;
+    const end = start + match[0].length;
+    candidates.push({
+      value: (() => {
+        const today = new Date(Date.UTC(berlinToday.year, berlinToday.month - 1, berlinToday.day)).getUTCDay();
+        const explicitFuture = /\b(?:kommend\w*|nächst\w*|naechst\w*|next|coming)\b/iu.test(match[0]);
+        if (WEEKDAY_NUMBERS[normalize(match[1] ?? "")] === today && !explicitFuture) return INVALID;
+        return nextBerlinWeekday(now, match[1] ?? "") ?? INVALID;
+      })(),
+      start,
+      end,
+    });
+  }
+
+  const unsupportedDate = /\b(?:nächste[nrms]?\s+woche|kommende[rn]?\s+woche|next\s+week|(?:letzte[nrms]?|vergangene[nrms]?|vorige[nrms]?|diese[nrms]?)\s+(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag))\b/iu.test(text);
   const distinct = [...new Set(candidates.map(({ value }) => value))];
   const negatedDate = candidates.some((candidate) => isNegatedNear(text, candidate.start, candidate.end));
   return { candidates, invalid: unsupportedDate || negatedDate || distinct.length > 1 || distinct.includes(INVALID) };
@@ -284,6 +319,11 @@ function parseFeatures(text: string): string[] {
 function parseLocation(text: string): { found: boolean; value?: string } {
   const normalized = normalize(text);
   const found: string[] = [];
+  const buildingPattern = /\b(?:gebaude|geb\.?|building)\s+(?:nr\.?\s*)?([a-z]?\d+[a-z0-9]*(?:[.-]\d+)*)\b/giu;
+  for (const match of normalized.matchAll(buildingPattern)) {
+    const code = match[1]?.toLocaleUpperCase("de-DE");
+    if (code) found.push(isNegatedNear(normalized, match.index ?? 0, (match.index ?? 0) + match[0].length) ? INVALID : code);
+  }
   for (const match of normalized.matchAll(/\bexpo[\s-]*plaza\b/gu)) {
     found.push(isNegatedNear(normalized, match.index ?? 0, (match.index ?? 0) + match[0].length) ? INVALID : "Expo Plaza");
   }
@@ -301,8 +341,10 @@ function parseQuery(text: string): string | undefined {
     /\b(?:\d+|ein(?:e|en|em|er)?|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s+(?:arbeitsplätz(?:e|en)|arbeitsplaetz(?:e|en)|schreibtisch(?:e|en)|desks?)\b/giu,
     /\b(?:arbeitsplätz(?:e|en)?|arbeitsplatz|schreibtisch(?:e|en)?|büros?|bueros?|büroraum|büroräume|bueroraum|bueroraeume|flex[-\s]?büros?|flex[-\s]?bueros?|desks?|besprechungsräum(?:e|en)|besprechungsraum|meetingräum(?:e|en)|meetingraum|hörsäle|hörsaal|hoersaele|hoersaal)\b/giu,
     /(?<![\p{L}\p{N}_])(?:übermorgen|morgen|heute)(?![\p{L}\p{N}_])/giu,
+    new RegExp(WEEKDAY_DATE_PATTERN.source, WEEKDAY_DATE_PATTERN.flags),
     /(?<!\d)\d{4}-\d{1,2}-\d{1,2}(?!\d)/gu,
     /(?<!\d)\d{1,2}\.\d{1,2}\.(?:\d{4})?(?!\d)/gu,
+    /\b(?:(?:im|in|at)\s+)?(?:gebäude|gebaeude|gebaude|geb\.?|building)\s+(?:nr\.?\s*)?[a-z]?\d+[a-z0-9]*(?:[.-]\d+)*\b/giu,
     /\b\d{1,2}(?::\d{2})?\s*(?:bis|–|—|-)\s*\d{1,2}(?::\d{2})?\s*(?:Uhr)?\b/giu,
     /\b(?:um\s*)?\d{1,2}:\d{2}\b|\b(?:um\s*)?\d{1,2}\s*Uhr\b/giu,
     /\b(?:\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s*(?:minuten?|stunden?)\b/giu,
@@ -311,7 +353,7 @@ function parseQuery(text: string): string | undefined {
     /\b(?:display|beamer|whiteboard|videokonferenz|wlan)\b/giu,
     /\b(?:expo[\s-]*plaza|linden)\b/giu,
     /\b(?:ich\s+)?(?:such(?:e|en)?|brauche|benötige|benoetige|möchte|moechte|hätte\s+gern|haette\s+gern|finde|finden|reserviere|buch(?:e|en)?|gibt\s+es|haben\s+sie)\b/giu,
-    /\b(?:kannst|kann|können|koennen|könnt|koennt|du|mir|mich|uns|ihnen|zeig|zeige|zeigen|gib|gibt|einmal|mal|ein(?:e|en|em|er)?|der|die|das|welche|welcher|welchen|was|nach|einzeln(?:e|en|er)?|bitte|doch|lieber|stattdessen|campus|raumbuchung(?:en)?|raum|räume|raeume|zimmer|für|fuer|mit|ohne|am|im|in|und|oder|wir|sind|zu|person(?:en)?|leute|gruppe|morgen|heute|übermorgen|uebermorgen)\b/giu,
+    /\b(?:kannst|kann|können|koennen|könnt|koennt|du|mir|mich|uns|ihnen|zeig|zeige|zeigen|gib|gibt|einmal|mal|ein(?:e|en|em|er)?|der|die|das|welche|welcher|welchen|was|nach|einzeln(?:e|en|er)?|bitte|doch|lieber|stattdessen|campus|raumbuchung(?:en)?|raum|räume|raeume|zimmer|für|fuer|mit|ohne|am|im|in|und|oder|wir|sind|zu|von|person(?:en)?|leute|gruppe|morgen|heute|übermorgen|uebermorgen)\b/giu,
   ];
   for (const pattern of patterns) residual = residual.replace(pattern, " ");
   const words = normalize(residual).match(/[a-z0-9]+/gu)?.filter((word) => word.length > 2) ?? [];
@@ -390,6 +432,20 @@ function queryTokens(query: string): string[] {
   return normalize(query).match(/[a-z0-9]+/gu) ?? [];
 }
 
+function canonicalLocation(value: string): string {
+  return normalize(value)
+    .trim()
+    .replace(/^(?:(?:im|in|at)\s+)?(?:gebaude|geb\.?|building)\s+(?:nr\.?\s*)?/u, "")
+    .trim();
+}
+
+const GENERIC_WORKPLACE_QUERY_TOKENS = new Set([
+  "buro", "buros", "buroraum", "buroraume", "arbeitsplatz", "arbeitsplatze",
+  "schreibtisch", "schreibtische", "schreibtischarbeitsplatz", "schreibtischarbeitsplatze",
+  "office", "offices", "workplace", "workplaces", "desk", "desks",
+  "gebaude", "geb", "building", "buildings", "im", "in", "at",
+]);
+
 function stemGermanWord(word: string): string {
   if (word.length > 5 && /(?:en|er|es|em|e|n|s)$/u.test(word)) return word.replace(/(?:en|er|es|em|e|n|s)$/u, "");
   return word;
@@ -399,7 +455,10 @@ export function matchingResources(resources: Resource[], request: RoomRequest): 
   if (request.capacity !== undefined && (!Number.isInteger(request.capacity) || request.capacity < 1)) return [];
   if (request.location === INVALID) return [];
   const requiredFeatures = request.features ?? [];
-  const requiredQuery = queryTokens(request.query ?? "").map(stemGermanWord).filter(Boolean);
+  const requiredQuery = queryTokens(request.query ?? "")
+    .filter((token) => !(request.kind === "workplace" && GENERIC_WORKPLACE_QUERY_TOKENS.has(token)))
+    .map(stemGermanWord)
+    .filter(Boolean);
   return resources.filter((resource) => {
     const kind = resource.kind ?? 'room';
     if (request.kind === 'room' ? kind === 'workplace' : request.kind && kind !== request.kind) return false;
@@ -411,8 +470,20 @@ export function matchingResources(resources: Resource[], request: RoomRequest): 
     const features = new Set(resource.features.map(normalize));
     if (!requiredFeatures.every((feature) => features.has(normalize(feature)))) return false;
     const location = kind === 'workplace' ? `${resource.location} ${resource.parentName ?? resource.name}` : resource.location;
-    if (request.location && !normalize(location).includes(normalize(request.location))) return false;
-    const searchable = normalize(`${resource.name} ${resource.parentName ?? ''} ${resource.description} ${resource.features.join(" ")}`);
+    if (request.location) {
+      const requestedLocation = canonicalLocation(request.location);
+      if (!requestedLocation) return false;
+      const identifier = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/u.test(requestedLocation) && /\d/u.test(requestedLocation);
+      if (identifier) {
+        // Building/room codes are identifiers, never substrings of another code
+        // or a room's floor number. Keep legacy location aliases and source room
+        // codes searchable without changing the imported catalog.
+        const locationCodes = normalize(resource.location).match(/[a-z0-9]+(?:[.-][a-z0-9]+)*/gu) ?? [];
+        const roomCodes = normalize(`${resource.name} ${resource.parentName ?? ""}`).match(/\b(?:[a-z]?\d+[a-z][a-z0-9]*|[a-z]\d+)(?:[.-]\d+)+\b/gu) ?? [];
+        if (![...locationCodes, ...roomCodes].some(code => code === requestedLocation || code.startsWith(`${requestedLocation}.`) || code.startsWith(`${requestedLocation}-`))) return false;
+      } else if (!normalize(location).includes(requestedLocation)) return false;
+    }
+    const searchable = normalize(`${resource.name} ${resource.location} ${resource.parentName ?? ''} ${resource.description} ${resource.features.join(" ")}`);
     if (!requiredQuery.every((token) => searchable.split(/[^a-z0-9]+/u).some((candidate) => stemGermanWord(candidate) === token))) return false;
     return true;
   });
