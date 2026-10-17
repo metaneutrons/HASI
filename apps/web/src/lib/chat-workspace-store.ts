@@ -3,6 +3,7 @@ import {
   renameChat, saveChatWorkspace, selectChat, updateChatSnapshot,
   type ChatSnapshot, type ChatWorkspace,
 } from "./chat-sessions";
+import { modelProfileIdSchema, type ModelProfileId } from "./chat-contract";
 
 type StorageLike = Pick<Storage, "getItem" | "setItem">;
 type View = { workspace: ChatWorkspace; busy: Readonly<Record<string, boolean>>; notice: string | null };
@@ -16,6 +17,7 @@ export function browserChatStorage(): StorageLike | undefined {
 export function createChatWorkspaceStore(ownerId: string, storage?: StorageLike) {
   const loaded = loadChatWorkspace(ownerId, storage);
   let view: View = { workspace: loaded.workspace, busy: {}, notice: loaded.notice };
+  let configuredDefault: ModelProfileId = "groq-oss-120b";
   let timer: ReturnType<typeof setTimeout> | undefined;
   const listeners = new Set<() => void>();
   const emit = () => listeners.forEach((listener) => listener());
@@ -56,11 +58,26 @@ export function createChatWorkspaceStore(ownerId: string, storage?: StorageLike)
       }
       publish(next, Boolean(view.busy[sessionId]) === busy ? view.busy : { ...view.busy, [sessionId]: busy });
     },
-    create() {
+    setDefaultProfile(profileId: ModelProfileId) {
+      const nextDefault = modelProfileIdSchema.parse(profileId);
+      let workspace = view.workspace;
+      // The sidebar can create empty chats before the server policy arrives.
+      // Move all untouched default sessions together; preserve selected models
+      // and any session with conversation content or an unsent draft.
+      for (const session of workspace.sessions) {
+        const snapshot = session.snapshot;
+        if (snapshot.profileId === configuredDefault && !snapshot.messages.length && !snapshot.history.length && !snapshot.input) {
+          workspace = updateChatSnapshot(workspace, session.id, { ...snapshot, profileId: nextDefault });
+        }
+      }
+      publish(workspace);
+      configuredDefault = nextDefault;
+    },
+    create(defaultProfileId: ModelProfileId = configuredDefault) {
       if (view.workspace.sessions.length >= MAX_CHAT_SESSIONS) {
         view = { ...view, notice: `Du kannst bis zu ${MAX_CHAT_SESSIONS} Chats speichern. Lösche einen nicht mehr benötigten Verlauf, um einen neuen Chat zu beginnen.` }; emit(); return;
       }
-      const session = createChatSession();
+      const session = createChatSession(modelProfileIdSchema.parse(defaultProfileId));
       publish({ ...view.workspace, activeId: session.id, sessions: [...view.workspace.sessions, session] });
     },
     select(sessionId: string) { publish(selectChat(view.workspace, sessionId)); },
@@ -68,7 +85,7 @@ export function createChatWorkspaceStore(ownerId: string, storage?: StorageLike)
     remove(sessionId: string) {
       if (view.busy[sessionId]) return;
       const busy = { ...view.busy }; delete busy[sessionId];
-      publish(deleteChat(view.workspace, sessionId), busy);
+      publish(deleteChat(view.workspace, sessionId, new Date(), configuredDefault), busy);
     },
   };
 }

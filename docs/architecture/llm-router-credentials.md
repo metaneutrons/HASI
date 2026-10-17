@@ -1,6 +1,6 @@
 # LLM router credentials
 
-Date: 2026-10-16. Status: agreed architecture with server-side Groq, GWDG SAIA
+Date: 2026-10-17. Status: agreed architecture with server-side Groq, GWDG SAIA
 and optional administrator-configured OpenAI-compatible connections.
 
 GroqCloud is the original provider for the HASI prototype. `GROQ_API_KEY` is a
@@ -9,6 +9,13 @@ Vercel Secret for project `hasi`, team `metaneutrons`, in Production and Preview
 presence and successful inference are separate states; neither approves a
 provider for protected HsH information. This status does not claim a live
 inference test or institutional approval.
+
+The [version-1 registry configuration](model-provider-configuration.md) now replaces
+the fixed runtime profile array. Standard Groq, GWDG, OpenAI and Anthropic
+connections and multiple custom connections are operator-configurable. User
+selection and error-specific fallback rules require explicit policy settings;
+the bundled demo enables manual selection and has no fallback rules. The public
+mock administrator has no global configuration/credential-write capability.
 
 ## Separate providers, model profiles and secrets
 
@@ -45,13 +52,15 @@ An illustrative server-owned connection is:
 }
 ```
 
-The GWDG connection is fixed to its SAIA endpoint and has one selectable profile.
+The bundled GWDG connection is fixed to its SAIA endpoint and has one selectable profile.
 The custom connection uses `CUSTOM_ENDPOINT` and `CUSTOM_MODEL_ID` supplied by
 the operator in the server environment; it is shown only when the HTTPS
 endpoint and model ID validate. Its key is resolved through the same allowlisted
-secret resolver. No custom connection values are accepted from a chat request.
-The router allowlists Groq GPT-OSS 120B, 20B and Qwen3.8 27B Preview, the GWDG
-`qwen3-30b-a3b-instruct-2507` profile, and one custom model profile. The GWDG
+secret resolver. Additional declared connections can reference `env:OPENAI_API_KEY`,
+`env:ANTHROPIC_API_KEY` or `env:HASI_LLM_SECRET_<NAME>`; client input cannot
+select these references. No custom connection values are accepted from a chat request.
+The bundled configuration includes Groq GPT-OSS 120B, 20B and Qwen3.8 27B Preview, the GWDG
+`qwen3-30b-a3b-instruct-2507` profile, and the optional legacy custom profile. Other profiles are declared in the validated operator document, not enabled by client input. The GWDG
 GPT-OSS 120B profile is deferred after protected Preview probes returned
 upstream HTTP 500; its cause is not established. Qwen passed Preview checks for
 knowledge retrieval and anny room search on 2026-10-16. Production greeting

@@ -68,6 +68,49 @@ describe("mounted chat workspace isolation", () => {
     expect(third.snapshot.profileId).toBe("groq-oss-120b");
   });
 
+  it("uses a supplied server default profile ID for a newly created chat", () => {
+    const store = createChatWorkspaceStore("student", memory());
+    const prior = store.getSnapshot().workspace.sessions[0]!;
+    store.update(prior.id, { ...prior.snapshot, profileId: "gwdg-qwen3-30b" }, false);
+
+    store.create("openai-campus_model-2");
+
+    const workspace = store.getSnapshot().workspace;
+    const created = workspace.sessions.find((session) => session.id === workspace.activeId)!;
+    expect(created.snapshot.profileId).toBe("openai-campus_model-2");
+    expect(workspace.sessions.find((session) => session.id === prior.id)!.snapshot.profileId).toBe("gwdg-qwen3-30b");
+  });
+
+  it("uses the operator default for list actions and the replacement of a final chat", () => {
+    const store = createChatWorkspaceStore("student", memory());
+    store.setDefaultProfile("campus-default.v2");
+    expect(store.getSnapshot().workspace.sessions[0]!.snapshot.profileId).toBe("campus-default.v2");
+    store.create();
+    let view = store.getSnapshot();
+    expect(view.workspace.sessions.find(session => session.id === view.workspace.activeId)!.snapshot.profileId).toBe("campus-default.v2");
+    for (const session of [...view.workspace.sessions]) store.remove(session.id);
+    view = store.getSnapshot();
+    expect(view.workspace.sessions).toHaveLength(1);
+    expect(view.workspace.sessions[0]!.snapshot.profileId).toBe("campus-default.v2");
+    store.flush();
+  });
+
+  it("resolves early sidebar-created chats when the server default arrives without changing drafts or explicit choices", () => {
+    const store = createChatWorkspaceStore("student", memory());
+    const first = store.getSnapshot().workspace.sessions[0]!;
+    store.update(first.id, { ...first.snapshot, input: "Draft" }, false);
+    store.create();
+    store.create();
+    store.create("gwdg-qwen3-30b");
+    store.setDefaultProfile("campus-default.v2");
+    const sessions = store.getSnapshot().workspace.sessions;
+    expect(sessions.filter(session => session.snapshot.profileId === "campus-default.v2")).toHaveLength(2);
+    expect(sessions.find(session => session.id === first.id)!.snapshot.input).toBe("Draft");
+    expect(sessions.find(session => session.id === first.id)!.snapshot.profileId).toBe("groq-oss-120b");
+    expect(sessions.at(-1)!.snapshot.profileId).toBe("gwdg-qwen3-30b");
+    store.flush();
+  });
+
   it("debounces storage and makes write failures visible without throwing or dropping in-memory chats", () => {
     vi.useFakeTimers();
     const storage = memory();

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 
 vi.mock("server-only", () => ({}));
 
@@ -7,6 +8,9 @@ import {
   modelReplySchema,
   type ChatRequest,
 } from "../src/lib/chat-contract";
+import { loadModelConfiguration } from "../src/lib/server/model-config";
+import { createRoutingPins } from "../src/lib/server/routing-pins";
+
 import {
   listModelProfiles,
   ModelRouterError,
@@ -188,6 +192,7 @@ describe("model router", () => {
         },
       ],
       defaultProfileId: "groq-oss-120b",
+      userChoiceEnabled: true,
     });
     expect(JSON.stringify(listModelProfiles({ GROQ_API_KEY: FAKE_KEY }))).not.toContain(FAKE_KEY);
     expect(listModelProfiles({}).configured).toBe(false);
@@ -803,5 +808,191 @@ describe("model router", () => {
         ],
       }).success,
     ).toBe(false);
+  });
+});
+
+
+describe("operator routing policy", () => {
+  const turnId = "ae93bd5b-49b1-40a9-8250-370d6c355fa7";
+  const pins = () => createRoutingPins("test-only-routing-secret", "workspace:student", () => NOW);
+  const input = (): ChatRequest => ({ profileId: "groq-oss-120b", messages: [{ id: turnId, role: "user", content: "Suche einen Besprechungsraum" }] });
+  function environment(change: (config: ReturnType<typeof loadModelConfiguration>) => void) {
+    const config = loadModelConfiguration({});
+    config.policy.fallbacks = [{ from: "groq-oss-120b", targets: ["gwdg-qwen3-30b"], on: ["rate_limit", "server_error", "timeout"] }];
+    change(config);
+    return { GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY, HASI_LLM_CONFIG: JSON.stringify(config) };
+  }
+
+  it("enforces disabled end-user choice even with a configured alternate key", async () => {
+    const env = environment(config => { config.policy.userChoice.enabled = false; });
+    const provider = fakeProvider(completion({ content: "unused" }));
+    expect(listModelProfiles(env).profiles.map(profile => profile.id)).toEqual(["groq-oss-120b"]);
+    expect(listModelProfiles(env).userChoiceEnabled).toBe(false);
+    await expectRouterError(runModelStep({ ...input(), profileId: "gwdg-qwen3-30b" }, { env, fetch: provider.fetch, now: NOW }), "profile_not_approved");
+    expect(provider.calls).toHaveLength(0);
+  });
+
+  it.each([429, 503])("falls back after HTTP %i and pins the actual model through a tool turn", async status => {
+    const env = environment(config => { config.policy.userChoice.profileIds = ["groq-oss-120b"]; });
+    const calls: string[] = [];
+    const fetch: typeof globalThis.fetch = async (url) => {
+      calls.push(String(url));
+      return calls.length === 1 ? new Response(JSON.stringify({ error: { message: "transient private detail" } }), { status, headers: { "content-type": "application/json" } })
+        : new Response(JSON.stringify(completion({ toolCalls: [{ id: "fallback-search", name: "anny_search_resources", arguments: '{"kind":"meeting_room"}' }] })), { headers: { "content-type": "application/json" } });
+    };
+    const routingPins = pins();
+    const first = await runModelStep(input(), { env, fetch, now: NOW, routingPins });
+    expect(first.profile.id).toBe("gwdg-qwen3-30b");
+    expect(first.routingToken).toBeTruthy();
+    expect(calls).toEqual(["https://api.groq.com/openai/v1/chat/completions", "https://chat-ai.academiccloud.de/v1/chat/completions"]);
+    const next: ChatRequest = { ...input(), routingToken: first.routingToken, messages: [...input().messages, first.message, { role: "tool", name: "anny_search_resources", toolCallId: "fallback-search", content: '{"resources":[]}' }] };
+    const subsequent = fakeProvider(completion({ content: "Keine passenden Räume." }));
+    const reply = await runModelStep(next, { env, fetch: subsequent.fetch, now: NOW, routingPins });
+    expect(reply.profile.id).toBe("gwdg-qwen3-30b");
+    expect(subsequent.calls.map(call => call.url)).toEqual(["https://chat-ai.academiccloud.de/v1/chat/completions"]);
+    expect(String(subsequent.calls[0]?.init?.body)).not.toContain(first.routingToken);
+    await expectRouterError(runModelStep({ ...next, messages: [{ ...input().messages[0]!, content: "changed task" }] }, { env, fetch: subsequent.fetch, now: NOW, routingPins }), "profile_not_approved");
+    expect(subsequent.calls).toHaveLength(1);
+  });
+
+  it("skips an ineligible sibling and follows the eligible nested fallback within the attempt budget", async () => {
+    const env = environment(config => {
+      config.policy.userChoice.profileIds = ["groq-oss-120b"];
+      config.policy.maxAttempts = 3;
+      config.profiles.find(profile => profile.id === "groq-qwen-3.8-27b")!.capabilities.tools = false;
+      config.policy.fallbacks = [
+        {
+          from: "groq-oss-120b",
+          targets: ["gwdg-qwen3-30b", "groq-qwen-3.8-27b"],
+          on: ["rate_limit", "server_error"],
+        },
+        { from: "gwdg-qwen3-30b", targets: ["groq-oss-20b"], on: ["server_error"] },
+      ];
+    });
+    const calls: Array<{ url: string; model: string }> = [];
+    const fetch: typeof globalThis.fetch = async (url, init) => {
+      const body = JSON.parse(String(init?.body)) as { model: string };
+      calls.push({ url: String(url), model: body.model });
+      if (calls.length === 1) {
+        return new Response(JSON.stringify({ error: { message: "transient A failure" } }), { status: 429, headers: { "content-type": "application/json" } });
+      }
+      if (calls.length === 2) {
+        return new Response(JSON.stringify({ error: { message: "transient B failure" } }), { status: 503, headers: { "content-type": "application/json" } });
+      }
+      return new Response(JSON.stringify(completion({ content: "D succeeded." })), { headers: { "content-type": "application/json" } });
+    };
+    const routingPins = pins();
+    const turn = input();
+    const reply = await runModelStep(turn, { env, fetch, now: NOW, routingPins });
+
+    expect(reply.profile.id).toBe("groq-oss-20b");
+    expect(calls).toEqual([
+      { url: "https://api.groq.com/openai/v1/chat/completions", model: "openai/gpt-oss-120b" },
+      { url: "https://chat-ai.academiccloud.de/v1/chat/completions", model: "qwen3-30b-a3b-instruct-2507" },
+      { url: "https://api.groq.com/openai/v1/chat/completions", model: "openai/gpt-oss-20b" },
+    ]);
+    const user = turn.messages.find(message => message.role === "user")!;
+    const config = loadModelConfiguration(env);
+    expect(routingPins.verify(reply.routingToken!, {
+      turnId,
+      turnHash: createHash("sha256").update(JSON.stringify([turnId, user.content])).digest("hex"),
+      revision: createHash("sha256").update(JSON.stringify(config)).digest("hex"),
+      requestedProfileId: "groq-oss-120b",
+    })).toMatchObject({
+      actualProfileId: "groq-oss-20b",
+      attemptedProfileIds: ["groq-oss-120b", "gwdg-qwen3-30b", "groq-oss-20b"],
+    });
+  });
+
+  it.each([400, 401, 403])("never falls back for HTTP %i or reruns an external action", async status => {
+    const env = environment(() => {});
+    const provider = fakeProvider({ error: { message: "private authentication detail" } }, status);
+    await expectRouterError(runModelStep(input(), { env, fetch: provider.fetch, now: NOW, routingPins: pins() }), "provider_unavailable");
+    expect(provider.calls).toHaveLength(1);
+  });
+
+  it.each(["missing-key", "data-policy", "tool-capability", "no-rule"] as const)("does not contact an ineligible fallback: %s", async reason => {
+    const env = environment(config => {
+      const target = config.profiles.find(profile => profile.id === "gwdg-qwen3-30b")!;
+      if (reason === "data-policy") target.allowedDataClasses = ["internal"];
+      if (reason === "tool-capability") target.capabilities.tools = false;
+      if (reason === "no-rule") config.policy.fallbacks = [];
+    });
+    if (reason === "missing-key") env.GWDG_API_KEY = "";
+    const provider = fakeProvider({ error: { message: "rate limited" } }, 429);
+    await expectRouterError(runModelStep(input(), { env, fetch: provider.fetch, now: NOW, routingPins: pins() }), "provider_rate_limited");
+    expect(provider.calls).toHaveLength(1);
+  });
+
+  it("rejects disallowed classes across the full outgoing context before any provider fetch", async () => {
+    const env = environment(() => {});
+    const provider = fakeProvider(completion({ content: "unused" }));
+    await expectRouterError(runModelStep(input(), {
+      env,
+      fetch: provider.fetch,
+      now: NOW,
+      context: { dataClasses: ["synthetic_demo", "confidential"], toolsRequired: true },
+    }), "profile_not_approved");
+    expect(provider.calls).toHaveLength(0);
+  });
+
+  it("counts Groq regeneration against the same budget before considering fallback", async () => {
+    const env = environment(() => {});
+    const calls: string[] = [];
+    const fetch: typeof globalThis.fetch = async url => {
+      calls.push(String(url));
+      const first = calls.length === 1;
+      return new Response(JSON.stringify({ error: { message: "failed", ...(first ? { code: "tool_use_failed" } : {}) } }), { status: first ? 400 : 429, headers: { "content-type": "application/json" } });
+    };
+    await expectRouterError(runModelStep(input(), { env, fetch, now: NOW, routingPins: pins() }), "provider_rate_limited");
+    expect(calls).toHaveLength(2);
+    expect(calls.every(url => url.startsWith("https://api.groq.com/"))).toBe(true);
+  });
+
+  it("falls back for an explicit transport timeout, with no external tool execution", async () => {
+    const env = environment(() => {});
+    const calls: string[] = [];
+    const fetch: typeof globalThis.fetch = async url => {
+      calls.push(String(url));
+      if (calls.length === 1) throw new DOMException("test timeout", "TimeoutError");
+      return new Response(JSON.stringify(completion({ content: "Anfrage übernommen." })), { headers: { "content-type": "application/json" } });
+    };
+    const reply = await runModelStep(input(), { env, fetch, now: NOW, routingPins: pins() });
+    expect(reply.profile.id).toBe("gwdg-qwen3-30b");
+    expect(calls).toHaveLength(2);
+  });
+
+  it("fails closed for invalid explicit configuration and forged routing tokens", async () => {
+    const provider = fakeProvider(completion({ content: "unused" }));
+    await expectRouterError(runModelStep(input(), { env: { GROQ_API_KEY: FAKE_KEY, HASI_LLM_CONFIG: '{"unsafe":"configuration"}' }, fetch: provider.fetch }), "configuration_invalid");
+    await expectRouterError(runModelStep({ ...input(), routingToken: "forged" }, { env: environment(() => {}), fetch: provider.fetch, routingPins: pins() }), "profile_not_approved");
+    expect(provider.calls).toHaveLength(0);
+  });
+});
+
+
+describe("standard provider adapters", () => {
+  it.each(["openai-responses", "openai-chat", "anthropic"] as const)("validates native tool calls with %s", async adapter => {
+    const config = loadModelConfiguration({});
+    const provider = adapter === "anthropic" ? "anthropic" : "openai";
+    const credentialRef = provider === "anthropic" ? "env:ANTHROPIC_API_KEY" : "env:OPENAI_API_KEY";
+    config.connections.push({ id: "standard-test", label: "Standard test", provider, credentialRef, ...(provider === "openai" ? { api: adapter === "openai-chat" ? "chat-completions" as const : "responses" as const } : {}) });
+    config.profiles.push({ id: "standard-model", label: "Operator model", connectionId: "standard-test", modelId: "operator-selected-model", capabilities: { tools: true }, allowedDataClasses: ["synthetic_demo"], parameters: { temperature: null, maxOutputTokens: 1536, timeoutMs: 20000 } });
+    config.policy.userChoice.profileIds.push("standard-model");
+    const output = adapter === "anthropic" ? { id: "msg_test", type: "message", role: "assistant", model: "operator-selected-model", content: [{ type: "tool_use", id: "toolu_test", name: "anny_search_resources", input: { kind: "meeting_room" } }], stop_reason: "tool_use", stop_sequence: null, usage: { input_tokens: 10, output_tokens: 4 } }
+      : adapter === "openai-chat" ? completion({ toolCalls: [{ id: "call_test", name: "anny_search_resources", arguments: '{"kind":"meeting_room"}' }] })
+      : { id: "resp_test", object: "response", created_at: 1792188900, status: "completed", model: "operator-selected-model", output: [{ type: "function_call", id: "fc_test", call_id: "call_test", name: "anny_search_resources", arguments: '{"kind":"meeting_room"}', status: "completed" }], usage: { input_tokens: 10, output_tokens: 4, total_tokens: 14, input_tokens_details: { cached_tokens: 0 }, output_tokens_details: { reasoning_tokens: 0 } }, error: null, incomplete_details: null };
+    const upstream = fakeProvider(output);
+    const reply = await runModelStep(request("standard-model"), { env: { OPENAI_API_KEY: "fake-openai-key", ANTHROPIC_API_KEY: "fake-anthropic-key", HASI_LLM_CONFIG: JSON.stringify(config) }, fetch: upstream.fetch, now: NOW });
+    expect(reply.profile.provider).toBe(provider);
+    expect(reply.message.toolCalls?.[0]).toMatchObject({ name: "anny_search_resources", arguments: { kind: "meeting_room" } });
+    const expectedPath = adapter === "anthropic" ? "https://api.anthropic.com/v1/messages" : adapter === "openai-chat" ? "https://api.openai.com/v1/chat/completions" : "https://api.openai.com/v1/responses";
+    expect(upstream.calls[0]?.url).toBe(expectedPath);
+    const sent = JSON.parse(String(upstream.calls[0]?.init?.body));
+    expect(sent.temperature).toBeUndefined();
+    if (provider === "openai") expect(sent.store).toBe(false);
+    expect(upstream.calls[0]?.init?.redirect).toBe("error");
+    expect(JSON.stringify(sent)).not.toMatch(/fake-openai-key|fake-anthropic-key/);
+    expect(JSON.stringify(sent)).toContain("Servergeprüfte Zeitmetadaten");
   });
 });

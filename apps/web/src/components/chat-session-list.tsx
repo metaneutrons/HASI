@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageCircle, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
+import { MoreHorizontal, Pencil, SquarePen, Trash2, X } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
 import { MAX_CHAT_SESSIONS } from "@/lib/chat-sessions";
 import type { ChatWorkspaceStore } from "@/lib/chat-workspace-store";
@@ -14,8 +14,6 @@ export function ChatSessionList({ view, store, close, onOpenChat, variant = "dra
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const idPrefix = useId().replaceAll(":", "");
   const sessions = [...view.workspace.sessions].sort((a, b) => {
-    if (a.id === view.workspace.activeId) return -1;
-    if (b.id === view.workspace.activeId) return 1;
     return b.updatedAt.localeCompare(a.updatedAt);
   });
   const embedded = variant === "embedded";
@@ -27,9 +25,12 @@ export function ChatSessionList({ view, store, close, onOpenChat, variant = "dra
   }
 
   return <div className={`chat-session-list${embedded ? " chat-session-list--embedded" : " chat-session-list--drawer"}`}>
-    {!embedded && <div className="chat-list-heading"><div><span className="chat-list-kicker">DEIN ARBEITSPLATZ</span><h2>Chats <small>{sessions.length}</small></h2></div>{close && <button className="icon-button" type="button" aria-label="Chatliste schließen" onClick={close}><X size={20} /></button>}</div>}
-    <button className="chat-list-create" type="button" aria-label={sessions.length >= MAX_CHAT_SESSIONS ? `Neuer Chat. Maximal ${MAX_CHAT_SESSIONS} Chats.` : "Neuer Chat"} disabled={sessions.length >= MAX_CHAT_SESSIONS} onClick={() => { store.create(); close?.(); onOpenChat?.(); }}><Plus size={18} /> Neuer Chat</button>
-    <div className="chat-session-items" role="list" aria-label="Gespeicherte Chats">
+    <div className="chat-list-heading">
+      <h2 id={`${idPrefix}-heading`}>Unterhaltungen <small aria-label={`${sessions.length} ${sessions.length === 1 ? "Chat" : "Chats"}`}>{sessions.length}</small></h2>
+      {close && <button className="icon-button" type="button" aria-label="Unterhaltungen schließen" onClick={close}><X size={20} aria-hidden="true" /></button>}
+    </div>
+    <button className="chat-list-create" type="button" aria-label={sessions.length >= MAX_CHAT_SESSIONS ? `Neuer Chat. Maximal ${MAX_CHAT_SESSIONS} Chats.` : "Neuer Chat"} disabled={sessions.length >= MAX_CHAT_SESSIONS} onClick={() => { store.create(); close?.(); onOpenChat?.(); }}><SquarePen size={17} strokeWidth={1.8} aria-hidden="true" /><span>Neuer Chat</span></button>
+    <div className="chat-session-items" role="list" aria-labelledby={`${idPrefix}-heading`}>
       {sessions.map((session) => {
         const active = session.id === view.workspace.activeId;
         const busy = Boolean(view.busy[session.id]);
@@ -40,7 +41,6 @@ export function ChatSessionList({ view, store, close, onOpenChat, variant = "dra
             <div><button type="button" onClick={() => setEditing(null)}>Abbrechen</button><button type="submit" disabled={!title.trim()}>Speichern</button></div>
           </form> : <>
             <button type="button" className="chat-session-select" aria-current={active ? "true" : undefined} aria-label={`${session.title} öffnen`} onClick={() => { store.select(session.id); close?.(); onOpenChat?.(); }}>
-              <span className="chat-session-symbol">{busy ? <span className="spinner" aria-label="Antwort läuft" /> : <MessageCircle size={16} />}</span>
               <span className="chat-session-copy"><strong>{session.title}</strong><span>{busy ? "HASI antwortet …" : preview}</span></span>
             </button>
             <button type="button" className="icon-button chat-session-menu" aria-label={`Aktionen für ${session.title}`} aria-expanded={menuFor === session.id} aria-controls={`${idPrefix}-actions-${session.id}`} onClick={() => setMenuFor(menuFor === session.id ? null : session.id)}><MoreHorizontal size={17} /></button>

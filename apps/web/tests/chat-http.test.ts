@@ -66,6 +66,15 @@ describe("public chat admission and error boundary", () => {
     expect(await response.json()).toEqual(reply);
     expect(run).toHaveBeenCalledWith(validBody);
   });
+
+  it("returns a sanitized denial for forbidden model choices and routing receipts", async () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const response = await handleChatPost(request(), { run: async () => { throw new ModelRouterError("profile_not_approved", "private routing receipt detail"); }, admit: async () => true, allowedOrigins: [origin] });
+    expect(response.status).toBe(403);
+    expect(await response.text()).not.toContain("private routing receipt detail");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    warning.mockRestore();
+  });
 });
 
 describe("server message time boundary", () => {

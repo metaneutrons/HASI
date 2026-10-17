@@ -6,6 +6,11 @@ protected HsH information. The model profile API reports whether the required
 server-side settings are present; it does not perform a live connection or tool
 compatibility check.
 
+Configuration now follows the [v1 registry and routing policy](model-provider-configuration.md).
+Legacy `CUSTOM_*` variables remain available when no explicit `HASI_LLM_CONFIG`
+is supplied. Fallbacks remain off in the bundled configuration; operators can
+explicitly define bounded, context-eligible alternatives.
+
 ## GWDG SAIA
 
 The server-owned `gwdg-demo` connection uses
@@ -17,7 +22,7 @@ limited to:
 | --- | --- | --- |
 | GWDG SAIA · Qwen3 30B A3B Instruct 2507 | `qwen3-30b-a3b-instruct-2507` | Listed as verified by GWDG |
 
-HASI currently exposes only the Qwen profile. A protected Preview check on
+The bundled HASI configuration exposes only the Qwen profile. A protected Preview check on
 2026-10-16 passed short text generation, a `knowledge_search` tool call with a
 cited answer, and an `anny_search_resources` room search. Initial GPT-OSS 120B
 probes returned upstream HTTP 500, including a short text request, so HASI
@@ -35,7 +40,7 @@ The adapter calls the OpenAI-compatible Chat Completions API through AI SDK's
 OpenAI-compatible provider and uses the same HASI tool schemas and reply
 validation as Groq. It adds no GWDG-specific options, retries or automatic
 fallback. GWDG's published model list changes over time; new model profiles
-require an explicit code and evaluation change.
+require explicit operator configuration and qualification.
 
 Generation deadlines are 45 seconds for GWDG and 20 seconds for Groq and custom
 connections. The server route's invocation limit must exceed the selected
