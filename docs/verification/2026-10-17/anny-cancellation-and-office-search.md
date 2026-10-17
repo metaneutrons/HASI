@@ -64,3 +64,23 @@ Production build, lint, types and full local test results, exact-head required C
 automatic main deployment and final live provider/UI proof are recorded in the PR.
 There are no live Anny writes or new credentials in this delivery. Public demo
 booking/cancellation execution remains entirely simulated.
+
+## Live model observation and follow-up
+
+After the initial deployment, Groq GPT-OSS 120B correctly returned the office-type
+question and seven single-office matches. A subsequent call hit its provider rate
+limit. Following desk selection, the model then returned Wednesday 2026-10-21
+instead of the user's Monday 2026-10-19. No booking was committed. This observation
+is a model-quality failure, not a passing end-to-end time qualification.
+
+The follow-up binds complete online room requests to their server-issued user
+message time, retains that interval across office preferences, and rejects model
+availability/proposal calls which silently change its start or duration. A desk
+selection with a complete interval checks availability directly through the typed
+tool bridge, avoiding another date-generation call. An explicitly selected,
+labelled alternate slot remains a separate user action. Six focused regression
+tests cover Monday persistence, changed days/start/duration, equivalent offsets,
+incomplete constraints and the spring/fall Berlin daylight-saving gaps/repeated
+hours. Complete unresolved times require clarification and cannot fall back to
+a model-chosen replacement. Final live evidence is recorded separately in the
+follow-up PR; the preceding failure is retained here.

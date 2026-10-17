@@ -14,6 +14,7 @@ import { chatProfileIdSchema, modelProfilesResponseSchema, modelReplySchema, typ
 import { createChatMessageClock } from "@/lib/chat-message-clock";
 import { appendChatText } from "@/lib/chat-history";
 import type { ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
+import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError, RoomTimeUnresolvedError } from "@/lib/chat-room-time";
 import { canStartNewChat } from "@/lib/chat-workspace-store";
 import { ChatSessionList } from "@/components/chat-session-list";
 import { ChatRoomResults } from "@/components/chat-room-results";
@@ -121,6 +122,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   const [busy, setBusy] = useState(false);
   const [activity, setActivity] = useState("");
   const [request, setRequest] = useState<RoomRequest>(initial.request);
+  const roomIntent = useRef<RoomRequest>(initial.request);
   const [roomContext, setRoomContext] = useState(initial.roomContext);
   const [chosenRoom, setChosenRoom] = useState<Resource | null>(initial.chosenRoom);
   const [activeResult, setActiveResult] = useState<string | null>(initial.activeResult);
@@ -166,6 +168,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     ? configuration.userChoiceEnabled
     : !configuration.error && (configuration.userChoiceEnabled || isDefaultProfile) && selectedProfile?.configured === true);
   const staticProfileLabel = offline ? "Dialog-Demo" : selectedProfile?.label ?? (isDefaultProfile ? defaultProfile?.label ?? configuration.defaultProfileId : "Gespeichertes Modell nicht verfügbar");
+
+  function updateRequest(next: RoomRequest) { roomIntent.current = next; setRequest(next); }
 
   function tools() {
     toolBridge.current ??= createAnnyChatTools(requestForChat);
@@ -214,6 +218,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     const timestamps = await messageClock.current!.flush();
     if (timestamps.size) history.current = history.current.map(message => message.id && timestamps.has(message.id) ? { ...message, timestamp: timestamps.get(message.id)! } : message);
     if (timestamps.size) setMessages(previous => previous.map(message => timestamps.has(message.id) ? { ...message, timestamp: timestamps.get(message.id)! } : message));
+    return timestamps;
   }
 
   function add(message: Omit<Message, "id">, messageId = id()) {
@@ -268,7 +273,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     const question = result.output.refinementRequired === true
       ? refinementQuestion ?? clarificationQuestion ?? "Bitte präzisiere, ob du ein Einzelbüro oder ein gemeinsames Büro suchst."
       : clarificationQuestion;
-    const questionText = question && notice && !question.includes(notice) ? `${question}\n${notice}` : question ?? notice;
+    const questionText = result.output.refinementRequired === true ? question
+      : question && notice && !question.includes(notice) ? `${question}\n${notice}` : question ?? notice;
     const returned = typeof result.output.returned === "number" && Number.isInteger(result.output.returned) && result.output.returned >= 0 ? result.output.returned : 0;
     const truncated = typeof result.output.truncated === "number" && Number.isInteger(result.output.truncated) && result.output.truncated > 0 ? result.output.truncated : 0;
     const truncatedSearchText = result.name === "anny_search_resources" && truncated > 0
@@ -321,7 +327,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         if (!reply.message.toolCalls?.length) return;
         let actionableResult = false;
         for (const call of reply.message.toolCalls) {
-          setActivity(`anny · ${call.name === "anny_propose_booking" ? "Buchung vorbereiten" : call.name === "anny_propose_cancellation" ? "Stornierung vorbereiten" : "Testdaten abfragen"}`);
+          setActivity(`anny · ${call.name === "anny_propose_booking" ? "Buchung vorbereiten" : call.name === "anny_propose_cancellation" ? "Stornierung beginnen" : "Testdaten abfragen"}`);
           let output: Record<string, unknown>;
           try {
             if (call.name === "knowledge_search") {
@@ -330,6 +336,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
               output = { ...result };
               add({ role: "assistant", text: result.documents.length ? "Gefundene Demoquellen. Die folgende Antwort wertet diese Beispiele aus." : "Keine passenden, für dein Testkonto freigegebenen Demoquellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents, model: actualLabel });
             } else {
+            assertRequestedRoomTime(call.name, call.arguments, roomIntent.current);
             const result = await tools().run(call.name, call.arguments);
             output = result.output;
             showToolResult(result, interactionId, actualLabel);
@@ -338,7 +345,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
               || result.rooms?.some((room) => room.checked && room.intervals.length > 0));
             }
           } catch (cause) {
-            output = { error: cause instanceof Error ? cause.message : "Das Tool konnte die Anfrage nicht abschließen." };
+            if (cause instanceof RoomTimeUnresolvedError) actionableResult = true;
+            output = { error: cause instanceof Error ? cause.message : "Das Tool konnte die Anfrage nicht abschließen.", ...(cause instanceof RoomTimeMismatchError ? { requestedInterval: cause.expectedInterval } : {}) };
             add({ role: "assistant", text: String(output.error), tool: call.name === "knowledge_search" ? "Wissensdienst · Anfrage fehlgeschlagen" : "anny · Anfrage fehlgeschlagen" });
           }
           history.current.push(remember({ role: "tool", toolCallId: call.id, name: call.name, content: JSON.stringify(output) }));
@@ -434,6 +442,14 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         return;
       }
       if (!offline) {
+        if (classifyIntent(trimmed, roomContext) === "rooms") {
+          const timestamp = history.current.find(message => message.id === eventId)?.timestamp;
+          if (timestamp) {
+            const reset = !roomContext || /(?:neue|andere)\s+(?:raum)?suche|(?:anderen|neuen)\s+raum|von vorne/i.test(trimmed);
+            updateRequest(mergeRoomRequest(trimmed, reset ? {} : roomIntent.current, new Date(timestamp.createdAt)));
+            setRoomContext(true);
+          }
+        }
         await runModel();
         return;
       }
@@ -447,7 +463,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         setActivity("anny · Eigene Buchungen laden");
         const result = await requestForChat<{ bookings: Booking[] }>("/api/bookings");
         const text = cancellationIntent
-          ? result.bookings.length ? "Hier sind deine eigenen Buchungen. Bei einer aktiven zukünftigen Buchung kannst du eine Stornierung vorbereiten; ausgeführt wird sie erst nach Prüfung und Bestätigung auf der Vorschlagskarte." : "Du hast in der Testumgebung keine eigenen Buchungen, die du stornieren kannst."
+          ? result.bookings.length ? "Hier sind deine eigenen Buchungen. Bei einer aktiven zukünftigen Buchung kannst du eine Stornierung beginnen; ausgeführt wird sie erst nach Prüfung und Bestätigung auf der Vorschlagskarte." : "Du hast in der Testumgebung keine eigenen Buchungen, die du stornieren kannst."
           : result.bookings.length ? "Hier sind deine Buchungen aus der Testumgebung." : "Du hast in der Testumgebung noch keine Testbuchungen. Soll ich einen Raum für dich suchen?";
         add({ role: "assistant", tool: "anny · Eigene Buchungen", text, bookings: result.bookings });
         setRoomContext(false);
@@ -461,7 +477,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         const next = mergeRoomRequest(trimmed, reset ? {} : request);
         const selected = reset || next.query !== request.query ? null : chosenRoom;
         if (!selected) setChosenRoom(null);
-        setRequest(next);
+        updateRequest(next);
         setRoomContext(true);
         await searchRooms(next, selected);
       } else {
@@ -477,11 +493,36 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
 
   async function chooseRoom(resource: Resource) {
     const label = `${resource.kind === 'workplace' ? 'einen einzelnen Arbeitsplatz: ' : ''}${resource.name}${resource.parentName ? ` im Büro ${resource.parentName}` : ''}`;
-    if (!offline) { await send(`Ich möchte ${label} buchen (resourceId: ${resource.id}). Verwende genau diese Ressource und frage nach noch fehlenden Angaben.`); return; }
+    if (!offline) {
+      let interval: ReturnType<typeof requestedRoomInterval>;
+      try { interval = requestedRoomInterval(roomIntent.current); }
+      catch (cause) {
+        addActionResult({ text: cause instanceof Error ? cause.message : "Bitte präzisiere den gewünschten Zeitraum." });
+        try { await stampMessages(); } catch { /* Preserve unknown time when the clock is unavailable. */ }
+        return;
+      }
+      if (!interval) { await send(`Ich möchte ${label} buchen (resourceId: ${resource.id}). Verwende genau diese Ressource und frage nach noch fehlenden Angaben.`); return; }
+      if (!start("anny · Gewünschten Zeitraum prüfen")) return;
+      setChosenRoom(resource);
+      setActiveResult(null);
+      setActiveProposal(null);
+      const selection = `Bitte prüfe ${label} am ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} Uhr.`;
+      const eventId = add({ role: "user", text: selection });
+      appendHistory("user", selection, eventId);
+      try {
+        await stampMessages();
+        const args = availabilityInputForSlot(resource.id, { ...interval, available: false });
+        const result = await tools().run("anny_get_availability", args);
+        recordTool("anny_get_availability", args, result.output);
+        showToolResult(result, id(), "");
+      } catch (cause) { addActionResult({ text: cause instanceof Error ? cause.message : "Der Zeitraum konnte nicht geprüft werden." }); }
+      finally { await finish(); }
+      return;
+    }
     if (!start("Raum auswählen")) return;
     setChosenRoom(resource);
     const next = { ...request, kind: resource.kind ?? 'room' as const };
-    setRequest(next);
+    updateRequest(next);
     setRoomContext(true);
     setActiveResult(null);
     setActiveProposal(null);
@@ -519,10 +560,10 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   }
 
   async function prepareCancellation(booking: Booking) {
-    if (!canRequestCancellation(booking) || !start("anny · Stornierung vorbereiten")) return;
+    if (!canRequestCancellation(booking) || !start("anny · Stornierung beginnen")) return;
     setActiveResult(null);
     setActiveProposal(null);
-    const selection = `Stornierung vorbereiten: ${booking.resourceName}, ${formatDateTime(booking.startDate)} bis ${formatTime(booking.endDate)} Uhr.`;
+    const selection = `Stornierung beginnen: ${booking.resourceName}, ${formatDateTime(booking.startDate)} bis ${formatTime(booking.endDate)} Uhr.`;
     const eventId = add({ role: "user", text: selection });
     if (!offline) appendHistory("user", selection, eventId);
     try {
@@ -590,7 +631,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
           addActionResult({ text: `Die Stornierung der Testbuchung für ${result.proposal.resourceName} wurde bestätigt. ${formatDateTime(result.proposal.startDate)} bis ${formatTime(result.proposal.endDate)} Uhr.`, tool: "anny · Stornierung ausgeführt" });
         } else {
           setRoomContext(false);
-          setRequest({});
+          updateRequest({});
           setChosenRoom(null);
           addActionResult({ text: `Die Testbuchung für ${result.proposal.resourceName} ist bestätigt. ${formatDateTime(result.proposal.startDate)} bis ${formatTime(result.proposal.endDate)} Uhr.`, tool: "anny · Buchung ausgeführt", confirmed: true });
         }
@@ -680,7 +721,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                       <Check size={16} aria-hidden="true" />
                     </button>
                   </div>}
-                  {message.bookings && message.bookings.length > 0 && <div className="chat-booking-list">{message.bookings.map((booking) => <div className="chat-tool-card" key={booking.id}><h2>{booking.resourceName}</h2><p>{formatDateTime(booking.startDate)} bis {formatTime(booking.endDate)} Uhr</p><span className="chat-booking-status">{bookingStatusLabel(booking.status)}</span>{canRequestCancellation(booking) && <button className="chat-card-action" type="button" disabled={busy} onClick={() => void prepareCancellation(booking)}>Stornierung vorbereiten <ArrowRight size={15} aria-hidden="true" /></button>}</div>)}</div>}
+                  {message.bookings && message.bookings.length > 0 && <div className="chat-booking-list">{message.bookings.map((booking) => <div className="chat-tool-card" key={booking.id}><h2>{booking.resourceName}</h2><p>{formatDateTime(booking.startDate)} bis {formatTime(booking.endDate)} Uhr</p><div className="chat-booking-footer"><span className="chat-booking-status">{bookingStatusLabel(booking.status)}</span>{canRequestCancellation(booking) && <button className="chat-card-action" type="button" disabled={busy} onClick={() => void prepareCancellation(booking)}>Stornierung beginnen <ArrowRight size={15} aria-hidden="true" /></button>}</div></div>)}</div>}
                   {message.confirmed && <Link className="chat-card-action" href="/bookings">Meine Buchungen öffnen <ArrowRight size={15} aria-hidden="true" /></Link>}
                 </div>
               </article>
