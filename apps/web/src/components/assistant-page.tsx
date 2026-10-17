@@ -17,6 +17,8 @@ import type { ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } f
 import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError, RoomTimeUnresolvedError } from "@/lib/chat-room-time";
 import { canStartNewChat } from "@/lib/chat-workspace-store";
 import { ChatSessionList } from "@/components/chat-session-list";
+import { ChatMessageCopy } from "@/components/chat-message-copy";
+import { bookingStatusLabel } from "@/lib/chat-message-copy";
 import { ChatRoomResults } from "@/components/chat-room-results";
 
 type ModelConfiguration = { profiles: ModelProfile[]; userChoiceEnabled: boolean; defaultProfileId: ModelProfileId; loading: boolean; error: string | null };
@@ -40,18 +42,6 @@ function canRequestCancellation(booking: Booking, now = Date.now()) {
   return ["requested", "accepted", "confirmed"].includes(status)
     && Number.isFinite(Date.parse(booking.startDate))
     && Date.parse(booking.startDate) > now;
-}
-
-function bookingStatusLabel(status: string) {
-  switch (status.toLowerCase()) {
-    case "requested":
-    case "pending": return "Angefragt";
-    case "accepted":
-    case "confirmed": return "Bestätigt";
-    case "cancelled":
-    case "canceled": return "Storniert";
-    default: return status;
-  }
 }
 
 function sameProposalSnapshot(displayed: Proposal, authoritative: Proposal) {
@@ -699,7 +689,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
             {renderedMessages.map((message) => (
               <article key={message.id} className={`chat-message chat-message--${message.role}`} aria-label={message.role === "user" ? "Du" : "HASI"}>
                 <span className="chat-speaker">{message.role === "user" ? "Du" : <><Sparkles size={14} aria-hidden="true" /> HASI {message.model && <small>{message.model}</small>}</>}</span>
-                {message.timestamp ? <time className="chat-message-time" dateTime={message.timestamp.createdAt} title="Servereingang · Europe/Berlin">{formatMessageTime(message.timestamp.createdAt)}</time> : <span className="chat-message-time">Zeitpunkt unbekannt</span>}
+                <div className="chat-message-meta">{message.timestamp ? <time className="chat-message-time" dateTime={message.timestamp.createdAt} title="Servereingang · Europe/Berlin">{formatMessageTime(message.timestamp.createdAt)}</time> : <span className="chat-message-time">Zeitpunkt unbekannt</span>}<ChatMessageCopy message={message} /></div>
                 <div className="chat-message-body">
                   {message.tool && <span className="chat-tool-label"><Check size={13} aria-hidden="true" /> {message.tool}</span>}
                   <p>{message.text}</p>
