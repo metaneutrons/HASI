@@ -7,6 +7,8 @@ import {
   missingRoomDetails,
   requestStartDate,
   roomRequestSummary,
+  workplaceOfficeTypeCounts,
+  workplaceRefinementQuestion,
   type RoomRequest,
 } from "../src/lib/chat-demo";
 import type { Resource } from "../src/lib/types";
@@ -42,6 +44,12 @@ const rooms: Resource[] = [
 ];
 
 describe("bounded German chat demo parser", () => {
+  it('recognizes a new single-office search and office preference follow-ups as room intent', () => {
+    expect(classifyIntent('Ich brauche am kommenden Montag ein Einzelbüro im Gebäude 1J von 8-16 Uhr.', false)).toBe('rooms');
+    expect(classifyIntent('Ein Einzelbüro bitte.', true)).toBe('rooms');
+    expect(classifyIntent('Beides passt, keine Präferenz.', true)).toBe('rooms');
+    expect(classifyIntent('Mir egal.', false)).toBe('help');
+  });
   it('distinguishes one workplace in an office from rooms with person capacities', () => {
     const resources: Resource[] = [
       { ...rooms[0]!, id: 'desk', name: 'Platz 1', kind: 'workplace', parentId: 'office', parentName: 'Büro Amrum', capacity: null },
@@ -70,6 +78,73 @@ describe("bounded German chat demo parser", () => {
     expect(mergeRoomRequest('einzelne Arbeitsplätze', { kind: 'workplace', capacity: 2 })).toMatchObject({ kind: 'workplace', capacity: undefined });
     expect(mergeRoomRequest('einen Besprechungsraum', { kind: 'workplace', capacity: 2 })).toMatchObject({ kind: 'meeting_room', capacity: 2 });
     expect(roomRequestSummary(mergeRoomRequest('Ich brauche zwei Arbeitsplätze', {}))).toContain('Jede Buchung reserviert genau einen Arbeitsplatz');
+  });
+  it("parses explicit office preferences and preserves the rest of a follow-up request", () => {
+    const previous: RoomRequest = {
+      kind: "workplace",
+      location: "Gebäude 1J",
+      date: "2026-06-02",
+      time: "14:00",
+      durationMinutes: 60,
+    };
+
+    const single = mergeRoomRequest("Einzelbüro", previous);
+    const shared = mergeRoomRequest("geteiltes Büro", previous);
+    const any = mergeRoomRequest("egal, keine Präferenz", previous);
+
+    expect(single).toMatchObject({ ...previous, kind: "workplace", officeType: "single" });
+    expect(single.query).toBeUndefined();
+    expect(shared).toMatchObject({ ...previous, kind: "workplace", officeType: "shared" });
+    expect(shared.query).toBeUndefined();
+    expect(any).toMatchObject({ ...previous, kind: "workplace", officeType: "any" });
+    expect(any.query).toBeUndefined();
+  });
+
+  it("filters only explicitly named single or shared offices and requests clarification for broad catalogs", () => {
+    const workplaces: Resource[] = [
+      { ...rooms[0]!, id: "single", kind: "workplace", name: "Arbeitsplatz 1", parentName: "Einzelbüro 1.01" },
+      { ...rooms[0]!, id: "two", kind: "workplace", name: "Arbeitsplatz 2", parentName: "2er Büro 1.02" },
+      { ...rooms[0]!, id: "three", kind: "workplace", name: "Arbeitsplatz 3", parentName: "3er Büro 1.03" },
+      { ...rooms[0]!, id: "shared", kind: "workplace", name: "Arbeitsplatz 4", parentName: "Shared Office 1.04" },
+      { ...rooms[0]!, id: "unknown", kind: "workplace", name: "Arbeitsplatz 5", parentName: "Büro 1.05" },
+      { ...rooms[0]!, id: "one-desk", kind: "workplace", name: "Einzelarbeitsplatz", parentName: "Büro 1.06" },
+    ];
+    expect(matchingResources(workplaces, { kind: "workplace", officeType: "single" }).map(({ id }) => id)).toEqual(["single"]);
+    expect(matchingResources(workplaces, { kind: "workplace", officeType: "shared" }).map(({ id }) => id)).toEqual(["two", "three", "shared"]);
+    expect(matchingResources(workplaces, { kind: "workplace", officeType: "any" })).toEqual(workplaces);
+    expect(matchingResources(workplaces, { kind: "workplace", officeType: "single" })).not.toContain(workplaces[5]);
+
+    const many = Array.from({ length: 9 }, (_, index) => ({
+      ...workplaces[index % workplaces.length]!,
+      id: `workplace-${index}`,
+      parentName: index === 0 ? "1er Büro A" : index === 1 ? "3er Büro B" : `Büro ${String(index)}`,
+    }));
+    const refinement = workplaceRefinementQuestion(many, { kind: "workplace" });
+    expect(refinement).toMatchObject({
+      candidateCount: 9,
+      counts: { single: 1, shared: 1, unknown: 7 },
+    });
+    expect(refinement?.question).toContain("Arbeitsplätze");
+    expect(refinement?.question).toContain("geteilten Büro");
+    expect(workplaceRefinementQuestion(many, { kind: "workplace", officeType: "any" })).toBeNull();
+    expect(workplaceRefinementQuestion(many, { kind: "workplace", query: "Amrum" })).toBeNull();
+    expect(workplaceRefinementQuestion(hshDemoCatalog.resources, { kind: "workplace", location: "Gebäude 1J" })).toMatchObject({
+      candidateCount: 27,
+      counts: { single: 7, shared: 14, unknown: 6 },
+    });
+  });
+  it("uses the complete catalog office count as authoritative and leaves standalone desks unknown", () => {
+    const workplaces: Resource[] = [
+      { ...rooms[0]!, id: "count-one", kind: "workplace", name: "Arbeitsplatz", parentName: "2er Büro", officeWorkplaceCount: 1 },
+      { ...rooms[0]!, id: "count-many", kind: "workplace", name: "Arbeitsplatz", parentName: "Einzelbüro", officeWorkplaceCount: 2 },
+      { ...rooms[0]!, id: "standalone", kind: "workplace", name: "Einzelarbeitsplatz", parentName: null, officeWorkplaceCount: null },
+    ];
+    expect(matchingResources(workplaces, { kind: "workplace", officeType: "single" }).map(({ id }) => id)).toEqual(["count-one"]);
+    expect(matchingResources(workplaces, { kind: "workplace", officeType: "shared" }).map(({ id }) => id)).toEqual(["count-many"]);
+    expect(matchingResources(workplaces, { kind: "workplace", officeType: "any" })).toEqual(workplaces);
+
+    const fixtureWorkplaces = hshDemoCatalog.resources.filter((resource) => resource.kind === "workplace");
+    expect(workplaceOfficeTypeCounts(fixtureWorkplaces)).toEqual({ single: 8, shared: 23, unknown: 6 });
   });
   it("fills the initial room request and carries omitted slots across follow-ups", () => {
     const now = new Date("2026-06-01T10:00:00.000Z");

@@ -6,6 +6,7 @@ import { hshDemoCatalog } from '../../../fixtures/catalog';
 import {
   createAnnyChatTools,
   availabilityInputForSlot,
+  visibleAvailabilityIntervals,
   type AnnyChatToolResult,
 } from "../src/lib/anny-chat-tools";
 import type { Booking, Resource, TimeInterval } from "../src/lib/types";
@@ -98,6 +99,25 @@ function outputIntervals(result: AnnyChatToolResult): TimeInterval[] {
 }
 
 describe("bounded Anny chat tools", () => {
+  it('prepares a cancellation with canonical booking details and never confirms it as a model tool', async () => {
+    const harness = createHarness();
+    await login(harness.request, 'student');
+    const tools = createAnnyChatTools(harness.request, { now: harness.now });
+    const search = await tools.run('anny_search_resources', { capacity: 4 });
+    const resource = search.rooms![0]!.resource;
+    const availability = await tools.run('anny_get_availability', { resourceId: resource.id, date: '2030-01-03', time: '09:00', durationMinutes: 60 });
+    const slot = availability.rooms![0]!.intervals[0]!;
+    const prepared = await tools.run('anny_propose_booking', { resourceId: resource.id, startDate: slot.startDate, endDate: slot.endDate });
+    const created = await harness.request<{ bookingId: string }>(`/api/proposals/${prepared.proposal!.id}/confirm`, { method: 'POST', body: '{}' });
+    harness.calls.length = 0;
+    const cancellation = await tools.run('anny_propose_cancellation', { bookingId: created.bookingId });
+    expect(cancellation.proposal).toMatchObject({ action: 'cancel_booking', status: 'pending', startDate: slot.startDate, endDate: slot.endDate });
+    expect(harness.calls.map(call => call.path)).toEqual(['/api/cancellations']);
+    expect((await harness.request<{ bookings: Booking[] }>('/api/bookings')).bookings.find(booking => booking.id === created.bookingId)?.status).toBe('accepted');
+    await expect(tools.run('anny_execute_cancellation', { bookingId: created.bookingId })).rejects.toThrow(/nicht freigegeben/);
+    await expect(tools.run('anny_propose_cancellation', { bookingId: created.bookingId, customerId: 'other' })).rejects.toThrow();
+    await expect(tools.run('anny_propose_cancellation', { bookingId: 'not-owned' })).rejects.toThrow();
+  });
   it('returns actual desk IDs and their offices without converting booking quantity to person capacity', async () => {
     const harness = createHarness('2030-01-01T10:30:00.000Z', hshDemoCatalog);
     await login(harness.request, 'employee');
@@ -108,6 +128,9 @@ describe("bounded Anny chat tools", () => {
     expect(search.output.resources).toEqual(expect.arrayContaining([expect.objectContaining({ id: '180116', parentId: '179669', bookingUnit: 'one_workplace', capacity: null })]));
     const officeAsLocation = await tools.run('anny_search_resources', { kind: 'workplace', location: 'Amrum' });
     expect(officeAsLocation.rooms?.map(r => r.resource.id).sort()).toEqual(['180116', '180117']);
+    expect(officeAsLocation.output.resources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: '180116', officeWorkplaceCount: officeAsLocation.rooms?.find(room => room.resource.id === '180116')?.resource.officeWorkplaceCount }),
+    ]));
     expect((await tools.run('anny_search_resources', { kind: 'meeting_room', capacity: 8 })).rooms).toHaveLength(5);
     expect((await tools.run('anny_search_resources', { kind: 'lecture_hall' })).rooms).toEqual([]);
     harness.calls.length = 0;
@@ -117,13 +140,60 @@ describe("bounded Anny chat tools", () => {
     await expect(tools.run('anny_get_availability', { resourceId: '179669', date: '2030-01-03', time: '09:00', durationMinutes: 60 })).rejects.toThrow(/zugänglichen Ressourcen/);
     expect(harness.calls.map(c => c.path)).toEqual(['/api/resources']);
   });
+  it("asks for office type before exposing many workplace candidates and explains unknown labels", async () => {
+    const resources: Resource[] = Array.from({ length: 10 }, (_, index) => ({
+      id: `synthetic-workplace-${index}`,
+      name: `Arbeitsplatz ${index}`,
+      description: "Synthetic catalog entry",
+      capacity: null,
+      location: "Gebäude 1J",
+      features: [],
+      serviceId: "synthetic-service",
+      kind: "workplace",
+      parentName: `Büro 1J.${String(index).padStart(2, "0")}`,
+    }));
+    const calls: string[] = [];
+    const request: Request = async <T>(path: string): Promise<T> => {
+      calls.push(path);
+      if (path === "/api/resources") return { resources } as T;
+      throw new Error(`Unexpected request: ${path}`);
+    };
+    const tools = createAnnyChatTools(request);
+
+    const broad = await tools.run("anny_search_resources", { kind: "workplace", location: "Gebäude 1J" });
+    expect(broad.rooms).toEqual([]);
+    expect(broad.output).toMatchObject({
+      availabilityChecked: false,
+      returned: 0,
+      truncated: 0,
+      refinementRequired: true,
+      officeTypeCounts: { single: 0, shared: 0, unknown: 10 },
+      catalogCandidates: 10,
+    });
+    expect(broad.output.refinementQuestion).toContain("geteilten Büro");
+    expect(broad.output.notice).toMatch(/keine Aussage zur Verfügbarkeit/u);
+
+    const single = await tools.run("anny_search_resources", {
+      kind: "workplace",
+      location: "Gebäude 1J",
+      officeType: "single",
+    });
+    expect(single.rooms).toEqual([]);
+    expect(single.output).toMatchObject({ returned: 0, availabilityChecked: false });
+    expect(single.output.notice).toMatch(/nicht dokumentiert/u);
+    expect(single.output.notice).not.toMatch(/keine Einzelbüros gibt/u);
+    expect(calls).toEqual(["/api/resources", "/api/resources"]);
+  });
   it("finds 1J workplaces and prepares the requested eight-hour interval without committing", async () => {
     const harness = createHarness('2030-01-01T10:30:00.000Z', hshDemoCatalog);
     await login(harness.request, 'employee');
     const tools = createAnnyChatTools(harness.request, { now: harness.now });
-    const search = await tools.run('anny_search_resources', { kind: 'workplace', location: 'Gebäude 1J' });
+    const search = await tools.run('anny_search_resources', { kind: 'workplace', location: 'Gebäude 1J', officeType: 'any' });
     expect(search.rooms).toHaveLength(8);
     expect(search.output).toMatchObject({ returned: 8, truncated: 19, availabilityChecked: false });
+    expect(search.output.resources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ officeWorkplaceCount: search.rooms?.[0]?.resource.officeWorkplaceCount }),
+    ]));
     const resource = search.rooms![0]!.resource;
     const availability = await tools.run('anny_get_availability', { resourceId: resource.id, date: '2030-01-07', time: '08:00', durationMinutes: 480 });
     const slot = availability.rooms![0]!.intervals.find(interval => interval.startDate === '2030-01-07T07:00:00.000Z');
@@ -215,6 +285,8 @@ describe("bounded Anny chat tools", () => {
       serviceId: "00000000-0000-4000-8000-000000000201",
     })).rejects.toThrow(/Argumente passen/u);
     await expect(tools.run("anny_list_my_bookings", { identity: "student" }))
+      .rejects.toThrow(/Argumente passen/u);
+    await expect(tools.run("anny_search_resources", { officeType: "private" }))
       .rejects.toThrow(/Argumente passen/u);
 
     expect(harness.calls).toEqual([]);
@@ -322,7 +394,23 @@ describe("bounded Anny chat tools", () => {
     expect(modelIntervals).toHaveLength(3);
     expect(modelIntervals.some(({ available }) => !available)).toBe(true);
     expect(result.rooms?.[0]?.intervals.every(({ available }) => available)).toBe(true);
-    expect(result.rooms?.[0]?.intervals).toHaveLength(2);
+    expect(result.rooms?.[0]?.intervals).toEqual([
+      expect.objectContaining({ startDate: "2030-01-03T07:00:00.000Z", available: true }),
+    ]);
+  });
+
+  it("shows the exact requested available interval or at most three alternatives", () => {
+    const intervals: TimeInterval[] = [
+      { startDate: "2030-01-03T07:00:00.000Z", endDate: "2030-01-03T08:00:00.000Z", available: false },
+      { startDate: "2030-01-03T08:00:00.000Z", endDate: "2030-01-03T09:00:00.000Z", available: true },
+      { startDate: "2030-01-03T09:00:00.000Z", endDate: "2030-01-03T10:00:00.000Z", available: true },
+      { startDate: "2030-01-03T10:00:00.000Z", endDate: "2030-01-03T11:00:00.000Z", available: true },
+      { startDate: "2030-01-03T11:00:00.000Z", endDate: "2030-01-03T12:00:00.000Z", available: true },
+    ];
+
+    expect(visibleAvailabilityIntervals(intervals, "2030-01-03T07:00:00.000Z")).toEqual(intervals.slice(1, 4));
+    expect(visibleAvailabilityIntervals(intervals, "2030-01-03T08:00:00.000Z")).toEqual([intervals[1]]);
+    expect(visibleAvailabilityIntervals(intervals, "2030-01-03T06:00:00.000Z")).toEqual(intervals.slice(1, 4));
   });
 
   it("bounds result counts and metadata size", async () => {

@@ -42,6 +42,7 @@ export const CHAT_TOOL_NAMES = [
   "anny_get_availability",
   "anny_list_my_bookings",
   "anny_propose_booking",
+  "anny_propose_cancellation",
 ] as const;
 export type ChatToolName = (typeof CHAT_TOOL_NAMES)[number];
 
@@ -75,6 +76,7 @@ export const chatToolSchemas = {
   }),
   anny_search_resources: z.strictObject({
     kind: z.enum(['workplace', 'meeting_room', 'lecture_hall', 'room']).describe("Büro/Schreibtisch bedeutet workplace (ein einzelner Arbeitsplatz). room umfasst ganze Räume ohne Arbeitsplätze; meeting_room und lecture_hall sind gezielte Raumarten.").optional(),
+    officeType: z.enum(["single", "shared", "any"]).describe("Bürotyp bei workplace: officeWorkplaceCount ist maßgeblich (1=single, größer 1=shared). Fehlt der Zähler, nur ausdrücklich als Einzelbüro/1er-Büro oder geteilt/2er-/3er-Büro benannte Büros zuordnen; sonst unbekannt lassen. any bedeutet keine Präferenz.").optional(),
     capacity: z.number().int().min(1).max(500).describe("Mindest-Personenkapazität eines ganzen Raums. Für einen Arbeitsplatz weglassen; mehrere Arbeitsplätze sind separate Ressourcen.").optional(),
     features: z.array(nonEmptyText(128)).max(10).describe("Nur ausdrücklich gewünschte Ausstattungsmerkmale; sonst weglassen.").optional(),
     location: nonEmptyText(300).describe("Nur ein ausdrücklich genannter Standort, ein Gebäudecode (z. B. 1J, ohne das Wort Gebäude) oder bei Arbeitsplätzen das zugehörige Büro; sonst weglassen, niemals leer oder null.").optional(),
@@ -87,6 +89,7 @@ export const chatToolSchemas = {
     durationMinutes: z.number().int().min(15).max(1440),
   }),
   anny_list_my_bookings: z.strictObject({}),
+  anny_propose_cancellation: z.strictObject({ bookingId: annyId }),
   anny_propose_booking: z
     .strictObject({
       resourceId: annyId,
@@ -102,11 +105,13 @@ export const chatToolDescriptions: Readonly<Record<ChatToolName, string>> =
   Object.freeze({
     knowledge_search: "Suche in den freigegebenen synthetischen Service-IT- und Intranet-Dokumenten. Verwende dieses Tool für Hochschul- und IT-Fragen. Ergebnisse sind erfundene Beispiele, keine echten HsH-Anleitungen. Fehlende oder widersprüchliche Belege ausdrücklich nennen.",
     anny_search_resources:
-      "Suche getrennt nach einzelnen Arbeitsplätzen (auch bei Büro-Anfragen), Besprechungsräumen oder Hörsälen. Nutze kind für die Buchungseinheit. Personenkapazität gehört zu ganzen Räumen. Arbeitsplätze liefern ihr übergeordnetes Büro, das nicht mitgebucht wird. Verfügbarkeit wird separat geprüft.",
+      "Suche getrennt nach einzelnen Arbeitsplätzen (auch bei Büro-Anfragen), Besprechungsräumen oder Hörsälen. Nutze kind für die Buchungseinheit. Bei workplace bestimmt officeWorkplaceCount den Typ: 1 bedeutet Einzelbüro, mehr als 1 ein geteiltes Büro. Fehlt der Zähler, klassifiziere nur ausdrücklich als Einzelbüro/1er oder geteilt/2er-/3er bezeichnete Büros; sonst bleibt es unbekannt. any bedeutet keine Präferenz. Personenkapazität gehört zu ganzen Räumen. Arbeitsplätze liefern ihr übergeordnetes Büro, das nicht mitgebucht wird. Verfügbarkeit wird separat geprüft.",
     anny_get_availability:
       "Prüfe die Verfügbarkeit einer bekannten Ressource für ein konkretes Datum, eine Uhrzeit und eine Dauer. Behaupte keine Verfügbarkeit ohne dieses Ergebnis.",
     anny_list_my_bookings:
       "Rufe die Buchungen der angemeldeten Person ab. Erfinde keine Buchungsdaten und leite keine Identität aus dem Gespräch ab.",
+    anny_propose_cancellation:
+      "Bereite die Stornierung einer eigenen aktiven zukünftigen Buchung vor. Verwende eine bookingId aus anny_list_my_bookings; bei Mehrdeutigkeit nachfragen. Führt keine Stornierung aus. Nur die separate Bestätigung auf der Vorschlagskarte darf sie auslösen.",
     anny_propose_booking:
       "Erstelle einen Buchungsvorschlag für eine Ressource und einen Zeitraum. Dieses Tool führt keine Buchung aus. Eine Buchung darf erst nach einer gesonderten ausdrücklichen Bestätigung behauptet werden.",
   });

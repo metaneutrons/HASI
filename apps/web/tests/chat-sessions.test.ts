@@ -106,6 +106,33 @@ describe("chat session persistence", () => {
     expect(restored.messages[1]!.timestamp).toBeUndefined();
     expect(restored.history[1]!.timestamp).toBeUndefined();
   });
+  it("persists a workplace office preference and rejects unsupported stored values", () => {
+    const storage = new MemoryStorage();
+    const initial = createChatWorkspace("user-1");
+    const session = initial.sessions[0]!;
+    const snapshot = makeSnapshot({
+      request: { kind: "workplace", officeType: "shared", location: "1J", date: "2030-01-03" },
+      messages: [{
+        ...textMessage("workplace-result", "assistant", "Katalogtreffer"),
+        rooms: [{
+          resource: { id: "desk-1", name: "Arbeitsplatz", description: "", capacity: null, location: "1J", features: [], serviceId: "service-1", kind: "workplace", officeWorkplaceCount: 2 },
+          intervals: [],
+          checked: false,
+        }],
+      }],
+    });
+    expect(saveChatWorkspace(updateChatSnapshot(initial, session.id, snapshot), storage)).toBe(true);
+    const restored = loadChatWorkspace("user-1", storage).workspace.sessions[0]!.snapshot;
+    expect(restored.request).toEqual(snapshot.request);
+    expect(restored.messages[0]?.rooms?.[0]?.resource.officeWorkplaceCount).toBe(2);
+
+    const stored = JSON.parse(storage.getItem(chatStorageKey("user-1"))!) as {
+      sessions: Array<{ snapshot: { request: { officeType?: string } } }>;
+    };
+    stored.sessions[0]!.snapshot.request.officeType = "private";
+    storage.setItem(chatStorageKey("user-1"), JSON.stringify(stored));
+    expect(loadChatWorkspace("user-1", storage).notice).not.toBeNull();
+  });
   it("keeps multiple sessions, drafts, profiles, and history independent", () => {
     const initial = createChatWorkspace("user-1");
     const first = initial.sessions[0]!;

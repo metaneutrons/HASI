@@ -5,6 +5,11 @@ type BookableResourceKind = 'workplace' | 'meeting_room' | 'lecture_hall' | 'roo
 const preferredWorkplaceServiceId = '76878';
 const resourcesById = new Map(snapshot.resources.map(resource => [resource.id, resource]));
 const serviceIds = new Set(snapshot.services.map(service => service.id));
+const officeWorkplaceCounts = new Map(snapshot.resources.filter(resource => resource.kind === 'office').map(office => {
+  const children = snapshot.resources.filter(resource => resource.parentId === office.id);
+  if (!children.length || children.some(child => child.kind !== 'workplace' || child.hasChildren) || office.quantity !== children.length) throw new Error(`Office ${office.id} has an incomplete or inconsistent workplace hierarchy.`);
+  return [office.id, children.length];
+}));
 const leafResources = snapshot.resources.filter(resource => !resource.hasChildren && resource.kind !== 'office');
 
 /** Explicit simulation mapping. This does not establish live booking eligibility. */
@@ -32,6 +37,7 @@ export const hshDemoCatalog = {
       kind: resource.kind as BookableResourceKind,
       parentId: resource.parentId,
       parentName: parent?.name ?? null,
+      officeWorkplaceCount: parent ? officeWorkplaceCounts.get(parent.id) ?? null : null,
     };
   }),
   services: snapshot.services.map(service => ({ id: service.id, name: service.name })),
@@ -46,4 +52,5 @@ export const hshDemoPresentation = Object.fromEntries(hshDemoCatalog.resources.m
   kind,
   parentId,
   parentName,
-}) => [id, { capacity, location, features, serviceId, kind, parentId, parentName }]));
+  officeWorkplaceCount,
+}) => [id, { capacity, location, features, serviceId, kind, parentId, parentName, officeWorkplaceCount }]));

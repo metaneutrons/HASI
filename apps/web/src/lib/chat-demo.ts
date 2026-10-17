@@ -1,7 +1,16 @@
 import type { Resource, ResourceKind } from "./types";
 
+export type OfficeType = "single" | "shared" | "any";
+export type WorkplaceOfficeTypeCounts = { single: number; shared: number; unknown: number };
+export type WorkplaceRefinement = {
+  question: string;
+  counts: WorkplaceOfficeTypeCounts;
+  candidateCount: number;
+};
+
 export type RoomRequest = {
   kind?: ResourceKind;
+  officeType?: OfficeType;
   date?: string;
   time?: string;
   durationMinutes?: number;
@@ -89,6 +98,26 @@ function normalize(value: string): string {
     .replaceAll("ß", "ss")
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "");
+}
+
+const SINGLE_OFFICE_PATTERN = /\b(?:einzelburos?|1er|single[- ]?offices?)\b/u;
+const SHARED_OFFICE_PATTERN = /\b(?:2|3)(?:er)?\s*(?:buros?|offices?)\b|\b(?:geteilte[nrsm]?|gemeinsame[nrsm]?|gemeinschafts)\s*(?:buros?|offices?)\b|\bshared(?:\s*(?:buros?|offices?))?\b/u;
+const ANY_OFFICE_PATTERN = /\b(?:egal|gleich|beides|keine?\s+praeferenz|ohne\s+praeferenz|keine?\s+bevorzugung)\b/u;
+const OFFICE_TYPE_QUERY_PATTERN = /\b(?:einzelb[uü]ros?|1er|single[- ]?offices?|(?:2|3)(?:er)?\s*(?:b[uü]ros?|offices?)|(?:geteilte[nrsm]?|gemeinsame[nrsm]?|gemeinschafts)\s*(?:b[uü]ros?|offices?)|shared(?:\s*(?:b[uü]ros?|offices?))?|egal|gleich|beides|keine?\s+(?:praeferenz|präferenz|bevorzugung)|ohne\s+(?:praeferenz|präferenz))\b/giu;
+
+/** Prefer the complete-catalog office count; otherwise use only explicit office labels. */
+export function classifyWorkplaceOfficeType(resource: Resource): Exclude<OfficeType, "any"> | "unknown" {
+  const workplaceCount = resource.officeWorkplaceCount;
+  if (typeof workplaceCount === "number" && Number.isInteger(workplaceCount) && workplaceCount > 0) {
+    return workplaceCount === 1 ? "single" : "shared";
+  }
+  // Keep each source label separate: concatenating a desk name like
+  // "Arbeitsplatz 2" with "Büro 1J" could falsely create a "2 Büro" label.
+  const labels = [resource.name, resource.parentName ?? ""].map(normalize);
+  const single = labels.some((label) => SINGLE_OFFICE_PATTERN.test(label));
+  const shared = labels.some((label) => SHARED_OFFICE_PATTERN.test(label));
+  if (single === shared) return "unknown";
+  return single ? "single" : "shared";
 }
 
 function berlinParts(date: Date): { year: number; month: number; day: number; hour: number; minute: number } {
@@ -338,6 +367,7 @@ function parseLocation(text: string): { found: boolean; value?: string } {
 function parseQuery(text: string): string | undefined {
   let residual = text;
   const patterns = [
+    new RegExp(OFFICE_TYPE_QUERY_PATTERN.source, OFFICE_TYPE_QUERY_PATTERN.flags),
     /\b(?:\d+|ein(?:e|en|em|er)?|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s+(?:arbeitsplätz(?:e|en)|arbeitsplaetz(?:e|en)|schreibtisch(?:e|en)|desks?)\b/giu,
     /\b(?:arbeitsplätz(?:e|en)?|arbeitsplatz|schreibtisch(?:e|en)?|büros?|bueros?|büroraum|büroräume|bueroraum|bueroraeume|flex[-\s]?büros?|flex[-\s]?bueros?|desks?|besprechungsräum(?:e|en)|besprechungsraum|meetingräum(?:e|en)|meetingraum|hörsäle|hörsaal|hoersaele|hoersaal)\b/giu,
     /(?<![\p{L}\p{N}_])(?:übermorgen|morgen|heute)(?![\p{L}\p{N}_])/giu,
@@ -360,17 +390,43 @@ function parseQuery(text: string): string | undefined {
   return words.length ? words.join(" ") : undefined;
 }
 
+function matchesUnnegated(text: string, pattern: RegExp): boolean {
+  const globalPattern = new RegExp(pattern.source, "gu");
+  for (const match of text.matchAll(globalPattern)) {
+    const start = match.index ?? 0;
+    if (!isNegatedNear(text, start, start + match[0].length)) return true;
+  }
+  return false;
+}
+
+function parseOfficeType(text: string): OfficeType | undefined {
+  const normalized = normalize(text);
+  const single = matchesUnnegated(normalized, SINGLE_OFFICE_PATTERN);
+  const shared = matchesUnnegated(normalized, SHARED_OFFICE_PATTERN);
+  const any = matchesUnnegated(normalized, ANY_OFFICE_PATTERN);
+  if (any && !single && !shared) return "any";
+  if (single === shared) return undefined;
+  return single ? "single" : "shared";
+}
+
 export function mergeRoomRequest(text: string, previous: RoomRequest, now = new Date()): RoomRequest {
   const boundedText = text.slice(0, 2_000);
   const next: RoomRequest = { ...previous };
   const normalized = normalize(boundedText);
-  const kind: ResourceKind | undefined = /\b(?:arbeitsplatz|arbeitsplatz(?:e|en)?|buros?|flex[-\s]?buros?|buroraum|buroraume|bueroraum|bueroraeume|schreibtisch(?:e|en)?|desks?)\b/u.test(normalized) ? 'workplace'
+  const officeType = parseOfficeType(boundedText);
+  const kind: ResourceKind | undefined = officeType !== undefined ? 'workplace'
+    : /\b(?:arbeitsplatz|arbeitsplatz(?:e|en)?|buros?|flex[-\s]?buros?|buroraum|buroraume|bueroraum|bueroraeume|schreibtisch(?:e|en)?|desks?)\b/u.test(normalized) ? 'workplace'
     : /\b(?:besprechungsraum|besprechungsraume|meetingraum|meetingraume)\b/u.test(normalized) ? 'meeting_room'
       : /\b(?:horsaal|horsale|hoersaal|hoersaele)\b/u.test(normalized) ? 'lecture_hall'
         : /\b(?:raum|raume|raeume|raumbuchung(?:en)?)\b/u.test(normalized) ? 'room' : undefined;
   if (kind) {
     if (kind === 'workplace' && (previous.kind !== kind || /\b(?:einzelne|einzelnen)\s+arbeitsplatz(?:e|en)?\b/u.test(normalized))) next.capacity = undefined;
+    if (kind !== 'workplace') next.officeType = undefined;
     next.kind = kind;
+  }
+  if (officeType !== undefined) {
+    next.kind = 'workplace';
+    next.officeType = officeType;
   }
   const dates = parseDateCandidates(boundedText, now);
   if (dates.candidates.length || dates.invalid) {
@@ -408,7 +464,8 @@ export function classifyIntent(text: string, hasRoomContext: boolean): "rooms" |
   if (/\b(?:meine|eigene)\s+buchungen?\b|\bbuchungen?\s+(?:anzeigen|auflisten|zeigen)\b|\bwas\s+habe\s+ich\s+gebucht\b|\bmy\s+bookings\b/iu.test(normalized)) return "bookings";
 
   const hasRoomWording = /\b(?:raum|raume|raeume|raumbuchung|raumbuchungen|zimmer|seminarraum|projektraum|medienstudio|computerraum|reservier\w*|raumplanung|arbeitsplatz|arbeitsplatz(?:e|en)?|buros?|flex[-\s]?buros?|buroraum|buroraume|bueroraum|bueroraeume|schreibtisch(?:e|en)?|besprechungsraum|besprechungsraume|horsaal|horsale|hoersaal|hoersaele)\b/iu.test(normalized);
-  if (hasRoomWording) return "rooms";
+  const officeType = parseOfficeType(text);
+  if (hasRoomWording || officeType !== undefined && (officeType !== "any" || hasRoomContext)) return "rooms";
 
   const knowledgeTerms = /\b(?:eduroam|wlan|vpn|intranet|service[-\s]*it|it[-\s]*service|passwort|multifaktor|mfa|account|zugangsdaten|softwareportal|zeiterfassung|urlaub|fortbildung|bibliothek|campuscard)\b/iu;
   if (knowledgeTerms.test(normalized)) return "knowledge";
@@ -454,14 +511,18 @@ function stemGermanWord(word: string): string {
 export function matchingResources(resources: Resource[], request: RoomRequest): Resource[] {
   if (request.capacity !== undefined && (!Number.isInteger(request.capacity) || request.capacity < 1)) return [];
   if (request.location === INVALID) return [];
+  if (request.officeType !== undefined && request.kind !== undefined && request.kind !== "workplace") return [];
+  const requestedKind = request.officeType === undefined ? request.kind : "workplace";
   const requiredFeatures = request.features ?? [];
   const requiredQuery = queryTokens(request.query ?? "")
-    .filter((token) => !(request.kind === "workplace" && GENERIC_WORKPLACE_QUERY_TOKENS.has(token)))
+    .filter((token) => !(requestedKind === "workplace" && GENERIC_WORKPLACE_QUERY_TOKENS.has(token)))
     .map(stemGermanWord)
     .filter(Boolean);
   return resources.filter((resource) => {
     const kind = resource.kind ?? 'room';
-    if (request.kind === 'room' ? kind === 'workplace' : request.kind && kind !== request.kind) return false;
+    if (requestedKind === 'room' ? kind === 'workplace' : requestedKind && kind !== requestedKind) return false;
+      if (request.officeType !== undefined && request.officeType !== "any"
+        && classifyWorkplaceOfficeType(resource) !== request.officeType) return false;
     if (request.capacity !== undefined) {
       if (kind === 'workplace') {
         if (request.kind !== 'workplace' || request.capacity !== 1) return false;
@@ -487,6 +548,27 @@ export function matchingResources(resources: Resource[], request: RoomRequest): 
     if (!requiredQuery.every((token) => searchable.split(/[^a-z0-9]+/u).some((candidate) => stemGermanWord(candidate) === token))) return false;
     return true;
   });
+}
+
+export function workplaceOfficeTypeCounts(resources: Resource[]): WorkplaceOfficeTypeCounts {
+  const counts: WorkplaceOfficeTypeCounts = { single: 0, shared: 0, unknown: 0 };
+  for (const resource of resources) {
+    if ((resource.kind ?? "room") !== "workplace") continue;
+    counts[classifyWorkplaceOfficeType(resource)] += 1;
+  }
+  return counts;
+}
+
+export function workplaceRefinementQuestion(resources: Resource[], request: RoomRequest): WorkplaceRefinement | null {
+  if (request.kind !== "workplace" || request.officeType !== undefined || request.query?.trim()) return null;
+  const matches = matchingResources(resources, request);
+  if (matches.length <= 8) return null;
+  const counts = workplaceOfficeTypeCounts(matches);
+  return {
+    question: "Es gibt viele passende Arbeitsplätze. Möchtest du ein Büro mit einem Arbeitsplatz oder einen Platz in einem geteilten Büro – oder ist beides passend? Den gewünschten Zeitraum prüfe ich anschließend.",
+    counts,
+    candidateCount: matches.length,
+  };
 }
 
 function validTime(value: string | undefined): value is string {

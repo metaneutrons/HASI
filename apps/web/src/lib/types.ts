@@ -21,6 +21,8 @@ export type Resource = {
   kind?: ResourceKind;
   parentId?: string | null;
   parentName?: string | null;
+  /** Complete catalog-derived desk count in the parent office, never room seating. */
+  officeWorkplaceCount?: number | null;
 };
 
 export type TimeInterval = {

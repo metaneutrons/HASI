@@ -66,7 +66,12 @@ used to estimate people capacity. The composed demo resource list omits
 - `hshDemoCatalog.resources` contains only 43 leaf resources: 37 workplaces
   and 6 meeting rooms. Office containers are excluded. The presentation map
   carries each leaf's kind and actual parent ID/name alongside its existing
-  capacity, location, features and selected demo service.
+  capacity, location, features and selected demo service. It also carries
+  `officeWorkplaceCount`, derived from the complete parent/child tree and checked
+  against the parent office quantity. This is the number of recorded workplaces
+  in the office, not meeting-room person capacity or current free desks. It is
+  computed before user filtering, so one accessible result cannot misclassify a
+  shared office as a single-workplace office.
 
 ## Exclusions and limits
 
@@ -78,3 +83,18 @@ availability, booking rights and booking eligibility are not represented.
 Mock personas and the selected demo service do not establish authority to make
 a live booking. The fixture documents a read-only catalog snapshot and does not
 verify a production Anny integration.
+
+
+## Office hierarchy recheck (2026-10-17)
+
+A fresh authorized read-only query returned the same 61 resource IDs, 18 office
+containers and 31 parent-child links. For every office, the complete child count
+matches its source quantity: eight offices have one workplace, seven have two,
+and three have three. Building 1J contains seven single-workplace offices and six
+shared offices (four with two workplaces and two with three). Six workplace roots
+have no parent office and retain an unknown office classification. No new source
+attribute or synthetic office count was needed. This query made no booking,
+availability or cancellation request.
+
+The single/shared filter describes this verified catalog structure. It does not
+promise exclusive room use beyond the selected workplace's actual booking rules.

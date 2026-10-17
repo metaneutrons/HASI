@@ -55,6 +55,21 @@ describe('curated Anny resource catalog', () => {
     expect(snapshot.resources.every(resource => resource.capacity === null || Number.isInteger(resource.capacity) && resource.capacity > 0)).toBe(true);
   });
 
+  it('derives office desk counts from the complete hierarchy and verifies the parent quantity', () => {
+    const offices = snapshot.resources.filter(resource => resource.kind === 'office');
+    expect(offices.filter(office => office.quantity === 1)).toHaveLength(8);
+    expect(offices.filter(office => office.quantity === 2)).toHaveLength(7);
+    expect(offices.filter(office => office.quantity === 3)).toHaveLength(3);
+    for (const resource of hshDemoCatalog.resources) {
+      const parent = resource.parentId ? byId.get(resource.parentId) : undefined;
+      const children = parent ? snapshot.resources.filter(child => child.parentId === parent.id) : [];
+      expect(resource.officeWorkplaceCount).toBe(parent ? children.length : null);
+      if (parent) expect(children.length).toBe(parent.quantity);
+      expect(hshDemoPresentation[resource.id]?.officeWorkplaceCount).toBe(resource.officeWorkplaceCount);
+    }
+    expect(hshDemoCatalog.resources.filter(resource => resource.kind === 'workplace' && resource.officeWorkplaceCount === null)).toHaveLength(6);
+  });
+
   it('composes only individual bookable leaves and derives names from actual parent links', () => {
     const expectedLeaves = snapshot.resources.filter(resource => !resource.hasChildren && resource.kind !== 'office');
     expect(hshDemoCatalog.resources).toHaveLength(43);

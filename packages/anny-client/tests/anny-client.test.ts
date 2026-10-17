@@ -289,10 +289,52 @@ describe('AnnyClient', () => {
     });
   });
 
-  it('blocks writes by default and surfaces cancellation as unsupported', async () => {
-    const client = await clientFor();
+  it('blocks create and cancel writes by default without sending a request', async () => {
+    let calls = 0;
+    const client = await clientFor({
+      fetchImpl: (input, init) => {
+        calls += 1;
+        return fetch(input, init);
+      }
+    });
     await expect(client.createBooking(baseInput)).rejects.toBeInstanceOf(AnnyUnsupportedOperationError);
     await expect(client.cancelBooking(MOCK_IDS.bookings.studentA)).rejects.toBeInstanceOf(AnnyUnsupportedOperationError);
+    expect(calls).toBe(0);
+  });
+
+  it('sends cancellation through Anny’s documented GET route as an authenticated, organization-scoped write', async () => {
+    const requests: { url: URL; method: RequestInit['method']; authorization: string | null; contentType: string | null; body: unknown; redirect: RequestInit['redirect'] }[] = [];
+    const client = await clientFor({
+      allowWrites: true,
+      fetchImpl: (input, init) => {
+        const url = input instanceof URL ? input : new URL(typeof input === 'string' ? input : input.url);
+        const headers = new Headers(init?.headers);
+        requests.push({
+          url,
+          method: init?.method,
+          authorization: headers.get('authorization'),
+          contentType: headers.get('content-type'),
+          body: init?.body,
+          redirect: init?.redirect
+        });
+        return Promise.resolve(new Response('cancellation accepted', {
+          status: 200,
+          headers: { 'content-type': 'text/plain' }
+        }));
+      }
+    });
+
+    await expect(client.cancelBooking(MOCK_IDS.bookings.studentA)).resolves.toBeUndefined();
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.url.pathname).toBe(`/api/v1/bookings/${MOCK_IDS.bookings.studentA}/cancel`);
+    expect(requests[0]?.url.searchParams.get('o')).toBe(organizationId);
+    expect(requests[0]?.url.toString()).not.toContain(token);
+    expect(requests[0]?.method).toBe('GET');
+    expect(requests[0]?.authorization).toBe(`Bearer ${token}`);
+    expect(requests[0]?.contentType).toBeNull();
+    expect(requests[0]?.body).toBeUndefined();
+    expect(requests[0]?.redirect).toBe('error');
   });
 
   it('reports a timed-out create as outcome unknown and sends it once', async () => {
@@ -318,6 +360,36 @@ describe('AnnyClient', () => {
     const error = await client.createBooking(baseInput).catch((cause: unknown) => cause);
     expect(error).toBeInstanceOf(AnnyOutcomeUnknownError);
     expect(error).toMatchObject({ kind: 'outcome_unknown', reason: 'timeout' });
+    expect(calls).toBe(1);
+  });
+
+  it('reports a timed-out GET cancellation as outcome unknown and does not retry it', async () => {
+    let calls = 0;
+    const fetchImpl: typeof fetch = (_input, init) => {
+      calls += 1;
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('request aborted', 'AbortError'));
+        }, { once: true });
+      });
+    };
+    const client = new AnnyClient({
+      baseUrl: 'http://localhost:4102',
+      organizationId,
+      token,
+      allowLoopback: true,
+      allowWrites: true,
+      timeoutMs: 5,
+      fetchImpl
+    });
+
+    const error = await client.cancelBooking(MOCK_IDS.bookings.studentA).catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(AnnyOutcomeUnknownError);
+    expect(error).toMatchObject({
+      kind: 'outcome_unknown',
+      operation: 'cancelBooking',
+      reason: 'timeout'
+    });
     expect(calls).toBe(1);
   });
 });

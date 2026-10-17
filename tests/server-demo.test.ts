@@ -142,6 +142,53 @@ for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres', 'snapshot-po
       expect(bookings[0]?.resourceName).toBe(proposal.resourceName);
     });
 
+    it('cancels an owned booking only after confirmation, persists the result and releases availability', async () => {
+      await request('cancel-owner', '/api/dev/login', { personaId: 'student' });
+      const start = new Date(Date.now() + 20 * 86400000); start.setUTCHours(9, 0, 0, 0);
+      const args = { resourceId: snapshot ? '180224' : '00000000-0000-4000-8000-000000000101', serviceId: snapshot ? '65625' : '00000000-0000-4000-8000-000000000201', startDate: start.toISOString(), endDate: new Date(start.getTime() + 3600000).toISOString() };
+      const prepared = await request('cancel-owner', '/api/proposals', args);
+      expect(prepared.status).toBe(200);
+      const { proposal: creation } = await prepared.json() as { proposal: { id: string } };
+      const created = await request('cancel-owner', `/api/proposals/${creation.id}/confirm`, {});
+      const { bookingId } = await created.json() as { bookingId: string };
+      expect(bookingId).toBeTruthy();
+      const bookingStatus = async () => {
+        const response = await request('cancel-owner', '/api/bookings');
+        return (await response.json() as { bookings: { id: string; status: string }[] }).bookings.find(booking => booking.id === bookingId)?.status;
+      };
+      const availability = async () => {
+        const response = await request('cancel-owner', '/api/availability', { resourceId: args.resourceId, serviceId: args.serviceId, startDate: args.startDate, durationMinutes: 60 });
+        return (await response.json() as { intervals: { startDate: string; available: boolean }[] }).intervals.find(slot => Date.parse(slot.startDate) === start.getTime())?.available;
+      };
+      expect(await availability()).toBe(false);
+      const cancellation = await request('cancel-owner', '/api/cancellations', { bookingId });
+      expect(cancellation.status).toBe(200);
+      const { proposal } = await cancellation.json() as { proposal: { id: string; action: string; status: string; startDate: string; endDate: string } };
+      expect(proposal).toMatchObject({ action: 'cancel_booking', status: 'pending', startDate: args.startDate, endDate: args.endDate });
+      expect(await (await request('cancel-owner', `/api/proposals/${proposal.id}`)).json()).toMatchObject({ proposal });
+      expect(await bookingStatus()).toBe('accepted');
+      expect(await availability()).toBe(false);
+      expect((await request('cancel-owner', '/api/tools/call', { pluginId: 'de.hsh.hasi.anny', name: 'anny.execute_cancellation', arguments: { bookingId, resourceId: args.resourceId, startDate: args.startDate, endDate: args.endDate } })).status).toBe(403);
+      await request('cancel-foreign', '/api/dev/login', { personaId: 'student' });
+      expect((await request('cancel-foreign', `/api/proposals/${proposal.id}`)).status).toBe(404);
+      expect((await request('cancel-foreign', '/api/cancellations', { bookingId })).status).not.toBe(200);
+      expect((await request('cancel-foreign', `/api/proposals/${proposal.id}/confirm`, {})).status).toBe(404);
+      await request('cancel-owner', '/api/dev/login', { personaId: 'employee' });
+      expect((await request('cancel-owner', `/api/proposals/${proposal.id}/confirm`, {})).status).toBe(404);
+      await request('cancel-owner', '/api/dev/login', { personaId: 'student' });
+      expect((await request('cancel-owner', `/api/proposals/${proposal.id}/confirm`, { bookingId })).status).toBe(400);
+      const confirmations = await Promise.all([request('cancel-owner', `/api/proposals/${proposal.id}/confirm`, {}), request('cancel-owner', `/api/proposals/${proposal.id}/confirm`, {})]);
+      expect(confirmations.some(response => response.status === 200)).toBe(true);
+      expect(confirmations.every(response => [200, 409].includes(response.status))).toBe(true);
+      runtimes.push(createDemoRuntime({ origin, store, secret, ...(snapshot ? { catalog: hshDemoCatalog } : {}) }));
+      const repeated = await request('cancel-owner', `/api/proposals/${proposal.id}/confirm`, {});
+      expect(await repeated.json()).toMatchObject({ bookingId, status: 'cancelled', proposal: { status: 'confirmed', action: 'cancel_booking' } });
+      expect(await bookingStatus()).toBe('canceled');
+      expect(await availability()).toBe(true);
+      expect((await request('cancel-owner', '/api/cancellations', { bookingId })).status).not.toBe(200);
+      expect(paths).toContain(`/api/v1/bookings/${bookingId}/cancel`);
+    });
+
     it('atomically confirms once, persists across cold runtimes and blocks foreign or altered confirmation', async () => {
       const start = new Date(Date.now() + 86400000); start.setUTCHours(9, 0, 0, 0);
       const args = { resourceId: snapshot ? '180224' : '00000000-0000-4000-8000-000000000101', serviceId: snapshot ? '65625' : '00000000-0000-4000-8000-000000000201', startDate: start.toISOString(), endDate: new Date(start.getTime() + 3600000).toISOString() };

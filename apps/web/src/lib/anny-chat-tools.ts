@@ -1,5 +1,5 @@
 import { chatToolSchemas, type ChatToolName } from "./chat-contract";
-import { matchingResources, requestStartDate, workplaceGroupQuestion, type RoomRequest } from "./chat-demo";
+import { matchingResources, requestStartDate, workplaceGroupQuestion, workplaceOfficeTypeCounts, workplaceRefinementQuestion, type RoomRequest } from "./chat-demo";
 import type { Booking, Resource, TimeInterval } from "./types";
 
 const ANNY_TOOL_NAMES = [
@@ -7,14 +7,16 @@ const ANNY_TOOL_NAMES = [
   "anny_get_availability",
   "anny_list_my_bookings",
   "anny_propose_booking",
+  "anny_propose_cancellation",
 ] as const satisfies readonly ChatToolName[];
 
 type AnnyChatToolName = (typeof ANNY_TOOL_NAMES)[number];
 type AnnyRequest = <T>(path: string, init?: RequestInit) => Promise<T>;
 type AnnyChatToolOptions = { now?: () => Date };
-type RoomCard = { resource: Resource; intervals: TimeInterval[]; checked: boolean };
+type RoomCard = { requestedStartDate?: string; resource: Resource; intervals: TimeInterval[]; checked: boolean };
 
 export type ChatProposal = {
+  action?: "book" | "cancel_booking";
   id: string;
   resourceName: string;
   startDate: string;
@@ -41,7 +43,8 @@ export type AnnyChatToolResult =
   | (AnnyChatToolResultBase & { name: "anny_search_resources" })
   | (AnnyChatToolResultBase & { name: "anny_get_availability" })
   | (AnnyChatToolResultBase & { name: "anny_list_my_bookings" })
-  | (AnnyChatToolResultBase & { name: "anny_propose_booking" });
+  | (AnnyChatToolResultBase & { name: "anny_propose_booking" })
+  | (AnnyChatToolResultBase & { name: "anny_propose_cancellation" });
 
 const MAX_MODEL_OUTPUT_CHARS = 8_000;
 const MAX_RESOURCES = 8;
@@ -79,6 +82,7 @@ function isResource(value: unknown): value is Resource {
     && (value.kind === undefined || ['workplace', 'meeting_room', 'lecture_hall', 'room'].includes(String(value.kind)))
     && (value.parentId === undefined || value.parentId === null || isAnnyId(value.parentId))
     && (value.parentName === undefined || value.parentName === null || typeof value.parentName === 'string')
+    && (value.officeWorkplaceCount === undefined || value.officeWorkplaceCount === null || Number.isInteger(value.officeWorkplaceCount) && Number(value.officeWorkplaceCount) > 0)
     && (value.capacity === null || Number.isInteger(value.capacity) && Number(value.capacity) > 0)
     && typeof value.location === "string"
     && Array.isArray(value.features)
@@ -129,6 +133,7 @@ function toRoomCardResource(resource: Resource): Resource {
     kind: resource.kind ?? 'room',
     parentId: resource.parentId ?? null,
     parentName: resource.parentName ? cleanText(resource.parentName, 160) : null,
+    ...(resource.officeWorkplaceCount !== undefined ? { officeWorkplaceCount: resource.officeWorkplaceCount } : {}),
   };
 }
 
@@ -142,6 +147,7 @@ function toModelResource(resource: Resource): Record<string, unknown> {
     bookingUnit: resource.kind === 'workplace' ? 'one_workplace' : 'whole_room',
     parentId: resource.parentId ?? null,
     parentName: resource.parentName ? cleanText(resource.parentName, 120) : null,
+    ...(resource.officeWorkplaceCount !== undefined ? { officeWorkplaceCount: resource.officeWorkplaceCount } : {}),
     location: cleanText(resource.location, 60),
     features: resource.features.slice(0, 6).map((feature) => cleanText(feature, 20)),
   };
@@ -196,8 +202,15 @@ function parseProposal(value: unknown): ChatProposal {
     startDate: value.startDate,
     endDate: value.endDate,
     status: "pending",
+    action: value.action === "cancel_booking" ? "cancel_booking" : "book",
     expiresAt: value.expiresAt,
   };
+}
+
+export function visibleAvailabilityIntervals(intervals: TimeInterval[], requestedStartDate: string): TimeInterval[] {
+  const available = intervals.filter(interval => interval.available);
+  const exact = available.find(interval => Date.parse(interval.startDate) === Date.parse(requestedStartDate));
+  return exact ? [exact] : available.slice(0, 3);
 }
 
 export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolOptions = {}) {
@@ -224,6 +237,7 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
   async function searchResources(input: Record<string, unknown>): Promise<AnnyChatToolResult> {
     const requestFilters: RoomRequest = {
       kind: input.kind as RoomRequest['kind'],
+      officeType: input.officeType as RoomRequest['officeType'],
       capacity: input.capacity as number | undefined,
       features: input.features as string[] | undefined,
       location: input.location as string | undefined,
@@ -232,16 +246,43 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
     const clarification = workplaceGroupQuestion(requestFilters);
     if (clarification) return { name: 'anny_search_resources', output: { resources: [], returned: 0, truncated: 0, clarificationRequired: clarification }, rooms: [] };
     const resources = await loadAllowedResources();
+    const refinement = workplaceRefinementQuestion(resources, requestFilters);
+    if (refinement) {
+      return {
+        name: "anny_search_resources",
+        output: boundedOutput({
+          resources: [],
+          availabilityChecked: false,
+          returned: 0,
+          truncated: 0,
+          refinementRequired: true,
+          refinementQuestion: refinement.question,
+          officeTypeCounts: refinement.counts,
+          catalogCandidates: refinement.candidateCount,
+          notice: "Das sind Katalogtreffer, keine Aussage zur Verfügbarkeit. Kläre zuerst den gewünschten Bürotyp.",
+        }),
+        rooms: [],
+      };
+    }
     const matches = matchingResources(resources, requestFilters);
     const shown = matches.slice(0, MAX_RESOURCES).map(toRoomCardResource);
     const modelResources = shown.map(toModelResource);
     const total = matches.length;
+    let noMatchNotice = "Keine Treffer für die angegebenen Suchfilter. Das ist keine Verfügbarkeitsprüfung und kein Nachweis, dass an diesem Standort keine Ressourcen existieren. Prüfe die Filter.";
+    if (requestFilters.kind === "workplace" && requestFilters.officeType !== undefined && requestFilters.officeType !== "any" && total === 0) {
+      const unfiltered = matchingResources(resources, { ...requestFilters, officeType: undefined });
+      const unknown = workplaceOfficeTypeCounts(unfiltered).unknown;
+      if (unknown > 0) {
+        const requestedName = requestFilters.officeType === "single" ? "Einzelbüro/1er-Büro" : "geteiltes/2er-/3er-Büro";
+        noMatchNotice = `Kein Arbeitsplatz-Treffer ist ausdrücklich als ${requestedName} dokumentiert. Bei ${String(unknown)} weiteren Treffern ist der Bürotyp nicht dokumentiert; daraus folgt nicht, dass es dort keine passenden Büros gibt. Verfügbarkeit wurde nicht geprüft.`;
+      }
+    }
 
     while (modelResources.length > 0) {
       const output = {
         resources: modelResources,
         availabilityChecked: false,
-        ...(total === 0 ? { notice: "Keine Treffer für die angegebenen Suchfilter. Das ist keine Verfügbarkeitsprüfung und kein Nachweis, dass an diesem Standort keine Ressourcen existieren. Prüfe die Filter." } : {}),
+        ...(total === 0 ? { notice: noMatchNotice } : {}),
         returned: modelResources.length,
         truncated: Math.max(0, total - modelResources.length),
       };
@@ -256,7 +297,7 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
       shown.pop();
     }
 
-    const output = boundedOutput({ resources: [], availabilityChecked: false, returned: 0, truncated: total, notice: "Keine Treffer für diese Suchfilter; Verfügbarkeit wurde nicht geprüft. Dies belegt keinen leeren Standortkatalog." });
+    const output = boundedOutput({ resources: [], availabilityChecked: false, returned: 0, truncated: total, notice: noMatchNotice });
     return { name: "anny_search_resources", output, rooms: [] };
   }
 
@@ -314,7 +355,7 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
     return {
       name: "anny_get_availability",
       output,
-      rooms: [{ resource: toRoomCardResource(resource), intervals: intervals.filter(({ available }) => available), checked: true }],
+      rooms: [{ resource: toRoomCardResource(resource), requestedStartDate: startDate, intervals: visibleAvailabilityIntervals(intervals, startDate), checked: true }],
     };
   }
 
@@ -381,6 +422,13 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
     }
   }
 
+  async function proposeCancellation(input: Record<string, unknown>): Promise<AnnyChatToolResult> {
+    const response = await postJson<{ proposal: unknown }>(request, "/api/cancellations", { bookingId: input.bookingId });
+    if (!isRecord(response) || !isRecord(response.proposal) || response.proposal.action !== "cancel_booking") throw new Error("Die Stornierung wurde nicht als Vorschlag zurückgegeben.");
+    const proposal = parseProposal(response.proposal);
+    return { name: "anny_propose_cancellation", output: boundedOutput({ proposal }), proposal };
+  }
+
   async function run(name: string, args: unknown): Promise<AnnyChatToolResult> {
     if (!isAnnyToolName(name)) throw new Error("Dieses Anny-Werkzeug ist nicht freigegeben.");
     const input = schemaInput(name, args);
@@ -393,6 +441,8 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
         return listMyBookings();
       case "anny_propose_booking":
         return proposeBooking(input);
+      case "anny_propose_cancellation":
+        return proposeCancellation(input);
     }
   }
 

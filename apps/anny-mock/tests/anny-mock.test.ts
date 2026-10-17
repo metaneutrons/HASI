@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { MemoryJsonStore } from '@hasi/state';
 import { createAnnyMock, MOCK_IDS, MOCK_RESOURCE_VIEWS, type AnnyMockCatalog } from '../src/index.js';
 
 interface OpenApiSnapshot {
@@ -97,6 +98,85 @@ describe('Anny mock contract', () => {
     for (const booking of body.included) expect(validateBooking(booking)).toBe(true);
     expect((body.data[0]?.relationships as { bookings: { data: { id: string }[] } }).bookings.data[0]?.id)
       .toBe(MOCK_IDS.bookings.studentA);
+  });
+
+  it('cancels accepted bookings atomically, persists the canceled status, and releases availability', async () => {
+    const token = 'cancel-contract-token';
+    const store = new MemoryJsonStore('cancel-persistence-contract');
+    const first = createAnnyMock({ token, store, scope: 'cancel-shared' });
+    const second = createAnnyMock({ token, store, scope: 'cancel-shared' });
+    const isolated = createAnnyMock({ token, store, scope: 'cancel-isolated' });
+    const cancelUrl = `/api/v1/bookings/${MOCK_IDS.bookings.studentA}/cancel?o=${MOCK_IDS.organization}`;
+    const bookingListUrl = `/api/v1/customers/${MOCK_IDS.customers.student}/bookings?o=${MOCK_IDS.organization}&page%5Bsize%5D=50`;
+    const auth = { authorization: `Bearer ${token}` };
+    try {
+      await Promise.all([first.ready(), second.ready(), isolated.ready()]);
+
+      const unauthenticated = await first.inject({ method: 'GET', url: cancelUrl });
+      expect(unauthenticated.statusCode).toBe(401);
+      const wrongOrganization = await first.inject({
+        method: 'GET',
+        url: `/api/v1/bookings/${MOCK_IDS.bookings.studentA}/cancel?o=wrong-organization`,
+        headers: auth
+      });
+      expect(wrongOrganization.statusCode).toBe(400);
+
+      const before = await first.inject({ method: 'GET', url: bookingListUrl, headers: auth });
+      const booking = before.json<{
+        included: { id: string; attributes: { status: string; start_date: string } }[];
+      }>().included.find(({ id }) => id === MOCK_IDS.bookings.studentA);
+      expect(booking?.attributes.status).toBe('accepted');
+      if (!booking) throw new Error('Seed booking missing from mock response.');
+
+      const availabilityUrl = `/api/v1/availability/upcoming-intervals?service_id=${MOCK_IDS.services.students2}&resource_id=${MOCK_IDS.resources.seminarRoom}&start_date=${encodeURIComponent(booking.attributes.start_date)}&duration=60`;
+      const beforeAvailability = await first.inject({ method: 'GET', url: availabilityUrl });
+      expect(beforeAvailability.json<{ data: { available: boolean }[] }>().data[0]?.available).toBe(false);
+
+      const canceled = await first.inject({ method: 'GET', url: cancelUrl, headers: auth });
+      expect(canceled.statusCode).toBe(200);
+      expect(canceled.headers['content-type']).toContain('application/vnd.api+json');
+      const canceledBody = canceled.json<{
+        data: { id: string; type: string; attributes: { status: string; canceled_at: string } };
+      }>();
+      expect(canceledBody.data).toMatchObject({
+        id: MOCK_IDS.bookings.studentA,
+        type: 'bookings',
+        attributes: { status: 'canceled' }
+      });
+
+      const canceledRequested = await first.inject({
+        method: 'GET',
+        url: `/api/v1/bookings/${MOCK_IDS.bookings.studentB}/cancel?o=${MOCK_IDS.organization}`,
+        headers: auth
+      });
+      expect(canceledRequested.statusCode).toBe(200);
+      expect(canceledRequested.json<{ data: { attributes: { status: string } } }>().data.attributes.status)
+        .toBe('canceled');
+
+      const repeatedCancel = await second.inject({ method: 'GET', url: cancelUrl, headers: auth });
+      expect(repeatedCancel.statusCode).toBe(200);
+      expect(repeatedCancel.json<typeof canceledBody>().data.attributes.canceled_at)
+        .toBe(canceledBody.data.attributes.canceled_at);
+
+      const persisted = await second.inject({ method: 'GET', url: bookingListUrl, headers: auth });
+      const persistedBooking = persisted.json<{
+        included: { id: string; attributes: { status: string } }[];
+      }>().included.find(({ id }) => id === MOCK_IDS.bookings.studentA);
+      expect(persistedBooking?.attributes.status).toBe('canceled');
+      const afterAvailability = await second.inject({ method: 'GET', url: availabilityUrl });
+      expect(afterAvailability.json<{ data: { available: boolean; resource_ids: string[] }[] }>().data[0])
+        .toMatchObject({ available: true, resource_ids: [MOCK_IDS.resources.seminarRoom] });
+
+      const isolatedBookingReply = await isolated.inject({ method: 'GET', url: bookingListUrl, headers: auth });
+      const isolatedBooking = isolatedBookingReply.json<{
+        included: { id: string; attributes: { status: string } }[];
+      }>().included.find(({ id }) => id === MOCK_IDS.bookings.studentA);
+      expect(isolatedBooking?.attributes.status).toBe('accepted');
+      const isolatedAvailability = await isolated.inject({ method: 'GET', url: availabilityUrl });
+      expect(isolatedAvailability.json<{ data: { available: boolean }[] }>().data[0]?.available).toBe(false);
+    } finally {
+      await Promise.all([first.close(), second.close(), isolated.close()]);
+    }
   });
 
   it('rejects missing auth, a wrong organization, and malformed order bodies', async () => {

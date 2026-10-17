@@ -21,6 +21,7 @@ export const MAX_CHAT_HISTORY = 64;
 export const MAX_CHAT_WORKSPACE_BYTES = 2 * 1024 * 1024;
 
 export type ChatProposal = {
+  action?: "book" | "cancel_booking";
   id: string;
   resourceName: string;
   startDate: string;
@@ -30,6 +31,7 @@ export type ChatProposal = {
 };
 
 export type ChatRoomOption = {
+  requestedStartDate?: string;
   resource: Resource;
   intervals: TimeInterval[];
   checked: boolean;
@@ -110,6 +112,7 @@ const resourceSchema = z.strictObject({
   kind: z.enum(['workplace', 'meeting_room', 'lecture_hall', 'room']).optional(),
   parentId: idSchema.nullable().optional(),
   parentName: plainTextSchema(160).nullable().optional(),
+  officeWorkplaceCount: z.number().int().min(1).max(10_000).nullable().optional(),
 });
 
 const intervalSchema = z
@@ -122,6 +125,7 @@ const intervalSchema = z
 
 const proposalSchema = z
   .strictObject({
+    action: z.enum(["book", "cancel_booking"]).optional(),
     id: idSchema,
     resourceName: plainTextSchema(160),
     startDate: offsetDateTimeSchema,
@@ -150,6 +154,7 @@ const chatMessageSchema = z.strictObject({
   rooms: z
     .array(
       z.strictObject({
+        requestedStartDate: offsetDateTimeSchema.optional(),
         resource: resourceSchema,
         intervals: z.array(intervalSchema).max(8),
         checked: z.boolean(),
@@ -167,6 +172,7 @@ const chatMessageSchema = z.strictObject({
 
 const roomRequestSchema = z.strictObject({
   kind: z.enum(['workplace', 'meeting_room', 'lecture_hall', 'room']).optional(),
+  officeType: z.enum(["single", "shared", "any"]).optional(),
   date: plainTextSchema(32).optional(),
   time: plainTextSchema(32).optional(),
   durationMinutes: z.number().int().min(0).max(10_080).optional(),
