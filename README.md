@@ -19,8 +19,8 @@ Ask questions, find rooms and prepare a simulated booking in one conversation.</
 
 ## What works today
 
-- **Chat and room workflows:** multiple saved conversations in a collapsible Chats list; new chats start with the operator default (Groq GPT-OSS 120B in the demo); server-issued UTC message times displayed in Europe/Berlin, with unknown legacy times preserved; room search, availability, booking proposals and explicit confirmation inside the conversation; responsive layouts with light, dark and system themes.
-- **Room and workplace catalog:** 61 resources and all 9 services from an authorized, read-only HsH anny snapshot dated 2026-10-16. The demo offers 37 individual workplaces and six meeting rooms; 18 office containers provide context and cannot be booked as a whole. Person capacity is separate from bookable quantity. No lecture halls occur in this snapshot. Availability, access grants and bookings remain synthetic. See [booking units](docs/architecture/anny-booking-units.md).
+- **Chat and room workflows:** multiple saved conversations in a collapsible Chats list; new chats start with the operator default (Groq GPT-OSS 120B in the demo); server-issued UTC message times displayed in Europe/Berlin, with unknown legacy times preserved; room search, compact progressive results, availability, booking and cancellation proposals with separate explicit confirmation inside the conversation; responsive layouts with light, dark and system themes.
+- **Room and workplace catalog:** 61 resources and all 9 services from an authorized, read-only HsH anny snapshot dated 2026-10-16. The demo offers 37 individual workplaces and six meeting rooms; 18 office containers provide context and cannot be booked as a whole. Person capacity is separate from bookable quantity. No lecture halls occur in this snapshot. Availability, access grants, bookings and cancellations remain synthetic. Office filters use the complete parent/desk hierarchy (eight offices with one recorded desk, ten shared offices); six standalone desks have no office classification. See [booking units](docs/architecture/anny-booking-units.md).
 - **Knowledge demo:** 60 entirely fictional documents, split between Service IT and Intranet examples. Search applies synthetic audience access rules before returning content, and the authenticated demo reader checks access again. These documents are not HsH guidance.
 - **Model registry:** versioned server configuration supports GroqCloud, GWDG SAIA, native OpenAI Responses/Chat, Anthropic Messages and multiple OpenAI-compatible endpoints. Operators choose the default, explicitly enable/limit user selection and define bounded fallback rules. Fallbacks are off in the bundled demo; eligible configured fallbacks pin the actual model for the tool turn and never replay business actions. Groq has live demo evidence; GWDG remains Experimental. Other adapters are mock-transport tested, not live-qualified. Use synthetic test data only.
 - **Test identity:** visitors can select student, employee or administrator demo personas in an isolated workspace. They are fixtures, not real SSO, HsH identities or institutional permissions.
@@ -155,6 +155,8 @@ See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](doc
 - [Verified message times](docs/architecture/chat-message-time.md)
 - [GWDG SAIA and custom model connections](docs/architecture/gwdg-saia.md)
 - [Knowledge MCP and authenticated document delivery](docs/architecture/knowledge-mcp.md)
+- [Production SSO and anny authorization boundary](docs/architecture/anny-identity-and-authorization.md)
+- [Booking cancellation and confirmation](docs/architecture/anny-cancellation.md)
 - [Room snapshot provenance](docs/evaluation/anny-room-snapshot.md)
 - [Evaluation plan](docs/evaluation/benchmark-v1.md)
 - [Local prototype and public-demo verification](docs/verification/2026-10-16/verification.md)

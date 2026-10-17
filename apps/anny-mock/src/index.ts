@@ -57,6 +57,7 @@ export interface AnnyMockCatalogResource {
   kind?: 'workplace' | 'meeting_room' | 'lecture_hall' | 'room';
   parentId?: string | null;
   parentName?: string | null;
+  officeWorkplaceCount?: number | null;
 }
 
 export interface AnnyMockCatalogService {
@@ -121,7 +122,8 @@ interface MockBooking {
   type: 'bookings';
   attributes: {
     number: string;
-    status: 'accepted' | 'requested';
+    status: 'reserved' | 'requested' | 'accepted' | 'rejected' | 'canceled' | 'expired';
+    canceled_at?: string | null;
     is_blocker: boolean;
     start_date: string;
     end_date: string;
@@ -455,7 +457,8 @@ const catalogResourceSchema = z.strictObject({
   serviceId: annyIdSchema,
   kind: z.enum(['workplace', 'meeting_room', 'lecture_hall', 'room']).optional(),
   parentId: annyIdSchema.nullable().optional(),
-  parentName: z.string().nullable().optional()
+  parentName: z.string().nullable().optional(),
+  officeWorkplaceCount: z.number().int().min(1).max(1000).nullable().optional()
 });
 const catalogServiceSchema = z.strictObject({ id: annyIdSchema, name: z.string().min(1) });
 const catalogSchema = z.strictObject({
@@ -629,6 +632,7 @@ function availabilityIntervals(
     if (start.getTime() < requestedStart || start.getTime() < now) return [];
     const availableResourceIds = resourceIds.filter((resourceId) => !bookings.some((booking) => (
       booking.relationships.resource.data.id === resourceId
+      && ['reserved', 'requested', 'accepted'].includes(booking.attributes.status)
       && intervalsOverlap(
         startIso,
         endIso,
@@ -824,6 +828,55 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
       ...page,
       included: customerBookings.filter((booking) => customerBookingIds.has(booking.id))
     });
+  });
+
+  app.get('/api/v1/bookings/:bookingId/cancel', async (request, reply) => {
+    if (!requireAdmin(request, reply, token)) return;
+    const query = request.query as PageQuery;
+    if (!requireOrganization(query, reply)) return;
+    const { bookingId } = request.params as { bookingId: string };
+
+    const result = await updateAggregate<
+      | { kind: 'missing' }
+      | { kind: 'canceled'; booking: MockBooking }
+      | { kind: 'not-cancellable' }
+    >((current) => {
+      const booking = current.bookings.find((item) => item.id === bookingId);
+      if (!booking) return { value: current, result: { kind: 'missing' as const } };
+      if (booking.attributes.status === 'canceled') {
+        return { value: current, result: { kind: 'canceled' as const, booking } };
+      }
+      if (booking.attributes.status !== 'accepted' && booking.attributes.status !== 'requested') {
+        return { value: current, result: { kind: 'not-cancellable' as const } };
+      }
+
+      const canceledBooking: MockBooking = {
+        ...booking,
+        attributes: {
+          ...booking.attributes,
+          status: 'canceled',
+          canceled_at: new Date().toISOString()
+        }
+      };
+      return {
+        value: {
+          ...current,
+          bookings: current.bookings.map((item) => item.id === bookingId ? canceledBooking : item)
+        },
+        result: { kind: 'canceled' as const, booking: canceledBooking }
+      };
+    });
+
+    if (result.kind === 'missing') {
+      sendError(reply, 404, 'Not Found', 'Unknown mock booking.');
+      return;
+    }
+    if (result.kind === 'not-cancellable') {
+      sendError(reply, 409, 'Conflict', 'Only accepted or requested mock bookings can be canceled.');
+      return;
+    }
+
+    return reply.code(200).type('application/vnd.api+json').send({ data: result.booking });
   });
 
   app.post('/api/v1/orders/from-config', async (request, reply) => {

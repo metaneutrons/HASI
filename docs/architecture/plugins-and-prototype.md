@@ -121,8 +121,11 @@ of those rights remains an integration prerequisite.
 
 The public schemas do not settle all semantics. Customer-booking responses
 and order creation must be checked against the actual tenant before live use.
-Cancellation is not exposed until the documented Admin cancellation route's
-contract has been verified; `DELETE` is not substituted. No automatic write
+Owned future-booking cancellation is exposed through prepare/confirm tools. The
+current Admin guide documents its request but no response schema; HASI verifies
+the result through a subsequent customer-scoped booking read. The mock is
+contract-tested; tenant-specific rules and live cancellation remain unqualified.
+`DELETE` is not substituted. See [cancellation](anny-cancellation.md). No automatic write
 retry occurs after a timeout or unknown outcome.
 
 ## Interface requirements

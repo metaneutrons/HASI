@@ -100,3 +100,26 @@ All availability and booking writes remain synthetic and workspace-scoped.
 Real SSO, source access, service eligibility and live anny bookings are separate
 qualification work. The demo's workplace service preference is explicit
 simulation configuration, not evidence of real booking permission.
+
+
+## Office preference and concise results (2026-10-17)
+
+The composed catalog provides `officeWorkplaceCount` from the complete office
+hierarchy, checked against parent quantity. A count of one identifies an office
+with one recorded workplace; larger counts identify shared offices. A leaf with
+no verified parent/count remains unknown. Neither person capacity nor the number
+of results accessible to one user determines this classification.
+
+Workplace searches accept `officeType` (`single`, `shared`, `any`). Large broad
+searches ask the user to narrow that preference before displaying candidates.
+Follow-ups retain the building and requested dates/times. Results start with four
+compact rows; more results and equipment details are disclosed on demand.
+Availability cards prefer the exact requested interval when it is free; otherwise
+up to three alternate intervals are explicitly identified. Full bounded tool
+results remain available to the model, and unchecked duplicate cards for a checked
+resource in the same interaction are hidden only in rendering.
+
+This presentation field and cancellation tools are included in plugin 0.4.0;
+see the [intentional contract migration](anny-cancellation.md#contract-migration).
+The resource/service ID namespace is unchanged, preserving existing simulated
+bookings.

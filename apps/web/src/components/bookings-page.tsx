@@ -13,6 +13,7 @@ function statusLabel(status: string) {
     pending: "Ausstehend",
     requested: "Ausstehend",
     cancelled: "Storniert",
+    canceled: "Storniert",
     failed: "Fehlgeschlagen",
   };
   return labels[status] ?? status;

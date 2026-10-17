@@ -65,8 +65,9 @@ rather than arbitrary plugin HTML or scripts.
 
 IT/intranet search will use the same transcript, returning citations and only
 content authorized for the current user. Real SSO, anny tenant/account linking,
-full API coverage, third-party artifact isolation, cancellation and booking
-reconciliation remain open. Model selection and evaluations must compare both
+full API coverage, third-party artifact isolation and live booking/cancellation
+qualification and reconciliation remain open. The synthetic demo supports owned
+future-booking cancellation through separate preparation and confirmation. Model selection and evaluations must compare both
 conversational quality and correct tool use. The demo is not evidence that
 institutional retrieval, real permissions or production prompt-injection
 defences are implemented.

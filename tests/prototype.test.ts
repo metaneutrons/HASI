@@ -12,7 +12,7 @@ describe('prototype identity, plugin and external API boundaries', () => {
     expect(() => { assertMockMode('development'); }).not.toThrow();
   });
   it('allows compatible patch updates but blocks changed permissions and schemas', () => {
-    const patch = { ...annyManifest, version: '0.3.1' };
+    const patch = { ...annyManifest, version: '0.4.1' };
     expect(compatibleUpdate(annyManifest, patch)).toBe(true);
     expect(manifestSchema.safeParse({ ...patch, apiVersion: '2.0.0' }).success).toBe(false);
     expect(compatibleUpdate(annyManifest, { ...patch, tools: patch.tools.map(tool => ({ ...tool, requiredPermissions: ['administrator'] })) })).toBe(false);

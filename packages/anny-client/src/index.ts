@@ -128,6 +128,11 @@ interface RequestOptions<T> {
   path: string;
   query?: Record<string, string | number | boolean>;
   body?: unknown;
+  /** Some vendor mutations use GET; classify those as writes for outcome handling. */
+  write?: boolean;
+  operation?: string;
+  /** The Admin cancellation guide does not publish a response schema. */
+  ignoreSuccessBody?: boolean;
   auth?: 'admin' | 'anonymous';
   schema: z.ZodType<T>;
 }
@@ -432,11 +437,25 @@ export class AnnyClient {
     return result;
   }
 
-  cancelBooking(bookingId: string): Promise<never> {
-    return Promise.reject(new AnnyUnsupportedOperationError(
-      `cancelBooking(${bookingId})`,
-      'the Admin lifecycle guide describes cancellation, but the route is absent from the pinned Admin OpenAPI snapshot; no cancel request was sent.'
-    ));
+  async cancelBooking(bookingId: string): Promise<void> {
+    if (!this.allowWrites) {
+      throw new AnnyUnsupportedOperationError('cancelBooking', 'set allowWrites:true to enable Anny writes.');
+    }
+    if (!bookingId.trim()) throw new TypeError('bookingId must not be empty.');
+
+    // Anny documents this state-changing action as GET. Treat it as a write:
+    // once the request is sent, a transport failure leaves its outcome unknown.
+    await this.request({
+      method: 'GET',
+      path: `/api/v1/bookings/${encodeURIComponent(bookingId)}/cancel`,
+      query: { o: this.organizationId },
+      write: true,
+      operation: 'cancelBooking',
+      ignoreSuccessBody: true,
+      // The Admin guide documents the request but not its response schema. Do
+      // not infer that the Customer API response contract also applies here.
+      schema: z.unknown()
+    });
   }
 
   private async listPaged<T>(
@@ -502,11 +521,17 @@ export class AnnyClient {
       };
       if (options.body !== undefined) init.body = JSON.stringify(options.body);
       response = await this.fetchImpl(url, init);
-      responseText = await readResponseText(response, options.method, options.path);
+      if (options.ignoreSuccessBody && response.ok) {
+        await response.body?.cancel().catch(() => undefined);
+        responseText = '';
+      } else {
+        responseText = await readResponseText(response, options.method, options.path);
+      }
     } catch (error) {
       if (error instanceof AnnyResponseValidationError) throw error;
-      if (options.method === 'POST') {
-        throw new AnnyOutcomeUnknownError('createBooking', timeoutState.didTimeout ? 'timeout' : 'transport_error', { cause: error });
+      if (options.method === 'POST' || options.write === true) {
+        const operation = options.operation ?? (options.method === 'POST' ? 'createBooking' : 'write operation');
+        throw new AnnyOutcomeUnknownError(operation, timeoutState.didTimeout ? 'timeout' : 'transport_error', { cause: error });
       }
       if (timeoutState.didTimeout) throw new AnnyRequestTimeoutError(options.method, options.path, { cause: error });
       throw new AnnyClientError(`Anny API transport failed for ${options.method} ${options.path}.`, { cause: error });

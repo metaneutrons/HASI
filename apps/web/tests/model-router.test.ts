@@ -280,6 +280,7 @@ describe("model router", () => {
       "anny_search_resources",
       "anny_get_availability",
       "anny_list_my_bookings",
+      "anny_propose_cancellation",
       "anny_propose_booking",
     ]);
     expect(reply).toEqual({
@@ -373,7 +374,9 @@ describe("model router", () => {
     const body = JSON.parse(String(provider.calls[0]?.init?.body));
     expect(body.model).toBe("qwen/qwen3.8-27b");
     expect(body.reasoning_effort).toBe("none");
-    expect(body.tools).toHaveLength(5);
+    expect(body.tools).toHaveLength(6);
+    expect(body.tools.map((entry: { function: { name: string } }) => entry.function.name)).toContain("anny_propose_cancellation");
+    expect(body.tools.map((entry: { function: { name: string } }) => entry.function.name)).not.toContain("anny_execute_cancellation");
     expect(reply.profile.id).toBe("groq-qwen-3.8-27b");
   });
 

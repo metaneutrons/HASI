@@ -66,8 +66,9 @@ dialogue parser. Provider failures do not trigger a silent fallback.
 IT/intranet retrieval and institutional citations remain unavailable.
 
 Real SSO, institutional permissions, anny tenant and customer linking, full
-anny API coverage, third-party artifact isolation, cancellation and booking
-reconciliation remain open work. The synthetic demo provides no connection to
+anny API coverage, third-party artifact isolation and live booking/cancellation
+qualification and reconciliation remain open work. Owned future-booking cancellation
+is available in the synthetic demo through prepare and explicit confirmation. The synthetic demo provides no connection to
 HsH identity, anny tenant data or institutional knowledge services.
 
 ## Chat and request limits
@@ -77,7 +78,8 @@ one inference step. The browser performs at most four steps per user turn and
 stops when host-rendered availability, proposal or booking cards supply the
 next action. Only typed anny read and proposal-preparation tools are model
 facing. A host-owned confirmation card performs the separately authorized
-booking execution. Prepared intervals must match a previously observed
+booking or cancellation execution. Cancellation proposals capture an owned booking’s
+ID, resource and interval and recheck that snapshot at execution. Prepared intervals must match a previously observed
 available interval.
 
 The default profile remains Groq GPT-OSS 120B. GPT-OSS 20B and Qwen3.8 27B are

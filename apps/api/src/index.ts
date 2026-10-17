@@ -15,7 +15,7 @@ const roomRequest = z.strictObject({ resourceId: annyId, serviceId: annyId, star
 const draftSchema = z.strictObject({ executionTool: z.string(), arguments: z.record(z.string(), z.unknown()), resourceName: z.string().max(200) });
 interface Proposal { id: string; subject: string; pluginId: string; pluginVersion: string; executionTool: string; args: Record<string, unknown>; resourceName: string; startDate: string; endDate: string; expiresAt: string; status: 'pending' | 'executing' | 'confirmed' | 'failed' | 'outcome_unknown'; result?: Record<string, unknown>; executionId?: string; executionStartedAt?: number }
 const publicUser = (user: Persona) => ({ id: user.id, displayName: user.displayName, role: user.role });
-const publicProposal = (proposal: Proposal) => ({ id: proposal.id, resourceName: proposal.resourceName, startDate: proposal.startDate, endDate: proposal.endDate, expiresAt: proposal.expiresAt, status: proposal.status, arguments: proposal.args });
+const publicProposal = (proposal: Proposal) => ({ id: proposal.id, resourceName: proposal.resourceName, startDate: proposal.startDate, endDate: proposal.endDate, expiresAt: proposal.expiresAt, status: proposal.status, arguments: proposal.args, action: proposal.pluginId === ANNY && proposal.executionTool === 'anny.execute_cancellation' ? 'cancel_booking' : 'book' });
 
 export interface ApiOptions {
   mode: 'development' | 'test' | 'public-demo'; registry: PluginRegistry; origin?: string;
@@ -96,12 +96,25 @@ export async function createApi(options: ApiOptions) {
     if (!user.actor.resourceIds.includes(args.resourceId)) throw new RequestError(403, 'Dieser Raum ist für das Testkonto nicht freigegeben.');
     return makeProposal(user, ANNY, 'anny.propose_booking', args);
   });
+  app.post('/api/cancellations', async request => {
+    const user = await requireUser(request.cookies[cookieName]);
+    const args = z.strictObject({ bookingId: annyId }).parse(request.body);
+    return makeProposal(user, ANNY, 'anny.propose_cancellation', args);
+  });
   app.post('/api/tools/call', async request => {
     const user = await requireUser(request.cookies[cookieName]);
     const body = z.strictObject({ pluginId: z.string(), name: z.string(), arguments: z.record(z.string(), z.unknown()) }).parse(request.body);
     const tool = options.registry.list().find(plugin => plugin.id === body.pluginId)?.tools.find(candidate => candidate.name === body.name);
     if (tool?.effect === 'prepare') return makeProposal(user, body.pluginId, body.name, body.arguments);
     return options.registry.invoke(body.pluginId, body.name, body.arguments, user.actor);
+  });
+  app.get('/api/proposals/:id', async request => {
+    const user = await requireUser(request.cookies[cookieName]);
+    const { id } = z.object({ id: z.uuid() }).parse(request.params);
+    const record = await store.read(proposalKey(id));
+    const proposal = record?.value as Proposal | undefined;
+    if (proposal?.subject !== user.actor.subject) throw new RequestError(404, 'Vorschlag nicht gefunden.');
+    return { proposal: publicProposal(proposal) };
   });
   app.post('/api/proposals/:id/confirm', async request => {
     const user = await requireUser(request.cookies[cookieName]);
