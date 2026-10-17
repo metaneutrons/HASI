@@ -38,7 +38,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open <http://127.0.0.1:3001>. Start in **Chats**, describe a room request, choose an available interval and confirm the proposal card to create a simulated booking. **Neuer Chat** starts a separate conversation; saved chats can be switched, renamed and deleted.
+Open <http://127.0.0.1:3001>. Start in **Chats**, describe a room request, choose an available interval and confirm the proposal card to create a simulated booking. **Neuer Chat** starts a separate conversation; saved chats can be switched, renamed and deleted. The new-chat action is disabled while the active chat has no messages or draft; another existing unused chat is reopened before a new conversation is created.
 
 `pnpm dev` builds backend packages, then starts the local multi-process reference stack with in-memory state: the web UI on port 3001, core API on 4100, anny MCP plugin on 4101, synthetic anny HTTP service on 4102 and knowledge MCP on 4103. It creates ephemeral signing keys and service tokens. If a port is occupied, startup stops; it does not stop other services. Stop the launcher with Ctrl-C. To use another UI port, run `HASI_WEB_PORT=3002 pnpm dev`.
 
