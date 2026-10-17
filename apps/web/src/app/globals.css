@@ -1122,8 +1122,18 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .chat-transcript { display: grid; width: min(100% - 48px, 790px); gap: 32px; margin: 0 auto; padding: 22px 0 30px; }
 .chat-message { min-width: 0; }
 .chat-speaker { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; color: var(--muted); font-size: 12px; font-weight: 650; }
-.chat-message-time { display: block; margin: -4px 0 10px; color: var(--faint); font-size: 11px; }
+.chat-message-time { display: block; margin: 0; color: var(--faint); font-size: 11px; }
 .chat-message--user .chat-message-time { text-align: right; }
+.chat-message-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; margin: -7px 0 6px; }
+.chat-message--user .chat-message-meta { justify-content: flex-end; }
+.chat-message-copy-wrap { position: relative; display: inline-flex; flex: 0 0 auto; }
+.chat-message-copy { display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; border: 0; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; }
+.chat-message-copy:hover, .chat-message-copy:focus-visible { background: var(--surface-raised); color: var(--ink); }
+.chat-message-copy[data-copied] { color: var(--green); }
+.chat-copy-feedback { position: absolute; z-index: 2; right: 0; bottom: calc(100% + 4px); width: max-content; max-width: 220px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-raised); color: var(--ink-soft); box-shadow: var(--shadow-small); font-size: 11px; pointer-events: none; }
+@media (pointer: coarse), (max-width: 760px) {
+  .chat-message-copy { width: 44px; height: 44px; }
+}
 .chat-speaker { flex-wrap: wrap; }
 .chat-speaker svg { color: var(--accent); }
 .chat-message-body { min-width: 0; }

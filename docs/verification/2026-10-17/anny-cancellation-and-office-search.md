@@ -84,3 +84,29 @@ incomplete constraints and the spring/fall Berlin daylight-saving gaps/repeated
 hours. Complete unresolved times require clarification and cannot fall back to
 a model-chosen replacement. Final live evidence is recorded separately in the
 follow-up PR; the preceding failure is retained here.
+
+
+## Production follow-up qualification
+
+PR #41 candidate `2e25152db26b4a9013640064a6213d54b01c10bc` passed exact-head
+CI 39044729999, including Node 24/26 and PostgreSQL. Main
+`d09bb8d52d442996402b6bf3748b4f6b0da55e45` automatically deployed as
+`dpl_ExeZuwwTgJgpCuvNkw5ERETNNVAd`, READY in fra1; the custom-domain alias
+was verified against that deployment.
+
+On hasi.metaneutrons.cc, a fresh chat selected Groq GPT-OSS 120B by default.
+The original Monday / building 1J / 08:00–16:00 request produced the clean
+preference question, then seven single-office candidates (four initially visible).
+Groq again hit a 429 after returning results. Selecting Grace Hopper used the
+typed availability bridge without another model call and correctly retained
+Monday 2026-10-19 08:00–16:00 Europe/Berlin. A proposal and explicit button
+confirmation created a simulated booking. The own-bookings tool listed it;
+“Stornierung beginnen” prepared a separate cancellation proposal. Only the
+explicit “Stornierung bestätigen” button executed cancellation. The server-backed
+bookings overview retained the record with status “Storniert”. No live Anny writes.
+
+The status/action footer measured a 20px gap and a 44px-high action at desktop,
+390px dark and 320px light widths; document width matched each mobile viewport.
+Chromium emulation is evidence for these viewport sizes, not native iPhone Safari
+qualification. Groq rate limits remain an observed provider limitation; no fallback
+or provider policy was changed.
