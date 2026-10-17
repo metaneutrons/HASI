@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hasi-hero-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="docs/assets/hasi-hero-light.svg">
-    <img src="docs/assets/hasi-hero-light.svg" alt="HASI — Hochschule Hannover · Assistant" width="1100">
+    <img src="docs/assets/hasi-hero-light.svg" alt="hasi — Hochschule Hannover" width="1100">
   </picture>
 </h1>
 
@@ -19,10 +19,10 @@ Ask questions, find rooms and prepare a simulated booking in one conversation.</
 
 ## What works today
 
-- **Chat and room workflows:** multiple saved chats; room search, availability, booking proposals and explicit confirmation inside the conversation; responsive layouts with light, dark and system themes.
+- **Chat and room workflows:** multiple saved conversations in a collapsible Chats list; new chats start with the operator default (Groq GPT-OSS 120B in the demo); server-issued UTC message times displayed in Europe/Berlin, with unknown legacy times preserved; room search, availability, booking proposals and explicit confirmation inside the conversation; responsive layouts with light, dark and system themes.
 - **Room and workplace catalog:** 61 resources and all 9 services from an authorized, read-only HsH anny snapshot dated 2026-10-16. The demo offers 37 individual workplaces and six meeting rooms; 18 office containers provide context and cannot be booked as a whole. Person capacity is separate from bookable quantity. No lecture halls occur in this snapshot. Availability, access grants and bookings remain synthetic. See [booking units](docs/architecture/anny-booking-units.md).
 - **Knowledge demo:** 60 entirely fictional documents, split between Service IT and Intranet examples. Search applies synthetic audience access rules before returning content, and the authenticated demo reader checks access again. These documents are not HsH guidance.
-- **Chat models:** GroqCloud and GWDG SAIA inference run through a server-side route; an optional OpenAI-compatible custom connection can be configured server-side. Chat messages and selected tool results are sent to the selected model provider, so use synthetic test data only. An explicit offline dialogue profile is available; provider failures never silently switch profiles.
+- **Model registry:** versioned server configuration supports GroqCloud, GWDG SAIA, native OpenAI Responses/Chat, Anthropic Messages and multiple OpenAI-compatible endpoints. Operators choose the default, explicitly enable/limit user selection and define bounded fallback rules. Fallbacks are off in the bundled demo; eligible configured fallbacks pin the actual model for the tool turn and never replay business actions. Groq has live demo evidence; GWDG remains Experimental. Other adapters are mock-transport tested, not live-qualified. Use synthetic test data only.
 - **Test identity:** visitors can select student, employee or administrator demo personas in an isolated workspace. They are fixtures, not real SSO, HsH identities or institutional permissions.
 
 The [public demo](https://hasi.metaneutrons.cc) uses a server-backed runtime and isolated synthetic state. Chat transcripts and profile settings stay in browser storage; the server stores workspace sessions, proposals, integration settings and simulated bookings. There is no live anny tenant, institutional knowledge source or real SSO connection.
@@ -38,7 +38,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open <http://127.0.0.1:3001>. Start in **Chat**, describe a room request, choose an available interval and confirm the proposal card to create a simulated booking. **Neuer Chat** starts a separate conversation; saved chats can be switched, renamed and deleted.
+Open <http://127.0.0.1:3001>. Start in **Chats**, describe a room request, choose an available interval and confirm the proposal card to create a simulated booking. **Neuer Chat** starts a separate conversation; saved chats can be switched, renamed and deleted.
 
 `pnpm dev` builds backend packages, then starts the local multi-process reference stack with in-memory state: the web UI on port 3001, core API on 4100, anny MCP plugin on 4101, synthetic anny HTTP service on 4102 and knowledge MCP on 4103. It creates ephemeral signing keys and service tokens. If a port is occupied, startup stops; it does not stop other services. Stop the launcher with Ctrl-C. To use another UI port, run `HASI_WEB_PORT=3002 pnpm dev`.
 
@@ -62,6 +62,30 @@ knowledge answer and anny room search. GPT-OSS 120B is deferred after upstream
 HTTP 500 responses. See [GWDG SAIA and custom providers](docs/architecture/gwdg-saia.md).
 
 Keep credentials private and never commit the file or expose them through a `NEXT_PUBLIC_` variable. The public UI sends messages and selected tool results to the chosen model provider. Do not enter personal, confidential or institutional data.
+
+### Configure models and routing
+
+Use [the example configuration](config/model-providers.example.json) and
+[JSON Schema](config/model-providers.schema.json), then validate without any
+provider calls or credential lookup:
+
+```sh
+pnpm config:models config/model-providers.example.json
+```
+
+Set the JSON document contents as server-only `HASI_LLM_CONFIG`. Connections
+reference environment-managed secrets; never put keys in the document.
+Standard providers use fixed vendor endpoints; custom connections use an
+operator-approved HTTPS endpoint. `policy.userChoice.enabled` and its profile
+allowlist determine whether users may choose a model, enforced in the backend
+as well as the UI. The default applies to every new/replacement chat.
+
+Fallback rules define source, ordered targets and eligible rate-limit/server/
+timeout errors. Each target must pass context, native-tool and credential
+checks within the attempt/time budget. Invalid configurations fail closed.
+The public mock admin cannot edit global configuration or credentials.
+See [configuration, fallback examples and qualification limits](docs/architecture/model-provider-configuration.md).
+Legacy `CUSTOM_*` settings remain supported when no explicit JSON is supplied.
 
 ### Local PostgreSQL server mode
 
@@ -116,6 +140,8 @@ HASI is an incomplete MVP prototype, not an operational Hochschule Hannover serv
 
 Versioned GHCR images for `linux/amd64` and `linux/arm64` are built only through Release Please. The workflow and local Compose demo are implemented; no GHCR image has been published, and hosted native qualification is recorded separately in [D3](https://github.com/metaneutrons/HASI/issues/17). See the [container runtime and release boundaries](docs/architecture/container-runtime.md) before building or selecting a release image. Read-only mainline qualification uploads CI artifacts without creating a tag or release.
 
+The roadmap additionally covers Moodle, Stud.IP, HISinOne (including exam registration and student records), SAP leave/time workflows, and a versioned knowledge base of examination regulations for every degree programme, including scanned PDFs, OCR and exact page citations. These integrations are planned, not implemented.
+
 See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](docs/plans/server-demo-parity.md) for qualification scope.
 
 ## Project documents
@@ -125,6 +151,8 @@ See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](doc
 - [Technical basis](docs/architecture/technical-basis.md)
 - [Security and model evaluation](docs/architecture/security-and-models.md)
 - [LLM router credentials and provider configuration](docs/architecture/llm-router-credentials.md)
+- [Model registry, user choice and fallback policies](docs/architecture/model-provider-configuration.md)
+- [Verified message times](docs/architecture/chat-message-time.md)
 - [GWDG SAIA and custom model connections](docs/architecture/gwdg-saia.md)
 - [Knowledge MCP and authenticated document delivery](docs/architecture/knowledge-mcp.md)
 - [Room snapshot provenance](docs/evaluation/anny-room-snapshot.md)

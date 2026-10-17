@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
   CHAT_TOOL_NAMES,
-  MODEL_PROFILE_IDS,
+  chatProfileIdSchema,
   messageMetadataShape,
   messageTimestampSchema,
   type MessageTimestamp,
@@ -180,7 +180,7 @@ const snapshotEnvelopeSchema = z.strictObject({
   messages: z.array(chatMessageSchema).max(MAX_CHAT_MESSAGES),
   history: z.array(z.unknown()).max(MAX_CHAT_HISTORY),
   input: plainTextSchema(4_000),
-  profileId: z.enum([...MODEL_PROFILE_IDS, "offline"]),
+  profileId: chatProfileIdSchema,
   request: roomRequestSchema,
   roomContext: z.boolean(),
   chosenRoom: resourceSchema.nullable(),
@@ -466,7 +466,7 @@ export function createChatSession(
   profileId: ChatProfileId = DEFAULT_PROFILE,
   now = new Date(),
 ): ChatSession {
-  const profile = z.enum([...MODEL_PROFILE_IDS, "offline"]).parse(profileId);
+  const profile = chatProfileIdSchema.parse(profileId);
   const createdAt = timestamp(now);
   return {
     id: generateId(),
@@ -587,13 +587,13 @@ export function renameChat(workspace: ChatWorkspace, id: string, title: string):
   return { ...workspace, sessions };
 }
 
-export function deleteChat(workspace: ChatWorkspace, id: string, now = new Date()): ChatWorkspace {
+export function deleteChat(workspace: ChatWorkspace, id: string, now = new Date(), defaultProfileId: ChatProfileId = DEFAULT_PROFILE): ChatWorkspace {
   const removed = workspace.sessions.find((session) => session.id === id);
   if (!removed) return workspace;
 
   const sessions = workspace.sessions.filter((session) => session.id !== id);
   if (sessions.length === 0) {
-    const freshSession = createChatSession(undefined, now);
+    const freshSession = createChatSession(defaultProfileId, now);
     return { ...workspace, activeId: freshSession.id, sessions: [freshSession] };
   }
 

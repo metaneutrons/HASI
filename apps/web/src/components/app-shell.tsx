@@ -26,7 +26,7 @@ import { browserChatStorage, createChatWorkspaceStore, type ChatWorkspaceStore }
 import type { Role } from "@/lib/types";
 
 const navItems = [
-  { href: "/", label: "Chat", icon: MessageCircle, key: "assistant" },
+  { href: "/", label: "Chats", icon: MessageCircle, key: "assistant" },
   { href: "/bookings", label: "Buchungen", icon: PanelTop, key: "bookings" },
 ];
 const prototypeLabel = process.env.NEXT_PUBLIC_HASI_PUBLIC_DEMO === "1" ? "Prototyp" : "Lokaler Prototyp";
@@ -318,12 +318,12 @@ function ChatNavigation({ active, store, onOpenChat }: { active: boolean; store:
   const [expanded, setExpanded] = useState(true);
   return (
     <div className={`primary-nav-chat${expanded ? " is-expanded" : " is-collapsed"}`}>
-      <div className="primary-nav-chat-row">
-        <NavLink href="/" label="Chat" icon={MessageCircle} active={active} />
+      <div className={`primary-nav-chat-row${active ? " is-active" : ""}`}>
+        <NavLink href="/" label="Chats" icon={MessageCircle} active={active} />
         <button
           className="primary-nav-chat-toggle"
           type="button"
-          aria-label={expanded ? "Chatverläufe ausblenden" : "Chatverläufe einblenden"}
+          aria-label={expanded ? "Unterhaltungen ausblenden" : "Unterhaltungen einblenden"}
           aria-expanded={expanded}
           aria-controls="primary-chat-sessions"
           onClick={() => setExpanded((value) => !value)}

@@ -1,29 +1,28 @@
 import { z } from "zod";
 
-export const MODEL_PROFILE_IDS = [
-  "groq-oss-120b",
-  "groq-oss-20b",
-  "groq-qwen-3.8-27b",
-  "gwdg-qwen3-30b",
-  "custom-default",
-] as const;
-export type ModelProfileId = (typeof MODEL_PROFILE_IDS)[number];
+export const modelProfileIdSchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9_.-]{0,63}$/u)
+  .refine((profileId) => profileId !== "offline", "offline is reserved for the local demo.");
+export type ModelProfileId = z.infer<typeof modelProfileIdSchema>;
 
-export const chatProfileIdSchema = z.union([z.enum(MODEL_PROFILE_IDS), z.literal("offline")]);
+export const chatProfileIdSchema = z.union([modelProfileIdSchema, z.literal("offline")]);
 
 export const modelProfileSchema = z.strictObject({
-  id: z.enum(MODEL_PROFILE_IDS),
+  id: modelProfileIdSchema,
   label: z.string().trim().min(1).max(100),
   modelId: z.string().trim().min(1).max(128),
-  provider: z.enum(["groq", "gwdg", "custom"]),
+  provider: z.enum(["groq", "gwdg", "custom", "openai", "anthropic"]),
   configured: z.boolean(),
+  fallbackLabels: z.array(z.string().min(1).max(100)).max(64).optional(),
 });
 
 export const modelProfilesResponseSchema = z
   .strictObject({
     configured: z.boolean(),
+    userChoiceEnabled: z.boolean(),
     profiles: z.array(modelProfileSchema),
-    defaultProfileId: z.enum(MODEL_PROFILE_IDS),
+    defaultProfileId: modelProfileIdSchema,
   })
   .superRefine(({ configured, profiles }, context) => {
     if (configured !== profiles.some((profile) => profile.configured)) {
@@ -290,7 +289,8 @@ function validateMessageSequence(
 
 export const chatRequestSchema = z
   .strictObject({
-    profileId: z.enum(MODEL_PROFILE_IDS),
+    profileId: modelProfileIdSchema,
+    routingToken: z.string().min(1).max(2_048).optional(),
     messages: z.array(wireMessageSchema).max(64),
   })
   .superRefine((request, context) => {
@@ -311,11 +311,12 @@ export const modelReplySchema = z
   .strictObject({
     message: assistantMessageSchema,
     profile: z.strictObject({
-      id: z.enum(MODEL_PROFILE_IDS),
+      id: modelProfileIdSchema,
       label: nonEmptyText(100),
       modelId: nonEmptyText(128),
-      provider: z.enum(["groq", "gwdg", "custom"]),
+      provider: z.enum(["groq", "gwdg", "custom", "openai", "anthropic"]),
     }),
+    routingToken: z.string().min(1).max(2_048).optional(),
     usage: z.strictObject({
       inputTokens: z.number().int().nonnegative(),
       outputTokens: z.number().int().nonnegative(),

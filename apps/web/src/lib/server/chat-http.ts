@@ -79,6 +79,9 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
     console.warn("HASI model request failed", JSON.stringify(cause instanceof ModelRouterError
       ? { code: cause.code, providerStatus: cause.providerStatus, ...(cause.diagnostics && Object.keys(cause.diagnostics).length ? { diagnostics: cause.diagnostics } : {}) }
       : { code: "unexpected_provider_failure" }));
+    if (cause instanceof ModelRouterError && cause.code === "profile_not_approved") {
+      return error("Das gewählte Modell oder die Routing-Freigabe ist für diese Anfrage nicht zugelassen. Beginne einen neuen Chat mit dem konfigurierten Standardmodell.", 403);
+    }
     if (cause instanceof ModelRouterError && cause.code === "provider_rate_limited") {
       return Response.json({ error: "Das Anfragelimit des ausgewählten Modellanbieters ist erreicht. Bitte warte eine Minute und versuche es erneut. Vorhandene Buchungskarten kannst du weiter nutzen." }, { status: 429, headers: { ...headers, "retry-after": "60" } });
     }

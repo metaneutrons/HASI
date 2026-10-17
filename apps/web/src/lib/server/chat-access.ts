@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { canonicalDemoRequest, getDemoRuntime } from "./demo-runtime";
+import { createRoutingPins } from "./routing-pins";
 import { createMessageClock } from "./message-timestamps";
 
 // Local development has no durable identity/secret store. Its receipts last
@@ -39,7 +40,7 @@ export async function chatAccess(request: Request) {
     if (process.env.VERCEL_URL) allowedOrigins.push(`https://${process.env.VERCEL_URL}`);
     if (!process.env.VERCEL) allowedOrigins.push("http://127.0.0.1:3001", "http://127.0.0.1:3002", "http://localhost:3001");
     if (!process.env.VERCEL && process.env.HASI_DEMO_MODE === "1") allowedOrigins.push(new URL(request.url).origin);
-    return { request, allowedOrigins, timestampScope: createHash("sha256").update(scope).digest("hex"), clock: createMessageClock(secret, `${new URL(request.url).origin}:${scope}`) };
+    return { request, allowedOrigins, timestampScope: createHash("sha256").update(scope).digest("hex"), routingPins: createRoutingPins(secret, `${new URL(request.url).origin}:${scope}`), clock: createMessageClock(secret, `${new URL(request.url).origin}:${scope}`) };
   } catch {
     return failure("Die Testsitzung ist vorübergehend nicht verfügbar.", 503);
   }

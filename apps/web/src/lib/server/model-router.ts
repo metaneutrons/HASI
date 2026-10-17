@@ -1,5 +1,10 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { loadModelConfiguration, resolveModelConnection, type ModelConfiguration } from "./model-config";
+import type { createRoutingPins } from "./routing-pins";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { APICallError, generateText, isStepCount, tool, type ModelMessage, type ToolSet } from "ai";
@@ -7,121 +12,37 @@ import { ModelRouterError } from "./model-router-error";
 import { groqErrorDiagnostics } from "./groq-error-diagnostics";
 export { ModelRouterError } from "./model-router-error";
 import {
-  MODEL_PROFILE_IDS,
   chatRequestSchema,
   chatToolDescriptions,
   chatToolSchemas,
   modelReplySchema,
   type ChatRequest,
   type ChatToolName,
-  type ModelProfileId,
   type ModelReply,
   type WireMessage,
 } from "../chat-contract";
 
-const GROQ_CONNECTION = Object.freeze({
-  id: "groq-demo",
-  adapter: "groq" as const,
-  baseURL: "https://api.groq.com/openai/v1",
-  credentialRef: "env:GROQ_API_KEY" as const,
-});
-const GWDG_CONNECTION = Object.freeze({
-  id: "gwdg-demo",
-  adapter: "openai-compatible" as const,
-  baseURL: "https://chat-ai.academiccloud.de/v1",
-  credentialRef: "env:GWDG_API_KEY" as const,
-});
-const CUSTOM_CREDENTIAL_REF = "env:CUSTOM_API_KEY" as const;
-type SecretReference = typeof GROQ_CONNECTION.credentialRef | typeof GWDG_CONNECTION.credentialRef | typeof CUSTOM_CREDENTIAL_REF;
-type ProviderConnection = {
-  id: string;
-  adapter: "groq" | "openai-compatible";
-  baseURL: string;
-  credentialRef: SecretReference;
-};
-
-type ServerModelProfile = {
-  id: ModelProfileId;
-  label: string;
-  modelId: string;
-  provider: "groq" | "gwdg" | "custom";
-  connection: ProviderConnection;
-  reasoningEffort?: "low" | "none";
-};
-
-const MODEL_PROFILES: readonly ServerModelProfile[] = Object.freeze([
-  Object.freeze({
-    id: "groq-oss-120b",
-    label: "Groq GPT-OSS 120B",
-    modelId: "openai/gpt-oss-120b",
-    provider: "groq",
-    connection: GROQ_CONNECTION,
-    reasoningEffort: "low",
-  }),
-  Object.freeze({
-    id: "groq-oss-20b",
-    label: "Groq GPT-OSS 20B",
-    modelId: "openai/gpt-oss-20b",
-    provider: "groq",
-    connection: GROQ_CONNECTION,
-    reasoningEffort: "low",
-  }),
-  Object.freeze({
-    id: "groq-qwen-3.8-27b",
-    label: "Groq Qwen3.8 27B · Preview",
-    modelId: "qwen/qwen3.8-27b",
-    provider: "groq",
-    connection: GROQ_CONNECTION,
-    reasoningEffort: "none",
-  }),
-  Object.freeze({
-    id: "gwdg-qwen3-30b",
-    label: "GWDG SAIA · Qwen3 30B A3B Instruct 2507 · Experimental",
-    modelId: "qwen3-30b-a3b-instruct-2507",
-    provider: "gwdg",
-    connection: GWDG_CONNECTION,
-  }),
-]);
-
-export const DEFAULT_PROFILE_ID: ModelProfileId = "groq-oss-120b";
-
-type SecretEnvironment = Readonly<{
-  GROQ_API_KEY?: string;
-  GWDG_API_KEY?: string;
-  CUSTOM_API_KEY?: string;
-  CUSTOM_ENDPOINT?: string;
-  CUSTOM_MODEL_ID?: string;
-}>;
-
-interface SecretResolver {
-  resolve(reference: SecretReference): string | undefined;
-}
-
-const SECRET_ENVIRONMENT_NAMES = Object.freeze({
-  [GROQ_CONNECTION.credentialRef]: "GROQ_API_KEY",
-  [GWDG_CONNECTION.credentialRef]: "GWDG_API_KEY",
-  [CUSTOM_CREDENTIAL_REF]: "CUSTOM_API_KEY",
-} as const satisfies Record<SecretReference, keyof SecretEnvironment>);
-
-class EnvironmentSecretResolver implements SecretResolver {
-  constructor(private readonly environment: SecretEnvironment) {}
-
-  resolve(reference: SecretReference): string | undefined {
-    const variableName = SECRET_ENVIRONMENT_NAMES[reference];
-    const value = this.environment[variableName];
-    return typeof value === "string" && value.trim().length > 0
-      ? value
-      : undefined;
-  }
-}
-
+type SecretEnvironment = Readonly<Record<string, string | undefined>>;
+type ProviderConnection = { baseURL: string };
 type RouterOptions = {
   env?: SecretEnvironment;
   fetch?: typeof fetch;
   now?: Date | (() => Date);
   /** Verified by the HTTP boundary, never taken from client timestamp fields. */
   messageTimes?: readonly (string | null)[];
+  routingPins?: ReturnType<typeof createRoutingPins>;
+  /** Trusted host context; client/model input cannot change its classification. */
+  context?: { dataClasses: readonly string[]; toolsRequired: boolean };
 };
+
+// Secret references have already passed the operator configuration allowlist.
+class EnvironmentSecretResolver {
+  constructor(private readonly environment: SecretEnvironment) {}
+  resolve(reference: string): string | undefined {
+    const value = this.environment[reference.slice(4)];
+    return typeof value === "string" && value.trim() ? value : undefined;
+  }
+}
 
 const CHAT_TOOLS = {
   knowledge_search: tool({ description: chatToolDescriptions.knowledge_search, inputSchema: chatToolSchemas.knowledge_search }),
@@ -172,91 +93,39 @@ function createPinnedFetch(connection: ProviderConnection, upstream: typeof fetc
   };
 }
 
-function isModelProfileId(value: unknown): value is ModelProfileId {
-  return (
-    typeof value === "string" &&
-    (MODEL_PROFILE_IDS as readonly string[]).includes(value)
-  );
-}
-
 function isChatToolName(value: string): value is ChatToolName {
   return Object.hasOwn(chatToolSchemas, value);
 }
 
-function customProfile(environment: SecretEnvironment): ServerModelProfile | undefined {
-  const configuredModelId = environment.CUSTOM_MODEL_ID;
-  if (typeof configuredModelId !== "string" || /[\u0000-\u001f\u007f]/u.test(configuredModelId)) return undefined;
-  const modelId = configuredModelId.trim();
-  if (!modelId || modelId.length > 128) return undefined;
-
-  const endpointValue = environment.CUSTOM_ENDPOINT;
-  if (typeof endpointValue !== "string" || /[\u0000-\u001f\u007f]/u.test(endpointValue)) return undefined;
-  const configuredEndpoint = endpointValue.trim();
-  if (!configuredEndpoint || configuredEndpoint.includes("?") || configuredEndpoint.includes("#")) return undefined;
-
-  let endpoint: URL;
-  try {
-    endpoint = new URL(configuredEndpoint);
-  } catch {
-    return undefined;
-  }
-  if (
-    endpoint.protocol !== "https:" ||
-    endpoint.hostname.length === 0 ||
-    endpoint.username.length > 0 ||
-    endpoint.password.length > 0 ||
-    endpoint.search.length > 0 ||
-    endpoint.hash.length > 0
-  ) return undefined;
-
-  endpoint.pathname = endpoint.pathname.replace(/\/+$/u, "");
-  const displayModelId = modelId.length > 72 ? `${modelId.slice(0, 71)}…` : modelId;
-  return {
-    id: "custom-default",
-    label: `Custom · ${displayModelId}`,
-    modelId,
-    provider: "custom",
-    connection: {
-      id: "custom-demo",
-      adapter: "openai-compatible",
-      baseURL: endpoint.toString().replace(/\/+$/u, ""),
-      credentialRef: CUSTOM_CREDENTIAL_REF,
-    },
-  };
+function eligible(profile: ModelConfiguration["profiles"][number], options: RouterOptions): boolean {
+  const context = options.context ?? { dataClasses: ["synthetic_demo"], toolsRequired: true };
+  return (!context.toolsRequired || profile.capabilities.tools) && context.dataClasses.length > 0 && context.dataClasses.every(value => profile.allowedDataClasses.includes(value as typeof profile.allowedDataClasses[number]));
 }
 
-function getProfile(profileId: ModelProfileId, environment: SecretEnvironment): ServerModelProfile | undefined {
-  if (profileId === "custom-default") return customProfile(environment);
-  return MODEL_PROFILES.find((profile) => profile.id === profileId);
-}
-
-function currentSecretEnvironment(): SecretEnvironment {
-  return {
-    GROQ_API_KEY: process.env.GROQ_API_KEY,
-    GWDG_API_KEY: process.env.GWDG_API_KEY,
-    CUSTOM_API_KEY: process.env.CUSTOM_API_KEY,
-    CUSTOM_ENDPOINT: process.env.CUSTOM_ENDPOINT,
-    CUSTOM_MODEL_ID: process.env.CUSTOM_MODEL_ID,
-  };
+function configured(environment: SecretEnvironment): ModelConfiguration {
+  try { return loadModelConfiguration(environment); }
+  catch { throw new ModelRouterError("configuration_invalid", "The server model configuration is invalid."); }
 }
 
 export function listModelProfiles(env?: SecretEnvironment) {
-  const environment = env ?? currentSecretEnvironment();
+  const environment = env ?? process.env;
+  const config = configured(environment);
   const resolver = new EnvironmentSecretResolver(environment);
-  const custom = customProfile(environment);
-  const serverProfiles = custom ? [...MODEL_PROFILES, custom] : MODEL_PROFILES;
-  const profiles = serverProfiles.map(({ id, label, modelId, provider, connection }) => ({
-    id,
-    label,
-    modelId,
-    provider,
-    configured: resolver.resolve(connection.credentialRef) !== undefined,
-  }));
-  return {
-    configured: profiles.some((profile) => profile.configured),
-    profiles,
-    defaultProfileId: DEFAULT_PROFILE_ID,
-  };
+  const allowed = new Set([config.policy.defaultProfileId, ...(config.policy.userChoice.enabled ? config.policy.userChoice.profileIds : [])]);
+  const profiles = config.profiles.filter(profile => allowed.has(profile.id)).map(profile => {
+    const connection = config.connections.find(connection => connection.id === profile.connectionId)!;
+    const reachable = new Set<string>();
+    const visit = (id: string) => {
+      for (const target of config.policy.fallbacks.find(rule => rule.from === id)?.targets ?? []) {
+        if (reachable.has(target)) continue;
+        reachable.add(target); visit(target);
+      }
+    };
+    visit(profile.id);
+    const fallbackLabels = config.profiles.filter(candidate => reachable.has(candidate.id)).map(candidate => candidate.label);
+    return { id: profile.id, label: profile.label, modelId: profile.modelId, provider: connection.provider, configured: resolver.resolve(connection.credentialRef) !== undefined && eligible(profile, {}), ...(fallbackLabels.length ? { fallbackLabels } : {}) };
+  });
+  return { configured: profiles.some(profile => profile.configured), profiles, defaultProfileId: config.policy.defaultProfileId, userChoiceEnabled: config.policy.userChoice.enabled };
 }
 
 function formatBerlinNow(now: Date): string {
@@ -357,82 +226,101 @@ function invalidModelResponse(): ModelRouterError {
   );
 }
 
-export async function runModelStep(
-  input: ChatRequest,
-  options: RouterOptions = {},
-): Promise<ModelReply> {
-  const candidateProfileId =
-    typeof input === "object" && input !== null
-      ? (input as { profileId?: unknown }).profileId
-      : undefined;
-  if (!isModelProfileId(candidateProfileId)) {
-    throw new ModelRouterError(
-      "profile_not_approved",
-      "The selected model profile is not approved.",
-    );
-  }
-
-  const requestResult = chatRequestSchema.safeParse(input);
-  if (!requestResult.success) {
-    throw new ModelRouterError(
-      "invalid_request",
-      "The chat request does not match the HASI contract.",
-    );
-  }
-
-  const request = requestResult.data;
-  const environment = options.env ?? currentSecretEnvironment();
-  const profile = getProfile(request.profileId, environment);
-  if (!profile) {
-    throw new ModelRouterError(
-      "profile_not_approved",
-      "The selected model profile is not approved.",
-    );
-  }
-
-  const connection = profile.connection;
+export async function runModelStep(input: ChatRequest, options: RouterOptions = {}): Promise<ModelReply> {
+  const parsed = chatRequestSchema.safeParse(input);
+  if (!parsed.success) throw new ModelRouterError("invalid_request", "The chat request does not match the HASI contract.");
+  const request = parsed.data;
+  const environment = options.env ?? process.env;
+  const config = configured(environment);
+  const allowed = new Set([config.policy.defaultProfileId, ...(config.policy.userChoice.enabled ? config.policy.userChoice.profileIds : [])]);
+  if (!allowed.has(request.profileId)) throw new ModelRouterError("profile_not_approved", "The selected model profile is not approved.");
+  const revision = createHash("sha256").update(JSON.stringify(config)).digest("hex");
+  const user = request.messages.findLast(message => message.role === "user");
+  const turnId = user?.id;
+  const turnHash = createHash("sha256").update(JSON.stringify([turnId, user?.content])).digest("hex");
+  const expected = { turnId: turnId ?? "", turnHash, revision, requestedProfileId: request.profileId };
+  const pin = request.routingToken ? options.routingPins?.verify(request.routingToken, expected) : null;
+  if (request.routingToken && !pin) throw new ModelRouterError("profile_not_approved", "The routing receipt is invalid or expired.");
+  let actualId = pin?.actualProfileId ?? request.profileId;
+  const attempted = [...(pin?.attemptedProfileIds ?? [actualId])];
+  const budget = { remaining: config.policy.maxAttempts, deadline: Date.now() + config.policy.totalTimeoutMs };
   const resolver = new EnvironmentSecretResolver(environment);
-  const apiKey = resolver.resolve(connection.credentialRef);
-  if (!apiKey) {
-    throw new ModelRouterError(
-      "missing_credentials",
-      "The selected model provider is not configured.",
-    );
+  let candidates: string[] = [];
+  let rule = config.policy.fallbacks.find(rule => rule.from === actualId);
+  for (;;) {
+    const profile = config.profiles.find(profile => profile.id === actualId);
+    if (!profile || !eligible(profile, options)) throw new ModelRouterError("profile_not_approved", "The profile is not eligible for this context.");
+    const configuredConnection = config.connections.find(connection => connection.id === profile.connectionId)!;
+    const apiKey = resolver.resolve(configuredConnection.credentialRef);
+    if (!apiKey) throw new ModelRouterError("missing_credentials", "The selected model provider is not configured.");
+    try {
+      const result = await generateProfile(request, { ...profile, provider: configuredConnection.provider }, resolveModelConnection(configuredConnection), apiKey, options, budget);
+      if (actualId !== request.profileId) {
+        if (!turnId || !options.routingPins) throw new ModelRouterError("profile_not_approved", "Fallback requires a current authenticated turn.");
+        result.routingToken = options.routingPins.issue({ ...expected, actualProfileId: actualId, attemptedProfileIds: attempted });
+      }
+      return result;
+    } catch (cause) {
+      if (!(cause instanceof ModelRouterError) || !cause.transientFailure || budget.remaining < 1 || Date.now() >= budget.deadline || !turnId || !options.routingPins) throw cause;
+      if (!rule?.on.includes(cause.transientFailure)) {
+        rule = config.policy.fallbacks.find(rule => rule.from === actualId && rule.on.includes(cause.transientFailure!));
+        candidates = [];
+      }
+      if (!rule) throw cause;
+      if (!candidates.length) candidates = [...rule.targets];
+      const findEligible = () => candidates.find(id => {
+        if (attempted.includes(id) || attempted.length >= config.policy.maxAttempts) return false;
+        const target = config.profiles.find(profile => profile.id === id);
+        const connection = target && config.connections.find(connection => connection.id === target.connectionId);
+        return target && connection && eligible(target, options) && resolver.resolve(connection.credentialRef) !== undefined;
+      });
+      let next = findEligible();
+      if (!next && rule.from !== actualId) {
+        const ownRule = config.policy.fallbacks.find(rule => rule.from === actualId && rule.on.includes(cause.transientFailure!));
+        if (ownRule) { rule = ownRule; candidates = [...ownRule.targets]; next = findEligible(); }
+      }
+      if (!next) throw cause;
+      candidates = candidates.slice(candidates.indexOf(next) + 1);
+      actualId = next;
+      attempted.push(next);
+      // Ordered sibling targets retain the triggering rule; a new rule is used
+      // once that list is exhausted. The configuration rejects graph cycles.
+      if (!candidates.length) rule = config.policy.fallbacks.find(rule => rule.from === actualId) ?? rule;
+    }
   }
+}
 
+type ResolvedProfile = ModelConfiguration["profiles"][number] & { provider: ModelConfiguration["connections"][number]["provider"] };
+async function generateProfile(request: ChatRequest, profile: ResolvedProfile, connection: ReturnType<typeof resolveModelConnection>, apiKey: string, options: RouterOptions, budget: { remaining: number; deadline: number }): Promise<ModelReply> {
   const pinnedFetch = createPinnedFetch(connection, options.fetch ?? fetch);
-  const model = connection.adapter === "groq"
-    ? createGroq({
-      apiKey,
-      baseURL: connection.baseURL,
-      fetch: pinnedFetch,
-    })(profile.modelId)
-    : createOpenAICompatible({
-      name: profile.provider,
-      apiKey,
-      baseURL: connection.baseURL,
-      fetch: pinnedFetch,
-    }).chatModel(profile.modelId);
+  const adapterOptions = { apiKey, baseURL: connection.baseURL, fetch: pinnedFetch };
+  const model = connection.adapter === "groq" ? createGroq(adapterOptions)(profile.modelId)
+    : connection.adapter === "openai" ? (connection.api === "responses" ? createOpenAI(adapterOptions).responses(profile.modelId) : createOpenAI(adapterOptions).chat(profile.modelId))
+    : connection.adapter === "anthropic" ? createAnthropic(adapterOptions)(profile.modelId)
+    : createOpenAICompatible({ name: profile.provider, ...adapterOptions }).chatModel(profile.modelId);
 
   const instructions = buildSystemPrompt(getNow(options.now), request.messages, options.messageTimes);
   const messages = toModelMessages(request.messages);
-  const deadline = Date.now() + (profile.provider === "gwdg" ? 45_000 : 20_000);
-  const generate = (retry: boolean) => generateText({
+  const deadline = Math.min(budget.deadline, Date.now() + profile.parameters.timeoutMs);
+  const generate = (retry: boolean) => {
+    if (budget.remaining-- < 1) throw new ModelRouterError("provider_unavailable", "Generation attempt budget exhausted.");
+    return generateText({
     model,
     instructions: retry
       ? `${instructions}\n\nDer vorige Generierungsversuch enthielt einen ungültigen Tool-Aufruf und wurde verworfen. Erzeuge die Antwort erneut gemäß den bereitgestellten Schemata. Verwende nur definierte Tool-Namen und Felder; lasse nicht benötigte optionale Felder weg.`
       : instructions,
     messages,
     tools: CHAT_TOOLS,
-    temperature: retry ? 0 : 0.2,
+    ...(profile.parameters.temperature === null ? {} : { temperature: retry ? 0 : profile.parameters.temperature }),
     ...(connection.adapter === "groq"
-      ? { providerOptions: { groq: { reasoningEffort: profile.reasoningEffort ?? "low", parallelToolCalls: false } } }
-      : {}),
-    maxOutputTokens: 1536,
+      ? { providerOptions: { groq: { reasoningEffort: profile.parameters.reasoningEffort ?? "low", parallelToolCalls: false } } }
+      : connection.adapter === "openai" ? { providerOptions: { openai: { store: false } } } : {}),
+    maxOutputTokens: profile.parameters.maxOutputTokens,
     maxRetries: 0,
     timeout: Math.max(1, deadline - Date.now()),
     stopWhen: isStepCount(1),
   });
+  };
   let result: Awaited<ReturnType<typeof generate>>;
   try {
     try {
@@ -442,7 +330,7 @@ export async function runModelStep(
       // failures or any business action. Failed output is never replayed.
       if (connection.adapter !== "groq" || !APICallError.isInstance(cause) || cause.statusCode !== 400 ||
         groqErrorDiagnostics(cause.responseBody).providerCode !== "tool_use_failed" ||
-        Date.now() >= deadline) throw cause;
+        Date.now() >= deadline || budget.remaining < 1) throw cause;
       result = await generate(true);
     }
   } catch (cause) {
@@ -454,6 +342,7 @@ export async function runModelStep(
       connection.adapter === "groq" && APICallError.isInstance(cause)
         ? groqErrorDiagnostics(cause.responseBody)
         : undefined,
+      status === 429 ? "rate_limit" : status !== undefined && status >= 500 ? "server_error" : cause instanceof Error && /Timeout|Abort/u.test(cause.name) ? "timeout" : undefined,
     );
   }
 

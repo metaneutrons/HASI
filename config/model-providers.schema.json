@@ -1,0 +1,484 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "connections": {
+      "minItems": 1,
+      "maxItems": 32,
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "credentialRef": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "env:GROQ_API_KEY",
+                      "env:GWDG_API_KEY",
+                      "env:OPENAI_API_KEY",
+                      "env:ANTHROPIC_API_KEY",
+                      "env:CUSTOM_API_KEY"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^env:HASI_LLM_SECRET_[A-Z0-9_]{1,64}$"
+                  }
+                ]
+              },
+              "provider": {
+                "type": "string",
+                "const": "groq"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "credentialRef",
+              "provider"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "credentialRef": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "env:GROQ_API_KEY",
+                      "env:GWDG_API_KEY",
+                      "env:OPENAI_API_KEY",
+                      "env:ANTHROPIC_API_KEY",
+                      "env:CUSTOM_API_KEY"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^env:HASI_LLM_SECRET_[A-Z0-9_]{1,64}$"
+                  }
+                ]
+              },
+              "provider": {
+                "type": "string",
+                "const": "gwdg"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "credentialRef",
+              "provider"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "credentialRef": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "env:GROQ_API_KEY",
+                      "env:GWDG_API_KEY",
+                      "env:OPENAI_API_KEY",
+                      "env:ANTHROPIC_API_KEY",
+                      "env:CUSTOM_API_KEY"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^env:HASI_LLM_SECRET_[A-Z0-9_]{1,64}$"
+                  }
+                ]
+              },
+              "provider": {
+                "type": "string",
+                "const": "openai"
+              },
+              "api": {
+                "type": "string",
+                "enum": [
+                  "responses",
+                  "chat-completions"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "credentialRef",
+              "provider"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "credentialRef": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "env:GROQ_API_KEY",
+                      "env:GWDG_API_KEY",
+                      "env:OPENAI_API_KEY",
+                      "env:ANTHROPIC_API_KEY",
+                      "env:CUSTOM_API_KEY"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^env:HASI_LLM_SECRET_[A-Z0-9_]{1,64}$"
+                  }
+                ]
+              },
+              "provider": {
+                "type": "string",
+                "const": "anthropic"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "credentialRef",
+              "provider"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "credentialRef": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "env:GROQ_API_KEY",
+                      "env:GWDG_API_KEY",
+                      "env:OPENAI_API_KEY",
+                      "env:ANTHROPIC_API_KEY",
+                      "env:CUSTOM_API_KEY"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^env:HASI_LLM_SECRET_[A-Z0-9_]{1,64}$"
+                  }
+                ]
+              },
+              "provider": {
+                "type": "string",
+                "const": "custom"
+              },
+              "endpoint": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048,
+                "pattern": "^https:\\/\\/[^/?#\\s]+(?:\\/[^?#\\s]*)?$"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "credentialRef",
+              "provider",
+              "endpoint"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "profiles": {
+      "minItems": 1,
+      "maxItems": 64,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "connectionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+          },
+          "modelId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "tools": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "tools"
+            ],
+            "additionalProperties": false
+          },
+          "allowedDataClasses": {
+            "minItems": 1,
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "synthetic_demo",
+                "public",
+                "internal",
+                "confidential"
+              ]
+            }
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "temperature": {
+                "default": 0.2,
+                "description": "Set to null to omit temperature for provider models that do not accept it; omitted values default to 0.2.",
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 2
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "maxOutputTokens": {
+                "default": 1536,
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1536
+              },
+              "timeoutMs": {
+                "default": 20000,
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 45000
+              },
+              "reasoningEffort": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "none"
+                ]
+              }
+            },
+            "required": [
+              "temperature",
+              "maxOutputTokens",
+              "timeoutMs"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "connectionId",
+          "modelId",
+          "capabilities",
+          "allowedDataClasses",
+          "parameters"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "defaultProfileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+        },
+        "userChoice": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "profileIds": {
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+              }
+            }
+          },
+          "required": [
+            "enabled",
+            "profileIds"
+          ],
+          "additionalProperties": false
+        },
+        "fallbacks": {
+          "maxItems": 16,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+              },
+              "targets": {
+                "minItems": 1,
+                "maxItems": 2,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+                }
+              },
+              "on": {
+                "minItems": 1,
+                "maxItems": 3,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "rate_limit",
+                    "server_error",
+                    "timeout"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "from",
+              "targets",
+              "on"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "maxAttempts": {
+          "default": 2,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "totalTimeoutMs": {
+          "default": 45000,
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 50000
+        }
+      },
+      "required": [
+        "defaultProfileId",
+        "userChoice",
+        "fallbacks",
+        "maxAttempts",
+        "totalTimeoutMs"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "connections",
+    "profiles",
+    "policy"
+  ],
+  "additionalProperties": false,
+  "$comment": "JSON Schema covers field shapes and bounds. Runtime validation also rejects the reserved ID offline and checks uniqueness, cross references, provider-specific reasoning parameters, custom endpoint credentials/origins, and the acyclic bounded fallback graph."
+}

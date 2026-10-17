@@ -10,13 +10,13 @@ import { useChatWorkspaceStore } from "@/components/chat-sidebar-context";
 import { useSession } from "@/components/session-provider";
 import { availabilityInputForSlot, createAnnyChatTools, type AnnyChatToolResult } from "@/lib/anny-chat-tools";
 import { searchKnowledge, knowledgeDocumentHref, knowledgeSourceLabel } from "@/lib/knowledge";
-import { chatProfileIdSchema, modelProfilesResponseSchema, modelReplySchema, type ModelProfile, type WireMessage } from "@/lib/chat-contract";
+import { chatProfileIdSchema, modelProfilesResponseSchema, modelReplySchema, type ModelProfile, type ModelProfileId, type WireMessage } from "@/lib/chat-contract";
 import { createChatMessageClock } from "@/lib/chat-message-clock";
 import { appendChatText } from "@/lib/chat-history";
 import type { ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
 import { ChatSessionList } from "@/components/chat-session-list";
 
-type ModelConfiguration = { profiles: ModelProfile[]; loading: boolean; error: string | null };
+type ModelConfiguration = { profiles: ModelProfile[]; userChoiceEnabled: boolean; defaultProfileId: ModelProfileId; loading: boolean; error: string | null };
 
 const suggestions = [
   { icon: Search, title: "Einen Raum finden", text: "Ich brauche morgen um 14 Uhr einen Raum für vier Personen für eine Stunde.", caption: "Gemeinsam planen und buchen" },
@@ -25,6 +25,9 @@ const suggestions = [
 ];
 
 function id() { return crypto.randomUUID(); }
+function modelProviderName(provider: ModelProfile["provider"]) {
+  return ({ groq: "GroqCloud", gwdg: "GWDG SAIA", openai: "OpenAI", anthropic: "Anthropic", custom: "Custom endpoint" })[provider];
+}
 function formatMessageTime(value: string) {
   return new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
@@ -39,7 +42,7 @@ function ChatWorkspace({ user }: { user: User }) {
   const store = useChatWorkspaceStore();
   const view = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   const drawer = useRef<HTMLDialogElement>(null);
-  const [configuration, setConfiguration] = useState<ModelConfiguration>({ profiles: [], loading: true, error: null });
+  const [configuration, setConfiguration] = useState<ModelConfiguration>({ profiles: [], userChoiceEnabled: false, defaultProfileId: "groq-oss-120b", loading: true, error: null });
 
   useEffect(() => {
     let active = true;
@@ -49,8 +52,9 @@ function ChatWorkspace({ user }: { user: User }) {
       if (!result.success) throw new Error("configuration");
       return result.data;
     }).then((result) => {
-      if (active) setConfiguration({ profiles: result.profiles, loading: false, error: null });
-    }).catch(() => { if (active) setConfiguration({ profiles: [], loading: false, error: "Der Modellstatus konnte nicht geladen werden. Du kannst ausdrücklich die Dialog-Demo wählen." }); });
+      if (active) store.setDefaultProfile(result.defaultProfileId);
+      if (active) setConfiguration({ profiles: result.profiles, userChoiceEnabled: result.userChoiceEnabled, defaultProfileId: result.defaultProfileId, loading: false, error: null });
+    }).catch(() => { if (active) setConfiguration({ profiles: [], userChoiceEnabled: false, defaultProfileId: "groq-oss-120b", loading: false, error: "Der Modellstatus konnte nicht geladen werden." }); });
     return () => {
       active = false;
       const latest = store.getSnapshot();
@@ -60,13 +64,13 @@ function ChatWorkspace({ user }: { user: User }) {
     };
   }, [store]);
 
-  function newChat() { store.create(); drawer.current?.close(); }
+  function newChat() { store.create(configuration.defaultProfileId); drawer.current?.close(); }
 
   return <section className="chat-workspace" aria-label="Deine Chatverläufe">
-    <dialog className="chat-history-dialog" ref={drawer} aria-label="Chatliste" onClick={(event) => { if (event.target === event.currentTarget) drawer.current?.close(); }}><div className="chat-history-dialog-body"><ChatSessionList view={view} store={store} close={() => drawer.current?.close()} /></div></dialog>
+    <dialog className="chat-history-dialog" ref={drawer} id="chat-conversations-dialog" aria-label="Unterhaltungen" onClick={(event) => { if (event.target === event.currentTarget) drawer.current?.close(); }}><div className="chat-history-dialog-body"><ChatSessionList view={view} store={store} close={() => drawer.current?.close()} /></div></dialog>
     <div className="chat-conversations">
       {view.notice && <div className="chat-storage-notice" role="status"><span>{view.notice}</span><button className="icon-button" type="button" aria-label="Hinweis schließen" onClick={store.dismissNotice}><X size={16} /></button></div>}
-      {view.workspace.sessions.map((session) => <Conversation key={session.id} sessionId={session.id} ownerId={user.id} initial={session.snapshot} name={user.displayName.split(/\s|·/)[0] ?? ""} active={session.id === view.workspace.activeId} configuration={configuration} onSnapshot={store.update} onNewChat={newChat} onShowHistory={() => drawer.current?.showModal()} />)}
+      {!configuration.loading && view.workspace.sessions.map((session) => <Conversation key={session.id} sessionId={session.id} ownerId={user.id} initial={session.snapshot} name={user.displayName.split(/\s|·/)[0] ?? ""} active={session.id === view.workspace.activeId} configuration={configuration} onSnapshot={store.update} onNewChat={newChat} onShowHistory={() => drawer.current?.showModal()} />)}
     </div>
   </section>;
 }
@@ -90,6 +94,9 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   const lock = useRef(false);
   const alive = useRef(true);
   const history = useRef<WireMessage[]>(structuredClone(initial.history));
+  const routingToken = useRef<string | undefined>(undefined);
+  const resolvedProfile = useRef<ModelProfile["provider"] | null>(null);
+  const [fallbackLabel, setFallbackLabel] = useState<string | null>(null);
   const toolBridge = useRef<ReturnType<typeof createAnnyChatTools> | null>(null);
   const pendingRequest = useRef<AbortController | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -100,13 +107,27 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   const latestMessage = messages.at(-1)?.id;
   const offline = profileId === "offline";
   const selectedProfile = profiles.find((profile) => profile.id === profileId);
-  const providerLabel = selectedProfile?.provider === "gwdg" ? "GWDG SAIA" : selectedProfile?.provider === "groq" ? "GroqCloud" : selectedProfile?.provider === "custom" ? "Custom endpoint" : null;
-  const modelError = offline || modelLoading ? null : configuration.error ?? (selectedProfile?.configured
-    ? null
-    : selectedProfile
-      ? `${providerLabel ?? "Der ausgewählte Modellanbieter"} ist für dieses Modell nicht konfiguriert. Bitte wähle ausdrücklich ein verfügbares Modell oder die Dialog-Demo.`
-      : "Der Status des ausgewählten Modells konnte nicht bestimmt werden. Bitte wähle ausdrücklich die Dialog-Demo.");
-  const canSend = offline || (!modelLoading && selectedProfile?.configured === true);
+  const defaultProfile = profiles.find((profile) => profile.id === configuration.defaultProfileId);
+  const isDefaultProfile = profileId === configuration.defaultProfileId;
+  const providerLabel = selectedProfile?.provider === "gwdg" ? "GWDG SAIA"
+    : selectedProfile?.provider === "groq" ? "GroqCloud"
+      : selectedProfile?.provider === "custom" ? "Custom endpoint"
+        : selectedProfile?.provider === "openai" ? "OpenAI"
+          : selectedProfile?.provider === "anthropic" ? "Anthropic" : null;
+  const modelError = modelLoading ? null
+    : offline
+      ? configuration.userChoiceEnabled ? null : "Die Dialog-Demo ist für diesen Chat nicht freigegeben. Beginne einen neuen Chat mit dem konfigurierten Standardmodell."
+      : !configuration.userChoiceEnabled && !isDefaultProfile
+        ? `Das gespeicherte Modell „${profileId}“ ist in dieser Konfiguration nicht freigegeben. Beginne einen neuen Chat mit dem Standardmodell.`
+        : !selectedProfile
+          ? configuration.error ?? `Das gespeicherte Modell „${profileId}“ ist nicht verfügbar. Wähle ein freigegebenes Modell.`
+          : !selectedProfile.configured
+            ? `${providerLabel ?? "Der ausgewählte Modellanbieter"} ist für dieses Modell nicht konfiguriert. Bitte wähle ausdrücklich ein verfügbares Modell${configuration.userChoiceEnabled ? " oder die Dialog-Demo" : ""}.`
+            : configuration.error;
+  const canSend = !modelLoading && (offline
+    ? configuration.userChoiceEnabled
+    : !configuration.error && (configuration.userChoiceEnabled || isDefaultProfile) && selectedProfile?.configured === true);
+  const staticProfileLabel = offline ? "Dialog-Demo" : selectedProfile?.label ?? (isDefaultProfile ? defaultProfile?.label ?? configuration.defaultProfileId : "Gespeichertes Modell nicht verfügbar");
 
   function tools() {
     toolBridge.current ??= createAnnyChatTools(requestForChat);
@@ -221,11 +242,11 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     const controller = pendingRequest.current!;
     try {
       for (let step = 0; step < 4; step += 1) {
-        setActivity(`${providerLabel ?? "Das Modell"} antwortet …`);
+        setActivity(`${resolvedProfile.current ? modelProviderName(resolvedProfile.current) : providerLabel ?? "Das Modell"} antwortet …`);
         await stampMessages();
         const response = await fetch("/api/chat", {
           method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ profileId, messages: history.current }), signal: controller.signal,
+          body: JSON.stringify({ profileId, ...(routingToken.current ? { routingToken: routingToken.current } : {}), messages: history.current }), signal: controller.signal,
         });
         const payload: unknown = await response.json().catch(() => ({ error: "Der Chat-Dienst ist gerade nicht erreichbar. Bitte versuche es später erneut." }));
         if (!response.ok) {
@@ -235,8 +256,12 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         const validated = modelReplySchema.safeParse(payload);
         if (!validated.success) throw new Error("Die Modellantwort entspricht nicht dem erwarteten Format. Bitte versuche es erneut.");
         const reply = validated.data;
+        resolvedProfile.current = reply.profile.provider;
+        const actualLabel = `${modelProviderName(reply.profile.provider)} · ${reply.profile.label}`;
+        setFallbackLabel(reply.profile.id !== profileId ? actualLabel : null);
+        if (reply.routingToken) routingToken.current = reply.routingToken;
         history.current.push(reply.message);
-        if (reply.message.content.trim()) add({ role: "assistant", text: reply.message.content, model: reply.profile.label, timestamp: reply.message.timestamp }, reply.message.id);
+        if (reply.message.content.trim()) add({ role: "assistant", text: reply.message.content, model: actualLabel, timestamp: reply.message.timestamp }, reply.message.id);
         if (!reply.message.toolCalls?.length) return;
         let actionableResult = false;
         for (const call of reply.message.toolCalls) {
@@ -247,11 +272,11 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
               setActivity("Wissensdienst · Demoquellen suchen");
               const result = await searchKnowledge(requestForChat, call.arguments as { query: string; sourceSystem?: "service_it" | "intranet" });
               output = { ...result };
-              add({ role: "assistant", text: result.documents.length ? "Gefundene Demoquellen. Die folgende Antwort wertet diese Beispiele aus." : "Keine passenden, für dein Testkonto freigegebenen Demoquellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents, model: reply.profile.label });
+              add({ role: "assistant", text: result.documents.length ? "Gefundene Demoquellen. Die folgende Antwort wertet diese Beispiele aus." : "Keine passenden, für dein Testkonto freigegebenen Demoquellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents, model: actualLabel });
             } else {
             const result = await tools().run(call.name, call.arguments);
             output = result.output;
-            showToolResult(result, interactionId, reply.profile.label);
+            showToolResult(result, interactionId, actualLabel);
             actionableResult ||= Boolean(result.proposal || result.bookings || result.rooms?.some((room) => room.checked && room.intervals.length > 0));
             }
           } catch (cause) {
@@ -307,6 +332,9 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || trimmed.length > 2000 || !canSend || !start("Anfrage wird verarbeitet")) return;
+    routingToken.current = undefined;
+    resolvedProfile.current = null;
+    setFallbackLabel(null);
     setInput("");
     const eventId = add({ role: "user", text: trimmed });
     if (!offline) appendHistory("user", trimmed, eventId);
@@ -427,8 +455,9 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
 
   return (
     <section className="chat-page" aria-label="HASI Chat" hidden={!active}>
-      <div className="chat-toolbar"><button className="chat-history-toggle icon-button" type="button" onClick={onShowHistory} aria-label="Chatliste öffnen"><PanelLeft size={19} /></button><label className="chat-model-picker"><MessageCircle size={15} aria-hidden="true" /><span className="sr-only">Sprachmodell</span><select aria-label="Sprachmodell" value={profileId} disabled={busy || modelLoading} onChange={(event) => { const parsed = chatProfileIdSchema.safeParse(event.currentTarget.value); if (!parsed.success) return; if (parsed.data === "offline" || profiles.some((profile) => profile.id === parsed.data && profile.configured)) setProfileId(parsed.data); }}>{!offline && !selectedProfile && <option value={profileId} disabled>{modelLoading ? "Modellstatus wird geladen …" : "Gespeichertes Modell nicht verfügbar"}</option>}{profiles.map((profile) => <option key={profile.id} value={profile.id} disabled={!profile.configured}>{profile.label}{profile.configured ? "" : " · nicht konfiguriert"}</option>)}<option value="offline">Dialog-Demo</option></select></label><button type="button" onClick={onNewChat} className="chat-new" aria-label="Neuer Chat"><Plus size={16} aria-hidden="true" /><span>Neuer Chat</span></button></div>
-      {modelError && !offline && <p className="chat-model-error" role="status">{modelError}</p>}
+      <div className="chat-toolbar"><button className="chat-history-toggle icon-button" type="button" onClick={onShowHistory} aria-label="Unterhaltungen anzeigen" title="Unterhaltungen anzeigen" aria-haspopup="dialog" aria-controls="chat-conversations-dialog"><PanelLeft size={19} aria-hidden="true" /><span>Chats</span></button>{configuration.userChoiceEnabled ? <label className="chat-model-picker"><MessageCircle size={15} aria-hidden="true" /><span className="sr-only">Sprachmodell</span><select aria-label="Sprachmodell" value={profileId} disabled={busy || modelLoading} onChange={(event) => { const parsed = chatProfileIdSchema.safeParse(event.currentTarget.value); if (!parsed.success) return; if (parsed.data === "offline" ? configuration.userChoiceEnabled : profiles.some((profile) => profile.id === parsed.data && profile.configured)) setProfileId(parsed.data); }}>{!offline && !selectedProfile && <option value={profileId} disabled>Gespeichertes Modell nicht verfügbar</option>}{profiles.map((profile) => <option key={profile.id} value={profile.id} disabled={!profile.configured}>{profile.label}{profile.configured ? "" : " · nicht konfiguriert"}</option>)}<option value="offline">Dialog-Demo</option></select></label> : <span className="chat-model-picker" aria-label="Sprachmodell"><MessageCircle size={15} aria-hidden="true" />{modelLoading ? "Modellstatus wird geladen …" : staticProfileLabel}</span>}<button type="button" onClick={onNewChat} className="chat-new" aria-label="Neuer Chat"><Plus size={16} aria-hidden="true" /><span>Neuer Chat</span></button></div>
+      {fallbackLabel && <p className="chat-recovery-note" role="status">Ausweichmodell für diesen Dialog: {fallbackLabel}</p>}
+      {modelError && <p className="chat-model-error" role="status">{modelError}</p>}
       {interrupted && <p className="chat-recovery-note" role="status">Eine frühere Anfrage wurde unterbrochen. Bei Buchungen prüfe bitte zuerst den aktuellen Status.</p>}
       {messagesTruncated && <p className="chat-recovery-note">Die letzten 200 Nachrichten dieses Chats werden gespeichert und angezeigt.</p>}
       <div className="chat-scroller" ref={scroller}>
@@ -471,7 +500,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
           <textarea id={inputId} ref={composer} rows={2} maxLength={2000} value={input} onChange={(event) => setInput(event.currentTarget.value)} placeholder="Frag HASI oder beschreibe, was du vorhast …" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(input); } }} />
           <div className="chat-composer-bottom"><span><span className="status-dot" /> {offline ? "Dialog-Demo · ohne Sprachmodell" : modelLoading ? "Modellstatus wird geladen …" : selectedProfile?.configured ? `${providerLabel} · anny-Testdaten` : `${providerLabel ?? "Modellanbieter"} nicht konfiguriert`}</span><button type="submit" aria-label="Nachricht senden" disabled={busy || !canSend || !input.trim()}><ArrowUp size={20} aria-hidden="true" /></button></div>
         </form>
-        <p className="chat-footnote">{offline ? "Dialog-Demo mit Testdaten · synthetisches IT- und Intranet-Wissen" : `Nachrichten und ausgewählte Toolergebnisse gehen an ${providerLabel ?? "den ausgewählten Modellanbieter"}. Bitte nur Testdaten eingeben.`}</p>
+        <p className="chat-footnote">{offline ? "Dialog-Demo mit Testdaten · synthetisches IT- und Intranet-Wissen" : `Nachrichten und ausgewählte Toolergebnisse gehen an ${providerLabel ?? "den ausgewählten Modellanbieter"}. Bitte nur Testdaten eingeben.${selectedProfile?.fallbackLabels?.length ? ` Konfigurierte Ausweichmodelle: ${selectedProfile.fallbackLabels.join(", ")}.` : ""}`}</p>
       </div>
     </section>
   );

@@ -1,6 +1,6 @@
 # hasi pilot plan
 
-Created: 2026-10-09. Updated: 2026-10-16. Scope, mobile usability, TypeScript,
+Created: 2026-10-09. Updated: 2026-10-17. Scope, mobile usability, TypeScript,
 mock identity for the prototype and independently updateable plugins are agreed
 requirements. The local implementation is an initial slice of the MVP.
 
@@ -9,7 +9,8 @@ requirements. The local implementation is an initial slice of the MVP.
 The prototype includes a server-side Groq model router/profile set, an
 independently deployed synthetic knowledge MCP with 60 fictional documents,
 and a Vercel demo whose workspace state persists in Postgres. The anny flow
-uses synthetic data, including a 30-room and 9-service catalog snapshot, for
+uses synthetic data, including a 61-resource catalog snapshot: 37 workplaces,
+6 meeting rooms and 18 office containers. The 43 bookable resources support
 search, availability, own-booking lookup and room-specific proposal and
 confirmation. The actual anny HTTP client still talks to a contract-based
 mock. The existing proposal path remains booking-specific.
@@ -21,8 +22,9 @@ uncertain-outcome reconciliation remain open. Formal model evaluation and
 institutional approval of profiles for protected data also remain open.
 Synthetic knowledge fixtures and selectable mock personas do not establish
 institutional access rights.
-This prototype therefore does not complete any milestone whose exit criteria
-include those capabilities. See [prototype architecture](../architecture/plugins-and-prototype.md)
+The current configuration and prototype work is partial. It does not complete
+any milestone whose exit criteria include those capabilities. See
+[prototype architecture](../architecture/plugins-and-prototype.md)
 and the [README](../../README.md) for the executable scope and verification
 commands.
 
@@ -142,3 +144,128 @@ The configurable taxonomy and routing, identity mapping, domain isolation,
 approval requirements and acceptance gates are described in the
 [Zammad MCP architecture](../architecture/zammad-mcp.md). No Zammad connector,
 credentials or queue mappings are currently implemented or configured.
+
+The integrations below are proposals for later, independently deployable MCP
+plugins. They do not add mandatory sources to the MVP or change its acceptance
+criteria. Microsoft 365 Bookings remains deferred. Each plugin must derive the
+actor from HsH SSO and enforce source-side rights for that person. Read access
+is limited to the authenticated person's records and permitted learning or
+service data. The model cannot choose an account, identity, or authority. Every
+write begins as a server-bound proposal that shows its exact target and effect;
+execution requires the user's explicit confirmation and a fresh check of rights,
+eligibility, deadlines, and current source state.
+
+### Examination-regulations knowledge base for all degree programmes
+
+Build a future, separately maintained knowledge corpus covering the complete
+HsH degree-programme inventory. Its catalogue must show coverage and gaps for
+every programme. Ingest authoritative, officially published general and
+programme-specific examination regulations, amendments, relevant annexes and,
+where needed, module handbooks. Record each document's authority and role so
+supporting module information is not presented as a regulation.
+
+For every document and provision, retain programme, degree, faculty, applicable
+cohort, publication and effective dates, version history, and transition rules.
+Never apply the newest amendment silently to students governed by an earlier
+version. Authoritative PDFs are a required source format, including searchable
+PDFs and scanned/image PDFs processed with OCR; HTML exports may supplement
+them. Preserve each original file unchanged with its document hash and revision
+metadata. For every PDF, map physical page numbers to printed page numbers where
+present, and retain section, article and annex anchors. Validate reading order
+for multi-column pages, tables and footnotes against rendered pages. Review
+sample pages and critical extracted content before publishing an index. Quarantine
+or flag low-quality extraction as unknown; never silently rely on it. Preserve
+source access metadata and amendment applicability rather than flattening
+amendments into one current text. If applicability is missing or ambiguous, ask
+for clarification or abstain rather than infer a rule.
+
+Every answer about a requirement must cite the exact document and version,
+physical and printed page where available, section or annex, and a direct link
+to the original reader page that respects the reader's permissions.
+Applicability may use a student's HISinOne record only after a trusted SSO-to-
+record link and the relevant access rights have been verified; mock identity or
+persona selection is insufficient. The corpus supplies cited source material,
+not invented legal facts or a binding eligibility decision. It does not replace
+HISinOne's authoritative eligibility and exam-registration checks.
+
+Acceptance requires a visible inventory of all programmes and uncovered
+documents, and tested cases for scanned/image PDFs, digitally signed originals
+preserved without editing, multi-column text, complex tables and cross-references,
+exact page citations, old and new cohorts, amendments, overlapping transition
+rules, and citation/version drift. Where the corpus cannot establish which rule
+applies or extraction quality is insufficient, hasi must expose the uncertainty
+and abstain from a substantive answer.
+
+### Moodle LMS
+
+Moodle's External Services framework documents web services for external
+systems; the live site's enabled functions and API documentation are
+instance-specific ([Moodle External Services](https://moodledev.io/docs/5.0/apis/subsystems/external)).
+
+- **Read:** the authenticated student's courses, visible course materials,
+  activities and deadlines, and submission or completion status where the
+  instance exposes these fields and grants access.
+- **Write proposal:** prepare an assignment response for the student to review.
+  A later submission action may run only if the live instance documents and
+  enables the relevant function. Show the exact course, activity and content,
+  require confirmation, then recheck that the activity is open and the student
+  remains authorized. No grade or administrative writes.
+
+### Stud.IP learning and campus platform
+
+Stud.IP documents a JSON:API-compatible REST interface with resource reads and
+mutations; routes, available resources and permissions must be checked against
+the HsH installation and its version ([Stud.IP JSON:API documentation](https://hilfe.studip.de/develop/Entwickler/JSONAPVueJSI)).
+
+- **Read:** the authenticated person's courses, course dates, announcements
+  and materials that the API exposes to that person.
+- **Write proposal:** a course registration or a course contribution may be
+  proposed only when the installed API exposes the operation and the source
+  confirms eligibility. Show the exact course or contribution and its effect;
+  require explicit confirmation and recheck registration rules, capacity and
+  rights before execution.
+
+### HISinOne campus management
+
+HIS documents HISinOne functions for online exam and course registration,
+student progress and results, and web services for connecting third-party
+systems ([exams and courses](https://www.his.de/hisinone/pruefungen-und-veranstaltungen),
+[HISinOne interfaces](https://www.his.de/hisinone/)). Those product descriptions
+do not establish that HsH uses these modules or expose a specific HsH API for
+exam-registration writes. Obtain the installed product/version, vendor or HsH
+API contract, and permission model before committing to a connector or write
+operation.
+
+- **Read:** the authenticated student's own record and study history, grades,
+  completed and current modules, exam dates and deadlines, and eligibility
+  information only when returned by an authoritative HISinOne service. If the
+  source does not provide a binding eligibility result, show the official
+  record or link rather than infer eligibility from model context.
+- **Write proposal:** exam registration is a high-impact action. Present the
+  exact exam, term, date, applicable conditions and any consequences, require
+  explicit confirmation, and recheck eligibility, deadline and existing
+  registration immediately before submission. Execute only through a
+  documented, HsH-authorized business API; otherwise direct the student to the
+  authoritative HISinOne workflow.
+
+### SAP personnel and time management
+
+The SAP HANA estate alone does not identify a business application or a safe
+API. SAP describes HANA as a database and platform; an application may enforce
+the end-user permissions and workflows above that database ([SAP HANA overview](https://help.sap.com/docs/SAP_HANA_PLATFORM/eb3777d5495d46c5b2fa773206bbfb46/d3b1adcdbb571014a93eff11ad9a1d89.html)).
+First identify the HsH system of record, product and configured workflow. SAP
+SuccessFactors documents time-off and time-sheet APIs, but its use at HsH is
+unknown ([EmployeeTime API](https://help.sap.com/docs/SAP_SUCCESSFACTORS_PLATFORM/d599f15995d348a1b45ba5603e2aba9b/a1905d4d4b26469b9ebca160ca34814c.html),
+[Time Sheet API](https://help.sap.com/docs/successfactors-platform/sap-successfactors-api-reference-guide-odata-v2/time-sheet?locale=en-US));
+these are candidate references only, not evidence of a deployed HsH service.
+
+- **Read:** the authenticated employee's own leave balance and requests, time
+  entries, clock events, service trips (`Dienstgang`) and associated time
+  account, limited to records and fields authorized by the source application.
+- **Write proposal:** prepare a vacation request, clock-in or clock-out event,
+  or service trip (`Dienstgang`) only if the identified business application
+  supports it. Show dates, times, duration,
+  category and resulting effect; require explicit confirmation for each
+  submission and recheck the employee's authority and current record. Never
+  write directly to HANA tables or infer an application API from database
+  access.

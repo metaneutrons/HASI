@@ -97,8 +97,9 @@ inference step. Native HTTP 400 `tool_use_failed` permits one regeneration with
 the same selected Groq profile, lower temperature and a fixed schema reminder.
 Failed generated content is discarded. Other errors, including
 transport/auth/quota failures, have no automatic retry, and business actions
-are never retried. One admitted HTTP request can make at most two provider
-calls within the same deadline. Failed generations may count toward provider
+are never retried. The bundled policy allows at most two provider calls per admitted request
+within the same deadline, including regeneration. An explicit registry policy
+can allow up to three; fallback and regeneration share that same attempt budget. Failed generations may count toward provider
 usage; this is not monetary accounting.
 
 The chat route uses Vercel Firewall rule `hasi-chat`, configured for 60

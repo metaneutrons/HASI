@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "research:anny": "tsx scripts/fetch-anny-specs.ts",
-    "prepare": "node scripts/install-hooks.mjs"
+    "prepare": "node scripts/install-hooks.mjs",
+    "config:models": "node --conditions=react-server --import tsx apps/web/scripts/check-model-config.ts"
   },
   "dependencies": {
     "@hasi/plugin-sdk": "workspace:*",

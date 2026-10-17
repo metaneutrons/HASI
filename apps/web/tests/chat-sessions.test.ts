@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { modelProfileIdSchema } from "../src/lib/chat-contract";
 import {
   MAX_CHAT_MESSAGES,
   MAX_CHAT_SESSIONS,
@@ -60,6 +61,28 @@ function withSession(workspace: ChatWorkspace, session = createChatSession()): C
 }
 
 describe("chat session persistence", () => {
+  it("preserves syntax-valid dynamic profile IDs and rejects invalid profile IDs", () => {
+    const dynamicProfileId = "openai-uni_model-2";
+    expect(modelProfileIdSchema.safeParse("groq-qwen-3.8-27b").success).toBe(true);
+    expect(modelProfileIdSchema.safeParse(dynamicProfileId).success).toBe(true);
+    expect(modelProfileIdSchema.safeParse("Invalid Profile").success).toBe(false);
+    expect(modelProfileIdSchema.safeParse("offline").success).toBe(false);
+
+    const initial = createChatWorkspace("user-1");
+    const session = createChatSession(dynamicProfileId);
+    const workspace = withSession(initial, session);
+    const storage = new MemoryStorage();
+    expect(saveChatWorkspace(workspace, storage)).toBe(true);
+    expect(loadChatWorkspace("user-1", storage).workspace.sessions.find(({ id }) => id === session.id)?.snapshot.profileId).toBe(dynamicProfileId);
+
+    const saved = JSON.parse(storage.getItem(chatStorageKey("user-1"))!) as ChatWorkspace;
+    saved.sessions.find(({ id }) => id === session.id)!.snapshot.profileId = "Invalid Profile";
+    storage.setItem(chatStorageKey("user-1"), JSON.stringify(saved));
+    const invalid = loadChatWorkspace("user-1", storage);
+    expect(invalid.notice).not.toBeNull();
+    expect(invalid.workspace.sessions[0]!.snapshot.profileId).toBe("groq-oss-120b");
+  });
+
   it.each(["gwdg-qwen3-30b", "offline"] as const)("replaces the final %s chat with a fresh Groq chat", profileId => {
     const initial = createChatWorkspace("user-1");
     const session = initial.sessions[0]!;
