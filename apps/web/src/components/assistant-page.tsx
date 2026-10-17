@@ -14,7 +14,7 @@ import { chatProfileIdSchema, modelProfilesResponseSchema, modelReplySchema, typ
 import { createChatMessageClock } from "@/lib/chat-message-clock";
 import { appendChatText } from "@/lib/chat-history";
 import type { ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
-import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError } from "@/lib/chat-room-time";
+import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError, RoomTimeUnresolvedError } from "@/lib/chat-room-time";
 import { canStartNewChat } from "@/lib/chat-workspace-store";
 import { ChatSessionList } from "@/components/chat-session-list";
 import { ChatRoomResults } from "@/components/chat-room-results";
@@ -345,6 +345,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
               || result.rooms?.some((room) => room.checked && room.intervals.length > 0));
             }
           } catch (cause) {
+            if (cause instanceof RoomTimeUnresolvedError) actionableResult = true;
             output = { error: cause instanceof Error ? cause.message : "Das Tool konnte die Anfrage nicht abschließen.", ...(cause instanceof RoomTimeMismatchError ? { requestedInterval: cause.expectedInterval } : {}) };
             add({ role: "assistant", text: String(output.error), tool: call.name === "knowledge_search" ? "Wissensdienst · Anfrage fehlgeschlagen" : "anny · Anfrage fehlgeschlagen" });
           }
@@ -493,7 +494,13 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   async function chooseRoom(resource: Resource) {
     const label = `${resource.kind === 'workplace' ? 'einen einzelnen Arbeitsplatz: ' : ''}${resource.name}${resource.parentName ? ` im Büro ${resource.parentName}` : ''}`;
     if (!offline) {
-      const interval = requestedRoomInterval(roomIntent.current);
+      let interval: ReturnType<typeof requestedRoomInterval>;
+      try { interval = requestedRoomInterval(roomIntent.current); }
+      catch (cause) {
+        addActionResult({ text: cause instanceof Error ? cause.message : "Bitte präzisiere den gewünschten Zeitraum." });
+        try { await stampMessages(); } catch { /* Preserve unknown time when the clock is unavailable. */ }
+        return;
+      }
       if (!interval) { await send(`Ich möchte ${label} buchen (resourceId: ${resource.id}). Verwende genau diese Ressource und frage nach noch fehlenden Angaben.`); return; }
       if (!start("anny · Gewünschten Zeitraum prüfen")) return;
       setChosenRoom(resource);

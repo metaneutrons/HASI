@@ -78,7 +78,9 @@ message time, retains that interval across office preferences, and rejects model
 availability/proposal calls which silently change its start or duration. A desk
 selection with a complete interval checks availability directly through the typed
 tool bridge, avoiding another date-generation call. An explicitly selected,
-labelled alternate slot remains a separate user action. Four focused regression
-tests cover Monday persistence, changed days/start/duration, equivalent offsets
-and incomplete constraints. Final live evidence is recorded separately in the
+labelled alternate slot remains a separate user action. Six focused regression
+tests cover Monday persistence, changed days/start/duration, equivalent offsets,
+incomplete constraints and the spring/fall Berlin daylight-saving gaps/repeated
+hours. Complete unresolved times require clarification and cannot fall back to
+a model-chosen replacement. Final live evidence is recorded separately in the
 follow-up PR; the preceding failure is retained here.
