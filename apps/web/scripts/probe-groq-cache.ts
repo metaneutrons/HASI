@@ -1,70 +1,35 @@
-import { createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
+import { createGroqCacheProbeTransport, GROQ_CACHE_PROBE_ENDPOINT as ENDPOINT } from "./groq-cache-probe-transport";
 import { runModelStep, ModelRouterError } from "../src/lib/server/model-router";
 
 // Explicit operator command only. No application endpoint or build hook calls it.
-const ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const MAX_CALLS = 2;
-const MAX_RESPONSE_BYTES = 65_536;
 const now = new Date();
 const request = { profileId: "groq-oss-120b", messages: [{ role: "user" as const, content: "Ich brauche am kommenden Montag ein Büro im Gebäude 1J von 8-16 Uhr." }] };
-const bodies: string[] = [];
+const transport = createGroqCacheProbeTransport(fetch, event => console.log(JSON.stringify(event)));
+const observedFetch = transport.fetch;
+const mode = process.argv[2] ?? "hasi";
 
-function record(value: unknown): Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
-function counter(value: unknown) {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
-    ? { state: "reported", value } : { state: value === undefined ? "missing" : value === null ? "null" : "invalid" };
-}
-
-async function observe(response: Response) {
-  const reader = response.clone().body?.getReader();
-  if (!reader) return { status: response.status, observation: "body_missing" };
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      size += chunk.value.byteLength;
-      if (size > MAX_RESPONSE_BYTES) return { status: response.status, observation: "body_limit" };
-      chunks.push(chunk.value);
-    }
-    const bytes = new Uint8Array(size);
-    let offset = 0;
-    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-    let payload: unknown;
-    try { payload = JSON.parse(new TextDecoder().decode(bytes)); }
-    catch { return { status: response.status, observation: "invalid_json" }; }
-    const usage = record(record(payload).usage);
-    return {
-      status: response.status,
-      promptTokens: counter(usage.prompt_tokens),
-      completionTokens: counter(usage.completion_tokens),
-      documentedCacheTokens: counter(record(usage.prompt_tokens_details).cached_tokens),
-      alternateCacheTokens: counter(usage.cached_tokens),
-    };
-  } finally {
-    // Cancelling one cloned response branch can wait for the unread SDK branch.
-    // Initiate cancellation without delaying delivery of that original branch.
-    void reader.cancel().catch(() => undefined);
-    reader.releaseLock();
+async function plainControl() {
+  // Independent synthetic control: no HASI instructions, tools or changing clocks.
+  // The nonce is created once, then both complete request bodies are identical.
+  const content = `Synthetic cache qualification ${randomUUID()}. Read the following fictitious catalog and reply only OK.\n` +
+    Array.from({ length: 160 }, (_, index) => `Record ${index}: Campus Example has a blue desk, a green chair and a quiet study area.`).join("\n");
+  const body = JSON.stringify({ model: mode === "plain-20b" ? "openai/gpt-oss-20b" : "openai/gpt-oss-120b", messages: [{ role: "system", content }, { role: "user", content: "Reply OK." }], max_completion_tokens: 64, reasoning_effort: "low", stream: false });
+  for (let index = 0; index < MAX_CALLS; index += 1) {
+    const response = await observedFetch(ENDPOINT, { method: "POST", headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" }, body, signal: AbortSignal.timeout(30_000) });
+    // Consume the original branch without printing model output or provider errors.
+    await response.body?.cancel();
+    if (!response.ok) throw new Error("Control provider failure.");
   }
 }
 
-const observedFetch: typeof fetch = async (input, init) => {
-  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-  if (url !== ENDPOINT || bodies.length >= MAX_CALLS || typeof init?.body !== "string") throw new Error("Probe transport boundary.");
-  bodies.push(init.body);
-  const response = await fetch(input, { ...init, redirect: "error" });
-  console.log(JSON.stringify({ event: "raw_usage_observation", call: bodies.length, ...await observe(response) }));
-  return response;
-};
 
 async function main() {
   if (!process.env.GROQ_API_KEY?.trim()) throw new Error("Probe credential unavailable.");
-  for (let index = 0; index < MAX_CALLS; index += 1) {
+  if (mode !== "hasi" && mode !== "plain" && mode !== "plain-20b") throw new Error("Unknown probe mode.");
+  if (mode !== "hasi") await plainControl();
+  else for (let index = 0; index < MAX_CALLS; index += 1) {
     const reply = await runModelStep(request, {
       // Only the approved bundled Groq profile and synthetic context are enabled.
       env: { GROQ_API_KEY: process.env.GROQ_API_KEY }, now, messageTimes: [now.toISOString()], fetch: observedFetch,
@@ -72,9 +37,9 @@ async function main() {
     });
     console.log(JSON.stringify({ event: "probe_result", probe: index + 1, profileId: reply.profile.id, ...reply.usage }));
     // A repair changes the prompt; stop instead of pretending it was an identical repeat.
-    if (bodies.length !== index + 1) break;
+    if (transport.calls() !== index + 1) break;
   }
-  console.log(JSON.stringify({ event: "request_comparison", calls: bodies.length, identical: bodies.length === 2 && bodies[0] === bodies[1], requestBytes: bodies.map(body => Buffer.byteLength(body)), syntheticRequestHashes: bodies.map(body => createHash("sha256").update(body).digest("hex")) }));
+  console.log(JSON.stringify({ ...transport.comparison(), mode }));
 }
 
 main().catch(cause => {
