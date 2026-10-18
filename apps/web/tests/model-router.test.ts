@@ -33,6 +33,44 @@ it("requires an explicit host-owned context policy in production before provider
   } finally { vi.unstubAllEnvs(); }
 });
 
+it("requires shared budget admission for trusted production calls before provider I/O", async () => {
+  vi.stubEnv("NODE_ENV", "production");
+  try {
+    const provider = fakeProvider(completion({ content: "must not run" }));
+    await expectRouterError(runModelStep(request(), {
+      env: { GROQ_API_KEY: FAKE_KEY },
+      fetch: provider.fetch,
+      context: { dataClasses: ["synthetic_demo"], toolsRequired: true },
+    }), "budget_unavailable");
+    expect(provider.calls).toHaveLength(0);
+  } finally { vi.unstubAllEnvs(); }
+});
+
+it("allows trusted production calls when shared budget admission is provided", async () => {
+  vi.stubEnv("NODE_ENV", "production");
+  try {
+    const provider = fakeProvider(completion({ content: "Budgetgeprüft.", usage: { prompt_tokens: 12, completion_tokens: 5 } }));
+    const reservations: { profileId: string; inputTokens: number; outputTokens: number }[] = [];
+    const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+    const reply = await runModelStep(request(), {
+      env: { GROQ_API_KEY: FAKE_KEY },
+      fetch: provider.fetch,
+      context: { dataClasses: ["synthetic_demo"], toolsRequired: true },
+      budgetAdmission: {
+        reserve: input => {
+          reservations.push(input);
+          return Promise.resolve({ settle: usage => { settlements.push(usage); return Promise.resolve(); } });
+        },
+      },
+    });
+    expect(reply.message.content).toBe("Budgetgeprüft.");
+    expect(reservations).toHaveLength(1);
+    expect(reservations[0]).toMatchObject({ profileId: "groq-oss-120b", outputTokens: 1_536 });
+    expect(settlements).toEqual([{ inputTokens: 12, outputTokens: 5 }]);
+    expect(provider.calls).toHaveLength(1);
+  } finally { vi.unstubAllEnvs(); }
+});
+
 const providerMessageSchema = z.object({
   role: z.string(),
   content: z.unknown().optional(),

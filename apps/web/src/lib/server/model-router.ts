@@ -349,6 +349,7 @@ function invalidModelResponse(): ModelRouterError {
 
 export async function runModelStep(input: ChatRequest, options: RouterOptions = {}): Promise<ModelReply> {
   if (process.env.NODE_ENV === "production" && !options.context) throw new ModelRouterError("profile_not_approved", "Production model calls require an explicit trusted context policy.");
+  if (process.env.NODE_ENV === "production" && !options.budgetAdmission) throw new ModelRouterError("budget_unavailable", "Production model calls require shared budget admission.");
   const parsed = chatRequestSchema.safeParse(input);
   if (!parsed.success) throw new ModelRouterError("invalid_request", "The chat request does not match the HASI contract.");
   const request = parsed.data;
