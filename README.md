@@ -143,6 +143,12 @@ Versioned GHCR images for `linux/amd64` and `linux/arm64` are built only through
 
 The roadmap additionally covers [public web search restricted to operator-approved URL scopes](docs/architecture/restricted-web-search.md), Moodle, Stud.IP, HISinOne (including exam registration and student records), SAP leave/time workflows, and a versioned knowledge base of examination regulations for every degree programme, including scanned PDFs, OCR and exact page citations. These integrations are planned, not implemented.
 
+Track institutional work in the [MVP epic #47](https://github.com/metaneutrons/HASI/issues/47),
+later integrations in the [roadmap epic #55](https://github.com/metaneutrons/HASI/issues/55),
+and external plugin installation/admin configuration in [#65](https://github.com/metaneutrons/HASI/issues/65).
+The generic MCP registry already supports approved endpoints and compatible
+updates; arbitrary plugin installation, schema-driven configuration and
+registry-driven chat tool discovery remain open.
 See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](docs/plans/server-demo-parity.md) for qualification scope.
 
 ## Project documents

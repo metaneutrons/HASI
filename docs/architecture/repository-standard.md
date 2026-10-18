@@ -78,6 +78,8 @@ The read-only GitHub audit passed 17 API checks with no failures. The web
 TypeScript configuration does not yet inherit all shared strict options, and
 its Next.js ESLint configuration is not type-aware strict ESLint. Coverage
 thresholds apply to the selected backend/services, not the entire frontend.
-The older MVP plans still lack corresponding epic/milestone issue tracking;
-the new delivery initiative has its own linked records. These findings are
-reported, not silently repaired by the delivery work.
+At the 2026-10-16 audit, the older MVP plan lacked epic/milestone tracking.
+That tracking gap is addressed by the [MVP epic #47](https://github.com/metaneutrons/HASI/issues/47)
+and [roadmap epic #55](https://github.com/metaneutrons/HASI/issues/55) on 2026-10-18.
+The web strictness/coverage findings remain open in [#67](https://github.com/metaneutrons/HASI/issues/67);
+this tracking update does not change compiler/lint settings or coverage gates.

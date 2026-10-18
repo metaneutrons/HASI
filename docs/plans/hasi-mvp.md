@@ -1,19 +1,29 @@
 # hasi pilot plan
 
-Created: 2026-10-09. Updated: 2026-10-17. Scope, mobile usability, TypeScript,
+Created: 2026-10-09. Updated: 2026-10-18. Scope, mobile usability, TypeScript,
 mock identity for the prototype and independently updateable plugins are agreed
-requirements. The local implementation is an initial slice of the MVP.
+requirements. The deployed synthetic-data prototype is an initial slice of the MVP.
+
+Tracking: [institutional MVP epic #47](https://github.com/metaneutrons/HASI/issues/47)
+and [post-MVP roadmap epic #55](https://github.com/metaneutrons/HASI/issues/55).
+The plan owns scope, dependencies and acceptance criteria; linked issues own
+current execution state, next actions, blockers and evidence. The separate
+[delivery epic #14](https://github.com/metaneutrons/HASI/issues/14) owns demo and
+container delivery, not institutional MVP acceptance.
 
 ## Current implementation slice
 
-The prototype includes a server-side Groq model router/profile set, an
-independently deployed synthetic knowledge MCP with 60 fictional documents,
-and a Vercel demo whose workspace state persists in Postgres. The anny flow
+The prototype includes a validated server-owned model/provider registry,
+explicit selection/fallback policy, a Groq connection and a synthetic knowledge
+MCP with 60 fictional documents. Local development runs separate plugin
+processes; the Vercel demo co-locates API/MCP entry points and persists workspace
+state in Postgres. The anny flow
 uses synthetic data, including a 61-resource catalog snapshot: 37 workplaces,
 6 meeting rooms and 18 office containers. The 43 bookable resources support
-search, availability, own-booking lookup and room-specific proposal and
-confirmation. The actual anny HTTP client still talks to a contract-based
-mock. The existing proposal path remains booking-specific.
+search, availability, own-booking lookup, and exact booking/cancellation
+proposals with separate user confirmation. The actual anny HTTP client still
+talks to a contract-based mock. Production source contracts, generic third-party
+chat tool discovery and generalized plugin configuration remain incomplete.
 
 Real HsH SSO, production permission-aware retrieval from Intranet and
 Service-IT, current IT incident information, authoritative anny customer and
@@ -68,15 +78,27 @@ candidate profiles, a 200-case curated dataset and blinded comparison criteria.
 
 ## Delivery sequence and exit criteria
 
-| Milestone | Work | Evidence required to proceed |
-| --- | --- | --- |
-| 1. Integration contracts | Confirm identity protocol and stable subject; separate Intranet and Service-IT connectors, exports, access rules and revocation behavior; anny organization, region, token scopes, customer linking and eligibility behavior | Written contracts or verified sandbox behavior for each unresolved boundary; no account mapping based solely on a transient NameID; authoritative rights for both knowledge sources |
-| 2. Application foundation | Web, API, worker and shared contracts in TypeScript; SSO session; trusted capability registry; constrained network/output handling; approved model-profile registry; logging; mobile-first UI shell | Authenticated API flow; forged identities and unauthorized capabilities rejected; separate API/frontend deployment; usable mobile SSO and keyboard; model selection checked against full context and capability requirements |
-| 3. Intranet and Service-IT knowledge pilot | Approved ingestion for both sources, language handling, hybrid retrieval, source references, permission-aware context/caches and current IT incident updates | Curated German/English cases for both sources; no unauthorized source metadata/snippets reaching models or users; rights-revocation cases pass; attributable answers and fresh updates; extraction checks for instructional images |
-| 4. anny read operations | Link verified HsH identities to anny customers, search permitted resources, show availability and own bookings | Two users with different rights see correct results; conflicting, missing and duplicate account matches are handled explicitly |
-| 5. anny write operations | Server-bound action proposals, confirmation, create/cancel, reconciliation and webhook processing | Customer eligibility enforced; stale/tampered confirmations rejected; timeouts cannot silently duplicate bookings; cancellation affects only authorized bookings |
-| 6. Model comparison and adversarial evaluation | Tester model selector; fixed-evidence and workflow comparisons; injected sources/tool output; rendering, network and model-switch tests | Actual effects instrumented; mandatory security cases pass per profile; quality, citations, tool arguments, latency and costs compared; no production writes in comparison runs |
-| 7. Controlled pilot | Selected users, usage observations, answer/action review and operational handover | All three integrations delivered; agreed acceptance thresholds met; restore and incident procedures exercised; source/integration owners assigned; complete key flows verified on real iPhone/Safari and Android/Chrome, including connection loss and booking-state recovery |
+| Milestone | Work | Evidence required to proceed | Tracking |
+| --- | --- | --- | --- |
+| M1. Integration contracts | Confirm identity protocol and stable subject; separate Intranet and Service-IT connectors, exports, access rules and revocation behavior; anny organization, region, token scopes, customer linking and eligibility behavior | Written contracts or verified sandbox behavior for each unresolved boundary; no account mapping based solely on a transient NameID; authoritative rights for both knowledge sources | [#48](https://github.com/metaneutrons/HASI/issues/48) |
+| M2. Application foundation | Web, API, worker and shared contracts in TypeScript; SSO session; trusted capability registry; constrained network/output handling; approved model-profile registry; logging; mobile-first UI shell | Authenticated API flow; forged identities and unauthorized capabilities rejected; separate API/frontend deployment; usable mobile SSO and keyboard; model selection checked against full context and capability requirements | [#49](https://github.com/metaneutrons/HASI/issues/49) |
+| M3. Intranet and Service-IT knowledge pilot | Approved ingestion for both sources, language handling, hybrid retrieval, source references, permission-aware context/caches and current IT incident updates | Curated German/English cases for both sources; no unauthorized source metadata/snippets reaching models or users; rights-revocation cases pass; attributable answers and fresh updates; extraction checks for instructional images | [#50](https://github.com/metaneutrons/HASI/issues/50) |
+| M4. anny read operations | Link verified HsH identities to anny customers, search permitted resources, show availability and own bookings | Two users with different rights see correct results; conflicting, missing and duplicate account matches are handled explicitly | [#51](https://github.com/metaneutrons/HASI/issues/51) |
+| M5. anny write operations | Server-bound action proposals, confirmation, create/cancel, reconciliation and webhook processing | Customer eligibility enforced; stale/tampered confirmations rejected; timeouts cannot silently duplicate bookings; cancellation affects only authorized bookings | [#52](https://github.com/metaneutrons/HASI/issues/52) |
+| M6. Model comparison and adversarial evaluation | Tester model selector; fixed-evidence and workflow comparisons; injected sources/tool output; rendering, network and model-switch tests | Actual effects instrumented; mandatory security cases pass per profile; quality, citations, tool arguments, latency and costs compared; no production writes in comparison runs | [#53](https://github.com/metaneutrons/HASI/issues/53) |
+| M7. Controlled pilot | Selected users, usage observations, answer/action review and operational handover | All three integrations delivered; agreed acceptance thresholds met; restore and incident procedures exercised; source/integration owners assigned; complete key flows verified on real iPhone/Safari and Android/Chrome, including connection loss and booking-state recovery | [#54](https://github.com/metaneutrons/HASI/issues/54) |
+
+M1 contract discovery and offline M6 dataset/harness design can proceed in
+parallel. Production acceptance of M3 and M4 requires the relevant M1 contracts
+and M2 identity/policy foundation; M5 requires qualified M4 identities/rights and
+M2 execution state. M6 institutional workflow qualification uses those integrated
+boundaries. M7 requires all applicable M1–M6 gates. These are qualification
+dependencies, not a prohibition on earlier synthetic fixtures or design work.
+M2 follow-ups include [external plugins/admin configuration #65](https://github.com/metaneutrons/HASI/issues/65),
+[durable model budgets #66](https://github.com/metaneutrons/HASI/issues/66) and
+[web-standard gaps #67](https://github.com/metaneutrons/HASI/issues/67).
+The separate [Groq cache investigation #64](https://github.com/metaneutrons/HASI/issues/64)
+does not establish savings or complete M6.
 
 No duration or budget is asserted before operating constraints and team
 availability are known. A read-only anny pilot can begin before write semantics
@@ -111,8 +133,9 @@ silently change room, time or consequences.
   How are page, attachment and group-specific rights represented, checked and
   revoked? Who owns content and the access contract? An SSO login alone does
   not answer these authorization questions.
-- **anny:** Which organization and API region does HsH use? Does admin booking
-  enforce selected-customer restrictions, or is a customer-context flow needed?
+- **anny:** Confirm the production organization/region and supported customer
+  context beyond the authorized catalog snapshot. Does admin booking enforce
+  selected-customer restrictions, or is a delegated customer flow needed?
   What is the authoritative customer-linking and uncertain-outcome mechanism?
 - **Models and operation:** Which profiles/endpoints are approved for which
   data classifications, and who can select them? Which institutional hosting,
@@ -127,15 +150,22 @@ Official anny Admin/Customer schemas and the public SSO evidence are saved. The
 public Service-IT crawl found 104 unique HTML pages. Authenticated research
 captures and details remain local and are excluded from the public repository.
 They do not establish a complete production knowledge index or access policy.
-The Intranet platform, source inventory and access contract have not yet been
-investigated. Prompt injection controls and model switching are documented
-requirements and designs, not implemented functionality.
+An authoritative Intranet inventory, approved connector and access contract
+remain unresolved. Model registry/selection/fallback policy is implemented and
+accepted in [#32–34](https://github.com/metaneutrons/HASI/issues/32). The prototype
+has deterministic tool, confirmation, source-fixture and model-policy boundaries;
+these are not a completed adversarial evaluation or production access contract.
+Formal model/security qualification remains in M6.
 
 See [technical basis](../architecture/technical-basis.md) and the linked
 [Service-IT](../research/service-it.md), [anny](../research/anny-api.md) and
 [identity](../research/hsh-identity.md) reports for evidence and limits.
 
 ## Future roadmap beyond the mandatory MVP
+
+### Zammad topic-routed tickets
+
+Tracking: [#56](https://github.com/metaneutrons/HASI/issues/56).
 
 Zammad ticket creation is a proposed later integration for topic-routed support
 requests across administrator-defined security domains. It does not defer or
@@ -157,6 +187,8 @@ eligibility, deadlines, and current source state.
 
 ### Restricted public web search
 
+Tracking: [#57](https://github.com/metaneutrons/HASI/issues/57).
+
 Add a read-only MCP for public web discovery and reading within server-owned,
 predefined URL scopes, including configurable anchored regex rules. A possible
 scope is the HsH apex and its subdomains. Source restrictions must hold for
@@ -171,6 +203,8 @@ connector implemented. See [restricted web search](../architecture/restricted-we
 for the provider comparison, URL/network policy and acceptance scenarios.
 
 ### Examination-regulations knowledge base for all degree programmes
+
+Tracking: [#58](https://github.com/metaneutrons/HASI/issues/58).
 
 Build a future, separately maintained knowledge corpus covering the complete
 HsH degree-programme inventory. Its catalogue must show coverage and gaps for
@@ -213,6 +247,8 @@ and abstain from a substantive answer.
 
 ### Moodle LMS
 
+Tracking: [#59](https://github.com/metaneutrons/HASI/issues/59).
+
 Moodle's External Services framework documents web services for external
 systems; the live site's enabled functions and API documentation are
 instance-specific ([Moodle External Services](https://moodledev.io/docs/5.0/apis/subsystems/external)).
@@ -228,6 +264,8 @@ instance-specific ([Moodle External Services](https://moodledev.io/docs/5.0/apis
 
 ### Stud.IP learning and campus platform
 
+Tracking: [#60](https://github.com/metaneutrons/HASI/issues/60).
+
 Stud.IP documents a JSON:API-compatible REST interface with resource reads and
 mutations; routes, available resources and permissions must be checked against
 the HsH installation and its version ([Stud.IP JSON:API documentation](https://hilfe.studip.de/develop/Entwickler/JSONAPVueJSI)).
@@ -241,6 +279,8 @@ the HsH installation and its version ([Stud.IP JSON:API documentation](https://h
   rights before execution.
 
 ### HISinOne campus management
+
+Tracking: [#61](https://github.com/metaneutrons/HASI/issues/61).
 
 HIS documents HISinOne functions for online exam and course registration,
 student progress and results, and web services for connecting third-party
@@ -265,6 +305,8 @@ operation.
 
 ### SAP personnel and time management
 
+Tracking: [#62](https://github.com/metaneutrons/HASI/issues/62).
+
 The SAP HANA estate alone does not identify a business application or a safe
 API. SAP describes HANA as a database and platform; an application may enforce
 the end-user permissions and workflows above that database ([SAP HANA overview](https://help.sap.com/docs/SAP_HANA_PLATFORM/eb3777d5495d46c5b2fa773206bbfb46/d3b1adcdbb571014a93eff11ad9a1d89.html)).
@@ -284,3 +326,14 @@ these are candidate references only, not evidence of a deployed HsH service.
   submission and recheck the employee's authority and current record. Never
   write directly to HANA tables or infer an application API from database
   access.
+
+### Microsoft 365 Bookings IT appointments
+
+Tracking: [#63](https://github.com/metaneutrons/HASI/issues/63).
+
+HsH IT appointment booking uses Microsoft 365 Bookings; integration remains
+explicitly deferred outside the mandatory MVP. Tenant/API permissions, service
+ownership and the supported appointment workflow still require discovery.
+This entry does not commit to an undocumented API or implement a connector.
+If later approved, retain the shared identity, rights, exact-proposal and
+confirmation boundaries for appointment writes.

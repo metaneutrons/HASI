@@ -1,8 +1,14 @@
 # Prompt injection defenses and model evaluation
 
-Date: 2026-10-15. Status: proposed implementation design. The Intranet MVP scope
-and flexible model testing are agreed requirements; the controls below have not
-yet been implemented or security-tested.
+Date: 2026-10-15. Status clarified: 2026-10-18. This document defines the target
+security/evaluation requirements, not a claim that all controls are implemented.
+The prototype now enforces typed tools, separate confirmed execution, synthetic
+source access and server-owned model selection/fallback policy; see the
+[accepted registry delivery](https://github.com/metaneutrons/HASI/issues/32).
+Real identity/source authorization remains open in the
+[MVP milestones](https://github.com/metaneutrons/HASI/issues/47); complete
+adversarial evaluation and protected-data profile approval remain open in
+[M6 #53](https://github.com/metaneutrons/HASI/issues/53).
 
 ## Objective and limits
 
