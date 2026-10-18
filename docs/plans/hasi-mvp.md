@@ -11,6 +11,11 @@ current execution state, next actions, blockers and evidence. The separate
 [delivery epic #14](https://github.com/metaneutrons/HASI/issues/14) owns demo and
 container delivery, not institutional MVP acceptance.
 
+The proposed [consolidated delivery plan](consolidated-delivery.md) maps the
+existing issues into a common dependency order and details the plugin-platform
+delivery slices, including the MCP Apps feasibility gate. It does not waive or
+replace the MVP criteria below; its new criteria remain proposed until reviewed.
+
 ## Current implementation slice
 
 The prototype includes a validated server-owned model/provider registry,

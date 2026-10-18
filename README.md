@@ -153,6 +153,7 @@ See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](doc
 
 ## Project documents
 
+- [Consolidated delivery plan and plugin-platform slices (proposed)](docs/plans/consolidated-delivery.md)
 - [Chat-first interaction](docs/architecture/chat-first.md)
 - [Plugin contract and prototype boundaries](docs/architecture/plugins-and-prototype.md)
 - [Technical basis](docs/architecture/technical-basis.md)

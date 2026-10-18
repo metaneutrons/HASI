@@ -62,3 +62,6 @@ and record execution state and measured evidence in those issues. Small fixes
 need no epic. Implementation PRs link their milestone without closing it while
 required post-merge or publication checks remain open. See the
 [delivery plan](docs/plans/releases-and-demo.md) for the current example.
+The proposed [consolidated delivery plan](docs/plans/consolidated-delivery.md)
+indexes the existing initiatives and the ordered plugin-platform delivery slices;
+its decision state distinguishes proposed criteria from agreed requirements.
