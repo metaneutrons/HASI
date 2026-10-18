@@ -25,8 +25,8 @@ export function chatMessageCopyText(message: ChatMessage, origin: string): strin
       resource.parentName ? `Büro: ${resource.parentName}` : "",
       resource.location,
       resource.kind === "workplace"
-        ? resource.officeWorkplaceCount ? `Büro mit ${resource.officeWorkplaceCount} ${resource.officeWorkplaceCount === 1 ? "Arbeitsplatz" : "Arbeitsplätzen"}` : "Einzelner Arbeitsplatz"
-        : resource.capacity === null ? "Personenkapazität nicht hinterlegt" : `Bis ${resource.capacity} Personen`,
+        ? resource.officeWorkplaceCount ? `Büro mit ${String(resource.officeWorkplaceCount)} ${resource.officeWorkplaceCount === 1 ? "Arbeitsplatz" : "Arbeitsplätzen"}` : "Einzelner Arbeitsplatz"
+        : resource.capacity === null ? "Personenkapazität nicht hinterlegt" : `Bis ${String(resource.capacity)} Personen`,
       resource.features.join(" · "),
       checked
         ? intervals.some(slot => slot.available)

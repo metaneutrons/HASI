@@ -21,14 +21,14 @@ const nextConfig: NextConfig = {
         },
       }
     : {}),
-  async rewrites() {
-    if (publicDemoBuild) return [];
-    return [
+  rewrites() {
+    if (publicDemoBuild) return Promise.resolve([]);
+    return Promise.resolve([
       {
         source: "/api/:path*",
         destination: `${apiOrigin}/api/:path*`,
       },
-    ];
+    ]);
   },
 };
 

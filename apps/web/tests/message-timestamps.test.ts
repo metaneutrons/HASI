@@ -3,6 +3,7 @@ import {
   createMessageClock,
   type TimestampMessage,
 } from "../src/lib/server/message-timestamps";
+import { required } from "./test-utils";
 
 const FIXED_NOW = new Date("2026-10-17T10:11:12.123Z");
 const SECRET = "test-only-message-timestamp-key";
@@ -87,7 +88,7 @@ describe("message timestamp receipts", () => {
     expect(clock.verify(reorderedMessage, receipt)).toBe(receipt.createdAt);
     expect(clock.verify({
       ...reorderedMessage,
-      toolCalls: [{ ...reorderedMessage.toolCalls![0]!, arguments: { query: "seminar", filters: { capacity: 5, building: "A" } } }],
+      toolCalls: [{ ...required(required(reorderedMessage.toolCalls)[0]), arguments: { query: "seminar", filters: { capacity: 5, building: "A" } } }],
     }, receipt)).toBeNull();
   });
 });

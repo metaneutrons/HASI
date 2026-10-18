@@ -8,12 +8,12 @@ import type { Resource, TimeInterval } from "@/lib/types";
 
 const INITIAL_VISIBLE_ROOMS = 4;
 
-export type ChatRoomResultsProps = {
+export interface ChatRoomResultsProps {
   rooms: ChatRoomOption[];
   disabled: boolean;
   onChooseRoom: (resource: Resource) => void;
   onChooseSlot: (resource: Resource, interval: TimeInterval) => void;
-};
+}
 
 function kindLabel(resource: Resource): string {
   switch (resource.kind) {
@@ -59,7 +59,7 @@ function RoomResult({
     ? hasSlots
       ? hasRequestedTime
         ? hasExactRequestedSlot ? "Im gewünschten Zeitraum verfügbar" : "Andere freie Zeiten"
-        : `Verfügbarkeit geprüft · ${intervals.length} freie ${intervals.length === 1 ? "Zeit" : "Zeiten"}`
+        : `Verfügbarkeit geprüft · ${String(intervals.length)} freie ${intervals.length === 1 ? "Zeit" : "Zeiten"}`
       : hasRequestedTime ? "Keine freien Zeiten im gewünschten Zeitraum" : "Verfügbarkeit geprüft · keine freien Zeiten"
     : "Treffer · Verfügbarkeit ungeprüft";
 
@@ -78,10 +78,10 @@ function RoomResult({
         <span className="chat-room-result__kind"><Users size={13} aria-hidden="true" /> {kindLabel(resource)}</span>
         {isWorkplace && resource.officeWorkplaceCount !== null && resource.officeWorkplaceCount !== undefined && resource.officeWorkplaceCount > 0 && (
           <span className="chat-room-result__capacity">
-            {resource.officeWorkplaceCount === 1 ? "Büro mit 1 Arbeitsplatz" : `Geteiltes Büro · ${resource.officeWorkplaceCount} Arbeitsplätze`}
+            {resource.officeWorkplaceCount === 1 ? "Büro mit 1 Arbeitsplatz" : `Geteiltes Büro · ${String(resource.officeWorkplaceCount)} Arbeitsplätze`}
           </span>
         )}
-        {!isWorkplace && <span className="chat-room-result__capacity">{resource.capacity === null ? "Personenkapazität nicht hinterlegt" : `bis ${resource.capacity} Personen`}</span>}
+        {!isWorkplace && <span className="chat-room-result__capacity">{resource.capacity === null ? "Personenkapazität nicht hinterlegt" : `bis ${String(resource.capacity)} Personen`}</span>}
         <span className={`chat-room-result__status ${checked ? hasSlots ? "chat-room-result__status--available" : "chat-room-result__status--checked" : "chat-room-result__status--candidate"}`}>
           {checked && hasSlots && <Check size={12} aria-hidden="true" />}
           {statusLabel}
@@ -92,7 +92,7 @@ function RoomResult({
         <details className="chat-room-result__details">
           <summary><ChevronDown size={14} aria-hidden="true" /> Merkmale ({resource.features.length})</summary>
           <ul aria-label="Ausstattungsmerkmale">
-            {resource.features.map((feature, index) => <li key={`${feature}-${index}`}>{feature}</li>)}
+            {resource.features.map((feature, index) => <li key={`${feature}-${String(index)}`}>{feature}</li>)}
           </ul>
         </details>
       )}
@@ -104,8 +104,8 @@ function RoomResult({
               className="chat-room-result__slot"
               type="button"
               disabled={disabled}
-              onClick={() => onChooseSlot(resource, interval)}
-              key={`${interval.startDate}-${interval.endDate}-${index}`}
+              onClick={() => { onChooseSlot(resource, interval); }}
+              key={`${interval.startDate}-${interval.endDate}-${String(index)}`}
               aria-label={roomTimeLabel(resource, interval)}
             >
               <Clock3 size={14} aria-hidden="true" />
@@ -117,7 +117,7 @@ function RoomResult({
       ) : (
         <p className="chat-room-result__no-slots" role="status">{hasRequestedTime ? "Keine freien Zeiten im gewünschten Zeitraum." : "Keine freien Zeiten zu diesen Anforderungen."}</p>
       ) : (
-        <button className="chat-room-result__action" type="button" disabled={disabled} onClick={() => onChooseRoom(resource)}>
+        <button className="chat-room-result__action" type="button" disabled={disabled} onClick={() => { onChooseRoom(resource); }}>
           {roomActionLabel(resource)} <ArrowRight size={15} aria-hidden="true" />
         </button>
       )}
@@ -139,7 +139,7 @@ export function ChatRoomResults({ rooms, disabled, onChooseRoom, onChooseSlot }:
       <div className="chat-room-results__list" id={listId}>
         {visibleRooms.map((room, index) => (
           <RoomResult
-            key={`${resourceIdentity(room.resource)}-${index}`}
+            key={`${resourceIdentity(room.resource)}-${String(index)}`}
             room={room}
             disabled={disabled}
             onChooseRoom={onChooseRoom}
@@ -153,9 +153,9 @@ export function ChatRoomResults({ rooms, disabled, onChooseRoom, onChooseSlot }:
           type="button"
           aria-expanded={expanded}
           aria-controls={listId}
-          onClick={() => setExpanded((current) => !current)}
+          onClick={() => { setExpanded((current) => !current); }}
         >
-          {expanded ? "Weniger anzeigen" : `Weitere ${remainingCount} anzeigen`}
+          {expanded ? "Weniger anzeigen" : `Weitere ${String(remainingCount)} anzeigen`}
           <ChevronDown className={expanded ? "is-expanded" : undefined} size={16} aria-hidden="true" />
         </button>
       )}

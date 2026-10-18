@@ -1,4 +1,5 @@
-import type { PluginManifest, ToolDefinition } from '@hasi/plugin-sdk';
+import type { PluginManifest, PluginManifestV2, ToolDefinition, ToolDefinitionV2 } from '@hasi/plugin-sdk';
+import { annyAppViewSha256 } from './app-view-metadata.generated.js';
 
 const string = { type: 'string' };
 const annyId = { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$' };
@@ -18,6 +19,64 @@ const tools: ToolDefinition[] = [
 ];
 
 export const annyManifest: PluginManifest = { manifestVersion: 1, id: 'de.hsh.hasi.anny', name: 'anny', description: 'Räume und Arbeitsplätze finden, buchen und eigene Buchungen stornieren.', version: '0.4.0', apiVersion: '1.0.0', mcpVersion: '2026-07-28', tools };
+
+export const annyAppPresentationId = 'resources';
+export const annyAppResourceUri = 'ui://de.hsh.hasi.anny/resources.html';
+
+const viewResourcesTool: ToolDefinitionV2 = {
+  name: 'anny.view_resources',
+  title: 'Räume und Arbeitsplätze filtern',
+  description: 'Filter and page through resources the authenticated actor is authorized to book. This does not check availability.',
+  effect: 'read',
+  requiredPermissions: ['rooms:read'],
+  inputSchema: object({
+    query: { type: 'string', maxLength: 100 },
+    kind: { type: 'string', enum: ['workplace', 'meeting_room', 'lecture_hall', 'room'] },
+    page: { type: 'integer', minimum: 0, maximum: 100 },
+    pageSize: { type: 'integer', minimum: 1, maximum: 6 },
+    requestedStartDate: timestamp,
+    requestedEndDate: timestamp,
+  }, ['page', 'pageSize']),
+  outputSchema: object({
+    resources: { type: 'array', items: resource },
+    total: { type: 'integer', minimum: 0 },
+    page: { type: 'integer', minimum: 0, maximum: 100 },
+    pageSize: { type: 'integer', minimum: 1, maximum: 6 },
+    availabilityChecked: { type: 'boolean', const: false },
+    requestedStartDate: timestamp,
+    requestedEndDate: timestamp,
+  }, ['resources', 'total', 'page', 'pageSize', 'availabilityChecked']),
+  visibility: ['app'],
+  presentationId: annyAppPresentationId,
+  resultSemantics: { kind: 'resources' },
+};
+
+const appTools: ToolDefinitionV2[] = tools.map((tool) => ({
+  ...tool,
+  visibility: ['model'],
+  ...(tool.name === 'anny.search_resources' ? { resultSemantics: { kind: 'resources' as const } } : {}),
+}));
+appTools.push(viewResourcesTool);
+
+/** Explicit opt-in contract for the sandboxed, read-only MCP App resource view. */
+export const annyAppManifest: PluginManifestV2 = {
+  manifestVersion: 2,
+  id: annyManifest.id,
+  name: annyManifest.name,
+  description: annyManifest.description,
+  version: '0.5.0',
+  apiVersion: '2.0.0',
+  mcpVersion: annyManifest.mcpVersion,
+  tools: appTools,
+  identity: { claims: ['anny.customerId', 'anny.resourceIds'] },
+  presentations: [{
+    id: annyAppPresentationId,
+    resourceUri: annyAppResourceUri,
+    mimeType: 'text/html;profile=mcp-app',
+    sha256: annyAppViewSha256,
+    csp: { connectDomains: [], resourceDomains: [] },
+  }],
+};
 
 // Explicit synthetic presentation metadata, not inferred anny API attributes.
 export const demoPresentation: Record<string, { capacity: number | null; location: string; features: string[]; serviceId: string }> = {

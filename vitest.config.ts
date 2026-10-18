@@ -9,6 +9,7 @@ export default defineConfig({
       ['@hasi/demo-runtime', './packages/demo-runtime/src/index.ts'],
       ['@hasi/api', './apps/api/src/index.ts'],
       ['@hasi/state', './packages/state/src/index.ts'],
+      ['@hasi/plugin-sdk/schema-pattern', './packages/plugin-sdk/src/schema-pattern.ts'],
       ['@hasi/plugin-sdk', './packages/plugin-sdk/src/index.ts'],
       ['@hasi/anny-client', './packages/anny-client/src/index.ts'],
       ['@hasi/knowledge-plugin', './apps/knowledge-plugin/src/index.ts'],

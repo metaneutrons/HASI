@@ -12,10 +12,10 @@ const ANNY_TOOL_NAMES = [
 
 type AnnyChatToolName = (typeof ANNY_TOOL_NAMES)[number];
 type AnnyRequest = <T>(path: string, init?: RequestInit) => Promise<T>;
-type AnnyChatToolOptions = { now?: () => Date };
-type RoomCard = { requestedStartDate?: string; resource: Resource; intervals: TimeInterval[]; checked: boolean };
+interface AnnyChatToolOptions { now?: () => Date }
+interface RoomCard { requestedStartDate?: string; resource: Resource; intervals: TimeInterval[]; checked: boolean }
 
-export type ChatProposal = {
+export interface ChatProposal {
   action?: "book" | "cancel_booking";
   id: string;
   resourceName: string;
@@ -23,21 +23,26 @@ export type ChatProposal = {
   endDate: string;
   status: "pending" | "confirmed" | "outcome_unknown" | "failed";
   expiresAt: string;
-};
+}
 
 /** Recheck a restored UI slot without persisting the bridge's availability cache. */
 export function availabilityInputForSlot(resourceId: string, interval: TimeInterval) {
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(interval.startDate));
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value;
-  return chatToolSchemas.anny_get_availability.parse({ resourceId, date: `${part("year")}-${part("month")}-${part("day")}`, time: `${part("hour")}:${part("minute")}`, durationMinutes: (Date.parse(interval.endDate) - Date.parse(interval.startDate)) / 60_000 });
+  const requiredPart = (type: Intl.DateTimeFormatPartTypes) => {
+    const value = part(type);
+    if (value === undefined) throw new Error("The selected interval could not be converted to local time.");
+    return value;
+  };
+  return chatToolSchemas.anny_get_availability.parse({ resourceId, date: `${requiredPart("year")}-${requiredPart("month")}-${requiredPart("day")}`, time: `${requiredPart("hour")}:${requiredPart("minute")}`, durationMinutes: (Date.parse(interval.endDate) - Date.parse(interval.startDate)) / 60_000 });
 }
 
-type AnnyChatToolResultBase = {
+interface AnnyChatToolResultBase {
   output: Record<string, unknown>;
   rooms?: RoomCard[];
   bookings?: Booking[];
   proposal?: ChatProposal;
-};
+}
 
 export type AnnyChatToolResult =
   | (AnnyChatToolResultBase & { name: "anny_search_resources" })
@@ -53,7 +58,7 @@ const MAX_BOOKINGS = 10;
 const ANNY_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u;
 const OFFSET_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/u;
 
-type CachedSlot = { startDate: string; endDate: string; serviceId: string };
+interface CachedSlot { startDate: string; endDate: string; serviceId: string }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -71,7 +76,7 @@ function isOffsetDateTime(value: unknown): value is string {
 
 function intervalCacheKey(startDate: string, endDate: string): string | null {
   if (!isOffsetDateTime(startDate) || !isOffsetDateTime(endDate)) return null;
-  return `${Date.parse(startDate)}\u0000${Date.parse(endDate)}`;
+  return `${String(Date.parse(startDate))}\u0000${String(Date.parse(endDate))}`;
 }
 
 function isResource(value: unknown): value is Resource {
@@ -79,7 +84,7 @@ function isResource(value: unknown): value is Resource {
     && isAnnyId(value.id)
     && typeof value.name === "string"
     && typeof value.description === "string"
-    && (value.kind === undefined || ['workplace', 'meeting_room', 'lecture_hall', 'room'].includes(String(value.kind)))
+    && (value.kind === undefined || typeof value.kind === "string" && ['workplace', 'meeting_room', 'lecture_hall', 'room'].includes(value.kind))
     && (value.parentId === undefined || value.parentId === null || isAnnyId(value.parentId))
     && (value.parentName === undefined || value.parentName === null || typeof value.parentName === 'string')
     && (value.officeWorkplaceCount === undefined || value.officeWorkplaceCount === null || Number.isInteger(value.officeWorkplaceCount) && Number(value.officeWorkplaceCount) > 0)
@@ -235,13 +240,14 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
   }
 
   async function searchResources(input: Record<string, unknown>): Promise<AnnyChatToolResult> {
+    const parsed = chatToolSchemas.anny_search_resources.parse(input);
     const requestFilters: RoomRequest = {
-      kind: input.kind as RoomRequest['kind'],
-      officeType: input.officeType as RoomRequest['officeType'],
-      capacity: input.capacity as number | undefined,
-      features: input.features as string[] | undefined,
-      location: input.location as string | undefined,
-      query: input.query as string | undefined,
+      ...(parsed.kind === undefined ? {} : { kind: parsed.kind }),
+      ...(parsed.officeType === undefined ? {} : { officeType: parsed.officeType }),
+      ...(parsed.capacity === undefined ? {} : { capacity: parsed.capacity }),
+      ...(parsed.features === undefined ? {} : { features: parsed.features }),
+      ...(parsed.location === undefined ? {} : { location: parsed.location }),
+      ...(parsed.query === undefined ? {} : { query: parsed.query }),
     };
     const clarification = workplaceGroupQuestion(requestFilters);
     if (clarification) return { name: 'anny_search_resources', output: { resources: [], returned: 0, truncated: 0, clarificationRequired: clarification }, rooms: [] };
@@ -270,7 +276,9 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
     const total = matches.length;
     let noMatchNotice = "Keine Treffer für die angegebenen Suchfilter. Das ist keine Verfügbarkeitsprüfung und kein Nachweis, dass an diesem Standort keine Ressourcen existieren. Prüfe die Filter.";
     if (requestFilters.kind === "workplace" && requestFilters.officeType !== undefined && requestFilters.officeType !== "any" && total === 0) {
-      const unfiltered = matchingResources(resources, { ...requestFilters, officeType: undefined });
+      const unfilteredRequest = { ...requestFilters };
+      delete unfilteredRequest.officeType;
+      const unfiltered = matchingResources(resources, unfilteredRequest);
       const unknown = workplaceOfficeTypeCounts(unfiltered).unknown;
       if (unknown > 0) {
         const requestedName = requestFilters.officeType === "single" ? "Einzelbüro/1er-Büro" : "geteiltes/2er-/3er-Büro";
@@ -402,7 +410,7 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
     const cache = cachedSlots.get(resource.id);
     const key = intervalCacheKey(startDate, endDate);
     const slot = key === null ? undefined : cache?.get(key);
-    if (!slot || slot.serviceId !== resource.serviceId) {
+    if (slot?.serviceId !== resource.serviceId) {
       throw new Error("Der Zeitraum wurde für diesen Raum nicht als verfügbar geprüft. Bitte prüfe die Verfügbarkeit erneut.");
     }
 

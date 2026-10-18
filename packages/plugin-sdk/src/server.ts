@@ -1,8 +1,9 @@
-import { timingSafeEqual, type KeyObject } from 'node:crypto';
+import { createHash, timingSafeEqual, type KeyObject } from 'node:crypto';
 import { Transform } from 'node:stream';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import type { AnySchema, ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
+import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { createMcpFastifyApp } from '@modelcontextprotocol/fastify';
 import { toNodeHandler } from '@modelcontextprotocol/node';
 import {
@@ -15,17 +16,26 @@ import {
 } from '@modelcontextprotocol/server';
 import type { FastifyInstance } from 'fastify';
 import { canonicalJson, digest, parseJsonRecord } from './canonical-json.js';
-import { verifyInvocationTokenClaims, type VerifiedInvocation } from './invocation.js';
-import { parsePluginManifest, type ActorContext, type PluginManifest, type ToolDefinition } from './manifest.js';
+import { verifyInvocationTokenClaims, type VerifiedInvocation, type InvocationContext } from './invocation.js';
+import {
+  parsePluginManifest,
+  type ActorContext,
+  type PluginManifest,
+  type ToolDefinition,
+  type ToolDefinitionV2,
+} from './manifest.js';
+import type { PluginPresentation } from './presentation.js';
 
 const MAX_REQUEST_BYTES = 64 * 1_024;
 const MAX_OUTPUT_BYTES = 64 * 1_024;
 const MAX_CONTENT_LENGTH = /^\d+$/;
 const OUTPUT_SUMMARY = 'Tool result is available in structuredContent.';
+const MAX_APP_RESOURCE_BYTES = 1_024 * 1_024;
 
 export type PluginToolHandler = (
   args: Record<string, unknown>,
   actor: ActorContext,
+  context?: InvocationContext,
 ) => Promise<Record<string, unknown>>;
 
 export interface CreatePluginServerOptions {
@@ -33,6 +43,8 @@ export interface CreatePluginServerOptions {
   publicKey: KeyObject;
   serviceToken: string;
   handlers: Record<string, PluginToolHandler>;
+  appResources?: Record<string, string>;
+  acceptedInstallationIds?: readonly string[];
   allowedHosts?: string[];
   consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>;
 }
@@ -76,6 +88,10 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
 
   const manifestJson = canonicalJson(options.manifest);
   const manifest = parsePluginManifest(JSON.parse(manifestJson) as unknown);
+  if (process.env.NODE_ENV === 'production' && manifest.tools.some(tool => tool.effect === 'execute') && !options.consumeInvocation) {
+    throw new Error('Production execution requires a shared durable invocation replay guard.');
+  }
+  const appResources = validateAppResources(manifest, options.appResources);
   const handlers = { ...options.handlers };
   const expectedHandlerNames = new Set(manifest.tools.map((tool) => tool.name));
   const actualHandlerNames = Object.keys(handlers);
@@ -222,6 +238,8 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
           return reply.code(401).send({ error: 'Unauthorized' });
         }
 
+        if (manifest.manifestVersion === 2 && (!invocation.context || !(options.acceptedInstallationIds ?? [manifest.id]).includes(invocation.context.installationId))) return reply.code(401).send({ error: 'Unauthorized' });
+
         const preparedTool = preparedTools.get(callBinding.tool);
         if (preparedTool && !hasRequiredPermissions(invocation.actor, preparedTool.definition)) {
           return reply.code(403).send({ error: 'Forbidden' });
@@ -244,60 +262,159 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
     call: ToolCallBinding | undefined,
   ): McpServer {
     const server = new McpServer({ name: manifest.id, version: manifest.version });
+    if (manifest.manifestVersion === 2) {
+      for (const presentation of manifest.presentations ?? []) {
+        const html = appResources.get(presentation.resourceUri);
+        if (html === undefined) {
+          throw new Error(`Missing app resource for ${presentation.resourceUri}`);
+        }
+        registerPresentationResource(server, presentation, html);
+      }
+    }
     for (const preparedTool of preparedTools.values()) {
       const { definition, handler } = preparedTool;
-      server.registerTool(
-        definition.name,
-        {
-          title: definition.title,
-          description: definition.description,
-          inputSchema: preparedTool.inputSchema,
-          outputSchema: preparedTool.outputSchema,
-          annotations: {
-            readOnlyHint: definition.effect === 'read',
-            destructiveHint: definition.effect === 'execute',
-            idempotentHint: definition.effect === 'read',
-          },
+      const config = {
+        title: definition.title,
+        description: definition.description,
+        inputSchema: preparedTool.inputSchema,
+        outputSchema: preparedTool.outputSchema,
+        annotations: {
+          readOnlyHint: definition.effect === 'read',
+          destructiveHint: definition.effect === 'execute',
+          idempotentHint: definition.effect === 'read',
         },
-        async (args) => {
-          if (
-            !verifiedInvocation ||
-            call?.tool !== definition.name ||
-            digest(args) !== verifiedInvocation.argsHash
-          ) {
-            throw new Error('Invalid invocation');
-          }
-          if (!hasRequiredPermissions(verifiedInvocation.actor, definition)) {
-            throw new Error('Forbidden');
-          }
-          if (!await (options.consumeInvocation ? options.consumeInvocation(verifiedInvocation.jti, verifiedInvocation.expiresAt) : replayGuard.consume(verifiedInvocation.jti, verifiedInvocation.expiresAt))) {
-            throw new Error('Invocation already used');
-          }
+      };
+      const callback = async (args: Record<string, unknown>) => {
+        if (
+          !verifiedInvocation ||
+          call?.tool !== definition.name ||
+          digest(args) !== verifiedInvocation.argsHash
+        ) {
+          throw new Error('Invalid invocation');
+        }
+        if (!hasRequiredPermissions(verifiedInvocation.actor, definition)) {
+          throw new Error('Forbidden');
+        }
+        if (!await (options.consumeInvocation ? options.consumeInvocation(verifiedInvocation.jti, verifiedInvocation.expiresAt) : replayGuard.consume(verifiedInvocation.jti, verifiedInvocation.expiresAt))) {
+          throw new Error('Invocation already used');
+        }
 
-          try {
-            const output = await handler(args, verifiedInvocation.actor);
-            const outputJson = canonicalJson(output);
-            const normalizedOutput = parseJsonRecord(JSON.parse(outputJson) as unknown, 'handler output');
-            if (!preparedTool.validateOutput(normalizedOutput)) {
-              throw new Error('Handler output does not match outputSchema');
-            }
-            const structuredContent = normalizedOutput;
-            const responseData = {
-              content: [{ type: 'text' as const, text: OUTPUT_SUMMARY }],
-              structuredContent,
-            };
-            if (Buffer.byteLength(canonicalJson(responseData), 'utf8') > MAX_OUTPUT_BYTES) {
-              throw new Error('Handler output exceeds the response limit');
-            }
-            return responseData;
-          } catch {
-            throw new Error('Tool execution failed');
+        try {
+          const output = await handler(args, verifiedInvocation.actor, verifiedInvocation.context);
+          const outputJson = canonicalJson(output);
+          const normalizedOutput = parseJsonRecord(JSON.parse(outputJson) as unknown, 'handler output');
+          if (!preparedTool.validateOutput(normalizedOutput)) {
+            throw new Error('Handler output does not match outputSchema');
           }
-        },
-      );
+          const structuredContent = normalizedOutput;
+          const responseData = {
+            content: [{ type: 'text' as const, text: OUTPUT_SUMMARY }],
+            structuredContent,
+          };
+          if (Buffer.byteLength(canonicalJson(responseData), 'utf8') > MAX_OUTPUT_BYTES) {
+            throw new Error('Handler output exceeds the response limit');
+          }
+          return responseData;
+        } catch {
+          throw new Error('Tool execution failed');
+        }
+      };
+      if (manifest.manifestVersion === 2) {
+        const v2Definition = definition as ToolDefinitionV2;
+        if (v2Definition.visibility || v2Definition.presentationId) {
+          const presentation = v2Definition.presentationId
+            ? (manifest.presentations ?? []).find((item) => item.id === v2Definition.presentationId)
+            : undefined;
+          registerAppTool(server, definition.name, {
+            ...config,
+            _meta: {
+              ui: {
+                ...(presentation ? { resourceUri: presentation.resourceUri } : {}),
+                ...(v2Definition.visibility ? { visibility: v2Definition.visibility } : {}),
+              },
+            },
+          }, callback);
+          continue;
+        }
+      }
+      server.registerTool(definition.name, config, callback);
     }
     return server;
   }
+}
+
+function validateAppResources(
+  manifest: PluginManifest,
+  candidate: Record<string, string> | undefined,
+): Map<string, string> {
+  if (manifest.manifestVersion !== 2) {
+    if (candidate !== undefined && Object.keys(candidate).length > 0) {
+      throw new TypeError('App resources require a v2 plugin manifest');
+    }
+    return new Map();
+  }
+
+  if (candidate !== undefined && !isRecord(candidate)) {
+    throw new TypeError('appResources must be a record of UI resource HTML');
+  }
+  const resources = candidate ?? {};
+  const presentations = manifest.presentations ?? [];
+  const presentationByUri = new Map(presentations.map((presentation) => [presentation.resourceUri, presentation]));
+  const resourceUris = Object.keys(resources);
+  if (
+    resourceUris.length !== presentationByUri.size ||
+    resourceUris.some((uri) => !presentationByUri.has(uri))
+  ) {
+    throw new TypeError('appResources must match manifest presentations exactly');
+  }
+
+  const validated = new Map<string, string>();
+  for (const [uri, html] of Object.entries(resources)) {
+    const presentation = presentationByUri.get(uri);
+    if (!presentation) {
+      throw new TypeError(`App resource ${uri} has no matching manifest presentation`);
+    }
+    if (typeof html !== 'string' || Buffer.byteLength(html, 'utf8') === 0 || Buffer.byteLength(html, 'utf8') > MAX_APP_RESOURCE_BYTES) {
+      throw new TypeError(`App resource ${uri} must be non-empty HTML under 1 MiB`);
+    }
+    const hash = createHash('sha256').update(html, 'utf8').digest('hex');
+    if (hash !== presentation.sha256.toLowerCase()) {
+      throw new TypeError(`App resource ${uri} does not match its manifest SHA-256`);
+    }
+    validated.set(uri, html);
+  }
+  return validated;
+}
+
+function registerPresentationResource(
+  server: McpServer,
+  presentation: PluginPresentation,
+  html: string,
+): void {
+  const csp = {
+    connectDomains: presentation.csp.connectDomains.map((domain) => `https://${domain}`),
+    resourceDomains: presentation.csp.resourceDomains.map((domain) => `https://${domain}`),
+  };
+  const metadata = { ui: { csp, prefersBorder: true } };
+  registerAppResource(
+    server,
+    presentation.id,
+    presentation.resourceUri,
+    {
+      description: `Interactive view for ${presentation.id}`,
+      _meta: metadata,
+    },
+    () => ({
+      contents: [
+        {
+          uri: presentation.resourceUri,
+          mimeType: RESOURCE_MIME_TYPE,
+          text: html,
+          _meta: metadata,
+        },
+      ],
+    }),
+  );
 }
 
 function assertObjectSchema(schema: Record<string, unknown>, label: string): void {

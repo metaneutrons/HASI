@@ -84,3 +84,14 @@ and [roadmap epic #55](https://github.com/metaneutrons/HASI/issues/55) on 2026-1
 The web strictness/coverage findings remain open as WEB-A1 in [M2 #49](https://github.com/metaneutrons/HASI/issues/49)
 (transferred from superseded #67);
 this tracking update does not change compiler/lint settings or coverage gates.
+
+
+## WEB-A1 implementation candidate (2026-10-18)
+
+The web tsconfig now extends the shared strict base with explicit Next-compatible
+emit/bundler overrides. ESLint combines Next rules with type-aware strict and
+stylistic TypeScript rules. Existing web types/tests were adjusted without
+disabling these checks. Unit/integration web tests run with the workspace suite;
+coverage thresholds still apply to the existing backend/service scope. There is
+no claim of blanket frontend coverage or native-device acceptance. Node 24/26 CI
+at the final implementation head remains the delivery gate.

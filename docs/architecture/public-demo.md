@@ -63,7 +63,9 @@ GWDG SAIA or an explicitly configured custom profile may run through the
 server-side `/api/chat` route with its own credential; no credential is sent to
 the browser or plugin. An explicit offline profile retains the bounded German
 dialogue parser. Provider failures do not trigger a silent fallback.
-IT/intranet retrieval and institutional citations remain unavailable.
+The bundled knowledge MCP serves fictional Service-IT and Intranet documents
+with authenticated demo source links. Live institutional retrieval and
+institutional citations remain unavailable.
 
 Real SSO, institutional permissions, anny tenant and customer linking, full
 anny API coverage, third-party artifact isolation and live booking/cancellation
@@ -129,7 +131,8 @@ include `cache.readTokens`, `cache.uncachedTokens` and, for positive input total
 `cache.readRatio` when the provider explicitly reports valid cache counters.
 Missing counters remain unknown; an explicit zero records a miss. Cache metrics
 stay in server telemetry so existing strict chat-response consumers remain
-compatible. This diagnoses limits; it is not a durable token reservation or spend ledger.
+compatible. This diagnoses limits; it is separate from the M2 candidate's
+durable budget ledger and does not prove a provider invoice amount.
 See [prompt-cache measurement](../verification/2026-10-18/groq-prompt-cache.md).
 
 See [context measurement and workflow qualification](../verification/2026-10-18/groq-context-budget.md).
@@ -148,8 +151,13 @@ Vercel automation bypass credential. Missing or failed limiter checks fail
 closed before inference. Local execution has no distributed WAF. The counter
 is regional, not an atomic worldwide token or currency budget. Input, output
 and request caps bound prototype throughput; provider quotas remain separate.
-Durable per-user/day accounting and a hard monetary ceiling remain necessary
-before an institutional pilot.
+The M2 candidate additionally reserves each provider attempt against a shared
+PostgreSQL-backed USD 1/day admission policy, including retries and fallbacks.
+Deployed records require explicit operator bootstrap and missing state fails
+closed. GWDG rates temporarily use an approved Groq-Qwen estimate. These are
+conservative admission charges, not verified provider invoices or a provider-side
+hard cap. Deployment qualification remains open; see
+[budget policy and provisioning](model-budget.md).
 
 Diagnostics log only host-owned failure categories, HTTP status, allowlisted
 provider codes, known tool names and schema issue codes or field names. They do

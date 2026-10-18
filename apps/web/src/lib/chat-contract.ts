@@ -46,6 +46,13 @@ export const CHAT_TOOL_NAMES = [
 ] as const;
 export type ChatToolName = (typeof CHAT_TOOL_NAMES)[number];
 
+export const dynamicModelToolNameSchema = z.string().regex(/^hasi_[a-f0-9]{24}$/u);
+export const chatToolCallNameSchema = z.union([
+  z.enum(CHAT_TOOL_NAMES),
+  dynamicModelToolNameSchema,
+]);
+export type ChatToolCallName = z.infer<typeof chatToolCallNameSchema>;
+
 const nonEmptyText = (maximum: number) =>
   z.string().trim().min(1).max(maximum);
 
@@ -53,7 +60,11 @@ const calendarDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/u)
   .refine((value) => {
-    const [year, month, day] = value.split("-").map(Number);
+    const [yearText, monthText, dayText] = value.split("-");
+    if (yearText === undefined || monthText === undefined || dayText === undefined) return false;
+    const year = Number(yearText);
+    const month = Number(monthText);
+    const day = Number(dayText);
     const date = new Date(Date.UTC(year, month - 1, day));
     return (
       date.getUTCFullYear() === year &&
@@ -116,10 +127,37 @@ export const chatToolDescriptions: Readonly<Record<ChatToolName, string>> =
       "Erstelle einen Buchungsvorschlag für eine Ressource und einen Zeitraum. Dieses Tool führt keine Buchung aus. Eine Buchung darf erst nach einer gesonderten ausdrücklichen Bestätigung behauptet werden.",
   });
 
+function boundedJsonValue(value: unknown): boolean {
+  let nodes = 0;
+  const visit = (item: unknown, depth: number): boolean => {
+    nodes += 1;
+    if (nodes > 512 || depth > 12) return false;
+    if (item === null || typeof item === "boolean") return true;
+    if (typeof item === "number") return Number.isFinite(item);
+    if (typeof item === "string") return item.length <= 8_000;
+    if (Array.isArray(item)) return item.length <= 128 && item.every(child => visit(child, depth + 1));
+    if (typeof item !== "object") return false;
+    const entries = Object.entries(item);
+    return entries.length <= 128 && entries.every(([key, child]) => key.length <= 256 && key !== "__proto__" && visit(child, depth + 1));
+  };
+  return visit(value, 0);
+}
+
+const toolArgumentsSchema = z.record(z.string().max(256), z.unknown()).superRefine((value, context) => {
+  if (!boundedJsonValue(value)) context.addIssue({ code: "custom", message: "Tool arguments exceed the permitted JSON bounds." });
+  try {
+    if (new TextEncoder().encode(JSON.stringify(value)).byteLength > 16 * 1024) {
+      context.addIssue({ code: "custom", message: "Tool arguments exceed the permitted size." });
+    }
+  } catch {
+    context.addIssue({ code: "custom", message: "Tool arguments are not valid JSON." });
+  }
+});
+
 const toolCallSchema = z.strictObject({
   id: z.string().trim().min(1).max(128),
-  name: z.enum(CHAT_TOOL_NAMES),
-  arguments: z.record(z.string(), z.unknown()),
+  name: chatToolCallNameSchema,
+  arguments: toolArgumentsSchema,
 });
 
 export const messageTimestampSchema = z.strictObject({
@@ -150,7 +188,7 @@ const toolMessageSchema = z.strictObject({
   role: z.literal("tool"),
   content: z.string().max(8000),
   toolCallId: z.string().trim().min(1).max(128),
-  name: z.enum(CHAT_TOOL_NAMES),
+  name: chatToolCallNameSchema,
 });
 
 export const wireMessageSchema = z.discriminatedUnion("role", [
@@ -191,7 +229,7 @@ function validateMessageSequence(
   }
 
   const seenCallIds = new Set<string>();
-  const pendingToolCalls: Array<{ id: string; name: ChatToolName }> = [];
+  const pendingToolCalls: { id: string; name: ChatToolCallName }[] = [];
   let totalContentLength = 0;
 
   messages.forEach((message, index) => {
@@ -250,9 +288,9 @@ function validateMessageSequence(
         }
         seenCallIds.add(toolCall.id);
 
-        const argumentResult = chatToolSchemas[toolCall.name].safeParse(
-          toolCall.arguments,
-        );
+        const argumentResult = isChatToolName(toolCall.name)
+          ? chatToolSchemas[toolCall.name].safeParse(toolCall.arguments)
+          : { success: dynamicModelToolNameSchema.safeParse(toolCall.name).success };
         if (!argumentResult.success) {
           context.addIssue({
             code: "custom",
@@ -339,9 +377,9 @@ export const modelReplySchema = z
       }
       seenCallIds.add(toolCall.id);
 
-      const argumentResult = chatToolSchemas[toolCall.name].safeParse(
-        toolCall.arguments,
-      );
+      const argumentResult = isChatToolName(toolCall.name)
+        ? chatToolSchemas[toolCall.name].safeParse(toolCall.arguments)
+        : { success: dynamicModelToolNameSchema.safeParse(toolCall.name).success };
       if (!argumentResult.success) {
         context.addIssue({
           code: "custom",
@@ -353,6 +391,10 @@ export const modelReplySchema = z
   });
 
 export type ModelReply = z.infer<typeof modelReplySchema>;
+
+export function isChatToolName(value: string): value is ChatToolName {
+  return Object.hasOwn(chatToolSchemas, value);
+}
 
 export const timestampRequestSchema = z.strictObject({
   messages: z.array(wireMessageSchema).min(1).max(16),

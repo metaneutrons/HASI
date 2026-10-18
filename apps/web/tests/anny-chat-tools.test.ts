@@ -10,10 +10,11 @@ import {
   type AnnyChatToolResult,
 } from "../src/lib/anny-chat-tools";
 import type { Booking, Resource, TimeInterval } from "../src/lib/types";
+import { required } from "./test-utils";
 
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
-type HarnessCall = { path: string; method: string; body?: unknown };
-const runtimes: Array<ReturnType<typeof createDemoRuntime>> = [];
+interface HarnessCall { path: string; method: string; body?: unknown }
+const runtimes: ReturnType<typeof createDemoRuntime>[] = [];
 const origin = "http://127.0.0.1:3001";
 
 afterEach(async () => {
@@ -75,7 +76,7 @@ function createHarness(startAt = "2030-01-01T10:30:00.000Z", catalog?: Parameter
     if (!response.ok) {
       const message = typeof payload === "object" && payload !== null && "error" in payload && typeof payload.error === "string"
         ? payload.error
-        : `Request failed with status ${response.status}.`;
+        : `Request failed with status ${String(response.status)}.`;
       throw Object.assign(new Error(message), { status: response.status });
     }
     return payload as T;
@@ -104,11 +105,11 @@ describe("bounded Anny chat tools", () => {
     await login(harness.request, 'student');
     const tools = createAnnyChatTools(harness.request, { now: harness.now });
     const search = await tools.run('anny_search_resources', { capacity: 4 });
-    const resource = search.rooms![0]!.resource;
+    const resource = required(required(search.rooms)[0]).resource;
     const availability = await tools.run('anny_get_availability', { resourceId: resource.id, date: '2030-01-03', time: '09:00', durationMinutes: 60 });
-    const slot = availability.rooms![0]!.intervals[0]!;
+    const slot = required(required(required(availability.rooms)[0]).intervals[0]);
     const prepared = await tools.run('anny_propose_booking', { resourceId: resource.id, startDate: slot.startDate, endDate: slot.endDate });
-    const created = await harness.request<{ bookingId: string }>(`/api/proposals/${prepared.proposal!.id}/confirm`, { method: 'POST', body: '{}' });
+    const created = await harness.request<{ bookingId: string }>(`/api/proposals/${required(prepared.proposal).id}/confirm`, { method: 'POST', body: '{}' });
     harness.calls.length = 0;
     const cancellation = await tools.run('anny_propose_cancellation', { bookingId: created.bookingId });
     expect(cancellation.proposal).toMatchObject({ action: 'cancel_booking', status: 'pending', startDate: slot.startDate, endDate: slot.endDate });
@@ -142,8 +143,8 @@ describe("bounded Anny chat tools", () => {
   });
   it("asks for office type before exposing many workplace candidates and explains unknown labels", async () => {
     const resources: Resource[] = Array.from({ length: 10 }, (_, index) => ({
-      id: `synthetic-workplace-${index}`,
-      name: `Arbeitsplatz ${index}`,
+      id: `synthetic-workplace-${String(index)}`,
+      name: `Arbeitsplatz ${String(index)}`,
       description: "Synthetic catalog entry",
       capacity: null,
       location: "Gebäude 1J",
@@ -153,10 +154,10 @@ describe("bounded Anny chat tools", () => {
       parentName: `Büro 1J.${String(index).padStart(2, "0")}`,
     }));
     const calls: string[] = [];
-    const request: Request = async <T>(path: string): Promise<T> => {
+    const request: Request = <T>(path: string): Promise<T> => {
       calls.push(path);
-      if (path === "/api/resources") return { resources } as T;
-      throw new Error(`Unexpected request: ${path}`);
+      if (path === "/api/resources") return Promise.resolve({ resources } as T);
+      return Promise.reject(new Error(`Unexpected request: ${path}`));
     };
     const tools = createAnnyChatTools(request);
 
@@ -194,11 +195,11 @@ describe("bounded Anny chat tools", () => {
     expect(search.output.resources).toEqual(expect.arrayContaining([
       expect.objectContaining({ officeWorkplaceCount: search.rooms?.[0]?.resource.officeWorkplaceCount }),
     ]));
-    const resource = search.rooms![0]!.resource;
+    const resource = required(required(search.rooms)[0]).resource;
     const availability = await tools.run('anny_get_availability', { resourceId: resource.id, date: '2030-01-07', time: '08:00', durationMinutes: 480 });
-    const slot = availability.rooms![0]!.intervals.find(interval => interval.startDate === '2030-01-07T07:00:00.000Z');
+    const slot = required(required(availability.rooms)[0]).intervals.find(interval => interval.startDate === '2030-01-07T07:00:00.000Z');
     expect(slot).toMatchObject({ endDate: '2030-01-07T15:00:00.000Z', available: true });
-    const proposal = await tools.run('anny_propose_booking', { resourceId: resource.id, startDate: slot!.startDate, endDate: slot!.endDate });
+    const proposal = await tools.run('anny_propose_booking', { resourceId: resource.id, startDate: required(slot).startDate, endDate: required(slot).endDate });
     expect(proposal.proposal?.status).toBe('pending');
     expect(harness.calls.some(({ path }) => path.endsWith('/confirm'))).toBe(false);
     const missing = await tools.run('anny_search_resources', { kind: 'workplace', location: 'Gebäude 99Z' });
@@ -211,9 +212,9 @@ describe("bounded Anny chat tools", () => {
     await login(harness.request, "student");
     const first = createAnnyChatTools(harness.request, { now: harness.now });
     const search = await first.run("anny_search_resources", { capacity: 4 });
-    const resource = search.rooms![0]!.resource;
+    const resource = required(required(search.rooms)[0]).resource;
     const availability = await first.run("anny_get_availability", { resourceId: resource.id, date: "2030-01-03", time: "09:00", durationMinutes: 60 });
-    const slot = availability.rooms![0]!.intervals[0]!;
+    const slot = required(required(required(availability.rooms)[0]).intervals[0]);
     const restored = createAnnyChatTools(harness.request, { now: harness.now });
     const args = { resourceId: resource.id, startDate: slot.startDate, endDate: slot.endDate };
     await expect(restored.run("anny_propose_booking", args)).rejects.toThrow(/nicht als verfügbar/);
@@ -375,7 +376,7 @@ describe("bounded Anny chat tools", () => {
     expect(prepared.proposal?.status).toBe("pending");
     const proposalId = prepared.proposal?.id;
     expect(proposalId).toBeDefined();
-    const confirmed = await harness.request<{ proposal: { status: string } }>(`/api/proposals/${proposalId}/confirm`, {
+    const confirmed = await harness.request<{ proposal: { status: string } }>(`/api/proposals/${required(proposalId)}/confirm`, {
       method: "POST",
       body: JSON.stringify({}),
     });
@@ -416,7 +417,7 @@ describe("bounded Anny chat tools", () => {
   it("bounds result counts and metadata size", async () => {
     const resources: Resource[] = Array.from({ length: 12 }, (_, index) => ({
       id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
-      name: `Raum ${index + 1}`,
+      name: `Raum ${String(index + 1)}`,
       description: "Testbeschreibung",
       capacity: 8,
       location: "Campus Linden",
@@ -424,16 +425,16 @@ describe("bounded Anny chat tools", () => {
       serviceId: "00000000-0000-4000-8000-000000000201",
     }));
     const bookings: Booking[] = Array.from({ length: 14 }, (_, index) => ({
-      id: `booking-${index}`,
-      resourceName: `Raum ${index}`,
+      id: `booking-${String(index)}`,
+      resourceName: `Raum ${String(index)}`,
       startDate: "2030-02-01T09:00:00.000Z",
       endDate: "2030-02-01T10:00:00.000Z",
       status: "confirmed",
     }));
-    const request: Request = async <T>(path: string): Promise<T> => {
-      if (path === "/api/resources") return { resources } as T;
-      if (path === "/api/bookings") return { bookings } as T;
-      throw new Error(`Unexpected request: ${path}`);
+    const request: Request = <T>(path: string): Promise<T> => {
+      if (path === "/api/resources") return Promise.resolve({ resources } as T);
+      if (path === "/api/bookings") return Promise.resolve({ bookings } as T);
+      return Promise.reject(new Error(`Unexpected request: ${path}`));
     };
     const tools = createAnnyChatTools(request, { now: () => new Date("2030-01-01T10:30:00.000Z") });
 

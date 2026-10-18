@@ -20,7 +20,7 @@ function DocumentReader({ documentId }: { documentId: string }) {
     apiRequest<{ document: unknown }>(`/api/knowledge/documents/${encodeURIComponent(documentId)}`, { signal: controller.signal })
       .then((result) => { if (!controller.signal.aborted) setDocument(knowledgeDocumentSchema.parse(result.document)); })
       .catch(() => { if (!controller.signal.aborted) setError("Dieses Dokument ist nicht verfügbar oder für dein Testkonto nicht freigegeben."); });
-    return () => controller.abort();
+    return () => { controller.abort(); };
   }, [documentId]);
   return <section className="knowledge-reader">
     <Link className="knowledge-back" href="/"><ArrowLeft size={18} aria-hidden="true" /> Zum Chat</Link>

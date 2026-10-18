@@ -4,6 +4,7 @@ vi.mock("server-only", () => ({}));
 
 import { canonicalDemoRequest } from "../src/lib/server/demo-runtime";
 import { handleChatPost } from "../src/lib/server/chat-http";
+import { required } from "./test-utils";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -48,7 +49,7 @@ describe("configured demo origin", () => {
     }));
     expect(canonical).not.toBeNull();
     const run = vi.fn().mockResolvedValue({ message: { role: "assistant", content: "Hallo" } });
-    const result = await handleChatPost(canonical!, { run, admit: async () => true, allowedOrigins: ["http://127.0.0.1:3187"] });
+    const result = await handleChatPost(required(canonical), { run, admit: () => Promise.resolve(true), allowedOrigins: ["http://127.0.0.1:3187"] });
     const allowed = origin === "http://127.0.0.1:3187";
     expect(result.status).toBe(allowed ? 200 : 403);
     expect(run).toHaveBeenCalledTimes(allowed ? 1 : 0);

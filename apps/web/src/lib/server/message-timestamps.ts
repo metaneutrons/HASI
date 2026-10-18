@@ -4,19 +4,19 @@ const KEY_INFO = "hasi-chat-message-times-v1";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const RECEIPT_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
-export type TimestampMessage = {
-  id?: string;
+export interface TimestampMessage {
+  id?: string | undefined;
   role: "user" | "assistant" | "tool";
   content: string;
-  toolCalls?: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
-  toolCallId?: string;
-  name?: string;
-};
+  toolCalls?: { id: string; name: string; arguments: Record<string, unknown> }[] | undefined;
+  toolCallId?: string | undefined;
+  name?: string | undefined;
+}
 
-export type MessageTimestamp = {
+export interface MessageTimestamp {
   createdAt: string;
   receipt: string;
-};
+}
 
 function canonicalize(value: unknown): unknown {
   if (value === null || typeof value === "string" || typeof value === "boolean") return value;
@@ -26,7 +26,7 @@ function canonicalize(value: unknown): unknown {
   }
   if (Array.isArray(value)) return value.map(canonicalize);
   if (typeof value === "object") {
-    const prototype = Object.getPrototypeOf(value);
+    const prototype: unknown = Object.getPrototypeOf(value);
     if (prototype !== Object.prototype && prototype !== null) {
       throw new TypeError("Message contains a non-plain object");
     }
@@ -39,7 +39,7 @@ function canonicalize(value: unknown): unknown {
 }
 
 function canonicalMessage(scope: string, message: TimestampMessage, createdAt: string): string {
-  if (!message || !UUID_PATTERN.test(message.id ?? "")) throw new TypeError("Message id must be a UUID");
+  if (!UUID_PATTERN.test(message.id ?? "")) throw new TypeError("Message id must be a UUID");
   if (!["user", "assistant", "tool"].includes(message.role) || typeof message.content !== "string") {
     throw new TypeError("Message is malformed");
   }
@@ -47,7 +47,7 @@ function canonicalMessage(scope: string, message: TimestampMessage, createdAt: s
     throw new TypeError("Message tool calls are malformed");
   }
   if (message.toolCalls?.some((call) =>
-    !call || typeof call.id !== "string" || typeof call.name !== "string" ||
+    typeof call.id !== "string" || typeof call.name !== "string" ||
     !call.arguments || typeof call.arguments !== "object" || Array.isArray(call.arguments)
   )) {
     throw new TypeError("Message tool calls are malformed");

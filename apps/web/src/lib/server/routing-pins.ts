@@ -142,7 +142,7 @@ export function createRoutingPins(
 
         const payloadBytes = decodeCanonicalBase64Url(encodedPayload);
         const signature = decodeCanonicalBase64Url(encodedSignature);
-        if (!payloadBytes || !signature || signature.length !== 32) return null;
+        if (!payloadBytes || signature?.length !== 32) return null;
         const payloadText = payloadBytes.toString("utf8");
         if (!Buffer.from(payloadText, "utf8").equals(payloadBytes)) return null;
 

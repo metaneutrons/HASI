@@ -7,6 +7,7 @@ import {
   modelConfigurationSchema,
   resolveModelConnection,
 } from "../src/lib/server/model-config";
+import { required } from "./test-utils";
 
 function defaultConfig() {
   return loadModelConfiguration({});
@@ -86,22 +87,22 @@ describe("server model configuration", () => {
 
   it("resolves fixed origins and provider APIs without accepting endpoint overrides", () => {
     const config = defaultConfig();
-    expect(resolveModelConnection(config.connections[0]!)).toEqual({
+    expect(resolveModelConnection(required(config.connections[0]))).toEqual({
       adapter: "groq",
       baseURL: "https://api.groq.com/openai/v1",
       api: "chat-completions",
     });
-    expect(resolveModelConnection(config.connections[1]!)).toEqual({
+    expect(resolveModelConnection(required(config.connections[1]))).toEqual({
       adapter: "openai-compatible",
       baseURL: "https://chat-ai.academiccloud.de/v1",
       api: "chat-completions",
     });
 
-    const openai = jsonConfig().connections[1]!;
-    expect(resolveModelConnection(modelConfigurationSchema.parse({
+    const openai = required(jsonConfig().connections[1]);
+    expect(resolveModelConnection(required(modelConfigurationSchema.parse({
       ...jsonConfig(),
       connections: [jsonConfig().connections[0], openai],
-    }).connections[1]!)).toEqual({
+    }).connections[1]))).toEqual({
       adapter: "openai",
       baseURL: "https://api.openai.com/v1",
       api: "responses",
@@ -110,7 +111,7 @@ describe("server model configuration", () => {
       ...jsonConfig(),
       connections: [jsonConfig().connections[0], { ...openai, api: "chat-completions" }],
     });
-    expect(resolveModelConnection(explicitChat.connections[1]!)).toMatchObject({ api: "chat-completions" });
+    expect(resolveModelConnection(required(explicitChat.connections[1]))).toMatchObject({ api: "chat-completions" });
   });
 
   it("rejects provider origins and credential references that are not server-owned", () => {
@@ -217,7 +218,7 @@ describe("server model configuration", () => {
   it("defaults temperature to 0.2 and preserves null to omit it", () => {
     const config = jsonConfig();
     const defaulted = modelConfigurationSchema.parse(config);
-    expect(defaulted.profiles[0]!.parameters.temperature).toBe(0.2);
+    expect(required(defaulted.profiles[0]).parameters.temperature).toBe(0.2);
 
     const omitted = modelConfigurationSchema.parse({
       ...config,
@@ -226,7 +227,7 @@ describe("server model configuration", () => {
         config.profiles[1],
       ],
     });
-    expect(omitted.profiles[0]!.parameters.temperature).toBeNull();
+    expect(required(omitted.profiles[0]).parameters.temperature).toBeNull();
   });
 
   it("supports multiple custom connections with separate approved secret references", () => {
@@ -249,7 +250,7 @@ describe("server model configuration", () => {
     });
     const parsed = modelConfigurationSchema.parse(config);
     expect(parsed.connections.filter(({ provider }) => provider === "custom")).toHaveLength(2);
-    expect(resolveModelConnection(parsed.connections[1]!)).toEqual({
+    expect(resolveModelConnection(required(parsed.connections[1]))).toEqual({
       adapter: "openai-compatible",
       baseURL: "https://one.example.test/v1",
       api: "chat-completions",
@@ -270,7 +271,7 @@ describe("server model configuration", () => {
       capabilities: { tools: true },
     });
     expect(configured.policy.userChoice.profileIds).toContain("custom-default");
-    expect(resolveModelConnection(configured.connections.at(-1)!)).toEqual({
+    expect(resolveModelConnection(required(configured.connections.at(-1)))).toEqual({
       adapter: "openai-compatible",
       baseURL: "https://custom.example.test/api/v2",
       api: "chat-completions",

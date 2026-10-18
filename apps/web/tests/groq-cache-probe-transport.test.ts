@@ -13,7 +13,7 @@ function response(body: unknown, status = 200, headers: HeadersInit = {}) {
 
 function createTransport(responses: Response[] = [response({ usage: {} })]) {
   let nextResponse = 0;
-  const upstream = vi.fn<typeof fetch>(async () => responses[nextResponse++] ?? response({ usage: {} }));
+  const upstream = vi.fn<typeof fetch>(() => Promise.resolve(responses[nextResponse++] ?? response({ usage: {} })));
   const log = vi.fn<(event: unknown) => void>();
   return { transport: createGroqCacheProbeTransport(upstream, log), upstream, log };
 }
@@ -27,6 +27,58 @@ function probeFetch(transportFetch: typeof globalThis.fetch, body = "{}") {
 }
 
 describe("operator Groq cache probe transport", () => {
+  const approvedBody = JSON.stringify({ model: 'openai/gpt-oss-120b', messages: [{ role: 'user', content: 'Synthetic probe.' }], max_tokens: 64 });
+
+  it('reserves before a live probe request and settles only explicit bounded usage', async () => {
+    const settle = vi.fn(() => Promise.resolve());
+    const reserve = vi.fn(() => Promise.resolve({ settle }));
+    const upstream = vi.fn<typeof fetch>(() => Promise.resolve(response({ usage: { prompt_tokens: 12, completion_tokens: 3 } })));
+    const transport = createGroqCacheProbeTransport(upstream, () => undefined, { reserve });
+    await probeFetch(transport.fetch, approvedBody);
+    expect(reserve).toHaveBeenCalledWith({ profileId: 'groq-oss-120b', inputTokens: Buffer.byteLength(approvedBody) + 4096, outputTokens: 64 });
+    expect(reserve.mock.invocationCallOrder[0]).toBeLessThan(upstream.mock.invocationCallOrder[0] ?? 0);
+    expect(settle).toHaveBeenCalledExactlyOnceWith({ inputTokens: 12, outputTokens: 3 });
+  });
+
+  it('denies exhausted admission and unapproved requests before provider IO', async () => {
+    const reserve = vi.fn(() => Promise.reject(new Error('budget exhausted')));
+    const upstream = vi.fn<typeof fetch>();
+    const transport = createGroqCacheProbeTransport(upstream, () => undefined, { reserve });
+    await expect(probeFetch(transport.fetch, approvedBody)).rejects.toThrow('budget exhausted');
+    await expect(probeFetch(transport.fetch, JSON.stringify({ model: 'unapproved', max_tokens: 64 }))).rejects.toThrow('Unapproved');
+    expect(reserve).toHaveBeenCalledTimes(1);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it.each([{}, { prompt_tokens: 0, completion_tokens: 0 }, { prompt_tokens: 12, completion_tokens: 65 }])('retains a full hold for unusable successful usage %j', async usage => {
+    const settle = vi.fn(() => Promise.resolve());
+    const transport = createGroqCacheProbeTransport(() => Promise.resolve(response({ usage })), () => undefined, { reserve: () => Promise.resolve({ settle }) });
+    await expect(probeFetch(transport.fetch, approvedBody)).rejects.toThrow('Probe usage');
+    expect(settle).toHaveBeenCalledExactlyOnceWith(undefined);
+  });
+
+  it('retains an unknown hold after transport failure', async () => {
+    const settle = vi.fn(() => Promise.resolve());
+    const transport = createGroqCacheProbeTransport(() => Promise.reject(new Error('synthetic transport loss')), () => undefined, { reserve: () => Promise.resolve({ settle }) });
+    await expect(probeFetch(transport.fetch, approvedBody)).rejects.toThrow('synthetic transport loss');
+    expect(settle).toHaveBeenCalledExactlyOnceWith();
+  });
+
+  it('keeps the two-call boundary while concurrent admissions are pending', async () => {
+    let allowAdmission: () => void = () => { throw new Error('Gate not initialized'); };
+    const gate = new Promise<void>(resolve => { allowAdmission = resolve; });
+    const reserve = vi.fn(async () => { await gate; return { settle: () => Promise.resolve() }; });
+    const upstream = vi.fn<typeof fetch>(() => Promise.resolve(response({ usage: { prompt_tokens: 12, completion_tokens: 3 } })));
+    const transport = createGroqCacheProbeTransport(upstream, () => undefined, { reserve });
+    const first = probeFetch(transport.fetch, approvedBody);
+    const second = probeFetch(transport.fetch, approvedBody);
+    await expect(probeFetch(transport.fetch, approvedBody)).rejects.toThrow('Probe transport boundary');
+    expect(reserve).toHaveBeenCalledTimes(2);
+    expect(upstream).not.toHaveBeenCalled();
+    allowAdmission();
+    await Promise.all([first, second]);
+    expect(upstream).toHaveBeenCalledTimes(2);
+  });
   it("records selected raw usage counters, keeps the response readable, and omits request and response details from logs", async () => {
     const privateRequest = "private-request-body-marker";
     const privateText = "private-response-text-marker";

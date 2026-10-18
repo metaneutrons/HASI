@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createRoutingPins, type RoutingPinInput } from "../src/lib/server/routing-pins";
+import { required } from "./test-utils";
 
 const NOW = new Date("2026-10-17T11:22:33.456Z");
 const SECRET = "fake-routing-pin-key-for-tests";
@@ -27,7 +28,7 @@ function makeToken(overrides: Partial<RoutingPinInput> = {}, clock = () => NOW) 
 
 function decodePayload(token: string): Record<string, unknown> {
   const [encoded] = token.split(".");
-  return JSON.parse(Buffer.from(encoded!, "base64url").toString("utf8")) as Record<string, unknown>;
+  return JSON.parse(Buffer.from(required(encoded), "base64url").toString("utf8")) as Record<string, unknown>;
 }
 
 describe("server-owned model routing pins", () => {
@@ -58,7 +59,7 @@ describe("server-owned model routing pins", () => {
     const changed = decodePayload(token);
     changed.actualProfileId = "groq-qwen-3.8-27b";
     changed.attemptedProfileIds = ["gwdg-qwen3-30b", "groq-qwen-3.8-27b"];
-    const mutated = `${Buffer.from(JSON.stringify(changed), "utf8").toString("base64url")}.${signature}`;
+    const mutated = `${Buffer.from(JSON.stringify(changed), "utf8").toString("base64url")}.${required(signature)}`;
 
     expect(encodedPayload).toBeTruthy();
     expect(createRoutingPins(SECRET, SCOPE, () => NOW).verify(mutated, expected)).toBeNull();

@@ -6,6 +6,11 @@ export type ModelRouterErrorCode =
   | "invalid_request"
   | "profile_not_approved"
   | "missing_credentials"
+  | "tools_unavailable"
+  | "budget_exhausted"
+  | "budget_unavailable"
+  | "budget_unpriced"
+  | "budget_usage_invalid"
   | "provider_unavailable"
   | "provider_rate_limited"
   | "invalid_model_response";

@@ -3,14 +3,14 @@ export const GROQ_RATE_LIMIT_DIMENSIONS = ["TPM", "RPM", "TPD", "RPD"] as const;
 
 export type GroqRateLimitDimension = (typeof GROQ_RATE_LIMIT_DIMENSIONS)[number];
 
-export type GroqRateLimitDiagnostics = {
+export interface GroqRateLimitDiagnostics {
   tokenLimit?: number;
   tokenRemaining?: number;
   requestLimit?: number;
   requestRemaining?: number;
   retryAfterSeconds?: number;
   dimension?: GroqRateLimitDimension;
-};
+}
 
 const MAX_COUNTER = 1_000_000_000_000;
 const MAX_ERROR_BODY_CHARS = 8_192;
@@ -26,10 +26,10 @@ const COUNTER_HEADERS = {
   requestRemaining: "x-ratelimit-remaining-requests",
 } as const;
 
-const DIMENSION_PATTERNS: ReadonlyArray<{
+const DIMENSION_PATTERNS: readonly {
   dimension: GroqRateLimitDimension;
   patterns: readonly RegExp[];
-}> = [
+}[] = [
   { dimension: "TPM", patterns: [/\btokens\s+per\s+minute\b/iu, /\bTPM\b/iu] },
   { dimension: "RPM", patterns: [/\brequests\s+per\s+minute\b/iu, /\bRPM\b/iu] },
   { dimension: "TPD", patterns: [/\btokens\s+per\s+day\b/iu, /\bTPD\b/iu] },
@@ -101,7 +101,7 @@ export function parseGroqRateLimitDiagnostics(
   }
 
   const result: GroqRateLimitDiagnostics = {};
-  for (const [field, header] of Object.entries(COUNTER_HEADERS) as Array<[keyof typeof COUNTER_HEADERS, string]>) {
+  for (const [field, header] of Object.entries(COUNTER_HEADERS) as [keyof typeof COUNTER_HEADERS, string][]) {
     const count = parseCounter(responseHeaders.get(header));
     if (count !== undefined) result[field] = count;
   }

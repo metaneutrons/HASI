@@ -40,7 +40,11 @@ export async function chatAccess(request: Request) {
     if (process.env.VERCEL_URL) allowedOrigins.push(`https://${process.env.VERCEL_URL}`);
     if (!process.env.VERCEL) allowedOrigins.push("http://127.0.0.1:3001", "http://127.0.0.1:3002", "http://localhost:3001");
     if (!process.env.VERCEL && process.env.HASI_DEMO_MODE === "1") allowedOrigins.push(new URL(request.url).origin);
-    return { request, allowedOrigins, timestampScope: createHash("sha256").update(scope).digest("hex"), routingPins: createRoutingPins(secret, `${new URL(request.url).origin}:${scope}`), clock: createMessageClock(secret, `${new URL(request.url).origin}:${scope}`) };
+    // These entrypoints run only the explicit bundled demo/local fixture stack.
+    // This label is deployment policy, never a claim that free text was scanned
+    // or that arbitrary future institutional plugin output is synthetic.
+    const modelContext = { dataClasses: ["synthetic_demo"], toolsRequired: true } as const;
+    return { request, allowedOrigins, modelContext, timestampScope: createHash("sha256").update(scope).digest("hex"), routingPins: createRoutingPins(secret, `${new URL(request.url).origin}:${scope}`), clock: createMessageClock(secret, `${new URL(request.url).origin}:${scope}`) };
   } catch {
     return failure("Die Testsitzung ist vorübergehend nicht verfügbar.", 503);
   }

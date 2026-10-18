@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { ModelBudgetAdmission } from "../src/lib/server/model-router";
 
 // Diagnostic-only: never imported by the application runtime.
 export const GROQ_CACHE_PROBE_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
@@ -21,7 +22,7 @@ async function observe(response: Response) {
   const chunks: Uint8Array[] = [];
   let size = 0;
   try {
-    while (true) {
+    for (;;) {
       const chunk = await reader.read();
       if (chunk.done) break;
       size += chunk.value.byteLength;
@@ -50,15 +51,41 @@ async function observe(response: Response) {
   }
 }
 
-export function createGroqCacheProbeTransport(upstream: typeof fetch, log: (event: unknown) => void) {
+export function createGroqCacheProbeTransport(upstream: typeof fetch, log: (event: unknown) => void, admission?: ModelBudgetAdmission) {
   const bodies: string[] = [];
+  let pendingAdmissions = 0;
   const observedFetch: typeof fetch = async (input, init) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    if (url !== ENDPOINT || bodies.length >= MAX_CALLS || typeof init?.body !== "string") throw new Error("Probe transport boundary.");
-    bodies.push(init.body);
-    const response = await upstream(input, { ...init, redirect: "error" });
-    log({ event: "raw_usage_observation", call: bodies.length, ...await observe(response) });
-    return response;
+    if (url !== ENDPOINT || bodies.length + pendingAdmissions >= MAX_CALLS || typeof init?.body !== "string") throw new Error("Probe transport boundary.");
+    const body = init.body;
+    const limits = admission ? probeAdmissionLimits(body) : undefined;
+    let reservation: Awaited<ReturnType<ModelBudgetAdmission['reserve']>> | undefined;
+    pendingAdmissions += 1;
+    try {
+      reservation = limits ? await admission?.reserve(limits) : undefined;
+      bodies.push(body);
+    } finally { pendingAdmissions -= 1; }
+    let settlementAttempted = false;
+    try {
+      const response = await upstream(url, { ...init, body, redirect: "error" });
+      const observation = await observe(response);
+      log({ event: "raw_usage_observation", call: bodies.length, ...observation });
+      if (reservation && limits) {
+        const prompt = 'promptTokens' in observation ? observation.promptTokens : undefined;
+        const completion = 'completionTokens' in observation ? observation.completionTokens : undefined;
+        const inputTokens = prompt?.state === 'reported' ? prompt.value : undefined;
+        const outputTokens = completion?.state === 'reported' ? completion.value : undefined;
+        const verified = typeof inputTokens === 'number' && inputTokens > 0 && inputTokens <= limits.inputTokens
+          && typeof outputTokens === 'number' && outputTokens >= 0 && outputTokens <= limits.outputTokens;
+        settlementAttempted = true;
+        await reservation.settle(verified ? { inputTokens, outputTokens } : undefined);
+        if (response.ok && !verified) throw new Error("Probe usage is unavailable or outside admission bounds.");
+      }
+      return response;
+    } catch (error) {
+      if (reservation && !settlementAttempted) await reservation.settle();
+      throw error;
+    }
   };
 
   return { fetch: observedFetch, calls: () => bodies.length, comparison: () => ({
@@ -67,4 +94,16 @@ export function createGroqCacheProbeTransport(upstream: typeof fetch, log: (even
     requestBytes: bodies.map(body => Buffer.byteLength(body)),
     syntheticRequestHashes: bodies.map(body => createHash("sha256").update(body).digest("hex")),
   }) };
+}
+
+function probeAdmissionLimits(body: string): { profileId: string; inputTokens: number; outputTokens: number } {
+  if (Buffer.byteLength(body) > 60_000) throw new Error("Probe request exceeds admission bounds.");
+  let parsed: unknown;
+  try { parsed = JSON.parse(body); } catch { throw new Error("Invalid probe request."); }
+  const payload = record(parsed);
+  const profileId = payload.model === 'openai/gpt-oss-120b' ? 'groq-oss-120b'
+    : payload.model === 'openai/gpt-oss-20b' ? 'groq-oss-20b' : undefined;
+  const outputTokens = payload.max_completion_tokens ?? payload.max_tokens;
+  if (!profileId || typeof outputTokens !== 'number' || !Number.isSafeInteger(outputTokens) || outputTokens < 1 || outputTokens > 1536) throw new Error("Unapproved probe model or output limit.");
+  return { profileId, inputTokens: Buffer.byteLength(body) + 4096, outputTokens };
 }

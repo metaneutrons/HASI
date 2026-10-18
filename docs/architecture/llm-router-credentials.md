@@ -70,7 +70,9 @@ a citation identifier. The profile is labelled Experimental; see the
 These checks do not establish reliable source grounding or approval for protected HsH data.
 Configured custom providers must be independently qualified for native tool
 calls before room workflows are enabled. Production data-policy approval and
-durable budgets remain required. HASI's router
+deployment qualification of the shared budget remain required. The candidate
+budget implementation and the explicitly approved temporary GWDG price estimate
+are documented in [the budget policy](model-budget.md). HASI's router
 is a server-side application module; introducing an external routing service
 would require a separate trust and credential-storage decision.
 
@@ -140,10 +142,13 @@ immediately. Rotate `GWDG_API_KEY` at least every six months. Audit records cont
 and time, never credential values. A rollback must account for revoked keys.
 
 The public prototype enforces shared regional Vercel WAF request limits,
-per-call input/output limits and a bounded client tool loop. These bound
-throughput but are not exact cross-region token/currency accounting. Durable
-budget reservations and provider-side spending quotas remain required for the
-institutional pilot. See [public deployment limits](public-demo.md). Selectable mock personas are not trusted
+per-call input/output limits and a bounded client tool loop. The M2 candidate
+adds durable cross-instance reservations for a shared USD 1/day admission
+limit; its deployment bootstrap and runtime qualification remain separate
+gates. Estimated prices and conservative reservations are not provider invoice
+accounting. Provider-side spending quotas remain required for the institutional
+pilot. See [public deployment limits](public-demo.md) and
+[budget provisioning](model-budget.md). Selectable mock personas are not trusted
 identities for privileged configuration or budgets. Plugin booking confirmation
 remains outside model authority.
 

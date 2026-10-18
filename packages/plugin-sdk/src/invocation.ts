@@ -6,7 +6,10 @@ import { parseActorContext, type ActorContext } from './manifest.js';
 const ISSUER = 'hasi-core';
 const MAX_TOKEN_AGE_SECONDS = 60;
 
+export interface InvocationContext { installationId: string; configurationRevision: number; configuration: Record<string, unknown> }
+
 export interface CreateInvocationTokenParams {
+  context?: InvocationContext;
   actor: ActorContext;
   pluginId: string;
   pluginVersion: string;
@@ -15,6 +18,7 @@ export interface CreateInvocationTokenParams {
 }
 
 export interface InvocationBinding {
+  installationId?: string;
   pluginId: string;
   pluginVersion: string;
   tool: string;
@@ -22,6 +26,7 @@ export interface InvocationBinding {
 }
 
 export interface VerifiedInvocation {
+  context?: InvocationContext;
   actor: ActorContext;
   jti: string;
   expiresAt: number;
@@ -42,6 +47,7 @@ export async function createInvocationToken(
 
   return new SignJWT({
     actor,
+    ...(input.context ? { context: validateContext(input.context) } : {}),
     pluginVersion: input.pluginVersion,
     tool: input.tool,
     argsHash: digest(args),
@@ -77,6 +83,7 @@ export async function verifyInvocationTokenClaims(
 
     const expectedClaims = new Set([
       'actor',
+      'context',
       'argsHash',
       'aud',
       'exp',
@@ -95,6 +102,8 @@ export async function verifyInvocationTokenClaims(
     const issuedAt = payload.iat;
     const expiresAt = payload.exp;
     const actor = parseActorContext(payload.actor);
+    const context = payload.context === undefined ? undefined : validateContext(payload.context);
+    if (binding.installationId !== undefined && context?.installationId !== binding.installationId) throw new Error('Invalid installation binding');
     if (
       payload.iss !== ISSUER ||
       payload.aud !== binding.pluginId ||
@@ -118,6 +127,7 @@ export async function verifyInvocationTokenClaims(
 
     return {
       actor,
+      ...(context ? { context } : {}),
       jti: payload.jti,
       expiresAt,
       argsHash: expectedArgsHash,
@@ -138,4 +148,12 @@ export async function verifyInvocationToken(
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function validateContext(value: unknown): InvocationContext {
+  const object = parseJsonRecord(value, 'invocation context');
+  if (Object.keys(object).some(key => !['installationId', 'configurationRevision', 'configuration'].includes(key)) || typeof object.installationId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(object.installationId) || typeof object.configurationRevision !== 'number' || !Number.isSafeInteger(object.configurationRevision) || object.configurationRevision < 0) throw new Error('Invalid invocation context');
+  const configuration = parseJsonRecord(object.configuration, 'configuration');
+  if (Buffer.byteLength(JSON.stringify(configuration)) > 32768) throw new Error('Configuration too large');
+  return { installationId: object.installationId, configurationRevision: object.configurationRevision, configuration };
 }

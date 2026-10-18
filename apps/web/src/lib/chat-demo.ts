@@ -1,14 +1,14 @@
 import type { Resource, ResourceKind } from "./types";
 
 export type OfficeType = "single" | "shared" | "any";
-export type WorkplaceOfficeTypeCounts = { single: number; shared: number; unknown: number };
-export type WorkplaceRefinement = {
+export interface WorkplaceOfficeTypeCounts { single: number; shared: number; unknown: number }
+export interface WorkplaceRefinement {
   question: string;
   counts: WorkplaceOfficeTypeCounts;
   candidateCount: number;
-};
+}
 
-export type RoomRequest = {
+export interface RoomRequest {
   kind?: ResourceKind;
   officeType?: OfficeType;
   date?: string;
@@ -18,7 +18,7 @@ export type RoomRequest = {
   features?: string[];
   location?: string;
   query?: string;
-};
+}
 
 export function workplaceGroupQuestion(request: RoomRequest): string | null {
   return request.kind === 'workplace' && request.capacity !== undefined && request.capacity > 1
@@ -83,7 +83,7 @@ const WEEKDAY_NUMBERS: Record<string, number> = {
   samstag: 6,
 };
 
-type DateCandidate = { value: string; start: number; end: number };
+interface DateCandidate { value: string; start: number; end: number }
 
 function isNegatedNear(text: string, start: number, end: number): boolean {
   const before = normalize(text.slice(Math.max(0, start - 40), start));
@@ -148,9 +148,13 @@ function nextBerlinWeekday(now: Date, weekday: string): string | undefined {
   return formatDate(targetDate.getUTCFullYear(), targetDate.getUTCMonth() + 1, targetDate.getUTCDate());
 }
 
-function dateIsValid(value: string | undefined): value is string {
+function dateIsValid(value: string | undefined): boolean {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split("-").map(Number);
+  const [yearText, monthText, dayText] = value.split("-");
+  if (yearText === undefined || monthText === undefined || dayText === undefined) return false;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
   const date = new Date(Date.UTC(year, month - 1, day));
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
@@ -166,23 +170,23 @@ function parseDateCandidates(text: string, now: Date): { candidates: DateCandida
     const localDay = new Date(Date.UTC(berlinToday.year, berlinToday.month - 1, berlinToday.day + offset));
     candidates.push({
       value: formatDate(localDay.getUTCFullYear(), localDay.getUTCMonth() + 1, localDay.getUTCDate()),
-      start: match.index ?? 0,
-      end: (match.index ?? 0) + match[0].length,
+      start: match.index,
+      end: (match.index) + match[0].length,
     });
   }
 
   for (const match of text.matchAll(/(?<!\d)(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)/gu)) {
     const value = formatDate(Number(match[1]), Number(match[2]), Number(match[3]));
-    candidates.push({ value: dateIsValid(value) ? value : INVALID, start: match.index ?? 0, end: (match.index ?? 0) + match[0].length });
+    candidates.push({ value: dateIsValid(value) ? value : INVALID, start: match.index, end: (match.index) + match[0].length });
   }
 
   for (const match of text.matchAll(/(?<!\d)(\d{1,2})\.(\d{1,2})\.(?:(\d{4}))?(?!\d)/gu)) {
     const value = formatDate(Number(match[3] ?? berlinToday.year), Number(match[2]), Number(match[1]));
-    candidates.push({ value: dateIsValid(value) ? value : INVALID, start: match.index ?? 0, end: (match.index ?? 0) + match[0].length });
+    candidates.push({ value: dateIsValid(value) ? value : INVALID, start: match.index, end: (match.index) + match[0].length });
   }
 
   for (const match of text.matchAll(new RegExp(WEEKDAY_DATE_PATTERN.source, WEEKDAY_DATE_PATTERN.flags))) {
-    const start = match.index ?? 0;
+    const start = match.index;
     const end = start + match[0].length;
     candidates.push({
       value: (() => {
@@ -202,7 +206,7 @@ function parseDateCandidates(text: string, now: Date): { candidates: DateCandida
   return { candidates, invalid: unsupportedDate || negatedDate || distinct.length > 1 || distinct.includes(INVALID) };
 }
 
-function maskRanges(text: string, ranges: Array<{ start: number; end: number }>): string {
+function maskRanges(text: string, ranges: { start: number; end: number }[]): string {
   const chars = text.split("");
   for (const range of ranges) {
     for (let index = range.start; index < range.end; index += 1) chars[index] = " ";
@@ -216,25 +220,25 @@ function numberValue(value: string): number | null {
   return WORD_NUMBERS[normalized] ?? null;
 }
 
-type TimeParse = { found: boolean; value?: string; durationMinutes?: number; invalid: boolean };
+interface TimeParse { found: boolean; value?: string; durationMinutes?: number; invalid: boolean }
 
 function parseTime(text: string, dateCandidates: DateCandidate[]): TimeParse {
   const dateMasked = maskRanges(text, dateCandidates);
   const durationMasked = dateMasked.replace(/\b(?:\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:minuten?|stunden?)\b/giu, (match) => " ".repeat(match.length));
-  const ranges: Array<{ start: number; end: number }> = [];
+  const ranges: { start: number; end: number }[] = [];
   const values: string[] = [];
   const rangeDurations: number[] = [];
   let invalid = false;
 
   const rangePattern = /\b(\d{1,2})(?::(\d{2}))?\s*(?:bis|–|—|-)\s*(\d{1,2})(?::(\d{2}))?\s*(Uhr\b)?/giu;
   for (const match of durationMasked.matchAll(rangePattern)) {
-    const start = match.index ?? 0;
+    const start = match.index;
     const end = start + match[0].length;
     const startHour = Number(match[1]);
     const startMinute = Number(match[2] ?? 0);
     const endHour = Number(match[3]);
     const endMinute = Number(match[4] ?? 0);
-    const hasExplicitClock = Boolean(match[2] || match[4] || match[5]);
+    const hasExplicitClock = [match[2], match[4], match[5]].some(value => value !== undefined && value.length > 0);
     ranges.push({ start, end });
     if (!hasExplicitClock || isNegatedNear(durationMasked, start, end)) {
       invalid = true;
@@ -255,7 +259,7 @@ function parseTime(text: string, dateCandidates: DateCandidate[]): TimeParse {
   for (const match of singleTimeText.matchAll(singlePattern)) {
     const hour = Number(match[1] ?? match[3]);
     const minute = Number(match[2] ?? 0);
-    if (hour > 23 || minute > 59 || isNegatedNear(singleTimeText, match.index ?? 0, (match.index ?? 0) + match[0].length)) {
+    if (hour > 23 || minute > 59 || isNegatedNear(singleTimeText, match.index, (match.index) + match[0].length)) {
       invalid = true;
       continue;
     }
@@ -271,15 +275,17 @@ function parseTime(text: string, dateCandidates: DateCandidate[]): TimeParse {
   const distinctDurations = [...new Set(rangeDurations)];
   if (distinctValues.length > 1 || distinctDurations.length > 1) invalid = true;
   if (distinctDurations.some((duration) => duration < 15 || duration > 1440)) invalid = true;
+  const value = invalid ? INVALID : distinctValues[0];
+  const durationMinutes = invalid ? undefined : distinctDurations[0];
   return {
     found: values.length > 0 || invalid,
-    value: invalid ? INVALID : distinctValues[0],
-    durationMinutes: invalid ? undefined : distinctDurations[0],
+    ...(value === undefined ? {} : { value }),
+    ...(durationMinutes === undefined ? {} : { durationMinutes }),
     invalid,
   };
 }
 
-type DurationParse = { found: boolean; value?: number };
+interface DurationParse { found: boolean; value?: number }
 
 function parseDuration(text: string): DurationParse {
   const values: number[] = [];
@@ -287,7 +293,7 @@ function parseDuration(text: string): DurationParse {
   for (const match of text.matchAll(/\b(\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s*(Minute(?:n)?|Stunde(?:n)?)\b/giu)) {
     found = true;
     const amount = numberValue(match[1] ?? "");
-    if (amount === null || isNegatedNear(text, match.index ?? 0, (match.index ?? 0) + match[0].length)) {
+    if (amount === null || isNegatedNear(text, match.index, (match.index) + match[0].length)) {
       values.push(0);
       continue;
     }
@@ -301,10 +307,11 @@ function parseDuration(text: string): DurationParse {
   }
   if (!found) return { found: false };
   const distinct = [...new Set(values)];
-  return { found: true, value: distinct.length === 1 ? distinct[0] : 0 };
+  const value = distinct[0];
+  return { found: true, value: distinct.length === 1 && value !== undefined ? value : 0 };
 }
 
-type CapacityParse = { found: boolean; value?: number };
+interface CapacityParse { found: boolean; value?: number }
 
 function parseCapacity(text: string): CapacityParse {
   const values: number[] = [];
@@ -312,12 +319,12 @@ function parseCapacity(text: string): CapacityParse {
   const groupPattern = new RegExp(`\\b${amountPattern}\\s+(?:person(?:en)?|leute|teilnehmende(?:n)?)\\b`, "giu");
   for (const match of text.matchAll(groupPattern)) {
     const value = numberValue(match[1] ?? "");
-    const negated = isNegatedNear(text, match.index ?? 0, (match.index ?? 0) + match[0].length);
+    const negated = isNegatedNear(text, match.index, (match.index) + match[0].length);
     values.push(!negated && value !== null && Number.isInteger(value) && value > 0 ? value : 0);
   }
   for (const match of text.matchAll(/\bwir\s+sind\s+zu\s+(zweit|dritt|viert|fünft|sechst|siebt|acht|neunt|zehnt|elft|zwölft)\b/giu)) {
     const value = ZU_CAPACITY[normalize(match[1] ?? "")];
-    const negated = isNegatedNear(text, match.index ?? 0, (match.index ?? 0) + match[0].length);
+    const negated = isNegatedNear(text, match.index, (match.index) + match[0].length);
     values.push(!negated ? value ?? 0 : 0);
   }
   if (/\b(?:nicht|kein(?:e|en)?|ohne)\s+(?:(?:für|fur)\s+)?(?:\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf|zu\s+(?:zweit|dritt|viert|fünft|sechst|siebt|acht|neunt|zehnt|elft|zwölft))\s+(?:person(?:en)?|leute)\b/iu.test(text)
@@ -326,7 +333,8 @@ function parseCapacity(text: string): CapacityParse {
   }
   if (!values.length) return { found: false };
   const distinct = [...new Set(values)];
-  return { found: true, value: distinct.length === 1 ? distinct[0] : 0 };
+  const value = distinct[0];
+  return { found: true, value: distinct.length === 1 && value !== undefined ? value : 0 };
 }
 
 function parseFeatures(text: string): string[] {
@@ -336,7 +344,6 @@ function parseFeatures(text: string): string[] {
     const pattern = new RegExp(`\\b${normalize(feature)}\\b`, "gu");
     let hasPositiveMention = false;
     for (const match of normalized.matchAll(pattern)) {
-      if (match.index === undefined) continue;
       if (isNegatedNear(normalized, match.index, match.index + match[0].length)) return [INVALID];
       hasPositiveMention = true;
     }
@@ -351,17 +358,18 @@ function parseLocation(text: string): { found: boolean; value?: string } {
   const buildingPattern = /\b(?:gebaude|geb\.?|building)\s+(?:nr\.?\s*)?([a-z]?\d+[a-z0-9]*(?:[.-]\d+)*)\b/giu;
   for (const match of normalized.matchAll(buildingPattern)) {
     const code = match[1]?.toLocaleUpperCase("de-DE");
-    if (code) found.push(isNegatedNear(normalized, match.index ?? 0, (match.index ?? 0) + match[0].length) ? INVALID : code);
+    if (code) found.push(isNegatedNear(normalized, match.index, (match.index) + match[0].length) ? INVALID : code);
   }
   for (const match of normalized.matchAll(/\bexpo[\s-]*plaza\b/gu)) {
-    found.push(isNegatedNear(normalized, match.index ?? 0, (match.index ?? 0) + match[0].length) ? INVALID : "Expo Plaza");
+    found.push(isNegatedNear(normalized, match.index, (match.index) + match[0].length) ? INVALID : "Expo Plaza");
   }
   for (const match of normalized.matchAll(/\blinden\b/gu)) {
-    found.push(isNegatedNear(normalized, match.index ?? 0, (match.index ?? 0) + match[0].length) ? INVALID : "Linden");
+    found.push(isNegatedNear(normalized, match.index, (match.index) + match[0].length) ? INVALID : "Linden");
   }
   const distinct = [...new Set(found)];
   if (distinct.length > 1) return { found: true, value: INVALID };
-  return distinct.length ? { found: true, value: distinct[0] } : { found: false };
+  const value = distinct[0];
+  return value === undefined ? { found: false } : { found: true, value };
 }
 
 function parseQuery(text: string): string | undefined {
@@ -393,7 +401,7 @@ function parseQuery(text: string): string | undefined {
 function matchesUnnegated(text: string, pattern: RegExp): boolean {
   const globalPattern = new RegExp(pattern.source, "gu");
   for (const match of text.matchAll(globalPattern)) {
-    const start = match.index ?? 0;
+    const start = match.index;
     if (!isNegatedNear(text, start, start + match[0].length)) return true;
   }
   return false;
@@ -420,8 +428,8 @@ export function mergeRoomRequest(text: string, previous: RoomRequest, now = new 
       : /\b(?:horsaal|horsale|hoersaal|hoersaele)\b/u.test(normalized) ? 'lecture_hall'
         : /\b(?:raum|raume|raeume|raumbuchung(?:en)?)\b/u.test(normalized) ? 'room' : undefined;
   if (kind) {
-    if (kind === 'workplace' && (previous.kind !== kind || /\b(?:einzelne|einzelnen)\s+arbeitsplatz(?:e|en)?\b/u.test(normalized))) next.capacity = undefined;
-    if (kind !== 'workplace') next.officeType = undefined;
+    if (kind === 'workplace' && (previous.kind !== kind || /\b(?:einzelne|einzelnen)\s+arbeitsplatz(?:e|en)?\b/u.test(normalized))) delete next.capacity;
+    if (kind !== 'workplace') delete next.officeType;
     next.kind = kind;
   }
   if (officeType !== undefined) {
@@ -430,7 +438,9 @@ export function mergeRoomRequest(text: string, previous: RoomRequest, now = new 
   }
   const dates = parseDateCandidates(boundedText, now);
   if (dates.candidates.length || dates.invalid) {
-    next.date = dates.invalid ? INVALID : dates.candidates[0]?.value;
+    const candidate = dates.candidates[0];
+    if (dates.invalid) next.date = INVALID;
+    else if (candidate !== undefined) next.date = candidate.value;
   }
 
   const time = parseTime(boundedText, dates.candidates);
@@ -442,7 +452,7 @@ export function mergeRoomRequest(text: string, previous: RoomRequest, now = new 
   } else if (time.durationMinutes !== undefined) {
     next.durationMinutes = time.durationMinutes;
   }
-  if (time.invalid && !explicitDuration.found) next.durationMinutes = next.durationMinutes === undefined ? 0 : next.durationMinutes;
+  if (time.invalid && !explicitDuration.found) next.durationMinutes = next.durationMinutes ?? 0;
   if (time.durationMinutes !== undefined && explicitDuration.found && explicitDuration.value !== time.durationMinutes) next.durationMinutes = 0;
 
   const capacity = parseCapacity(boundedText);
@@ -452,7 +462,7 @@ export function mergeRoomRequest(text: string, previous: RoomRequest, now = new 
   if (features.length) next.features = features;
 
   const location = parseLocation(boundedText);
-  if (location.found) next.location = location.value;
+  if (location.found && location.value !== undefined) next.location = location.value;
 
   const query = parseQuery(boundedText);
   if (query) next.query = query;
@@ -571,7 +581,7 @@ export function workplaceRefinementQuestion(resources: Resource[], request: Room
   };
 }
 
-function validTime(value: string | undefined): value is string {
+function validTime(value: string | undefined): boolean {
   if (!value || !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return false;
   return true;
 }
@@ -600,16 +610,27 @@ function offsetAt(instant: Date): number {
 }
 
 export function requestStartDate(request: RoomRequest): string | null {
-  if (!dateIsValid(request.date) || !validTime(request.time)) return null;
-  const [year, month, day] = request.date.split("-").map(Number);
-  const [hour, minute] = request.time.split(":").map(Number);
+  const date = request.date;
+  const time = request.time;
+  if (date === undefined || !dateIsValid(date) || time === undefined || !validTime(time)) return null;
+  const [yearText, monthText, dayText] = date.split("-");
+  const [hourText, minuteText] = time.split(":");
+  if (
+    yearText === undefined || monthText === undefined || dayText === undefined
+    || hourText === undefined || minuteText === undefined
+  ) return null;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
   const targetWallClock = Date.UTC(year, month - 1, day, hour, minute);
   const offsets = new Set<number>();
   for (let deltaHours = -36; deltaHours <= 36; deltaHours += 6) {
     offsets.add(offsetAt(new Date(targetWallClock + deltaHours * 60 * 60_000)));
   }
 
-  const matches: Array<{ instant: Date; offsetMinutes: number }> = [];
+  const matches: { instant: Date; offsetMinutes: number }[] = [];
   for (const offsetMinutes of offsets) {
     const instant = new Date(targetWallClock - offsetMinutes * 60_000);
     const local = localPartsAt(instant);
@@ -631,17 +652,17 @@ export function requestStartDate(request: RoomRequest): string | null {
 
 export function roomRequestSummary(request: RoomRequest): string {
   const parts: string[] = [];
-  if (dateIsValid(request.date)) {
+  if (request.date !== undefined && dateIsValid(request.date)) {
     const [year, month, day] = request.date.split("-");
-    parts.push(`am ${day}.${month}.${year}`);
-  } else if (request.date) {
+    if (year !== undefined && month !== undefined && day !== undefined) parts.push(`am ${day}.${month}.${year}`);
+  } else if (request.date !== undefined) {
     parts.push("mit ungeklärtem Datum");
   }
-  if (validTime(request.time)) parts.push(`um ${request.time} Uhr`);
-  else if (request.time) parts.push("mit ungeklärter Uhrzeit");
-  if (request.durationMinutes && request.durationMinutes > 0) parts.push(`für ${request.durationMinutes} Minuten`);
+  if (request.time !== undefined && validTime(request.time)) parts.push(`um ${request.time} Uhr`);
+  else if (request.time !== undefined) parts.push("mit ungeklärter Uhrzeit");
+  if (request.durationMinutes && request.durationMinutes > 0) parts.push(`für ${String(request.durationMinutes)} Minuten`);
   else if (request.durationMinutes !== undefined) parts.push("mit ungeklärter Dauer");
-  if (request.capacity && request.capacity > 0) parts.push(`für ${request.capacity} Personen`);
+  if (request.capacity && request.capacity > 0) parts.push(`für ${String(request.capacity)} Personen`);
   else if (request.capacity !== undefined) parts.push("mit ungeklärter Personenzahl");
   if (request.features?.includes(INVALID)) parts.push("mit ungeklärter Ausstattung");
   else if (request.features?.length) parts.push(`mit ${request.features.join(" und ")}`);

@@ -12,12 +12,12 @@ import {
 import { apiRequest, postJson } from "@/lib/api";
 import type { Persona, Role, User } from "@/lib/types";
 
-type SessionState = {
+interface SessionState {
   user: User | null;
   mode: string;
-};
+}
 
-type SessionContextValue = {
+interface SessionContextValue {
   user: User | null;
   mode: string;
   loading: boolean;
@@ -29,7 +29,7 @@ type SessionContextValue = {
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   refreshPersonas: () => Promise<void>;
-};
+}
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
@@ -62,7 +62,7 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
       const result = await apiRequest<SessionState>("/api/session");
       setUser(result.user);
       setMode(result.mode);
-      if (!result.user) void refreshPersonas();
+      if (!result.user && result.mode !== "oidc") void refreshPersonas();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Die Sitzung konnte nicht geladen werden.");
     } finally {
@@ -77,7 +77,7 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
         if (!active) return;
         setUser(result.user);
         setMode(result.mode);
-        if (!result.user) void refreshPersonas();
+        if (!result.user && result.mode !== "oidc") void refreshPersonas();
       })
       .catch((cause: unknown) => {
         if (active) setError(cause instanceof Error ? cause.message : "Die Sitzung konnte nicht geladen werden.");
@@ -98,9 +98,8 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
   const logout = useCallback(async () => {
     await postJson<unknown>("/api/logout", {});
     setUser(null);
-    setMode("mock");
-    void refreshPersonas();
-  }, [refreshPersonas]);
+    await refresh();
+  }, [refresh]);
 
   const value = useMemo(
     () => ({

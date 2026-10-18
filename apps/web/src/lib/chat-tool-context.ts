@@ -1,4 +1,5 @@
 import type { WireMessage } from "./chat-contract";
+import { boundedPluginToolResult, MODEL_PLUGIN_TOOL_NAME } from "./plugin-tools";
 
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === "object" && !Array.isArray(value));
 const fields = (value: unknown, keys: readonly string[]) => {
@@ -14,6 +15,13 @@ export function modelToolContent(message: Extract<WireMessage, { role: "tool" }>
   try {
     const value: unknown = JSON.parse(message.content);
     if (!record(value)) return omitted;
+    if (MODEL_PLUGIN_TOOL_NAME.test(message.name)) {
+      return JSON.stringify({
+        untrustedPluginToolResult: boundedPluginToolResult(value),
+        historyDetailsOmitted: false,
+        requiresFreshRead: true,
+      });
+    }
     const output: Record<string, unknown> = fields(value, ["error", "notice", "returned", "truncated", "availabilityChecked", "refinementRequired", "refinementQuestion", "clarificationRequired", "catalogCandidates", "bookingUnit", "parentName", "requestedStartDate", "durationMinutes"]);
     if (Array.isArray(value.resources)) output.resources = value.resources.slice(0, 8).map(resource => ({
       ...fields(resource, ["id", "name", "kind", "bookingUnit", "parentName", "officeWorkplaceCount", "capacity", "location"]),
@@ -21,8 +29,9 @@ export function modelToolContent(message: Extract<WireMessage, { role: "tool" }>
     }));
     if (record(value.resource)) output.resource = fields(value.resource, ["id", "name"]);
     if (Array.isArray(value.intervals)) {
-      const available = value.intervals.filter(slot => record(slot) && slot.available === true);
-      const exact = available.find(slot => record(slot) && slot.startDate === value.requestedStartDate);
+      const intervals: unknown[] = value.intervals;
+      const available = intervals.filter((slot): slot is Record<string, unknown> => record(slot) && slot.available === true);
+      const exact = available.find(slot => slot.startDate === value.requestedStartDate);
       output.intervals = (exact ? [exact] : available.slice(0, 3)).map(slot => fields(slot, ["startDate", "endDate", "available"]));
     }
     if (Array.isArray(value.bookings)) output.bookings = value.bookings.slice(0, 10).map(booking => fields(booking, ["id", "resourceName", "startDate", "endDate", "status"]));

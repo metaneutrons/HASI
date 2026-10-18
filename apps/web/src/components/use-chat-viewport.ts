@@ -15,8 +15,8 @@ export function useChatViewport(enabled: boolean) {
       const editing = Boolean(document.activeElement?.matches("textarea, input, [contenteditable='true']"));
       const value = chatViewport(window.innerHeight, viewport, window.matchMedia("(max-width: 760px), (max-width: 1024px) and (max-height: 500px)").matches, editing);
       if (value) {
-        frame.style.setProperty("--chat-viewport-height", `${value.height}px`);
-        frame.style.setProperty("--chat-viewport-top", `${value.top}px`);
+        frame.style.setProperty("--chat-viewport-height", `${String(value.height)}px`);
+        frame.style.setProperty("--chat-viewport-top", `${String(value.top)}px`);
       } else {
         frame.style.removeProperty("--chat-viewport-height");
         frame.style.removeProperty("--chat-viewport-top");

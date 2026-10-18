@@ -1,0 +1,11 @@
+# Independent generic v2 reference plugin
+
+The local qualification completed on 2026-10-18 with the existing HASI Core process held open while a separate Node process served the reference plugin from a fresh temporary Git repository outside the workspace. No Docker, registry, external endpoint, paid resource, or LLM call was used. Core and plugin communicated over loopback HTTP.
+
+The initial plugin source was committed as `5ba67b3d8c08cdc7422b8567f5b6ec9870908cb7` (manifest version `1.0.0`). After the first confirmation, the process was stopped, the manifest version was changed to `1.0.1`, and the updated temporary repository was committed as `1c01612b25b06a3bb7604c4041cb0e719644ffde`. The replacement process ran on the same loopback port `56091`; Core remained PID `638`, while the plugin process changed from PID `803` to `823`. The qualification script removed the temporary Git repository after recording these SHAs.
+
+Core connected the operator-approved source, drafted and activated the public `label` configuration, then called `read_status`. The independent plugin returned that configured label and only its declared `reference.account` claim. Core then called `prepare_mark`, created a proposal, and confirmed it through the host endpoint; the synthetic in-memory counter reported exactly one execution. Core checked and activated the compatible update without restarting, then `read_status` returned version `1.0.1` from the replacement process.
+
+The SDK was built locally with `pnpm --filter @hasi/plugin-sdk build`; its build/source tree fingerprint was `784d6160ca3a717cae40680b70847a6b7ed26a4aaa909337b6c425a4e76a0fdf`. The separate plugin process imported that build through the explicit local build path supplied by the qualification script. An offline install of a locally packed SDK was unavailable because the pnpm store lacked the `@modelcontextprotocol/ext-apps@2.0.3` tarball; no online install or arbitrary dependency workaround was used. This qualifies process and source separation with a local SDK build, not a self-contained distributable artifact.
+
+The current `PluginRegistry` exposes compatible update check and activation but no rollback operation. Rollback was not simulated. The focused test, scoped TypeScript check, ESLint, and repository-wide TypeScript check passed.

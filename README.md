@@ -24,7 +24,9 @@ Ask questions, find rooms and prepare a simulated booking in one conversation.</
 - **Knowledge demo:** 60 entirely fictional documents, split between Service IT and Intranet examples. Search applies synthetic audience access rules before returning content, and the authenticated demo reader checks access again. These documents are not HsH guidance.
 - **Model registry:** versioned server configuration supports GroqCloud, GWDG SAIA, native OpenAI Responses/Chat, Anthropic Messages and multiple OpenAI-compatible endpoints. Operators choose the default, explicitly enable/limit user selection and define bounded fallback rules. Fallbacks are off in the bundled demo; eligible configured fallbacks pin the actual model for the tool turn and never replay business actions. Groq has live demo evidence; GWDG remains Experimental. Other adapters are mock-transport tested, not live-qualified. Use synthetic test data only.
 - **Model efficiency:** room cards end model planning without an extra summary. Simple office preferences and booking-list requests use typed tools directly; card selection and confirmation need no extra generation. Provider context uses a shorter stable instruction prefix, user-only calendar anchors and compact recent anny results. Content-free usage/quota diagnostics help distinguish provider limits; Groq cache counters measure reused versus uncached input tokens when the provider reports them. Controlled live repeats currently return no cache counter; a hit is not yet proven. The operator-only `pnpm probe:groq-cache` compares raw versus SDK usage without logging prompts. See the [context measurements](docs/verification/2026-10-18/groq-context-budget.md) and [cache investigation](docs/verification/2026-10-18/groq-prompt-cache.md).
-- **Test identity:** visitors can select student, employee or administrator demo personas in an isolated workspace. They are fixtures, not real SSO, HsH identities or institutional permissions.
+- **Plugin foundation:** registry-derived generic model tools, v2 installation/configuration/claim contracts, revision-controlled configuration drafts and per-tool policy in the admin UI, and exact host-owned confirmation. Approved external endpoint catalogues and an operator-local signed-artifact/container driver are implemented; independent distribution and production isolation remain unqualified. MCP Apps is an opt-in local Anny feasibility view, disabled in the public demo. See [contracts and limits](docs/architecture/plugin-contract-v2.md).
+- **Model budgets:** a CAS-backed shared USD 1/day admission ledger covers provider attempts, retries and fallbacks. Missing deployed state fails closed and requires explicit bootstrap. GWDG uses an expressly approved temporary Groq-Qwen price estimate, not a verified invoice tariff. See [budget policy and provisioning](docs/architecture/model-budget.md).
+- **Test identity:** visitors can select student, employee or administrator demo personas in an isolated workspace. They are fixtures, not HsH identities or institutional permissions. The local `--test-idp` launcher additionally exercises real OIDC redirects, PKCE/state/nonce and signed test ID tokens; it is not institutional SSO.
 
 The [public demo](https://hasi.metaneutrons.cc) uses a server-backed runtime and isolated synthetic state. Chat transcripts and profile settings stay in browser storage; the server stores workspace sessions, proposals, integration settings and simulated bookings. There is no live anny tenant, institutional knowledge source or real SSO connection.
 
@@ -50,6 +52,9 @@ To use GroqCloud or GWDG SAIA locally, provide the corresponding server-side cre
 GROQ_API_KEY=
 GWDG_API_KEY=
 ```
+
+Paid calls require an exact operator-approved price, either from the bundled Groq/GWDG entries or an operator-supplied `HASI_MODEL_PRICES` configuration. Custom models have no implicit tariff.
+Live cache probes additionally require the explicitly initialized shared PostgreSQL ledger described in [budget provisioning](docs/architecture/model-budget.md); they do not fall back to a fresh local-memory allowance.
 
 An optional custom OpenAI-compatible profile appears only when `CUSTOM_ENDPOINT`
 is a valid HTTPS base URL and `CUSTOM_MODEL_ID` is set. Its own `CUSTOM_API_KEY`
@@ -107,7 +112,7 @@ CUSTOM_MODEL_ID=
 
 Then run `pnpm --filter @hasi/web dev`. This PostgreSQL mode is separate from `pnpm dev`, which continues to run the multi-process in-memory stack. Do not commit `.env.local` or place secrets in client-visible variables. See [public demo architecture](docs/architecture/public-demo.md) for the runtime and data boundaries.
 
-For an optimized local preview, run `pnpm preview`. It builds the application first and runs the separate local services in production build mode with in-memory demo data. It does not enable real SSO or live integration credentials.
+For an optimized local preview, run `pnpm preview`. It builds the application first and runs the separate local services in production build mode with in-memory demo data. Model calls in production build mode additionally require the explicitly initialized PostgreSQL budget store; select Dialog-Demo when that store is unavailable. It does not enable real SSO or live integration credentials.
 
 ## Verify changes
 
@@ -146,15 +151,19 @@ The roadmap additionally covers [public web search restricted to operator-approv
 Track institutional work in the [MVP epic #47](https://github.com/metaneutrons/HASI/issues/47),
 later integrations in the [roadmap epic #55](https://github.com/metaneutrons/HASI/issues/55),
 and external plugin milestones P1–P6 under [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
-The generic MCP registry already supports approved endpoints and compatible
-updates; arbitrary plugin installation, schema-driven configuration and
-registry-driven chat tool discovery remain open.
+The MCP registry supports approved endpoints, compatible updates, schema-driven
+configuration and registry-driven chat tool discovery. Arbitrary plugin code
+installation is intentionally unsupported. Independent artifact deployment,
+account lifecycle and full mobile/production acceptance remain open.
 See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](docs/plans/server-demo-parity.md) for qualification scope.
 
 ## Project documents
 
 - [Consolidated delivery plan and plugin-platform milestones](docs/plans/consolidated-delivery.md)
 - [Chat-first interaction](docs/architecture/chat-first.md)
+- [Plugin v2 contracts, administration and MCP Apps feasibility](docs/architecture/plugin-contract-v2.md)
+- [Plugin setup, credential rotation, updates and recovery runbook](docs/architecture/plugin-operations.md)
+- [Shared model budget and temporary GWDG tariff](docs/architecture/model-budget.md)
 - [Plugin contract and prototype boundaries](docs/architecture/plugins-and-prototype.md)
 - [Technical basis](docs/architecture/technical-basis.md)
 - [Security and model evaluation](docs/architecture/security-and-models.md)

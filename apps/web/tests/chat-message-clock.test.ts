@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createChatMessageClock } from "../src/lib/chat-message-clock";
 import type { MessageTimestamp, WireMessage } from "../src/lib/chat-contract";
+import { required } from "./test-utils";
 
 const SERVER_TIME = "2026-10-17T11:22:33.456Z";
 const RECEIPT = "R".repeat(43);
@@ -8,13 +9,13 @@ const SERVER_TIMESTAMP: MessageTimestamp = { createdAt: SERVER_TIME, receipt: RE
 
 function responseFor(messages: WireMessage[]) {
   return {
-    timestamps: messages.map((message) => ({ id: message.id!, timestamp: SERVER_TIMESTAMP })),
+    timestamps: messages.map((message) => ({ id: required(message.id), timestamp: SERVER_TIMESTAMP })),
   };
 }
 
 describe("chat message clock", () => {
   it("stamps only tracked fresh events and keeps generated IDs on the tracked objects", async () => {
-    const request = vi.fn(async (messages: WireMessage[]) => responseFor(messages));
+    const request = vi.fn((messages: WireMessage[]) => Promise.resolve(responseFor(messages)));
     const clock = createChatMessageClock(request);
     const priorTimestamp = { createdAt: "2026-10-16T09:00:00.000Z", receipt: "P".repeat(43) };
     const existing: WireMessage = {
@@ -37,19 +38,19 @@ describe("chat message clock", () => {
     const stamped = await clock.flush();
 
     expect(request).toHaveBeenCalledTimes(1);
-    expect(request.mock.calls[0]![0].map((message) => message.id)).toEqual([generatedId]);
-    expect(stamped.get(generatedId!)).toEqual(SERVER_TIMESTAMP);
+    expect(required(request.mock.calls[0])[0].map((message) => message.id)).toEqual([generatedId]);
+    expect(stamped.get(required(generatedId))).toEqual(SERVER_TIMESTAMP);
     expect(fresh.timestamp).toEqual(SERVER_TIMESTAMP);
     expect(existing.timestamp).toEqual(priorTimestamp);
-    expect(legacyHistory[0]!.timestamp).toBeUndefined();
+    expect(required(legacyHistory[0]).timestamp).toBeUndefined();
     expect(untracked.timestamp).toBeUndefined();
   });
 
   it("sends timestamp requests in batches of at most sixteen", async () => {
-    const request = vi.fn(async (messages: WireMessage[]) => responseFor(messages));
+    const request = vi.fn((messages: WireMessage[]) => Promise.resolve(responseFor(messages)));
     const clock = createChatMessageClock(request);
     const messages = Array.from({ length: 33 }, (_, index) =>
-      clock.track<WireMessage>({ role: "user", content: `Message ${index}` }),
+      clock.track<WireMessage>({ role: "user", content: `Message ${String(index)}` }),
     );
 
     const stamped = await clock.flush();
@@ -60,9 +61,9 @@ describe("chat message clock", () => {
   });
 
   it("bounds UTF-8 bytes and removes a stale pending key after coalescing", async () => {
-    const request = vi.fn(async (messages: WireMessage[]) => responseFor(messages));
+    const request = vi.fn((messages: WireMessage[]) => Promise.resolve(responseFor(messages)));
     const clock = createChatMessageClock(request);
-    for (let index = 0; index < 5; index++) clock.track<WireMessage>({ role: "tool", name: "knowledge_search", toolCallId: `tool-${index}`, content: "界".repeat(8000) });
+    for (let index = 0; index < 5; index++) clock.track<WireMessage>({ role: "tool", name: "knowledge_search", toolCallId: `tool-${String(index)}`, content: "界".repeat(8000) });
     await clock.flush();
     expect(request.mock.calls.map(([batch]) => batch.length)).toEqual([2, 2, 1]);
     expect(request.mock.calls.every(([batch]) => new TextEncoder().encode(JSON.stringify({ messages: batch })).byteLength < 60_000)).toBe(true);
@@ -73,15 +74,15 @@ describe("chat message clock", () => {
     combined.content += " Second";
     clock.track(combined);
     await clock.flush();
-    expect(request.mock.calls[0]![0]).toHaveLength(1);
-    expect(request.mock.calls[0]![0][0]!.id).toBe(combined.id);
+    expect(required(request.mock.calls[0])[0]).toHaveLength(1);
+    expect(required(required(request.mock.calls[0])[0][0]).id).toBe(combined.id);
   });
 
   it.each(["mismatched", "duplicate"] as const)("rejects %s response IDs", async (kind) => {
     const firstId = "22222222-2222-4222-8222-222222222222";
     const secondId = "33333333-3333-4333-8333-333333333333";
     const otherId = "44444444-4444-4444-8444-444444444444";
-    const request = vi.fn(async () => ({
+    const request = vi.fn(() => Promise.resolve({
       timestamps: kind === "mismatched"
         ? [
             { id: firstId, timestamp: SERVER_TIMESTAMP },
@@ -105,9 +106,7 @@ describe("chat message clock", () => {
   });
 
   it("leaves events unstamped when the service is unavailable and drops them from the next flush", async () => {
-    const request = vi.fn(async () => {
-      throw new Error("timestamp service unavailable");
-    });
+    const request = vi.fn(() => Promise.reject(new Error("timestamp service unavailable")));
     const clock = createChatMessageClock(request);
     const message: WireMessage = { role: "user", content: "Pending timestamp" };
     clock.track(message);

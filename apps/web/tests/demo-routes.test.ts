@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  checkRateLimit: vi.fn(),
+  checkRateLimit: vi.fn<(
+    id: string,
+    options?: { rateLimitKey?: string },
+  ) => Promise<{ rateLimited: boolean; error?: "not-found" | "blocked" }>>(),
   createDemoRuntime: vi.fn(),
   deleteExpired: vi.fn(),
   handleChatPost: vi.fn(),
@@ -33,14 +36,14 @@ const originalEnv = new Map<string, string | undefined>();
 function setEnv(values: Record<string, string | undefined>) {
   for (const [name, value] of Object.entries(values)) {
     if (!originalEnv.has(name)) originalEnv.set(name, process.env[name]);
-    if (value === undefined) delete process.env[name];
+    if (value === undefined) Reflect.deleteProperty(process.env, name);
     else process.env[name] = value;
   }
 }
 
 function chatRequest() {
   const origin = process.env.VERCEL_ENV === "preview"
-    ? `https://${process.env.VERCEL_URL}`
+    ? `https://${String(process.env.VERCEL_URL)}`
     : "https://hasi.metaneutrons.cc";
   return new Request(`${origin}/api/chat`, {
     method: "POST",
@@ -82,7 +85,7 @@ beforeEach(() => {
 
 afterEach(() => {
   for (const [name, value] of originalEnv) {
-    if (value === undefined) delete process.env[name];
+    if (value === undefined) Reflect.deleteProperty(process.env, name);
     else process.env[name] = value;
   }
   originalEnv.clear();
@@ -167,7 +170,7 @@ describe("timestamp route session and admission boundary", () => {
     await postChat(chatRequest());
     const { POST } = await import("../src/app/api/chat/timestamps/route");
     await POST(chatRequest());
-    const keys = mocks.checkRateLimit.mock.calls.map(call => call[1].rateLimitKey);
+    const keys = mocks.checkRateLimit.mock.calls.map(call => call[1]?.rateLimitKey);
     expect(keys[0]).toBe("hasi:groq:shared:v1");
     expect(keys[1]).toMatch(/^hasi:timestamps:v1:[0-9a-f]{64}$/u);
     expect(keys[1]).not.toContain("workspace:student");
@@ -177,7 +180,7 @@ describe("timestamp route session and admission boundary", () => {
 describe("demo response host boundary", () => {
   it("pins the internal request origin while preserving path and query", async () => {
     setPreviewEnv();
-    const handleCore = vi.fn(async (request: Request) => Response.json({ url: request.url }));
+    const handleCore = vi.fn((request: Request) => Response.json({ url: request.url }));
     mocks.createDemoRuntime.mockReturnValue({ handleCore });
     const { demoResponse } = await import("../src/lib/server/demo-runtime");
 

@@ -18,6 +18,7 @@ import {
   type ChatStorageWriter,
   type ChatWorkspace,
 } from "../src/lib/chat-sessions";
+import { required } from "./test-utils";
 
 class MemoryStorage implements ChatStorageReader, ChatStorageWriter {
   readonly values = new Map<string, string>();
@@ -75,46 +76,48 @@ describe("chat session persistence", () => {
     expect(saveChatWorkspace(workspace, storage)).toBe(true);
     expect(loadChatWorkspace("user-1", storage).workspace.sessions.find(({ id }) => id === session.id)?.snapshot.profileId).toBe(dynamicProfileId);
 
-    const saved = JSON.parse(storage.getItem(chatStorageKey("user-1"))!) as ChatWorkspace;
-    saved.sessions.find(({ id }) => id === session.id)!.snapshot.profileId = "Invalid Profile";
+    const saved = JSON.parse(required(storage.getItem(chatStorageKey("user-1")))) as ChatWorkspace;
+    required(saved.sessions.find(({ id }) => id === session.id)).snapshot.profileId = "Invalid Profile";
     storage.setItem(chatStorageKey("user-1"), JSON.stringify(saved));
     const invalid = loadChatWorkspace("user-1", storage);
     expect(invalid.notice).not.toBeNull();
-    expect(invalid.workspace.sessions[0]!.snapshot.profileId).toBe("groq-oss-120b");
+    expect(required(invalid.workspace.sessions[0]).snapshot.profileId).toBe("groq-oss-120b");
   });
 
   it.each(["gwdg-qwen3-30b", "offline"] as const)("replaces the final %s chat with a fresh Groq chat", profileId => {
     const initial = createChatWorkspace("user-1");
-    const session = initial.sessions[0]!;
+    const session = required(initial.sessions[0]);
     const selected = updateChatSnapshot(initial, session.id, makeSnapshot({ profileId }));
     const next = deleteChat(selected, session.id);
-    expect(next.sessions[0]!.snapshot.profileId).toBe("groq-oss-120b");
-    expect(next.sessions[0]!.id).not.toBe(session.id);
+    expect(required(next.sessions[0]).snapshot.profileId).toBe("groq-oss-120b");
+    expect(required(next.sessions[0]).id).not.toBe(session.id);
   });
 
   it("roundtrips server metadata and leaves legacy message times absent", () => {
     const initial = createChatWorkspace("user-1");
-    const session = initial.sessions[0]!;
+    const session = required(initial.sessions[0]);
     const id = "ae93bd5b-49b1-40a9-8250-370d6c355fa7";
     const timestamp = { createdAt: "2026-10-17T09:00:00.000Z", receipt: "A".repeat(43) };
     const snapshot = makeSnapshot({ messages: [{ id, role: "user", text: "Morgen", timestamp }, textMessage("old", "assistant", "Alt")], history: [{ id, role: "user", content: "Morgen", timestamp }, { role: "assistant", content: "Alt" }] });
     const storage = new MemoryStorage();
     saveChatWorkspace(updateChatSnapshot(initial, session.id, snapshot), storage);
-    const restored = loadChatWorkspace("user-1", storage).workspace.sessions[0]!.snapshot;
-    expect(restored.messages[0]!.timestamp).toEqual(timestamp);
-    expect(restored.history[0]!.timestamp).toEqual(timestamp);
-    expect(restored.messages[1]!.timestamp).toBeUndefined();
-    expect(restored.history[1]!.timestamp).toBeUndefined();
+    const restored = required(loadChatWorkspace("user-1", storage).workspace.sessions[0]).snapshot;
+    expect(required(restored.messages[0]).timestamp).toEqual(timestamp);
+    expect(required(restored.history[0]).timestamp).toEqual(timestamp);
+    expect(required(restored.messages[1]).timestamp).toBeUndefined();
+    expect(required(restored.history[1]).timestamp).toBeUndefined();
   });
   it("persists a workplace office preference and rejects unsupported stored values", () => {
     const storage = new MemoryStorage();
     const initial = createChatWorkspace("user-1");
-    const session = initial.sessions[0]!;
+    const session = required(initial.sessions[0]);
     const snapshot = makeSnapshot({
       request: { kind: "workplace", officeType: "shared", location: "1J", date: "2030-01-03" },
       messages: [{
         ...textMessage("workplace-result", "assistant", "Katalogtreffer"),
         rooms: [{
+          requestedStartDate: "2030-01-03T08:00:00.000Z",
+          requestedEndDate: "2030-01-03T16:00:00.000Z",
           resource: { id: "desk-1", name: "Arbeitsplatz", description: "", capacity: null, location: "1J", features: [], serviceId: "service-1", kind: "workplace", officeWorkplaceCount: 2 },
           intervals: [],
           checked: false,
@@ -122,20 +125,22 @@ describe("chat session persistence", () => {
       }],
     });
     expect(saveChatWorkspace(updateChatSnapshot(initial, session.id, snapshot), storage)).toBe(true);
-    const restored = loadChatWorkspace("user-1", storage).workspace.sessions[0]!.snapshot;
+    const restored = required(loadChatWorkspace("user-1", storage).workspace.sessions[0]).snapshot;
     expect(restored.request).toEqual(snapshot.request);
     expect(restored.messages[0]?.rooms?.[0]?.resource.officeWorkplaceCount).toBe(2);
+    expect(restored.messages[0]?.rooms?.[0]?.requestedStartDate).toBe("2030-01-03T08:00:00.000Z");
+    expect(restored.messages[0]?.rooms?.[0]?.requestedEndDate).toBe("2030-01-03T16:00:00.000Z");
 
-    const stored = JSON.parse(storage.getItem(chatStorageKey("user-1"))!) as {
-      sessions: Array<{ snapshot: { request: { officeType?: string } } }>;
+    const stored = JSON.parse(required(storage.getItem(chatStorageKey("user-1")))) as {
+      sessions: { snapshot: { request: { officeType?: string } } }[];
     };
-    stored.sessions[0]!.snapshot.request.officeType = "private";
+    required(stored.sessions[0]).snapshot.request.officeType = "private";
     storage.setItem(chatStorageKey("user-1"), JSON.stringify(stored));
     expect(loadChatWorkspace("user-1", storage).notice).not.toBeNull();
   });
   it("keeps multiple sessions, drafts, profiles, and history independent", () => {
     const initial = createChatWorkspace("user-1");
-    const first = initial.sessions[0]!;
+    const first = required(initial.sessions[0]);
     const second = createChatSession("groq-oss-20b");
     const workspace = withSession(initial, second);
     const firstSnapshot = makeSnapshot({
@@ -157,8 +162,8 @@ describe("chat session persistence", () => {
     firstSnapshot.messages.push(textMessage("m3", "assistant", "mutated caller state"));
     (firstSnapshot.history as { role: "user"; content: string }[]).push({ role: "user", content: "mutated history" });
 
-    const storedFirst = updated.sessions.find(({ id }) => id === first.id)!;
-    const storedSecond = updated.sessions.find(({ id }) => id === second.id)!;
+    const storedFirst = required(updated.sessions.find(({ id }) => id === first.id));
+    const storedSecond = required(updated.sessions.find(({ id }) => id === second.id));
     expect(storedFirst.snapshot).toMatchObject({
       profileId: "groq-oss-120b",
       input: "first draft",
@@ -173,7 +178,7 @@ describe("chat session persistence", () => {
 
   it("applies a late update only to its target session and never resurrects deleted chats", () => {
     const initial = createChatWorkspace("user-1");
-    const first = initial.sessions[0]!;
+    const first = required(initial.sessions[0]);
     const second = createChatSession();
     const workspace = withSession(initial, second);
     const lateUpdate = updateChatSnapshot(workspace, first.id, makeSnapshot({ input: "late draft" }));
@@ -195,24 +200,24 @@ describe("chat session persistence", () => {
     const ownerOne = createChatWorkspace("owner-one");
     expect(saveChatWorkspace(ownerOne, storage)).toBe(true);
 
-    storage.setItem(chatStorageKey("owner-two"), storage.getItem(chatStorageKey("owner-one"))!);
+    storage.setItem(chatStorageKey("owner-two"), required(storage.getItem(chatStorageKey("owner-one"))));
     const wrongOwner = loadChatWorkspace("owner-two", storage);
     expect(wrongOwner.workspace.ownerId).toBe("owner-two");
     expect(wrongOwner.notice).not.toBeNull();
 
-    const raw = JSON.parse(storage.getItem(chatStorageKey("owner-one"))!) as Record<string, unknown>;
+    const raw = JSON.parse(required(storage.getItem(chatStorageKey("owner-one")))) as Record<string, unknown>;
     storage.setItem(chatStorageKey("owner-one"), JSON.stringify({ ...raw, version: 2 }));
     expect(loadChatWorkspace("owner-one", storage).notice).not.toBeNull();
 
-    const duplicate = JSON.parse(storage.getItem(chatStorageKey("owner-one"))!) as ChatWorkspace;
+    const duplicate = JSON.parse(required(storage.getItem(chatStorageKey("owner-one")))) as ChatWorkspace;
     duplicate.version = 1;
-    duplicate.sessions.push({ ...duplicate.sessions[0]! });
+    duplicate.sessions.push({ ...required(duplicate.sessions[0]) });
     expect(duplicate.sessions.length).toBeGreaterThan(1);
     storage.setItem(chatStorageKey("owner-one"), JSON.stringify(duplicate));
     expect(loadChatWorkspace("owner-one", storage).notice).not.toBeNull();
 
     const malformed = createChatWorkspace("owner-one");
-    malformed.sessions[0]!.snapshot.messages.push(textMessage("bad", "assistant", "x".repeat(8_001)));
+    required(malformed.sessions[0]).snapshot.messages.push(textMessage("bad", "assistant", "x".repeat(8_001)));
     storage.setItem(chatStorageKey("owner-one"), JSON.stringify(malformed));
     expect(loadChatWorkspace("owner-one", storage).notice).not.toBeNull();
   });
@@ -220,7 +225,7 @@ describe("chat session persistence", () => {
   it("drops only an interrupted trailing tool exchange and rejects corruption before it", () => {
     const storage = new MemoryStorage();
     const workspace = createChatWorkspace("user-1");
-    const session = workspace.sessions[0]!;
+    const session = required(workspace.sessions[0]);
     const prefix = [
       { role: "user", content: "Find a room" },
       { role: "assistant", content: "I will check rooms." },
@@ -252,7 +257,7 @@ describe("chat session persistence", () => {
     expect(recovered.workspace.sessions[0]?.snapshot.history).toEqual(prefix);
 
     const corrupt = structuredClone(stored);
-    const corruptHistory = corrupt.sessions[0]!.snapshot.history as { role: string; content?: string }[];
+    const corruptHistory = required(corrupt.sessions[0]).snapshot.history as { role: string; content?: string }[];
     corruptHistory[1] = { role: "assistant", content: "x", unexpected: true } as never;
     storage.setItem(chatStorageKey("user-1"), JSON.stringify(corrupt));
     expect(loadChatWorkspace("user-1", storage).notice).not.toBeNull();
@@ -273,10 +278,10 @@ describe("chat session persistence", () => {
     expect(storage.getItem(key)).toBe(previous);
 
     const largeMessages = Array.from({ length: MAX_CHAT_MESSAGES }, (_, index) =>
-      textMessage(`large-${index}`, "assistant", "x".repeat(8_000)),
+      textMessage(`large-${String(index)}`, "assistant", "x".repeat(8_000)),
     );
     const largeSessionOne = {
-      ...workspace.sessions[0]!,
+      ...required(workspace.sessions[0]),
       snapshot: makeSnapshot({ messages: largeMessages }),
     };
     const largeSessionTwo = {
@@ -293,8 +298,8 @@ describe("chat session persistence", () => {
     const tooMany = {
       ...workspace,
       sessions: Array.from({ length: MAX_CHAT_SESSIONS + 1 }, (_, index) => ({
-        ...workspace.sessions[0]!,
-        id: `session-${index}`,
+        ...required(workspace.sessions[0]),
+        id: `session-${String(index)}`,
       })),
     };
     expect(saveChatWorkspace(tooMany, storage)).toBe(false);
@@ -305,7 +310,7 @@ describe("chat session persistence", () => {
     const created = new Date("2026-10-15T10:00:00.000Z");
     const secondCreated = new Date("2026-10-15T10:01:00.000Z");
     const initial = createChatWorkspace("user-1");
-    const first = { ...initial.sessions[0]!, createdAt: created.toISOString(), updatedAt: created.toISOString() };
+    const first = { ...required(initial.sessions[0]), createdAt: created.toISOString(), updatedAt: created.toISOString() };
     const second = createChatSession("offline", secondCreated);
     const workspace = { ...initial, sessions: [first, second], activeId: second.id };
     const autoTitled = updateChatSnapshot(workspace, first.id, makeSnapshot({
@@ -345,9 +350,9 @@ describe("chat session persistence", () => {
   it("trims only old displayed messages on update and restores interruption and safe proposal state", () => {
     const now = new Date("2030-01-01T00:00:00.000Z");
     const workspace = createChatWorkspace("user-1");
-    const session = workspace.sessions[0]!;
+    const session = required(workspace.sessions[0]);
     const messages = Array.from({ length: MAX_CHAT_MESSAGES + 3 }, (_, index) =>
-      textMessage(`m-${index}`, index === 0 ? "user" : "assistant", `Message ${index}`),
+      textMessage(`m-${String(index)}`, index === 0 ? "user" : "assistant", `Message ${String(index)}`),
     );
     const updated = updateChatSnapshot(workspace, session.id, makeSnapshot({
       messages,
@@ -356,7 +361,7 @@ describe("chat session persistence", () => {
       messagesTruncated: false,
     }), now);
 
-    const snapshot = updated.sessions[0]!.snapshot;
+    const snapshot = required(updated.sessions[0]).snapshot;
     expect(snapshot.messages).toHaveLength(MAX_CHAT_MESSAGES);
     expect(snapshot.messages[0]?.id).toBe("m-3");
     expect(snapshot.messagesTruncated).toBe(true);
@@ -388,5 +393,39 @@ describe("chat session persistence", () => {
       interrupted: true,
       activeProposal: proposal.id,
     });
+  });
+
+  it("roundtrips a generic plugin proposal without parsing its plugin-specific date strings", () => {
+    const now = new Date("2030-01-01T00:00:00.000Z");
+    const workspace = createChatWorkspace("user-1");
+    const session = required(workspace.sessions[0]);
+    const proposal = {
+      action: "execute_tool" as const,
+      id: "5f891aac-81c0-4c7e-9a89-aed77396eea9",
+      pluginId: "example.plugin",
+      executionTool: "resource.confirm",
+      executionTitle: "Ressource bestätigen",
+      executionDescription: "Bestätigt die ausgewählte Ressource.",
+      toolName: "resource.prepare",
+      title: "Ressource prüfen",
+      arguments: { resourceId: "resource-1" },
+      resourceName: "Ressource 1",
+      startDate: "",
+      endDate: "",
+      status: "pending" as const,
+      expiresAt: "2100-01-01T01:00:00.000Z",
+    };
+    const active = updateChatSnapshot(workspace, session.id, makeSnapshot({
+      messages: [
+        textMessage("plugin-user", "user", "Bitte Vorschlag erstellen"),
+        { ...textMessage("plugin-assistant", "assistant", "Bitte prüfen."), proposal },
+      ],
+      activeProposal: proposal.id,
+    }), now);
+    const storage = new MemoryStorage();
+    expect(saveChatWorkspace(active, storage)).toBe(true);
+    const restored = loadChatWorkspace("user-1", storage).workspace.sessions[0]?.snapshot;
+    expect(restored?.activeProposal).toBe(proposal.id);
+    expect(restored?.messages[1]?.proposal).toEqual(proposal);
   });
 });
