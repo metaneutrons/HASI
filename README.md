@@ -24,11 +24,11 @@ Ask questions, find rooms and prepare a simulated booking in one conversation.</
 - **Knowledge demo:** 60 entirely fictional documents, split between Service IT and Intranet examples. Search applies synthetic audience access rules before returning content, and the authenticated demo reader checks access again. These documents are not HsH guidance.
 - **Model registry:** versioned server configuration supports GroqCloud, GWDG SAIA, native OpenAI Responses/Chat, Anthropic Messages and multiple OpenAI-compatible endpoints. Operators choose the default, explicitly enable/limit user selection and define bounded fallback rules. Fallbacks are off in the bundled demo; eligible configured fallbacks pin the actual model for the tool turn and never replay business actions. Groq has live demo evidence; GWDG remains Experimental. Other adapters are mock-transport tested, not live-qualified. Use synthetic test data only.
 - **Model efficiency:** room cards end model planning without an extra summary. Simple office preferences and booking-list requests use typed tools directly; card selection and confirmation need no extra generation. Provider context uses a shorter stable instruction prefix, user-only calendar anchors and compact recent anny results. Content-free usage/quota diagnostics help distinguish provider limits; Groq cache counters measure reused versus uncached input tokens when the provider reports them. Controlled live repeats currently return no cache counter; a hit is not yet proven. The operator-only `pnpm probe:groq-cache` compares raw versus SDK usage without logging prompts. See the [context measurements](docs/verification/2026-10-18/groq-context-budget.md) and [cache investigation](docs/verification/2026-10-18/groq-prompt-cache.md).
-- **Plugin foundation:** registry-derived generic model tools, v2 installation/configuration/claim contracts, revision-controlled configuration drafts and per-tool policy in the admin UI, and exact host-owned confirmation. Approved external endpoint catalogues and an operator-local signed-artifact/container driver are implemented; independent distribution and production isolation remain unqualified. MCP Apps is an opt-in local Anny feasibility view, disabled in the public demo. See [contracts and limits](docs/architecture/plugin-contract-v2.md).
+- **Plugin foundation:** registry-derived tools, v2 contracts, nested/conditional configuration forms, field-level diagnostics and revision-controlled activation. Personal service connections support explicit consent, renewal, disconnect and provider revocation, with current account rights checked before tool calls. Host confirmation previews identify service/account, consequences and costs; an independent status check reads durable execution receipts without replaying writes. Approved plain-MCP adapters, host provenance/pagination envelopes, credential-custody revisions, a shared deployment route/controller and a self-contained reference artifact implement the external-plugin path. Final isolation, recovery and device acceptance remain pending. MCP Apps stays disabled in the public demo; native results are the default. See [contracts](docs/architecture/plugin-contract-v2.md) and [operations](docs/architecture/plugin-operations.md).
 - **Model budgets:** a CAS-backed shared USD 1/day admission ledger covers provider attempts, retries and fallbacks. Missing deployed state fails closed and requires explicit bootstrap. GWDG uses an expressly approved temporary Groq-Qwen price estimate, not a verified invoice tariff. See [budget policy and provisioning](docs/architecture/model-budget.md).
 - **Test identity:** visitors can select student, employee or administrator demo personas in an isolated workspace. They are fixtures, not HsH identities or institutional permissions. The local `--test-idp` launcher additionally exercises real OIDC redirects, PKCE/state/nonce and signed test ID tokens; it is not institutional SSO.
 
-The [public demo](https://hasi.metaneutrons.cc) uses a server-backed runtime and isolated synthetic state. Chat transcripts and profile settings stay in browser storage; the server stores workspace sessions, proposals, integration settings and simulated bookings. There is no live anny tenant, institutional knowledge source or real SSO connection.
+The [public demo](https://hasi.metaneutrons.cc) uses a server-backed runtime and isolated synthetic state. On first use of anny, open **Verbundene Dienste** and explicitly connect the selected test account. Disconnecting removes tool access and invalidates pending confirmations; it does not undo an existing booking or delete chat history. Chat transcripts and profile settings stay in browser storage; the server stores workspace sessions, proposals, integration settings and simulated bookings. There is no live anny tenant, institutional knowledge source or real SSO connection.
 
 ## Run locally
 
@@ -138,11 +138,13 @@ Build first after a clean install: workspace declaration files are emitted to `d
 | `packages/demo-runtime`, `packages/state` | Co-located server handlers and memory/PostgreSQL JSON stores |
 | `fixtures` | Curated fictional knowledge corpus and read-only room catalog snapshot |
 
+A separate production API entrypoint and frontend-to-API transport are available; see [production composition](docs/architecture/production-runtime.md). They require real operator configuration and institutional authority provisioning. The public demo does not use this production identity path.
+
 The host owns identity, permissions and state transitions. The model can search and prepare a proposal; only the user can confirm the exact proposal, and the current booking path writes to the synthetic service. Production third-party plugin isolation, source integrations and institutional authorization remain open work.
 
 ## Status
 
-HASI is an incomplete MVP prototype, not an operational Hochschule Hannover service. Real SSO and account linking, institutional permission mapping, live availability and booking, real Intranet/Service-IT source adapters, cancellation and booking reconciliation, production provider approval, third-party plugin isolation, and native-device qualification remain outstanding. Responsive browser checks do not establish iPhone or Android qualification. The public demo's durable synthetic state does not provide institutional authorization or booking reconciliation.
+HASI is an incomplete MVP prototype, not an operational Hochschule Hannover service. The M2 account/action/deployment implementation is available for qualification; real HsH SSO/account-adapter provisioning, institutional permission mapping, live availability and booking, real Intranet/Service-IT source adapters, source-specific uncertain-write reconciliation, provider approval and final isolation/native-device qualification remain outstanding. Responsive browser checks do not establish iPhone or Android qualification. The public demo's durable synthetic state does not provide institutional authorization or booking reconciliation.
 
 Versioned GHCR images for `linux/amd64` and `linux/arm64` are built only through Release Please. The workflow and local Compose demo are implemented; no GHCR image has been published, and hosted native qualification is recorded separately in [D3](https://github.com/metaneutrons/HASI/issues/17). See the [container runtime and release boundaries](docs/architecture/container-runtime.md) before building or selecting a release image. Read-only mainline qualification uploads CI artifacts without creating a tag or release.
 
@@ -153,8 +155,7 @@ later integrations in the [roadmap epic #55](https://github.com/metaneutrons/HAS
 and external plugin milestones P1–P6 under [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
 The MCP registry supports approved endpoints, compatible updates, schema-driven
 configuration and registry-driven chat tool discovery. Arbitrary plugin code
-installation is intentionally unsupported. Independent artifact deployment,
-account lifecycle and full mobile/production acceptance remain open.
+installation is intentionally unsupported. Independent artifact packaging, personal account lifecycle and deployment coordination have implementation paths. Full mobile/production acceptance remains open; final acceptance tests were deferred by Fabian on 2026-10-18.
 See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](docs/plans/server-demo-parity.md) for qualification scope.
 
 ## Project documents
@@ -162,6 +163,8 @@ See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](doc
 - [Consolidated delivery plan and plugin-platform milestones](docs/plans/consolidated-delivery.md)
 - [Chat-first interaction](docs/architecture/chat-first.md)
 - [Plugin v2 contracts, administration and MCP Apps feasibility](docs/architecture/plugin-contract-v2.md)
+- [M2 implementation evidence and deferred acceptance](docs/verification/2026-10-18/m2-implementation.md)
+- [Separate production API/frontend composition](docs/architecture/production-runtime.md)
 - [Plugin setup, credential rotation, updates and recovery runbook](docs/architecture/plugin-operations.md)
 - [Shared model budget and temporary GWDG tariff](docs/architecture/model-budget.md)
 - [Plugin contract and prototype boundaries](docs/architecture/plugins-and-prototype.md)

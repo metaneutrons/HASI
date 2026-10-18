@@ -1,7 +1,7 @@
 import type { KeyObject } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { createPluginServer, type ActorContext } from '@hasi/plugin-sdk';
+import { createPluginServer, type ActorContext, type ExecutionJournal } from '@hasi/plugin-sdk';
 import { AnnyClient } from '@hasi/anny-client';
 import { annyAppManifest, annyAppResourceUri, annyManifest } from './manifest.js';
 import { loadAnnyAppView } from './app-view.js';
@@ -10,7 +10,7 @@ export { annyAppManifest, annyAppPresentationId, annyAppResourceUri, annyManifes
 export { annyAppViewSha256, loadAnnyAppView } from './app-view.js';
 export type ResourceKind = 'workplace' | 'meeting_room' | 'lecture_hall' | 'room';
 export interface Presentation { capacity: number | null; location: string; features: string[]; serviceId: string; kind?: ResourceKind; parentId?: string | null; parentName?: string | null; officeWorkplaceCount?: number | null }
-export interface AnnyPluginOptions { client: AnnyClient | ((actor: ActorContext) => AnnyClient); allowedHosts?: string[]; consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>; publicKey: KeyObject; serviceToken: string; presentation: Record<string, Presentation>; version?: string; enableAppView?: boolean }
+export interface AnnyPluginOptions { executionJournal?: ExecutionJournal; client: AnnyClient | ((actor: ActorContext) => AnnyClient); allowedHosts?: string[]; consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>; publicKey: KeyObject; serviceToken: string; presentation: Record<string, Presentation>; version?: string; enableAppView?: boolean }
 const annyId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/);
 const interval = z.strictObject({ resourceId: annyId, serviceId: annyId, startDate: z.iso.datetime({ offset: true }), endDate: z.iso.datetime({ offset: true }) });
 const cancellation = interval.omit({ serviceId: true }).extend({ bookingId: annyId });
@@ -74,7 +74,7 @@ export function createAnnyPlugin(options: AnnyPluginOptions): FastifyInstance {
     if (!['accepted', 'confirmed', 'requested'].includes(booking.status ?? '') || Date.parse(booking.startDate) <= Date.now()) throw new Error('Only active future bookings can be cancelled.');
   };
   return createPluginServer({
-    manifest, publicKey: options.publicKey, serviceToken: options.serviceToken, ...(enableAppView ? { appResources: { [annyAppResourceUri]: loadAnnyAppView() } } : {}), ...(options.allowedHosts ? { allowedHosts: options.allowedHosts } : {}), ...(options.consumeInvocation ? { consumeInvocation: options.consumeInvocation } : {}),
+    ...(options.executionJournal ? { executionJournal: options.executionJournal } : {}), manifest, publicKey: options.publicKey, serviceToken: options.serviceToken, ...(enableAppView ? { appResources: { [annyAppResourceUri]: loadAnnyAppView() } } : {}), ...(options.allowedHosts ? { allowedHosts: options.allowedHosts } : {}), ...(options.consumeInvocation ? { consumeInvocation: options.consumeInvocation } : {}),
     handlers: {
       'anny.search_resources': async (_args, actor) => ({ resources: (await client(actor).listResources()).flatMap(resource => {
         const profile = options.presentation[resource.id];

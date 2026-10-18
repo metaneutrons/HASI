@@ -280,8 +280,12 @@ or a guarantee about arbitrary text a visitor types. No deterministic filter or
 model can reliably recognize every confidential free-text disclosure. The demo
 continues to require test input and must not be approved for institutional data.
 
-Before enabling live or third-party institutional sources, implement trusted
-source/result provenance, current rights/classification for retained context and
-provider approval for all outgoing data. Plugin-generated labels and client
-history cannot establish that approval. These remain M3/M6 and production-M2
-qualification gates; the synthetic demo route is not a general production route.
+Production registry composition now attaches host-owned source/result provenance
+and classification, and refreshes operator/account authority around tool calls.
+The separate production frontend requires the complete conservative API context
+classification and eligible model profiles. Before enabling institutional sources,
+M3 must supply current rights/classification and revocation for retained context;
+M6 must qualify provider approval for all outgoing data. Plugin-generated labels
+and client history cannot establish that approval. These remain M3/M6 and
+production-M2 qualification gates; the synthetic demo route is not a general
+production route. See [production composition](production-runtime.md).

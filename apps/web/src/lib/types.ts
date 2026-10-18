@@ -55,4 +55,4 @@ export interface Plugin {
   tools: PluginTool[];
 }
 
-export type ApiError = Error & { status?: number };
+export type ApiError = Error & { status?: number; code?: string; errors?: { path: string; message: string }[] };

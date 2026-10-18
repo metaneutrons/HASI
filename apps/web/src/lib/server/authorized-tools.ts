@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { testSafeJsonSchemaPattern } from "@hasi/plugin-sdk/schema-pattern";
 import { canonicalDemoRequest, getDemoRuntime } from "./demo-runtime";
 import { ModelRouterError } from "./model-router-error";
+import { productionCoreRequest } from "./core-api";
 import {
   isBoundedJsonSchema,
   isObjectSchema,
@@ -71,7 +72,9 @@ function toolsUnavailable(): ModelRouterError {
 export async function loadAuthorizedModelTools(request: Request): Promise<PluginToolDescriptor[]> {
   try {
     let response: Response;
-    if (process.env.HASI_DEMO_MODE === "1") {
+    if (process.env.HASI_APP_MODE === "production") {
+      response = await productionCoreRequest("/api/tools", new Request(request.url, { headers: request.headers }), "GET");
+    } else if (process.env.HASI_DEMO_MODE === "1") {
       const canonical = canonicalDemoRequest(new Request(request.url, { method: "GET", headers: request.headers }));
       if (!canonical) throw toolsUnavailable();
       const url = new URL("/api/tools", canonical.url);

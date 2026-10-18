@@ -1,11 +1,63 @@
 # Independent generic v2 reference plugin
 
-The local qualification completed on 2026-10-18 with the existing HASI Core process held open while a separate Node process served the reference plugin from a fresh temporary Git repository outside the workspace. No Docker, registry, external endpoint, paid resource, or LLM call was used. Core and plugin communicated over loopback HTTP.
+The local qualification completed on 2026-10-18 with HASI Core held open while
+a separate Node process served two independently packaged versions of
+`hasi.reference`. The qualification used only the reviewed local fixture,
+loopback HTTP, and synthetic in-memory action state. It did not call an
+external service, LLM, registry, or Docker daemon and did not perform an
+external business write.
 
-The initial plugin source was committed as `5ba67b3d8c08cdc7422b8567f5b6ec9870908cb7` (manifest version `1.0.0`). After the first confirmation, the process was stopped, the manifest version was changed to `1.0.1`, and the updated temporary repository was committed as `1c01612b25b06a3bb7604c4041cb0e719644ffde`. The replacement process ran on the same loopback port `56091`; Core remained PID `638`, while the plugin process changed from PID `803` to `823`. The qualification script removed the temporary Git repository after recording these SHAs.
+The qualification's temporary source history recorded initial revision
+`479a19032ec72da957b7ec7fdaebc2bd31af384b` with manifest version `1.0.0` and
+compatible update revision `d9d2a89ba72db44be2858745f2a544d7fdf1e3c4` with
+version `1.0.1`. These temporary Git commit IDs are run-specific; the artifact
+and manifest digests below identify the packaged bytes. Each version
+was packaged into its own temporary directory before its process started. The
+SDK and production dependency closure were bundled into each artifact using
+offline `pnpm deploy` with lifecycle scripts and pnpm hooks disabled. The
+qualification checked `/healthz`, connected the approved source, activated
+configuration, read only the declared account claim, prepared and confirmed a
+synthetic action once, and activated the compatible update while Core remained
+running.
 
-Core connected the operator-approved source, drafted and activated the public `label` configuration, then called `read_status`. The independent plugin returned that configured label and only its declared `reference.account` claim. Core then called `prepare_mark`, created a proposal, and confirmed it through the host endpoint; the synthetic in-memory counter reported exactly one execution. Core checked and activated the compatible update without restarting, then `read_status` returned version `1.0.1` from the replacement process.
+The package command is:
 
-The SDK was built locally with `pnpm --filter @hasi/plugin-sdk build`; its build/source tree fingerprint was `784d6160ca3a717cae40680b70847a6b7ed26a4aaa909337b6c425a4e76a0fdf`. The separate plugin process imported that build through the explicit local build path supplied by the qualification script. An offline install of a locally packed SDK was unavailable because the pnpm store lacked the `@modelcontextprotocol/ext-apps@2.0.3` tarball; no online install or arbitrary dependency workaround was used. This qualifies process and source separation with a local SDK build, not a self-contained distributable artifact.
+```sh
+pnpm exec tsx scripts/package-reference-plugin.ts /path/to/new-artifact-directory
+```
 
-The current `PluginRegistry` exposes compatible update check and activation but no rollback operation. Rollback was not simulated. The focused test, scoped TypeScript check, ESLint, and repository-wide TypeScript check passed.
+It emits an `artifact-manifest.json` containing the package ID and version,
+canonical and raw manifest hashes, SDK/runtime dependency versions and
+licenses, and sorted payload file records including kind, mode, size, hash or
+symlink target. The artifact digest excludes only `artifact-manifest.json` and
+is computed over those sorted payload records. The qualification's evidence
+was:
+
+| Evidence | Initial artifact | Updated artifact |
+| --- | --- | --- |
+| Canonical manifest digest | `5cbee0101afb557940503dea42ebb8af228caafd6386942a50002d1d298be8b4` | `9743655c929142f0150ded13fd71fa94c7279fbb994b652a2b34ea255da206bb` |
+| Artifact SHA-256 | `052f65c8f0d811dadf3e263599e07ca2df1d3f7480805fe81156ea63e6473833` | `05c0f535ea5e9f52ca33df4185595e72cbd460d5db9c54dbf54a46d068fc2dc9` |
+| Artifact manifest SHA-256 | `ddf84920daed1ede8d8d58db5806627b21fa852a34103c1081315befeab5ab83` | `62cdca0e024dc2dcf800db6cd0b1b9d7d7ae3da68ff1e3c05d613824d0eb2267` |
+
+Both artifacts contained 72 SDK runtime packages and the same exact SDK
+license/version inventory, SHA-256
+`ab25a0cb985434334806a17a35ad3599642e211b2cdba4c4420c42f764eb9f39`. The
+plugin package's own `GPL-3.0-only` record is also included in each artifact
+manifest. The initial package had 8,301 payload files; the updated artifact
+had the same runtime closure and a distinct complete artifact digest.
+
+The test route controller used two instances over one in-memory store. It
+activated the v1.0.1 route, rolled back to the retained v1.0.0 route, and
+confirmed the restored process remained healthy. This establishes the fixture
+flow and shared-store controller contract only. Focused tests cover CAS
+concurrency, stale configuration fencing, gateway authentication/path/header
+limits and Docker-label endpoint resolution logic. They do not establish
+production PostgreSQL durability or deployment.
+
+The local proxy is implemented as a separate loopback gateway, and the Docker
+driver resolves a route to a fresh, verified `127.0.0.1` published port.
+Neither the production gateway wiring nor a real Docker container/image was
+used in this qualification. Full container hardening, operator shared-store
+integration, route switching under actual traffic, and actual-device recovery
+remain unverified. The qualification command is
+`pnpm exec tsx scripts/qualify-reference-plugin.ts`.

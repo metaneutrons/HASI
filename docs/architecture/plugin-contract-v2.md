@@ -30,9 +30,11 @@ V2 adds optional `configuration`, logical `secrets`, `identity.claims`,
 Configuration is bounded JSON Schema with field labels/help/groups. Secret
 declarations contain names and required flags, never values or custody references.
 Remote schema references, prototype properties, cycles and unbounded structures
-are rejected. The current form renders primitive, enum, integer and boolean
-controls; nested/conditional forms need additional reviewed UI support and are
-shown as unsupported rather than silently discarded.
+are rejected. The form supports bounded nested objects/arrays, primitive and enum fields,
+conditional if/then/else rules and uniquely discriminated oneOf/anyOf branches.
+Unsupported schema rules are reported explicitly and retain stored values;
+ambiguous branches are never guessed. JSON Pointer diagnostics map to fields.
+Rendering is capped independently of schema validation.
 
 ## Discovery, calls and results
 
@@ -58,15 +60,20 @@ only declared v2 claims and relevant tool permissions, then signs package/versio
 tool, argument hash, installation, active configuration/revision, expiry and a
 single-use identifier. Upstream identities are plugin-specific:
 `anny.customerId` and `anny.resourceIds` belong to its adapter, not every plugin.
-Production execute handlers require a shared durable replay guard; a process-local
-map is permitted only for local tests/development. Plugins never receive model
+Production execute handlers require a shared durable replay guard and execution
+journal; process-local stores are permitted only for local tests/development. Plugins never receive model
 provider credentials or HASI session cookies.
 
 Structured output must validate against its approved schema. Generic pagination
 and provenance stay explicit schema fields; the host does not invent provenance
 from free text. Existing Anny paging/filtering and knowledge citations use their
-domain contracts. A richer mandatory cross-plugin pagination/provenance envelope
-has not yet been qualified.
+domain contracts. Production registry composition adds a mandatory host-owned `_hasi` envelope
+with installation/manifest/configuration, authorization digest, operator source
+classification/revision, fetch time and explicit pagination. Plugin-supplied
+`_hasi` is rejected. Legacy v1 callers can use explicit compatibility mode.
+Unpaged completeness describes this tool result, not a complete institution-wide
+inventory; paged adapters must supply reviewed cursor/completeness semantics.
+Final cross-plugin acceptance tests remain pending.
 
 ## Host-owned confirmation
 
@@ -83,8 +90,9 @@ the binding and passes it into invocation, which checks before signing and again
 after connecting. Activation, account changes, removal and endpoint changes make
 old proposals stale. CAS permits one claimant; repeated confirmation returns the
 recorded outcome. An uncertain external outcome remains uncertain and cannot be
-blindly retried. General authoritative reconciliation is still an integration
-contract, not something a generic JSON result can establish.
+blindly retried. Signed SDK receipt reads reconcile committed outcomes without
+executing again. Source-specific status adapters must resolve a crash between an
+upstream write and receipt commit; a generic JSON result cannot establish failure.
 
 ## Administrator journey
 
@@ -110,8 +118,10 @@ contract, not something a generic JSON result can establish.
    history/configuration remain, and existing bookings are not silently cancelled.
 
 Central service setup is separate from personal account consent/renewal/revocation.
-The latter is not yet a complete generic OAuth account-linking UI. OIDC's test
-provider proves the login boundary, not institutional account/role contracts.
+Personal connections have a separate consent/renewal/disconnect UI and a
+subject-bound callback. Trusted operator adapters supply provider authorization,
+credential custody and fresh rights. OIDC's test provider proves the login
+boundary, not institutional account/role contracts.
 The production identity adapter must supply current authority, rather than
 treating a historical login claim as permanent permission.
 
@@ -140,8 +150,10 @@ Browser CSP does not reliably prohibit all self-navigation channels. Therefore a
 manifest hash alone does not activate a view: `reviewedAppDigests` is a separate
 operator-owned allowlist of reviewed immutable UI code. The local switch approves
 only the bundled Anny view. Unreviewed third-party Apps remain denied. The
-public demo does not enable this feasibility flag. P2 go/no-go and actual mobile,
-accessibility, navigation/network-negative and performance gates remain open.
+public demo does not enable this feasibility flag. The implementation decision
+is native results by default and no-go for unreviewed third-party Apps. Actual
+mobile, accessibility, navigation/network-negative and performance qualification
+remains open before broader adoption.
 
 The local launcher supplies the reviewed resource hash as
 `HASI_REVIEWED_APP_DIGEST` to the prototype API. App mode fails closed when that
@@ -165,7 +177,7 @@ synthetic. The IdP rejects non-test mode.
 | Local reference stack | Separate web/API/MCP processes; test IdP | Memory state, synthetic identities |
 | Vercel demo | Reviewed bundled fixtures and fixed HTTP transports | Cannot install persistent executable plugins inside a function |
 | Approved remote MCP | Pinned manifest/endpoint and per-instance authority | Operator-reviewed adapter required for plain MCP without HASI policy/effect contract |
-| Operator-local container driver | Verified signed digest image, nonroot/read-only/capability/resource/network policy, durable staged coordinator | Requires external atomic route controller, approved secret resolver and runtime qualification; no arbitrary pulls/build scripts |
+| Operator-local container driver | Verified signed digest image, nonroot/read-only/capability/resource/network policy, durable staged coordinator | Shared CAS route controller, configuration binding, verified endpoint gateway and operator secret custody implemented; actual runtime qualification pending; no arbitrary pulls/build scripts |
 
 The Docker controller is an operator-side component. Its Engine socket must never
 be mounted into plugins or exposed to the public demo administrator. Release
@@ -173,3 +185,33 @@ envelopes use Ed25519 publisher approval and immutable image/manifest digests.
 Independent external distribution, complete UI update review, production API/
 worker deployment and actual-device qualification are not accepted by this code
 alone. They remain tracked in M2/P5/P6.
+
+
+## Implementation completion and deferred acceptance (2026-10-18)
+
+Fabian requested completion of M2 implementation while deferring final tests.
+Personal account services are installed by the operator per installation and
+use trusted adapters for credential custody and fresh rights projection. The
+model/browser never supplies an upstream account. Consent state is subject-,
+installation- and revision-bound; renewal/disconnect/revocation invalidates old
+approvals. Only the synthetic runtime accepts its local test-consent screen.
+The production account service rejects demo adapters.
+
+Execution tokens can carry a host-generated `executionId`. SDK `ExecutionJournal`
+records the attempt before the side effect and stores a validated result before
+returning it. A signed, host-only `/hasi/actions/status` request reads that
+receipt. `POST /api/proposals/:id/reconcile` never invokes the execute tool; it
+requires current subject/account/configuration authority and a matching receipt
+or reviewed source-specific status adapter. Missing, incomplete or unreachable
+receipts remain unknown. A crash between an upstream write and receipt commit
+requires source-specific reconciliation (M5); no timeout or empty read proves
+that a write failed. Do not expire idempotency tombstones while replay remains
+possible.
+
+The trusted host preview includes service instance, account, exact target and
+arguments, effect, consequences and costs. Production rejects preparation without
+a reviewed action policy. Changes to that policy invalidate previous approvals.
+Historical cards do not execute by rendering; users can explicitly request a
+status check. See [production composition](production-runtime.md) and
+[operations](plugin-operations.md). Final device/security/recovery qualification
+and institutional rights approval are not claimed by implementation alone.

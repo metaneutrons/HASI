@@ -18,6 +18,9 @@ import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError, 
 import { canStartNewChat } from "@/lib/chat-workspace-store";
 import { ChatSessionList } from "@/components/chat-session-list";
 import { MAX_MODEL_STEPS, toolNeedsModelFollowUp, toolBatchNeedsModelFollowUp, isAvailabilityFollowUp, isMixedKnowledgeRequest, officePreferenceSearch, isOwnBookingsRequest } from "@/lib/chat-tool-loop";
+import { ActionPreviewDetails, ActionStatusControl } from "@/components/action-status";
+import { sameActionPreview } from "@/lib/action-preview";
+import { PersonalConnectionNotice } from "@/components/personal-connection-notice";
 import { ChatMessageCopy } from "@/components/chat-message-copy";
 import { bookingStatusLabel } from "@/lib/chat-message-copy";
 import { ChatRoomResults } from "@/components/chat-room-results";
@@ -55,6 +58,7 @@ function sameProposalSnapshot(displayed: AnnyChatProposal, authoritative: AnnyCh
   };
   return displayed.id === authoritative.id
     && (displayed.action ?? "book") === (authoritative.action ?? "book")
+    && sameActionPreview(displayed.preview, authoritative.preview)
     && displayed.resourceName === authoritative.resourceName
     && sameInstant(displayed.startDate, authoritative.startDate)
     && sameInstant(displayed.endDate, authoritative.endDate);
@@ -839,6 +843,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
       {interrupted && <p className="chat-recovery-note" role="status">Eine frühere Anfrage wurde unterbrochen. Bei Buchungen prüfe bitte zuerst den aktuellen Status.</p>}
       {messagesTruncated && <p className="chat-recovery-note">Die letzten 200 Nachrichten dieses Chats werden gespeichert und angezeigt.</p>}
       <div className="chat-scroller" ref={scroller}>
+        {!offline && <PersonalConnectionNotice />}
         {messages.length === 0 ? (
           <div className="chat-welcome">
             <span className="chat-orb" aria-hidden="true"><Sparkles size={30} strokeWidth={1.3} /></span>
@@ -881,6 +886,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                     <h2>{pluginProposalView.actionTitle}</h2>
                     {pluginProposalView.executionDescription && <p>{pluginProposalView.executionDescription}</p>}
                     <small>Plugin: {pluginProposalView.pluginId} · Werkzeug: <code>{pluginProposalView.executionTool}</code></small>
+                    <ActionPreviewDetails preview={pluginProposal.preview} />
                     {pluginProposal.resourceName && <p>{pluginProposal.resourceName}</p>}
                     <p>{compactPluginToolResult(pluginProposal.arguments, 800)}</p>
                     <small>Vorbereitet durch: {pluginProposalView.preparationTitle} · Gültig bis {formatTime(pluginProposal.expiresAt)} Uhr</small>
@@ -892,6 +898,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                   {message.proposal && message.proposal.action !== "execute_tool" && <div className="chat-tool-card chat-proposal">
                     <span className="chat-proposal-label">{message.proposal.action === "cancel_booking" ? "STORNIERUNG PRÜFEN" : "BITTE PRÜFEN UND BESTÄTIGEN"}</span>
                     <h2>{message.proposal.resourceName}</h2>
+                    <ActionPreviewDetails preview={message.proposal.preview} />
                     <p>{formatDateTime(message.proposal.startDate)} bis {formatTime(message.proposal.endDate)} Uhr</p>
                     {message.proposal.action === "cancel_booking" && <p>Diese bestehende Buchung wird erst nach deiner Bestätigung storniert.</p>}
                     <small>Gültig bis {formatTime(message.proposal.expiresAt)} Uhr · Testumgebung</small>
@@ -900,6 +907,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                       <Check size={16} aria-hidden="true" />
                     </button>
                   </div>}
+                  {message.proposal && !message.confirmed && activeProposal !== message.proposal.id && !offline && <ActionStatusControl proposalId={message.proposal.id} disabled={busy} />}
                   {message.bookings && message.bookings.length > 0 && <div className="chat-booking-list">{message.bookings.map((booking) => <div className="chat-tool-card" key={booking.id}><h2>{booking.resourceName}</h2><p>{formatDateTime(booking.startDate)} bis {formatTime(booking.endDate)} Uhr</p><div className="chat-booking-footer"><span className="chat-booking-status">{bookingStatusLabel(booking.status)}</span>{canRequestCancellation(booking) && <button className="chat-card-action" type="button" disabled={busy} onClick={() => void prepareCancellation(booking)}>Stornierung beginnen <ArrowRight size={15} aria-hidden="true" /></button>}</div></div>)}</div>}
                   {message.confirmed && <Link className="chat-card-action" href="/bookings">Meine Buchungen öffnen <ArrowRight size={15} aria-hidden="true" /></Link>}
                 </div>

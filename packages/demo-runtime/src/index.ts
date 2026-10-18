@@ -5,10 +5,12 @@ import { AnnyClient } from '@hasi/anny-client';
 import { createAnnyPlugin, annyManifest, annyAppManifest, annyAppViewSha256, demoPresentation } from '@hasi/anny-plugin';
 import { createAnnyMock, MOCK_IDS, type AnnyMockCatalog } from '@hasi/anny-mock';
 import { createKnowledgePlugin, knowledgeManifest } from '@hasi/knowledge-plugin';
-import { digest } from '@hasi/plugin-sdk';
+import { digest, ExecutionJournal } from '@hasi/plugin-sdk';
 import type { JsonStore } from '@hasi/state';
-import { createApi, PluginRegistry } from '@hasi/api';
+import { createApi, PluginRegistry, PluginAccountService, personas, withDemoPluginClaims } from '@hasi/api';
 import { DurableDemoIdentity } from './identity.js';
+import { DemoPluginAccountAdapter } from './plugin-account-adapter.js';
+export { DemoPluginAccountAdapter } from './plugin-account-adapter.js';
 
 const workspaceCookie = '__Host-hasi-demo-workspace';
 const sessionCookie = '__Host-hasi-session';
@@ -72,6 +74,7 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
   };
   const plugin = createAnnyPlugin({
     enableAppView: options.enablePluginApps === true,
+    executionJournal: new ExecutionJournal(options.store, 'demo-anny'),
     publicKey, serviceToken: pluginToken, presentation: options.catalog ? Object.fromEntries(options.catalog.resources.map(({ id, capacity, location, features, serviceId, kind, parentId, parentName, officeWorkplaceCount }) => [id, { capacity, location, features, serviceId, ...(kind ? { kind } : {}), ...(parentId !== undefined ? { parentId } : {}), ...(parentName !== undefined ? { parentName } : {}), ...(officeWorkplaceCount !== undefined ? { officeWorkplaceCount } : {}) }])) : demoPresentation, allowedHosts: [origin.hostname],
     consumeInvocation: (jti, expiresAt) => options.store.compareAndSet(`invocation:${jti}`, null, { consumed: true }, expiresAt * 1000),
     client: actor => {
@@ -110,7 +113,16 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
     if (new URL(request.url).origin !== origin.origin) return failure(403);
     const space = workspace(request);
     const store = workspaceStore(space.id);
-    const registry = new PluginRegistry(privateKey, { store, scope: space.id, fetch: internalFetch, reviewedAppDigests: options.enablePluginApps ? [annyAppViewSha256] : [] });
+    const installationId = 'de.hsh.hasi.anny';
+    const adapter = new DemoPluginAccountAdapter({ mode: 'public-demo', privateKey, store, scope: space.id, installationId, resolveProjection: ({ subject }) => {
+      if (subjectWorkspace(subject) !== space.id) throw new Error('Invalid synthetic account scope');
+      const template = personas.find(persona => subject.endsWith(`:${persona.id}`));
+      if (!template) throw new Error('Synthetic account missing');
+      const actor = withDemoPluginClaims({ ...structuredClone(template.actor), ...(options.catalog ? { resourceIds: options.catalog.resources.map(resource => resource.id) } : {}) });
+      return { permissions: actor.permissions, customerId: actor.customerId, resourceIds: actor.resourceIds, claims: actor.claims };
+    } });
+    const account = new PluginAccountService({ mode: 'public-demo', privateKey, store, scope: space.id, installationId, adapter });
+    const registry = new PluginRegistry(privateKey, { accounts: new Map([[installationId, account]]), envelopeResults: true, defaultSourcePolicy: { sourceId: 'synthetic-demo', revision: '1', dataClasses: ['synthetic_demo'] }, store, scope: space.id, fetch: internalFetch, reviewedAppDigests: options.enablePluginApps ? [annyAppViewSha256] : [] });
     await registry.install({ endpoint: `${origin.origin}/mcp`, serviceToken: pluginToken, expectedManifestDigest: digest(options.enablePluginApps ? annyAppManifest : annyManifest), approvedPreviousManifestDigests: ['f730a360b3f108d5980994994c0fdbb740c1e624245b815af1f2339ef5a3ff45', '61b8360b00745238bbdfc1dfa134bb20d7e4790581d47bb46091e27ef1c691fb', '325f50953082e8b1156d3c1807a1310b492e61bbcdc84d9d6fd9cd48952db66b'], allowLoopback: !secure });
     await registry.install({ endpoint: `${origin.origin}/plugins/knowledge/mcp`, serviceToken: knowledgeToken, expectedManifestDigest: digest(knowledgeManifest), allowLoopback: !secure });
     const app = await createApi({ mode: secure ? 'public-demo' : 'test', registry, identity: new DurableDemoIdentity(store, space.id, options.catalog?.resources.map(resource => resource.id)), store, origin: origin.origin, allowedHosts: [origin.hostname], secureCookies: secure, sessionCookieName: sessionName });

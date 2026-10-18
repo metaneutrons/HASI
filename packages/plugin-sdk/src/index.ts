@@ -1,4 +1,5 @@
 export { canonicalJson, digest } from './canonical-json.js';
+export { ExecutionJournal, type ExecutionStore, type ExecutionBinding, type ExecutionReceipt } from './execution-journal.js';
 export {
   createInvocationToken,
   verifyInvocationToken,

@@ -8,12 +8,18 @@ import { createInvocationToken, digest, manifestSchema, projectActorContext, typ
 import { z } from 'zod';
 import { PluginSettingsStore } from './plugin-settings.js';
 import { createPluginFetch, type PluginFetch } from './network-policy.js';
+import type { PluginSecretCustody } from './plugin-secrets.js';
+import { resultEnvelope, sourcePolicySchema, type SourcePolicy, type ResultPaginationPolicy } from './result-envelope.js';
+import { PluginAccountError, type PluginAccountService } from './plugin-accounts.js';
+import type { PluginDeploymentBinding } from './plugin-deployment-binding.js';
 
 export class RequestError extends Error {
   constructor(public readonly status: number, message: string) { super(message); }
 }
 
 export interface Registration {
+  sourcePolicy?: SourcePolicy;
+  pagination?: ResultPaginationPolicy;
   /** Trusted installation identity; package identity remains the signed MCP audience. */
   instanceId?: string;
   /** Operator revision for secret rotation/deployment identity; never a secret-derived fingerprint. */
@@ -22,6 +28,8 @@ export interface Registration {
   allowedPrivateCidrs?: readonly string[];
   /** Logical slot readiness resolved by the operator, never request input. */
   secretReady?: (name: string) => boolean;
+  secretRevision?: (name: string) => string | null;
+  secretCustody?: PluginSecretCustody;
   endpoint: string;
   serviceToken: string;
   expectedManifestDigest: string;
@@ -44,9 +52,18 @@ export interface PluginConnectionTestResult {
 }
 
 export interface PluginRegistryOptions {
+  /** Current host authority; production composition must resolve this independently of caller snapshots. */
+  resolveActor?: (subject: string) => Promise<ActorContext | undefined>;
+  deploymentBindings?: ReadonlyMap<string, PluginDeploymentBinding>;
+  accounts?: ReadonlyMap<string, PluginAccountService>;
+  /** Mandatory host provenance for production; v1 callers can retain explicit compatibility mode. */
+  envelopeResults?: boolean;
+  defaultSourcePolicy?: SourcePolicy;
   store?: JsonStore;
   /** Server-owned namespace for persisted plugin state. */
   scope?: string;
+  /** Private production-composition pin for the exact operator deployment gateway origin. */
+  operatorManagedLoopbackOrigin?: string;
   fetch?: typeof fetch;
   /** Pending update candidates expire after this many milliseconds. Defaults to seven days. */
   candidateTtlMs?: number;
@@ -130,6 +147,12 @@ export class PluginRegistry {
   private readonly catalogSources = new Map<string, ApprovedPluginSource>();
   private readonly transports = new Map<string, PluginFetch>();
   private readonly reviewedAppDigests: ReadonlySet<string>;
+  private readonly envelopeResults: boolean;
+  private readonly defaultSourcePolicy: SourcePolicy | undefined;
+  readonly accounts: ReadonlyMap<string, PluginAccountService>;
+  private readonly deploymentBindings: ReadonlyMap<string, PluginDeploymentBinding>;
+  private readonly resolveActor: PluginRegistryOptions['resolveActor'];
+  private readonly operatorManagedLoopbackOrigin: string | undefined;
 
   constructor(private readonly privateKey: KeyObject, options: PluginRegistryOptions = {}) {
     if (privateKey.type !== 'private' || privateKey.asymmetricKeyType !== 'ed25519') {
@@ -142,6 +165,12 @@ export class PluginRegistry {
     this.store = options.store;
     this.scope = scope;
     this.fetchImpl = options.fetch ?? globalThis.fetch;
+    this.envelopeResults = options.envelopeResults ?? false;
+    this.accounts = options.accounts ?? new Map();
+    this.deploymentBindings = options.deploymentBindings ?? new Map();
+    this.resolveActor = options.resolveActor;
+    this.operatorManagedLoopbackOrigin = options.operatorManagedLoopbackOrigin;
+    this.defaultSourcePolicy = options.defaultSourcePolicy ? sourcePolicySchema.parse(options.defaultSourcePolicy) : undefined;
     this.candidateTtlMs = candidateTtlMs;
     const reviewedApps = options.reviewedAppDigests ?? [];
     if (reviewedApps.length > 64 || reviewedApps.some(value => !/^[a-f0-9]{64}$/.test(value))) throw new TypeError('Invalid reviewed App resource policy');
@@ -157,17 +186,19 @@ export class PluginRegistry {
   private endpoint(registration: Registration): URL {
     const endpoint = new URL(registration.endpoint);
     const loopback = ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname);
-    if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || ! /^(?:\/[A-Za-z0-9._~-]+)*\/mcp$/.test(endpoint.pathname) || (endpoint.protocol !== 'https:' && !(registration.allowLoopback && loopback && endpoint.protocol === 'http:'))) throw new RequestError(400, 'Unzulässiger Plugin-Endpunkt.');
+    const managedGateway = endpoint.origin === this.operatorManagedLoopbackOrigin
+      && endpoint.protocol === 'http:' && endpoint.hostname === '127.0.0.1';
+    if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || ! /^(?:\/[A-Za-z0-9._~-]+)*\/mcp$/.test(endpoint.pathname) || (endpoint.protocol !== 'https:' && !(managedGateway || registration.allowLoopback && loopback && endpoint.protocol === 'http:'))) throw new RequestError(400, 'Unzulässiger Plugin-Endpunkt.');
     return endpoint;
   }
 
   private transport(registration: Registration): typeof fetch {
     if (this.fetchImpl !== fetch) return this.fetchImpl;
     const endpoint = this.endpoint(registration);
-    const policyKey = digest({ origin: endpoint.origin, loopback: registration.allowLoopback, privateCidrs: registration.allowedPrivateCidrs ?? [] });
+    const policyKey = digest({ origin: endpoint.origin, loopback: registration.allowLoopback, operatorManagedLoopbackOrigin: this.operatorManagedLoopbackOrigin ?? null, privateCidrs: registration.allowedPrivateCidrs ?? [] });
     let transport = this.transports.get(policyKey);
     if (!transport) {
-      transport = createPluginFetch({ origins: [endpoint.origin], allowLoopback: registration.allowLoopback, ...(registration.allowedPrivateCidrs ? { allowedPrivateCidrs: registration.allowedPrivateCidrs } : {}), maxResponseBytes: 2 * 1024 * 1024 });
+      transport = createPluginFetch({ origins: [endpoint.origin], allowLoopback: registration.allowLoopback, ...(this.operatorManagedLoopbackOrigin ? { operatorManagedLoopbackOrigin: this.operatorManagedLoopbackOrigin } : {}), ...(registration.allowedPrivateCidrs ? { allowedPrivateCidrs: registration.allowedPrivateCidrs } : {}), maxResponseBytes: 2 * 1024 * 1024 });
       this.transports.set(policyKey, transport);
     }
     return transport;
@@ -338,11 +369,11 @@ export class PluginRegistry {
 
   private async refresh(plugin: InstalledPlugin): Promise<InstalledPlugin> {
     if (!await this.sourceConnected(plugin.instanceId)) throw new RequestError(409, 'Die Verbindung wurde entfernt. Bitte neu verbinden.');
-    if (!this.store) { plugin.settings = await this.settings.binding(plugin.instanceId, plugin.manifest, plugin.registration.secretReady); return plugin; }
+    if (!this.store) { plugin.settings = await this.settings.binding(plugin.instanceId, plugin.manifest, plugin.registration.secretReady, plugin.registration.secretRevision); return plugin; }
     const stored = await this.store.read(this.stateKey(plugin.instanceId));
     if (!stored) throw new RequestError(409, 'Der gespeicherte Plugin-Zustand fehlt.');
     this.applyState(plugin, this.validatePersistedState(stored.value, plugin.registration, plugin.instanceId));
-    plugin.settings = await this.settings.binding(plugin.instanceId, plugin.manifest, plugin.registration.secretReady);
+    plugin.settings = await this.settings.binding(plugin.instanceId, plugin.manifest, plugin.registration.secretReady, plugin.registration.secretRevision);
     return plugin;
   }
 
@@ -372,6 +403,11 @@ export class PluginRegistry {
   }
 
   async install(registration: Registration): Promise<void> {
+    if (this.envelopeResults) sourcePolicySchema.parse(registration.sourcePolicy ?? this.defaultSourcePolicy);
+    if (registration.secretCustody) {
+      const custody = registration.secretCustody;
+      registration = { ...registration, secretReady: name => custody.status(name).configured, secretRevision: name => custody.status(name).revision };
+    }
     this.endpoint(registration);
     const liveManifest = await this.fetchManifest(registration);
     if (!valid(liveManifest.version)) throw new RequestError(409, 'Plugin-Freigabe oder Version stimmt nicht überein.');
@@ -425,7 +461,7 @@ export class PluginRegistry {
       ...(state.candidate && state.candidateBaseDigest !== undefined && state.candidateExpiresAt !== undefined ? { candidate: state.candidate, candidateBaseDigest: state.candidateBaseDigest, candidateExpiresAt: state.candidateExpiresAt } : {}),
     };
     this.validateManifestSchemas(plugin.manifest);
-    plugin.settings = await this.settings.binding(instanceId, plugin.manifest, registration.secretReady);
+    plugin.settings = await this.settings.binding(instanceId, plugin.manifest, registration.secretReady, registration.secretRevision);
     this.installed.set(instanceId, plugin);
   }
 
@@ -434,8 +470,33 @@ export class PluginRegistry {
   }
 
   version(id: string): string { return this.get(id).manifest.version; }
-  modelTools(actor: ActorContext) {
+  private candidateTools(actor: ActorContext) {
     return [...this.installed.values()].filter(plugin => plugin.enabled && plugin.settings?.ready).flatMap(plugin => plugin.manifest.tools.filter(tool => tool.effect !== 'execute' && !plugin.settings?.disabledTools.includes(tool.name) && ((tool as ToolDefinitionV2).visibility ?? ['model']).includes('model') && tool.requiredPermissions.every(permission => actor.permissions.includes(permission))).map(tool => ({ pluginId: plugin.instanceId, modelName: `hasi_${createHash('sha256').update(`${plugin.instanceId}\0${tool.name}`).digest('hex').slice(0, 24)}`, ...tool })));
+  }
+  modelTools(actor: ActorContext) { return this.authorizedModelTools(actor); }
+  async authorizedModelTools(actor: ActorContext) {
+    const tools = this.candidateTools(actor);
+    const allowed: typeof tools = [];
+    for (const id of new Set(tools.map(tool => tool.pluginId))) {
+      try {
+        const current = await this.actorFor(id, actor);
+        allowed.push(...tools.filter(tool => tool.pluginId === id && tool.requiredPermissions.every(permission => current.actor.permissions.includes(permission))));
+      } catch (error) { if (!(error instanceof PluginAccountError)) throw error; }
+    }
+    return allowed;
+  }
+  private async actorFor(id: string, actor: ActorContext) {
+    if (this.resolveActor) {
+      const current = await this.resolveActor(actor.subject);
+      if (current?.subject !== actor.subject) throw new RequestError(403, 'Die aktuellen Kontorechte geben diese Aktion nicht frei.');
+      actor = { ...current, permissions: actor.permissions.filter(permission => current.permissions.includes(permission)) };
+    }
+    const account = this.accounts.get(id);
+    if (!account) return { actor, revision: undefined };
+    const current = await account.resolveAuthority(actor.subject);
+    const projection = current.projection;
+    const projected: ActorContext = { subject: actor.subject, permissions: actor.permissions.filter(permission => projection.permissions.includes(permission)), ...(projection.customerId ? { customerId: projection.customerId } : {}), ...(projection.resourceIds ? { resourceIds: projection.resourceIds } : {}), ...(projection.claims ? { claims: projection.claims } : {}) };
+    return { actor: projected, revision: current.authorityRevision };
   }
   private get(id: string): InstalledPlugin { const plugin = this.installed.get(id); if (!plugin) throw new RequestError(404, 'Plugin nicht gefunden.'); return plugin; }
 
@@ -494,13 +555,37 @@ export class PluginRegistry {
     }
   }
   private bindingFor(plugin: InstalledPlugin): string {
-    return digest({ instanceId: plugin.instanceId, manifest: digest(plugin.manifest), configuration: plugin.settings?.digest ?? null, enabled: plugin.enabled, endpoint: this.endpoint(plugin.registration).href, credentialRevision: plugin.registration.credentialRevision ?? 'legacy-v1', network: plugin.registration.allowedPrivateCidrs ?? [] });
+    return digest({ instanceId: plugin.instanceId, manifest: digest(plugin.manifest), configuration: plugin.settings?.digest ?? null, enabled: plugin.enabled, endpoint: this.endpoint(plugin.registration).href, credentialRevision: plugin.registration.credentialRevision ?? 'legacy-v1', network: plugin.registration.allowedPrivateCidrs ?? [], sourcePolicy: plugin.registration.sourcePolicy ?? this.defaultSourcePolicy ?? null });
   }
   async binding(id: string) { return this.bindingFor(await this.refresh(this.get(id))); }
-  authorityBinding(id: string, actor: ActorContext) { return digest(projectActorContext(actor, this.get(id).manifest)); }
+  async authorityBinding(id: string, actor: ActorContext) {
+    const current = await this.actorFor(id, actor);
+    return digest({ actor: projectActorContext(current.actor, this.get(id).manifest), accountRevision: current.revision ?? null });
+  }
+  /** Read-only recovery can survive renewal only if the complete current account/grant projection agrees. */
+  async reconciliationAuthorityBinding(id: string, actor: ActorContext) {
+    return digest(projectActorContext((await this.actorFor(id, actor)).actor, this.get(id).manifest));
+  }
   manifest(id: string): PluginManifest { return this.get(id).manifest; }
+  validateExecutionResult(id: string, name: string, result: Record<string, unknown>) {
+    const tool = this.get(id).manifest.tools.find(candidate => candidate.name === name && candidate.effect === 'execute');
+    if (Object.hasOwn(result, '_hasi') || !tool || !validateSchema(tool.outputSchema, result) || Buffer.byteLength(JSON.stringify(result)) > 65536) throw new RequestError(502, 'Der Ausführungsbeleg entspricht nicht dem Vertrag.');
+  }
+  async projectExecutionReceipt(id: string, name: string, result: Record<string, unknown>, actor: ActorContext) {
+    this.validateExecutionResult(id, name, result);
+    const plugin = await this.refresh(this.get(id));
+    const projected = (await this.actorFor(id, actor)).actor;
+    return this.projectOutput(plugin, name, result, projectActorContext(projected, plugin.manifest));
+  }
+  private projectOutput(plugin: InstalledPlugin, name: string, output: Record<string, unknown>, actor: ActorContext) {
+    return this.envelopeResults ? resultEnvelope({ instanceId: plugin.instanceId, manifest: plugin.manifest, configurationRevision: plugin.settings?.activeRevision ?? 0, actor, policy: sourcePolicySchema.parse(plugin.registration.sourcePolicy ?? this.defaultSourcePolicy), output, tool: name, ...(plugin.registration.pagination ? { pagination: plugin.registration.pagination } : {}) }) : output;
+  }
   registration(id: string): Registration { return this.get(id).registration; }
-  async configuration(id: string) { const plugin = await this.refresh(this.get(id)); return this.settings.describe(id, plugin.manifest, plugin.registration.secretReady); }
+  async configuration(id: string) { const plugin = await this.refresh(this.get(id)); return this.settings.describe(id, plugin.manifest, plugin.registration.secretReady, plugin.registration.secretRevision); }
+  async configurationActivated(id: string) {
+    const plugin = await this.refresh(this.get(id));
+    await this.deploymentBindings.get(id)?.configurationActivated(id, plugin.settings?.activeRevision ?? 0);
+  }
   /** Tests transport/contract readiness only; no business tool or credential readback. */
   async testConnection(id: string): Promise<PluginConnectionTestResult> {
     const plugin = this.get(id);
@@ -549,6 +634,9 @@ export class PluginRegistry {
     return result;
   }
   async readPresentation(id: string, presentationId: string, actor: ActorContext) {
+    const originalActor = actor;
+    const authority = await this.authorityBinding(id, actor);
+    actor = (await this.actorFor(id, actor)).actor;
     const plugin = await this.refresh(this.get(id));
     if (!plugin.enabled || !plugin.settings?.ready || plugin.manifest.manifestVersion !== 2) throw new RequestError(404, 'Ansicht nicht verfügbar.');
     const approvedDigest = digest(plugin.manifest);
@@ -566,6 +654,7 @@ export class PluginRegistry {
       if (result.contents.length !== 1 || !resource || !('text' in resource) || typeof resource.text !== 'string' || resource.uri !== presentation.resourceUri || resource.mimeType !== presentation.mimeType || Buffer.byteLength(resource.text) > 1024 * 1024 || createHash('sha256').update(resource.text).digest('hex') !== presentation.sha256.toLowerCase()) throw new RequestError(502, 'Die Ansicht entspricht nicht der Freigabe.');
       const refreshed = await this.refresh(this.get(id));
       if (!refreshed.enabled || !refreshed.settings?.ready || digest(refreshed.manifest) !== approvedDigest || refreshed.settings.digest !== approvedSettings) throw new RequestError(409, 'Ansicht nicht mehr freigegeben.');
+      if (authority !== await this.authorityBinding(id, originalActor)) throw new RequestError(409, 'Die persönliche Kontoberechtigung wurde geändert.');
       return { resourceHtml: resource.text, resourceSha256: presentation.sha256, csp: presentation.csp, tools: tools.map(tool => ({ name: tool.name, effect: tool.effect, visibility: tool.visibility ?? ['model'] })) };
     } finally { await client.close(); }
   }
@@ -615,6 +704,29 @@ export class PluginRegistry {
     if (result !== 'activated') throw new RequestError(409, 'Keine kompatible Version zur Aktivierung vorhanden.');
   }
 
+  /** Reads a signed, plugin-side execution receipt; never calls a business tool. */
+  async reconcile(id: string, name: string, args: Record<string, unknown>, actor: ActorContext, executionId: string, expectedBinding: string) {
+    const plugin = await this.refresh(this.get(id));
+    this.assertInvocation(plugin, name, args, actor, true);
+    const originalActor = actor;
+    const authority = await this.authorityBinding(id, originalActor);
+    actor = (await this.actorFor(id, originalActor)).actor;
+    if (this.bindingFor(plugin) !== expectedBinding) throw new RequestError(409, 'Die Aktionsfreigabe hat sich geändert. Bitte den zuständigen Dienst prüfen.');
+    const tool = this.assertInvocation(plugin, name, args, actor, true);
+    if (tool.effect !== 'execute') throw new RequestError(403, 'Kein ausführbares Werkzeug.');
+    const body = { executionId, tool: name, argsHash: digest(args) };
+    const context = { installationId: id, configurationRevision: plugin.settings?.activeRevision ?? 0, configuration: plugin.settings?.configuration ?? {}, executionId };
+    const token = await createInvocationToken({ actor: projectActorContext(actor, plugin.manifest), pluginId: plugin.manifest.id, pluginVersion: plugin.manifest.version, tool: '__hasi.action_status', args: body, context }, this.privateKey);
+    const response = await plugin.fetch(new URL('./hasi/actions/status', plugin.registration.endpoint), { method: 'POST', headers: { authorization: `Bearer ${plugin.registration.serviceToken}`, 'x-hasi-invocation': token, 'content-type': 'application/json' }, body: JSON.stringify(body), redirect: 'error', signal: AbortSignal.timeout(5000) });
+    if (!response.ok) return { status: 'outcome_unknown' as const };
+    const raw: unknown = await response.json();
+    const resolution = z.discriminatedUnion('status', [z.strictObject({ status: z.literal('confirmed'), result: z.record(z.string(), z.unknown()) }), z.strictObject({ status: z.literal('outcome_unknown') })]).parse(raw);
+    if (resolution.status === 'confirmed') this.validateExecutionResult(id, name, resolution.result);
+    if (this.bindingFor(await this.refresh(plugin)) !== expectedBinding) throw new RequestError(409, 'Die Aktionsfreigabe hat sich geändert.');
+    if (authority !== await this.authorityBinding(id, originalActor)) throw new RequestError(409, 'Die persönliche Kontoberechtigung wurde geändert.');
+    return resolution;
+  }
+
   private assertInvocation(plugin: InstalledPlugin, name: string, args: Record<string, unknown>, actor: ActorContext, execution: boolean, source: 'model' | 'app' = 'model') {
     if (!plugin.enabled) throw new RequestError(409, 'Das Plugin ist deaktiviert.');
     if (!plugin.settings?.ready) throw new RequestError(409, 'Das Plugin ist noch nicht vollständig konfiguriert.');
@@ -627,8 +739,13 @@ export class PluginRegistry {
     return tool;
   }
 
-  async invoke(id: string, name: string, args: Record<string, unknown>, actor: ActorContext, execution = false, source: 'model' | 'app' = 'model', expectedBinding?: string): Promise<Record<string, unknown>> {
+  async invoke(id: string, name: string, args: Record<string, unknown>, actor: ActorContext, execution = false, source: 'model' | 'app' = 'model', expectedBinding?: string, executionId?: string): Promise<Record<string, unknown>> {
     const plugin = await this.refresh(this.get(id));
+    this.assertInvocation(plugin, name, args, actor, execution, source);
+    const originalActor = actor;
+    const authority = await this.authorityBinding(id, originalActor);
+    actor = (await this.actorFor(id, originalActor)).actor;
+    await this.deploymentBindings.get(id)?.assertCurrent(id, plugin.settings?.activeRevision ?? 0);
     if (expectedBinding !== undefined && this.bindingFor(plugin) !== expectedBinding) throw new RequestError(409, 'Die bestätigte Plugin-Konfiguration ist nicht mehr aktuell.');
     this.assertInvocation(plugin, name, args, actor, execution, source);
     const version = plugin.manifest.version;
@@ -637,12 +754,14 @@ export class PluginRegistry {
     const tokenActor = projectActorContext(actor, plugin.manifest);
     // The legacy knowledge adapter needs its fixture audience grants, not room claims.
     if (plugin.manifest.manifestVersion === 1 && plugin.manifest.id === 'de.hsh.hasi.knowledge') tokenActor.permissions = actor.permissions.filter(permission => permission.startsWith('knowledge:'));
-    const token = await createInvocationToken({ actor: tokenActor, pluginId: plugin.manifest.id, pluginVersion: version, tool: name, args, ...(plugin.manifest.manifestVersion === 2 ? { context: { installationId: id, configurationRevision: plugin.settings?.activeRevision ?? 0, configuration: plugin.settings?.configuration ?? {} } } : {}) }, this.privateKey);
+    const token = await createInvocationToken({ actor: tokenActor, pluginId: plugin.manifest.id, pluginVersion: version, tool: name, args, ...(plugin.manifest.manifestVersion === 2 || executionId ? { context: { installationId: id, configurationRevision: plugin.settings?.activeRevision ?? 0, configuration: plugin.settings?.configuration ?? {}, ...(executionId ? { executionId } : {}) } } : {}) }, this.privateKey);
     const client = new Client({ name: 'hasi-core', version: '0.1.0' }, { versionNegotiation: { mode: 'auto' } });
     const transport = new StreamableHTTPClientTransport(new URL(plugin.registration.endpoint), { requestInit: { headers: { authorization: `Bearer ${plugin.registration.serviceToken}`, 'x-hasi-invocation': token }, redirect: 'error' }, fetch: plugin.fetch });
     try {
       await client.connect(transport);
       const current = await this.refresh(plugin);
+      await this.deploymentBindings.get(id)?.assertCurrent(id, current.settings?.activeRevision ?? 0);
+      if (authority !== await this.authorityBinding(id, originalActor)) throw new RequestError(409, 'Die persönliche Kontoberechtigung wurde geändert.');
       if (expectedBinding !== undefined && this.bindingFor(current) !== expectedBinding) throw new RequestError(409, 'Die bestätigte Plugin-Konfiguration ist nicht mehr aktuell.');
       if (!current.enabled) throw new RequestError(409, 'Das Plugin ist deaktiviert.');
       if (digest(current.manifest) !== manifestDigest || current.settings?.digest !== settingsDigest) throw new RequestError(409, 'Die Plugin-Version wurde geändert. Bitte erneut prüfen und freigeben.');
@@ -654,8 +773,9 @@ export class PluginRegistry {
       const output: unknown = result.structuredContent;
       if (!output || typeof output !== 'object' || Array.isArray(output) || !validator.validate(currentTool.outputSchema, output)) throw new RequestError(502, 'Die Plugin-Antwort entspricht nicht dem vereinbarten Vertrag.');
       if (Buffer.byteLength(JSON.stringify(output)) > 65536) throw new RequestError(502, 'Die Plugin-Antwort ist zu groß.');
+      if (authority !== await this.authorityBinding(id, originalActor)) throw new RequestError(409, 'Die persönliche Kontoberechtigung wurde geändert.');
       plugin.healthy = true;
-      return output as Record<string, unknown>;
+      return this.projectOutput(current, name, output as Record<string, unknown>, tokenActor);
     } catch (error) {
       plugin.healthy = false;
       throw error;

@@ -1,4 +1,5 @@
 import { generateKeyPairSync, sign } from 'node:crypto';
+import { MemoryJsonStore } from '@hasi/state';
 import { describe, expect, it, vi } from 'vitest';
 import {
   buildPluginContainerLaunchPolicy,
@@ -17,6 +18,7 @@ import {
   type DockerEngineTransport,
   type DockerPluginRoutingController,
 } from '../apps/api/src/docker-plugin-driver.js';
+import { PluginRouteController } from '../apps/api/src/plugin-route-controller.js';
 
 const IMAGE_DIGEST = 'a'.repeat(64);
 const MANIFEST_DIGEST = 'b'.repeat(64);
@@ -469,6 +471,27 @@ describe('operator-local Docker plugin driver', () => {
     await expect(driver.check({ installationId: 'installation-1', deploymentId: staged.deploymentId, releaseDigest: release().releaseDigest })).rejects.toMatchObject({ outcome: 'unknown' });
   });
 
+  it('resolves only the current digest-pinned managed container and fences a moved route', async () => {
+    const engine = new FakeDockerEngine();
+    let active = { deploymentId: CONTAINER_ID, releaseDigest: release().releaseDigest };
+    const route = routingController({ readActiveRoute: () => Promise.resolve(active) });
+    const driver = createDockerPluginDriver(driverOptions(engine, route.routing));
+    await driver.stage(stageInput());
+
+    const endpoint = await driver.resolveActiveEndpoint({ installationId: 'installation-1' });
+    expect(endpoint).toEqual({
+      deploymentId: CONTAINER_ID,
+      releaseDigest: release().releaseDigest,
+      host: '127.0.0.1',
+      port: 43121,
+      containerPort: 3000,
+    });
+    await expect(driver.assertActiveEndpoint({ installationId: 'installation-1', endpoint: endpoint! })).resolves.toBe(true);
+
+    active = { ...active, releaseDigest: 'f'.repeat(64) };
+    await expect(driver.assertActiveEndpoint({ installationId: 'installation-1', endpoint: endpoint! })).resolves.toBe(false);
+  });
+
   it('reconciles from engine-owned labels and the routing authority without mutation', async () => {
     const engine = new FakeDockerEngine();
     const route = routingController();
@@ -478,5 +501,30 @@ describe('operator-local Docker plugin driver', () => {
     const observation = await driver.reconcile({ installationId: 'installation-1', operationId: 'stage-operation-1' });
     expect(observation).toEqual({ activeDeploymentId: null, stagedDeploymentId: staged.deploymentId, routeOperationOutcome: 'unknown' });
     expect(engine.requests.slice(before).every(request => request.method === 'GET')).toBe(true);
+  });
+
+  it('activates through the shared CAS route controller and reconciles from a second controller instance', async () => {
+    const store = new MemoryJsonStore(`docker-route-integration-${String(Math.random())}`);
+    const routeOptions = { store, scope: 'operator-scope', ownerId: 'operator-1' } as const;
+    const writer = new PluginRouteController(routeOptions);
+    const observer = new PluginRouteController(routeOptions);
+    await writer.initializeInstallation({ installationId: 'installation-1', configurationRevision: 'config-revision-1' });
+    const engine = new FakeDockerEngine();
+    const driver = createDockerPluginDriver(driverOptions(engine, writer));
+    const staged = await driver.stage(stageInput());
+
+    await driver.activate({
+      installationId: 'installation-1',
+      operationId: 'activation-route-integration',
+      candidateDeploymentId: staged.deploymentId,
+      previousDeploymentId: null,
+      baseCurrentDigest: null,
+      configurationRevision: 'config-revision-1',
+    });
+
+    expect(await observer.readActiveDeploymentId({ ownerId: 'operator-1', installationId: 'installation-1' })).toBe(staged.deploymentId);
+    expect(await observer.readOperationStatus({ ownerId: 'operator-1', installationId: 'installation-1', operationId: 'activation-route-integration' })).toBe('committed');
+    const observation = await driver.reconcile({ installationId: 'installation-1', operationId: 'activation-route-integration' });
+    expect(observation).toEqual({ activeDeploymentId: staged.deploymentId, stagedDeploymentId: null, routeOperationOutcome: 'committed' });
   });
 });

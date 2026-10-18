@@ -27,8 +27,11 @@ uses synthetic data, including a 61-resource catalog snapshot: 37 workplaces,
 6 meeting rooms and 18 office containers. The 43 bookable resources support
 search, availability, own-booking lookup, and exact booking/cancellation
 proposals with separate user confirmation. The actual anny HTTP client still
-talks to a contract-based mock. Production source contracts, generic third-party
-chat tool discovery and generalized plugin configuration remain incomplete.
+talks to a contract-based mock. Generic registry-driven chat discovery,
+schema-driven configuration, personal account lifecycle, durable action
+receipts and independent artifact/runtime composition are implemented. Final
+M2 qualification is deferred; production source contracts remain external M1
+work. See the [implementation ledger](../verification/2026-10-18/m2-implementation.md).
 
 Real HsH SSO, production permission-aware retrieval from Intranet and
 Service-IT, current IT incident information, authoritative anny customer and

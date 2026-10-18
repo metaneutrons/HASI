@@ -29,6 +29,8 @@ export interface PluginFetchOptions {
   origins: readonly string[];
   /** Permit HTTP and DNS-resolved loopback addresses for explicitly configured loopback hosts. */
   allowLoopback?: boolean;
+  /** Exact literal 127.0.0.1 origin created by the trusted operator deployment gateway. */
+  operatorManagedLoopbackOrigin?: string;
   /** Operator-approved non-public destination ranges, in CIDR notation. */
   allowedPrivateCidrs?: readonly string[];
   /** Injectable Node lookup used by the connector itself, not a preflight lookup. */
@@ -42,6 +44,7 @@ export interface PluginFetchOptions {
 export type PluginFetch = typeof fetch & { close(): Promise<void> };
 
 const IPV4_LOOPBACK = blockList([['127.0.0.0', 8, 'ipv4']]);
+const IPV4_NEVER = blockList([['0.0.0.0', 8, 'ipv4'], ['169.254.0.0', 16, 'ipv4'], ['224.0.0.0', 4, 'ipv4'], ['240.0.0.0', 4, 'ipv4']]);
 const IPV4_PROTECTED_RANGES = [
   ['0.0.0.0', 8, 'ipv4'],
   ['10.0.0.0', 8, 'ipv4'],
@@ -62,6 +65,7 @@ const IPV4_PROTECTED_RANGES = [
 ] as const;
 const IPV4_PROTECTED = blockList(IPV4_PROTECTED_RANGES);
 const IPV6_LOOPBACK = blockList([['::1', 128, 'ipv6']]);
+const IPV6_NEVER = blockList([['::', 128, 'ipv6'], ['fe80::', 10, 'ipv6'], ['ff00::', 8, 'ipv6'], ['fd00:ec2::254', 128, 'ipv6']]);
 const IPV6_GLOBAL_UNICAST = blockList([['2000::', 3, 'ipv6']]);
 const IPV6_PROTECTED_RANGES = [
   ['2001::', 23, 'ipv6'],
@@ -100,6 +104,26 @@ function isLoopbackHost(hostname: string): boolean {
   if (family === 4) return IPV4_LOOPBACK.check(host, 'ipv4');
   if (family === 6) return IPV6_LOOPBACK.check(host, 'ipv6');
   return false;
+}
+
+function validateOperatorManagedLoopbackOrigin(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new TypeError('The operator-managed gateway origin is invalid.');
+  }
+  if (url.origin !== value || url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port
+    || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
+    throw new TypeError('The operator-managed gateway must be an exact literal 127.0.0.1 HTTP origin.');
+  }
+  return value;
+}
+
+function isOperatorManagedLoopbackOrigin(url: URL, trustedOrigin: string | undefined): boolean {
+  return trustedOrigin !== undefined && url.origin === trustedOrigin
+    && url.protocol === 'http:' && url.hostname === '127.0.0.1';
 }
 
 function parseCidr(value: string): Cidr {
@@ -143,6 +167,8 @@ function buildApprovedCidrs(values: readonly string[]): { ipv4: BlockList; ipv6:
   for (const value of values) {
     const cidr = parseCidr(value);
     if (!isProtectedOperatorRange(cidr)) throw new TypeError('Approved ranges must be non-public network ranges.');
+    const range = blockList([[cidr.address, cidr.prefix, cidr.family]]);
+    if ((cidr.family === 'ipv4' && range.check('127.0.0.1', 'ipv4')) || (cidr.family === 'ipv6' && range.check('::1', 'ipv6')) || isLoopbackHost(cidr.address)) throw new TypeError('Loopback access requires the separate explicit loopback policy.');
     approved[cidr.family].addSubnet(cidr.address, cidr.prefix, cidr.family);
   }
   return approved;
@@ -161,16 +187,18 @@ function addressAllowed(
   if (!family) return false;
 
   if (family === 'ipv4') {
-    if (checkApproved(address, family, approved.ipv4)) return true;
+    if (IPV4_NEVER.check(address, family)) return false;
     if (IPV4_LOOPBACK.check(address, family)) return allowLoopback && isLoopbackHost(hostname);
+    if (checkApproved(address, family, approved.ipv4)) return true;
     return !IPV4_PROTECTED.check(address, family);
   }
 
   // These ranges can carry an IPv4 destination inside an IPv6 address. Never
   // treat them as ordinary global IPv6, even if an adjacent range is approved.
   if (IPV6_TRANSLATION.check(address, family)) return false;
-  if (checkApproved(address, family, approved.ipv6)) return true;
+  if (IPV6_NEVER.check(address, family)) return false;
   if (IPV6_LOOPBACK.check(address, family)) return allowLoopback && isLoopbackHost(hostname);
+  if (checkApproved(address, family, approved.ipv6)) return true;
   return IPV6_GLOBAL_UNICAST.check(address, family) && !IPV6_PROTECTED.check(address, family);
 }
 
@@ -237,7 +265,12 @@ function validateResponseLimit(value: number | undefined): number {
   return limit;
 }
 
-function configuredOrigins(values: readonly string[], allowLoopback: boolean, approved: { ipv4: BlockList; ipv6: BlockList }): Set<string> {
+function configuredOrigins(
+  values: readonly string[],
+  allowLoopback: boolean,
+  operatorManagedLoopbackOrigin: string | undefined,
+  approved: { ipv4: BlockList; ipv6: BlockList },
+): Set<string> {
   if (values.length === 0) throw new TypeError('At least one plugin origin must be configured.');
   const origins = new Set<string>();
   for (const value of values) {
@@ -248,12 +281,13 @@ function configuredOrigins(values: readonly string[], allowLoopback: boolean, ap
       throw new TypeError('Plugin origins must be bare origins without credentials, paths, queries, or fragments.');
     }
     const loopbackHost = isLoopbackHost(host);
-    if (loopbackHost && !allowLoopback) throw new TypeError('Loopback plugin origins must be explicitly enabled.');
-    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && allowLoopback && loopbackHost)) {
+    const managedGateway = isOperatorManagedLoopbackOrigin(url, operatorManagedLoopbackOrigin);
+    if (loopbackHost && !allowLoopback && !managedGateway) throw new TypeError('Loopback plugin origins must be explicitly enabled.');
+    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ((allowLoopback && loopbackHost) || managedGateway))) {
       throw new TypeError('Plugin origins must use HTTPS; HTTP is limited to explicitly enabled loopback origins.');
     }
     const family = isIP(host);
-    if (family && !addressAllowed(host, family, host, allowLoopback, approved)) throw new TypeError('Plugin origin address is not permitted.');
+    if (family && !addressAllowed(host, family, host, allowLoopback || managedGateway, approved)) throw new TypeError('Plugin origin address is not permitted.');
     if (url.protocol === 'http:' && !loopbackHost) throw new TypeError('HTTP is limited to loopback plugin origins.');
     origins.add(url.origin);
   }
@@ -316,8 +350,9 @@ function containsPolicyError(value: unknown): boolean {
 export function createPluginFetch(options: PluginFetchOptions): PluginFetch {
   const allowLoopback = options.allowLoopback ?? false;
   if (allowLoopback && process.env.NODE_ENV === 'production') throw new TypeError('Loopback plugin access is unavailable in production.');
+  const operatorManagedLoopbackOrigin = validateOperatorManagedLoopbackOrigin(options.operatorManagedLoopbackOrigin);
   const approved = buildApprovedCidrs(options.allowedPrivateCidrs ?? []);
-  const origins = configuredOrigins(options.origins, allowLoopback, approved);
+  const origins = configuredOrigins(options.origins, allowLoopback, operatorManagedLoopbackOrigin, approved);
   const connectTimeoutMs = validateTimeout(options.connectTimeoutMs, DEFAULT_CONNECT_TIMEOUT_MS);
   const headersTimeoutMs = validateTimeout(options.headersTimeoutMs, DEFAULT_HEADERS_TIMEOUT_MS);
   const bodyTimeoutMs = validateTimeout(options.bodyTimeoutMs, DEFAULT_BODY_TIMEOUT_MS);
@@ -338,7 +373,8 @@ export function createPluginFetch(options: PluginFetchOptions): PluginFetch {
     }
     const host = unbracket(url.hostname);
     const family = isIP(host);
-    if (family && !addressAllowed(host, family, host, allowLoopback, approved)) {
+    const managedGateway = isOperatorManagedLoopbackOrigin(url, operatorManagedLoopbackOrigin);
+    if (family && !addressAllowed(host, family, host, allowLoopback || managedGateway, approved)) {
       throw new PluginNetworkError('Plugin destination is not permitted.');
     }
     try {

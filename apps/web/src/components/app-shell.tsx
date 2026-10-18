@@ -28,6 +28,7 @@ import type { Role } from "@/lib/types";
 const navItems = [
   { href: "/", label: "Chats", icon: MessageCircle, key: "assistant" },
   { href: "/bookings", label: "Buchungen", icon: PanelTop, key: "bookings" },
+  { href: "/account/connections", label: "Verbundene Dienste", icon: UserRound, key: "connections" },
 ];
 const prototypeLabel = process.env.NEXT_PUBLIC_HASI_PUBLIC_DEMO === "1" ? "Prototyp" : "Lokaler Prototyp";
 
@@ -349,7 +350,7 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const chatStore = useChatWorkspaceStore();
-  const activeKey = pathname === "/bookings" ? "bookings" : pathname === "/admin" ? "admin" : "assistant";
+  const activeKey = pathname.startsWith("/account/connections") ? "connections" : pathname === "/bookings" ? "bookings" : pathname === "/admin" ? "admin" : "assistant";
   const frameRef = useChatViewport(activeKey === "assistant");
   const initial = user ? initials(user.displayName) : "H";
 
@@ -375,6 +376,7 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
         <nav className="primary-nav" aria-label="Hauptnavigation">
           <ChatNavigation active={activeKey === "assistant"} store={chatStore} onOpenChat={() => { if (activeKey !== "assistant") router.push("/"); }} />
           <NavLink href="/bookings" label="Buchungen" icon={PanelTop} active={activeKey === "bookings"} />
+          <NavLink href="/account/connections" label="Verbundene Dienste" icon={UserRound} active={activeKey === "connections"} />
           {user?.role === "admin" && (
             <NavLink href="/admin" label="Verwaltung" icon={PanelTop} active={activeKey === "admin"} />
           )}

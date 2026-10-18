@@ -1,3 +1,4 @@
+import { actionPreviewSchema, type ActionPreview } from "./action-preview";
 import { z } from "zod";
 import {
   CHAT_TOOL_NAMES,
@@ -22,6 +23,7 @@ export const MAX_CHAT_HISTORY = 64;
 export const MAX_CHAT_WORKSPACE_BYTES = 2 * 1024 * 1024;
 
 export interface AnnyChatProposal {
+  preview?: ActionPreview | undefined;
   action?: "book" | "cancel_booking";
   id: string;
   resourceName: string;
@@ -129,6 +131,7 @@ const intervalSchema = z
 
 const proposalSchema = z
   .strictObject({
+    preview: actionPreviewSchema.optional(),
     action: z.enum(["book", "cancel_booking"]).optional(),
     id: idSchema,
     resourceName: plainTextSchema(160),
@@ -151,6 +154,7 @@ const pluginProposalArgumentsSchema = z.record(z.string().max(256), z.unknown())
 });
 
 const pluginToolProposalSchema = z.strictObject({
+  preview: actionPreviewSchema.optional(),
   action: z.literal("execute_tool"),
   id: z.uuid(),
   pluginId: z.string().min(1).max(128),
@@ -455,6 +459,7 @@ function normalizeChatMessage(message: z.infer<typeof chatMessageSchema>): ChatM
     : message.proposal.action === "execute_tool"
       ? {
           action: "execute_tool",
+          ...(message.proposal.preview === undefined ? {} : { preview: message.proposal.preview }),
           id: message.proposal.id,
           pluginId: message.proposal.pluginId,
           executionTool: message.proposal.executionTool,
@@ -471,6 +476,7 @@ function normalizeChatMessage(message: z.infer<typeof chatMessageSchema>): ChatM
         }
       : {
           ...(message.proposal.action === undefined ? {} : { action: message.proposal.action }),
+          ...(message.proposal.preview === undefined ? {} : { preview: message.proposal.preview }),
           id: message.proposal.id,
           resourceName: message.proposal.resourceName,
           startDate: message.proposal.startDate,
