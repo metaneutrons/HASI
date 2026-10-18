@@ -178,6 +178,7 @@ See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](doc
 - [GWDG SAIA and custom model connections](docs/architecture/gwdg-saia.md)
 - [Knowledge MCP and authenticated document delivery](docs/architecture/knowledge-mcp.md)
 - [Content adapter contract, MediaWiki/BlueSpice and HTML fallback](docs/architecture/content-adapters.md)
+- [Coolify self-hosting, restricted synthetic MediaWiki and migration status](deploy/coolify/README.md)
 - [Production SSO and anny authorization boundary](docs/architecture/anny-identity-and-authorization.md)
 - [Booking cancellation and confirmation](docs/architecture/anny-cancellation.md)
 - [Room snapshot provenance](docs/evaluation/anny-room-snapshot.md)

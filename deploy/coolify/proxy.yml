@@ -1,0 +1,49 @@
+name: coolify-proxy
+networks:
+  coolify:
+    external: true
+services:
+  traefik:
+    container_name: coolify-proxy
+    image: 'traefik:v3.7'
+    restart: unless-stopped
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - coolify
+    ports:
+      - '443:443'
+    healthcheck:
+      test: 'wget -qO- http://localhost:80/ping || exit 1'
+      interval: 4s
+      timeout: 2s
+      retries: 5
+    environment:
+      CF_DNS_API_TOKEN_FILE: /run/secrets/cloudflare-dns-token
+    volumes:
+      - '/data/hasi/secrets/cloudflare-dns-token:/run/secrets/cloudflare-dns-token:ro'
+      - '/var/run/docker.sock:/var/run/docker.sock:ro'
+      - '/data/coolify/proxy/:/traefik'
+    command:
+      - '--ping=true'
+      - '--ping.entrypoint=http'
+      - '--api.dashboard=true'
+      - '--entrypoints.http.address=:80'
+      - '--entrypoints.https.address=:443'
+      - '--entrypoints.http.http.encodequerysemicolons=true'
+      - '--entryPoints.http.http2.maxConcurrentStreams=250'
+      - '--entrypoints.https.http.encodequerysemicolons=true'
+      - '--entryPoints.https.http2.maxConcurrentStreams=250'
+      - '--providers.file.directory=/traefik/dynamic/'
+      - '--providers.file.watch=true'
+      - '--certificatesresolvers.hasi-dns.acme.dnschallenge=true'
+      - '--certificatesresolvers.hasi-dns.acme.dnschallenge.provider=cloudflare'
+      - '--certificatesresolvers.hasi-dns.acme.email=fabian@schmieder.eu'
+      - '--certificatesresolvers.hasi-dns.acme.storage=/traefik/acme-hasi-dns.json'
+      - '--api.insecure=false'
+      - '--providers.docker=true'
+      - '--providers.docker.exposedbydefault=false'
+    labels:
+      - traefik.enable=false
+      - coolify.managed=true
+      - coolify.proxy=true

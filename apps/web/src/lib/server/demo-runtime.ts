@@ -3,6 +3,7 @@ import 'server-only';
 import { createDemoRuntime } from '@hasi/demo-runtime';
 import { hshDemoCatalog } from '@hasi/demo-fixtures/catalog';
 import { PostgresJsonStore } from '@hasi/state';
+import { resolveDemoStateNamespace } from './demo-runtime-namespace';
 
 let pending: Promise<ReturnType<typeof createDemoRuntime>> | undefined;
 
@@ -24,10 +25,9 @@ function configuredOrigin(): string {
 
 async function initialize() {
   if (process.env.HASI_DEMO_MODE !== '1') throw new Error('Explicit server demo mode is required.');
-  const deployed = Boolean(process.env.VERCEL);
   const preview = process.env.VERCEL_ENV === 'preview';
   const origin = configuredOrigin();
-  const namespace = deployed ? preview ? `preview:${process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.VERCEL_URL ?? 'isolated'}` : 'production:v1' : 'local-demo:v1';
+  const namespace = resolveDemoStateNamespace(process.env);
   const store = new PostgresJsonStore(namespace, { poolConfig: { connectionString: requiredSecret('DATABASE_URL'), max: 3, connectionTimeoutMillis: 5000, idleTimeoutMillis: 20000, allowExitOnIdle: true } });
   try { await store.initialize(); await store.deleteExpired(); } catch { await store.close(); throw new Error('Demo state unavailable.'); }
   const internalFetch: typeof fetch = (input, init) => {
