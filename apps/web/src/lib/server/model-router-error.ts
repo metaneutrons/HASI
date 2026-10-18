@@ -1,3 +1,4 @@
+import type { GroqRateLimitDiagnostics } from "./provider-rate-limits";
 import type { GroqErrorDiagnostics } from "./groq-error-diagnostics";
 
 export type ModelRouterErrorCode =
@@ -10,7 +11,7 @@ export type ModelRouterErrorCode =
   | "invalid_model_response";
 
 export class ModelRouterError extends Error {
-  constructor(readonly code: ModelRouterErrorCode, message: string, readonly providerStatus?: number, readonly diagnostics?: GroqErrorDiagnostics, readonly transientFailure?: "rate_limit" | "server_error" | "timeout") {
+  constructor(readonly code: ModelRouterErrorCode, message: string, readonly providerStatus?: number, readonly diagnostics?: GroqErrorDiagnostics, readonly transientFailure?: "rate_limit" | "server_error" | "timeout", readonly rateLimits?: GroqRateLimitDiagnostics) {
     super(message);
     this.name = "ModelRouterError";
   }

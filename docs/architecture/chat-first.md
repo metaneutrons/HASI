@@ -27,10 +27,13 @@ as separate processes. Vercel co-locates their Node.js entry points and keeps
 the same HTTP boundaries. The model receives no execution tool. Exact proposals
 require the host confirmation button.
 
-`chat-demo.ts` remains a deterministic, bounded German parser available only
-through an explicit offline selection. There is no silent offline/provider
-fallback on a Groq error. Knowledge retrieval is still absent; general model
-answers must not be represented as verified institutional guidance or citations.
+`chat-demo.ts` provides the bounded German parser for explicit offline mode and
+for retaining online room constraints. Unambiguous standalone office preferences
+and own-booking list requests use the same typed read bridge in online mode;
+compound requests still use the selected model. This is host orchestration, not
+a silent offline/provider fallback on a model error. Synthetic knowledge search
+is available through the MCP knowledge service; its examples must never be
+represented as verified institutional guidance.
 
 The prototype supports up to 20 separate chats per test account in the browser.
 Each chat owns its transcript, bounded model history, selected profile, draft,

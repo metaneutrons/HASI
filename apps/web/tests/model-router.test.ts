@@ -69,7 +69,7 @@ function completion(options: {
   };
 }
 
-function fakeProvider(body: unknown, status = 200) {
+function fakeProvider(body: unknown, status = 200, responseHeaders: Record<string, string> = {}) {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const fetch: typeof globalThis.fetch = async (input, init) => {
     const url =
@@ -81,7 +81,7 @@ function fakeProvider(body: unknown, status = 200) {
     calls.push({ url, init });
     return new Response(JSON.stringify(body), {
       status,
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...responseHeaders },
     });
   };
   return { fetch, calls };
@@ -127,7 +127,7 @@ describe("verified per-message time context", () => {
     expect(sent.messages[0].content).toContain('"position":1,"role":"user","serverReceivedAt":"2026-10-16T21:30:00.000Z"');
     expect(sent.messages[0].content).toContain('"today":"2026-10-16","tomorrow":"2026-10-17"');
     expect(sent.messages[0].content).toContain('"today":"2026-10-17","tomorrow":"2026-10-18"');
-    expect(sent.messages[0].content).toContain('"position":2,"role":"assistant","serverReceivedAt":null');
+    expect(sent.messages[0].content).not.toContain('"position":2');
     expect(sent.messages.slice(1).map((message: { content: string }) => message.content)).toEqual(input.messages.map(message => message.content));
   });
 
@@ -453,7 +453,7 @@ describe("model router", () => {
     ]);
     expect(body.messages.find(({ role }) => role === "assistant")?.tool_calls?.map(({ function: definition }) => definition.name)).toEqual(["knowledge_search", "anny_search_resources"]);
     expect(body.messages.filter(({ role }) => role === "tool").map(({ tool_call_id }) => tool_call_id)).toEqual(["gwdg-knowledge-1", "gwdg-anny-1"]);
-    expect(body.messages.filter(({ role }) => role === "tool").map(({ content }) => content)).toEqual(['{"documents":[]}', '{"resources":[]}']);
+    expect(body.messages.filter(({ role }) => role === "tool").map(({ content }) => content)).toEqual(['{"documents":[]}', '{"resources":[],"requiresFreshRead":true}']);
     expect(followUp.message.content).toBe("Beide Demoabfragen sind ausgewertet.");
   });
 
@@ -651,7 +651,7 @@ describe("model router", () => {
     ]);
     expect(body.messages.find(({ role }) => role === "assistant")?.tool_calls?.map(({ function: definition }) => definition.name)).toEqual(["knowledge_search", "anny_search_resources"]);
     expect(body.messages.filter(({ role }) => role === "tool").map(({ tool_call_id }) => tool_call_id)).toEqual(["custom-knowledge-1", "custom-anny-1"]);
-    expect(body.messages.filter(({ role }) => role === "tool").map(({ content }) => content)).toEqual(['{"documents":[]}', '{"resources":[]}']);
+    expect(body.messages.filter(({ role }) => role === "tool").map(({ content }) => content)).toEqual(['{"documents":[]}', '{"resources":[],"requiresFreshRead":true}']);
     expect(followUp.message.content).toBe("Die custom tool responses wurden verarbeitet.");
   });
 
@@ -844,7 +844,11 @@ describe("operator routing policy", () => {
         : new Response(JSON.stringify(completion({ toolCalls: [{ id: "fallback-search", name: "anny_search_resources", arguments: '{"kind":"meeting_room"}' }] })), { headers: { "content-type": "application/json" } });
     };
     const routingPins = pins();
-    const first = await runModelStep(input(), { env, fetch, now: NOW, routingPins });
+    const telemetry = vi.fn();
+    const first = await runModelStep(input(), { env, fetch, now: NOW, routingPins, telemetry });
+    expect(telemetry.mock.calls.map(call => [call[0].outcome, call[0].profileId])).toEqual([["failure", "groq-oss-120b"], ["success", "gwdg-qwen3-30b"]]);
+    expect(telemetry.mock.calls[0]?.[0].inputTokens).toBeUndefined();
+    expect(JSON.stringify(telemetry.mock.calls)).not.toContain("transient private detail");
     expect(first.profile.id).toBe("gwdg-qwen3-30b");
     expect(first.routingToken).toBeTruthy();
     expect(calls).toEqual(["https://api.groq.com/openai/v1/chat/completions", "https://chat-ai.academiccloud.de/v1/chat/completions"]);
@@ -998,4 +1002,108 @@ describe("standard provider adapters", () => {
     expect(JSON.stringify(sent)).not.toMatch(/fake-openai-key|fake-anthropic-key/);
     expect(JSON.stringify(sent)).toContain("Servergeprüfte Zeitmetadaten");
   });
+});
+
+
+describe("bounded provider context and usage", () => {
+  it("records only counts and allowlisted quota metadata while keeping the request bounded", async () => {
+    const provider = fakeProvider(completion({ content: "Hallo.", usage: { prompt_tokens: 1400, completion_tokens: 30 } }), 200, { "x-ratelimit-limit-tokens": "8000", "x-ratelimit-remaining-tokens": "6600", "x-private": FAKE_KEY });
+    const telemetry = vi.fn();
+    await runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW, telemetry });
+    expect(telemetry).toHaveBeenCalledWith(expect.objectContaining({ profileId: "groq-oss-120b", attempts: 1, inputTokens: 1400, outputTokens: 30, rateLimits: { tokenLimit: 8000, tokenRemaining: 6600 } }));
+    expect(JSON.stringify(telemetry.mock.calls)).not.toMatch(/test-groq-key-only|Hallo|authorization|x-private/iu);
+    expect(new TextEncoder().encode(String(provider.calls[0]?.init?.body)).byteLength).toBeLessThan(12_500);
+  });
+  it("retains the upstream quota dimension and bounded wait without exposing provider text", async () => {
+    const provider = fakeProvider({ error: { message: `Private ${FAKE_KEY} tokens per minute (TPM)`, code: "rate_limit_exceeded" } }, 429, { "retry-after": "7", "x-ratelimit-limit-tokens": "8000", "x-ratelimit-remaining-tokens": "0", "x-private": FAKE_KEY });
+    const error = await expectRouterError(runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW }), "provider_rate_limited");
+    expect(error.rateLimits).toEqual({ retryAfterSeconds: 7, tokenLimit: 8000, tokenRemaining: 0, dimension: "TPM" });
+    expect(JSON.stringify(error)).not.toContain(FAKE_KEY);
+    expect(provider.calls).toHaveLength(1);
+  });
+  it("keeps the instruction prefix stable and user constraints intact across calendar changes", async () => {
+    const first = fakeProvider(completion({ content: "Hallo." }));
+    const second = fakeProvider(completion({ content: "Hallo." }));
+    await runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: first.fetch, now: NOW });
+    await runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: second.fetch, now: new Date("2026-10-18T10:00:00Z") });
+    const a = JSON.parse(String(first.calls[0]?.init?.body));
+    const b = JSON.parse(String(second.calls[0]?.init?.body));
+    expect(a.messages[0].content.split("Die aktuelle Zeit ist")[0]).toBe(b.messages[0].content.split("Die aktuelle Zeit ist")[0]);
+    expect(a.messages[1].content).toBe("Hallo.");
+    expect(b.messages[1].content).toBe("Hallo.");
+  });
+});
+
+
+it.each([
+  ["Ich suche einen Arbeitsplatz in Gebäude 1J.", ["anny_search_resources", "anny_get_availability", "anny_propose_booking"]],
+  ["Zeige mir meine Buchungen", ["anny_list_my_bookings", "anny_propose_cancellation"]],
+  ["Wie funktioniert WLAN?", ["knowledge_search"]],
+  ["Suche Wissen und einen Raum", ["knowledge_search", "anny_search_resources", "anny_get_availability", "anny_list_my_bookings", "anny_propose_cancellation", "anny_propose_booking"]],
+  ["Meine Reservierungen und VPN", ["knowledge_search", "anny_search_resources", "anny_get_availability", "anny_list_my_bookings", "anny_propose_cancellation", "anny_propose_booking"]],
+])("advertises only needed tools for a clear task and preserves mixed tasks: %s", async (text, names) => {
+  const provider = fakeProvider(completion({ content: "Bereit." }));
+  await runModelStep({ ...request(), messages: [{ role: "user", content: text as string }] }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
+  const body = JSON.parse(String(provider.calls[0]?.init?.body));
+  expect(body.tools.map((entry: { function: { name: string } }) => entry.function.name)).toEqual(names);
+  if (String(text).startsWith("Ich suche")) expect(new TextEncoder().encode(String(provider.calls[0]?.init?.body)).byteLength).toBeLessThan(10_000);
+});
+
+it("rejects an unadvertised tool without invoking any action", async () => {
+  const provider = fakeProvider(completion({ toolCalls: [{ id: "unadvertised", name: "anny_propose_cancellation", arguments: '{"bookingId":"b1"}' }] }));
+  await expectRouterError(runModelStep({ ...request(), messages: [{ role: "user", content: "Wie funktioniert WLAN?" }] }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW }), "invalid_model_response");
+  expect(provider.calls).toHaveLength(1);
+});
+
+
+it("keeps room tools for a contextual availability/WLAN follow-up", async () => {
+  const provider = fakeProvider(completion({ content: "Verfügbarkeit wird geprüft." }));
+  const messages: ChatRequest["messages"] = [
+    { role: "user", content: "Suche einen Arbeitsplatz in 1J" },
+    { role: "assistant", content: "", toolCalls: [{ id: "room-context", name: "anny_search_resources", arguments: { kind: "workplace", location: "1J" } }] },
+    { role: "tool", toolCallId: "room-context", name: "anny_search_resources", content: '{"resources":[]}' },
+    { role: "user", content: "Ist es morgen frei und gibt es WLAN?" },
+  ];
+  await runModelStep({ ...request(), messages }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
+  const sent = JSON.parse(String(provider.calls[0]?.init?.body));
+  expect(sent.tools.map((entry: { function: { name: string } }) => entry.function.name)).toContain("anny_get_availability");
+  expect(sent.tools.map((entry: { function: { name: string } }) => entry.function.name)).toContain("knowledge_search");
+});
+
+it("synthesizes a combined knowledge/room batch without advertising further tools", async () => {
+  const provider = fakeProvider(completion({ content: "Belegte Demoantwort [demo:knowledge:service-it:001]." }));
+  const messages: ChatRequest["messages"] = [
+    { role: "user", content: "Suche Wissen und einen Raum" },
+    { role: "assistant", content: "", toolCalls: [{ id: "k", name: "knowledge_search", arguments: { query: "WLAN" } }, { id: "r", name: "anny_search_resources", arguments: { capacity: 4 } }] },
+    { role: "tool", toolCallId: "k", name: "knowledge_search", content: '{"documents":[{"citationId":"demo:knowledge:service-it:001","text":"Fiktive WLAN-Anleitung"}]}' },
+    { role: "tool", toolCallId: "r", name: "anny_search_resources", content: '{"resources":[]}' },
+  ];
+  await runModelStep({ ...request(), messages }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
+  const sent = JSON.parse(String(provider.calls[0]?.init?.body));
+  expect(sent.tools ?? []).toEqual([]);
+  expect(JSON.stringify(sent.messages)).toContain("Fiktive WLAN-Anleitung");
+  expect(sent.messages[0].content).toContain("Keine weiteren Tool-Aufrufe");
+});
+
+
+it.each([true, false])("preserves a sequential mixed task and stops repeated retrieval (knowledge first: %s)", async knowledgeFirst => {
+  const firstName = knowledgeFirst ? "knowledge_search" as const : "anny_search_resources" as const;
+  const secondName = knowledgeFirst ? "anny_search_resources" as const : "knowledge_search" as const;
+  const firstArgs = knowledgeFirst ? { query: "WLAN" } : { capacity: 4 };
+  const secondArgs = knowledgeFirst ? { capacity: 4 } : { query: "WLAN" };
+  const messages: ChatRequest["messages"] = [
+    { role: "user", content: "Suche Wissen und einen Raum" },
+    { role: "assistant", content: "", toolCalls: [{ id: "first-goal", name: firstName, arguments: firstArgs }] },
+    { role: "tool", toolCallId: "first-goal", name: firstName, content: JSON.stringify(knowledgeFirst ? { documents: [] } : { resources: [] }) },
+  ];
+  const secondProvider = fakeProvider(completion({ toolCalls: [{ id: "second-goal", name: secondName, arguments: JSON.stringify(secondArgs) }] }));
+  const planned = await runModelStep({ ...request(), messages }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: secondProvider.fetch, now: NOW });
+  const sent = JSON.parse(String(secondProvider.calls[0]?.init?.body));
+  const names = sent.tools.map((entry: { function: { name: string } }) => entry.function.name);
+  expect(names).toContain(secondName);
+  expect(names).not.toContain(firstName);
+  messages.push(planned.message, { role: "tool", toolCallId: "second-goal", name: secondName, content: JSON.stringify(knowledgeFirst ? { resources: [] } : { documents: [] }) });
+  const finalProvider = fakeProvider(completion({ content: "Die Wissenssuche liefert keine Belege; Raumkarten stehen bereit." }));
+  await runModelStep({ ...request(), messages }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: finalProvider.fetch, now: NOW });
+  expect(JSON.parse(String(finalProvider.calls[0]?.init?.body)).tools ?? []).toEqual([]);
 });

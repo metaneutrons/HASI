@@ -77,13 +77,14 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
     // Serialize allowlisted metadata so nested schema issue names remain visible.
     // Never log the cause or provider payload.
     console.warn("HASI model request failed", JSON.stringify(cause instanceof ModelRouterError
-      ? { code: cause.code, providerStatus: cause.providerStatus, ...(cause.diagnostics && Object.keys(cause.diagnostics).length ? { diagnostics: cause.diagnostics } : {}) }
+      ? { code: cause.code, providerStatus: cause.providerStatus, ...(cause.diagnostics && Object.keys(cause.diagnostics).length ? { diagnostics: cause.diagnostics } : {}), ...(cause.rateLimits && Object.keys(cause.rateLimits).length ? { rateLimits: cause.rateLimits } : {}) }
       : { code: "unexpected_provider_failure" }));
     if (cause instanceof ModelRouterError && cause.code === "profile_not_approved") {
       return error("Das gewählte Modell oder die Routing-Freigabe ist für diese Anfrage nicht zugelassen. Beginne einen neuen Chat mit dem konfigurierten Standardmodell.", 403);
     }
     if (cause instanceof ModelRouterError && cause.code === "provider_rate_limited") {
-      return Response.json({ error: "Das Anfragelimit des ausgewählten Modellanbieters ist erreicht. Bitte warte eine Minute und versuche es erneut. Vorhandene Buchungskarten kannst du weiter nutzen." }, { status: 429, headers: { ...headers, "retry-after": "60" } });
+      const retryAfter = cause.rateLimits?.retryAfterSeconds ?? 60;
+      return Response.json({ error: `Das Anfragelimit des ausgewählten Modellanbieters ist erreicht. Bitte versuche es in ${retryAfter} Sekunden erneut. Vorhandene Buchungskarten kannst du weiter nutzen.` }, { status: 429, headers: { ...headers, "retry-after": String(retryAfter) } });
     }
     return error("Der ausgewählte Modellanbieter konnte die Anfrage nicht abschließen. Bitte versuche es erneut oder wähle ausdrücklich die Dialog-Demo.", 503);
   }

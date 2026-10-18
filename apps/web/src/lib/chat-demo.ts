@@ -102,7 +102,7 @@ function normalize(value: string): string {
 
 const SINGLE_OFFICE_PATTERN = /\b(?:einzelburos?|1er|single[- ]?offices?)\b/u;
 const SHARED_OFFICE_PATTERN = /\b(?:2|3)(?:er)?\s*(?:buros?|offices?)\b|\b(?:geteilte[nrsm]?|gemeinsame[nrsm]?|gemeinschafts)\s*(?:buros?|offices?)\b|\bshared(?:\s*(?:buros?|offices?))?\b/u;
-const ANY_OFFICE_PATTERN = /\b(?:egal|gleich|beides|keine?\s+praeferenz|ohne\s+praeferenz|keine?\s+bevorzugung)\b/u;
+const ANY_OFFICE_PATTERN = /\b(?:egal|gleich|beides|keine?\s+pr(?:ae|a)ferenz|ohne\s+pr(?:ae|a)ferenz|keine?\s+bevorzugung)\b/u;
 const OFFICE_TYPE_QUERY_PATTERN = /\b(?:einzelb[uü]ros?|1er|single[- ]?offices?|(?:2|3)(?:er)?\s*(?:b[uü]ros?|offices?)|(?:geteilte[nrsm]?|gemeinsame[nrsm]?|gemeinschafts)\s*(?:b[uü]ros?|offices?)|shared(?:\s*(?:b[uü]ros?|offices?))?|egal|gleich|beides|keine?\s+(?:praeferenz|präferenz|bevorzugung)|ohne\s+(?:praeferenz|präferenz))\b/giu;
 
 /** Prefer the complete-catalog office count; otherwise use only explicit office labels. */
