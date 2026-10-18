@@ -141,8 +141,9 @@ No support message has been sent.
 
 ### Reproducing the operator controls
 
-From the repository root, with the key already injected into the server process
-by its approved secret store:
+From the repository root, with the key and shared database connection already
+injected into the server process by their approved secret store, and the
+[shared budget ledger explicitly initialized](../../architecture/model-budget.md):
 
 ```sh
 pnpm probe:groq-cache hasi
@@ -152,6 +153,10 @@ pnpm probe:groq-cache plain-20b
 
 These are separate explicit runs, not a suite or an automatic fallback. Run only
 one pair at a time and leave the required quota budget before another run.
+The M2 candidate now reserves each actual network attempt, including plain
+controls, against the same durable daily ledger. Missing state fails closed;
+there is no process-local budget fallback. This added admission path has mock
+regression coverage; no new live cache experiment was run for that change.
 There is no key CLI argument, environment download, public probe endpoint or
 normal build hook. Do not paste a key into a command. When credentials are
 non-downloadable Vercel Secrets, an operator can execute the command in an

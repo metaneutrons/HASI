@@ -38,7 +38,7 @@ const anthropicConnectionSchema = z.strictObject({ ...connectionFields, provider
 const customConnectionSchema = z.strictObject({
   ...connectionFields,
   provider: z.literal("custom"),
-  endpoint: z.string().refine((value) => !CONTROL_CHARACTERS.test(value)).trim().min(1).max(2048).url().regex(/^https:\/\/[^/?#\s]+(?:\/[^?#\s]*)?$/u),
+  endpoint: z.string().refine((value) => !CONTROL_CHARACTERS.test(value)).trim().min(1).max(2048).pipe(z.url().regex(/^https:\/\/[^/?#\s]+(?:\/[^?#\s]*)?$/u)),
 });
 
 const connectionSchema = z.discriminatedUnion("provider", [
@@ -175,27 +175,27 @@ export const modelConfigurationSchema = modelConfigurationBaseSchema.superRefine
 
   const visiting = new Set<string>();
   const visited = new Set<string>();
-  let hasCycle = false;
   const depthMemo = new Map<string, number>();
-  const visit = (profileId: string): number => {
-    if (visiting.has(profileId)) {
-      hasCycle = true;
-      return 0;
-    }
+  const visit = (profileId: string): { depth: number; hasCycle: boolean } => {
+    if (visiting.has(profileId)) return { depth: 0, hasCycle: true };
     const knownDepth = depthMemo.get(profileId);
-    if (knownDepth !== undefined) return knownDepth;
-    if (visited.has(profileId)) return 0;
+    if (knownDepth !== undefined) return { depth: knownDepth, hasCycle: false };
+    if (visited.has(profileId)) return { depth: 0, hasCycle: false };
     visiting.add(profileId);
     let depth = 0;
+    let hasCycle = false;
     for (const target of fallbackEdges.get(profileId) ?? []) {
-      depth = Math.max(depth, 1 + visit(target));
+      const result = visit(target);
+      depth = Math.max(depth, 1 + result.depth);
+      hasCycle = hasCycle || result.hasCycle;
     }
     visiting.delete(profileId);
     visited.add(profileId);
     depthMemo.set(profileId, depth);
-    return depth;
+    return { depth, hasCycle };
   };
-  for (const source of fallbackEdges.keys()) visit(source);
+  let hasCycle = false;
+  for (const source of fallbackEdges.keys()) hasCycle = hasCycle || visit(source).hasCycle;
   if (hasCycle) addIssue(context, ["policy", "fallbacks"], "Fallback graph must be acyclic.");
   if (!hasCycle && [...depthMemo.values()].some((depth) => depth > policy.maxAttempts - 1)) {
     addIssue(context, ["policy", "fallbacks"], "Fallback depth cannot exceed the configured attempt limit.");
@@ -204,11 +204,11 @@ export const modelConfigurationSchema = modelConfigurationBaseSchema.superRefine
 
 export type ModelConfiguration = z.infer<typeof modelConfigurationSchema>;
 export type ModelConnection = ModelConfiguration["connections"][number];
-export type ResolvedModelConnection = {
+export interface ResolvedModelConnection {
   adapter: "groq" | "openai" | "anthropic" | "openai-compatible";
   baseURL: string;
   api: "responses" | "chat-completions";
-};
+}
 
 export const modelConfigurationJsonSchema = {
   ...z.toJSONSchema(modelConfigurationBaseSchema),

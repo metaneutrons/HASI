@@ -13,7 +13,7 @@ function requiredSecret(name: 'DATABASE_URL' | 'HASI_DEMO_SECRET'): string {
 }
 
 export function getDemoRuntime() {
-  if (!pending) pending = initialize().catch(() => { pending = undefined; throw new Error('Demo backend unavailable.'); });
+  pending ??= initialize().catch(() => { pending = undefined; throw new Error('Demo backend unavailable.'); });
   return pending;
 }
 
@@ -32,7 +32,7 @@ async function initialize() {
   try { await store.initialize(); await store.deleteExpired(); } catch { await store.close(); throw new Error('Demo state unavailable.'); }
   const internalFetch: typeof fetch = (input, init) => {
     const headers = new Headers(input instanceof Request ? input.headers : undefined);
-    new Headers(init?.headers).forEach((value, key) => headers.set(key, value));
+    new Headers(init?.headers).forEach((value, key) => { headers.set(key, value); });
     // This credential is sent only by the origin-pinned integration transport.
     if (preview && process.env.VERCEL_AUTOMATION_BYPASS_SECRET) headers.set('x-vercel-protection-bypass', process.env.VERCEL_AUTOMATION_BYPASS_SECRET);
     return fetch(input, { ...init, headers, redirect: 'error' });

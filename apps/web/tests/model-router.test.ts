@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
+import { z } from "zod";
 
 vi.mock("server-only", () => ({}));
+vi.mock("../src/lib/server/demo-runtime", () => ({ canonicalDemoRequest: vi.fn(), getDemoRuntime: vi.fn() }));
 
 import {
   chatRequestSchema,
@@ -22,6 +24,128 @@ const FAKE_KEY = "test-groq-key-only";
 const GWDG_FAKE_KEY = "test-gwdg-key-only";
 const CUSTOM_FAKE_KEY = "test-custom-key-only";
 
+it("requires an explicit host-owned context policy in production before provider I/O", async () => {
+  vi.stubEnv("NODE_ENV", "production");
+  try {
+    const provider = vi.fn<typeof fetch>();
+    await expect(runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider })).rejects.toMatchObject({ code: "profile_not_approved" });
+    expect(provider).not.toHaveBeenCalled();
+  } finally { vi.unstubAllEnvs(); }
+});
+
+it("requires shared budget admission for trusted production calls before provider I/O", async () => {
+  vi.stubEnv("NODE_ENV", "production");
+  try {
+    const provider = fakeProvider(completion({ content: "must not run" }));
+    await expectRouterError(runModelStep(request(), {
+      env: { GROQ_API_KEY: FAKE_KEY },
+      fetch: provider.fetch,
+      context: { dataClasses: ["synthetic_demo"], toolsRequired: true },
+    }), "budget_unavailable");
+    expect(provider.calls).toHaveLength(0);
+  } finally { vi.unstubAllEnvs(); }
+});
+
+it("allows trusted production calls when shared budget admission is provided", async () => {
+  vi.stubEnv("NODE_ENV", "production");
+  try {
+    const provider = fakeProvider(completion({ content: "Budgetgeprüft.", usage: { prompt_tokens: 12, completion_tokens: 5 } }));
+    const reservations: { profileId: string; inputTokens: number; outputTokens: number }[] = [];
+    const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+    const reply = await runModelStep(request(), {
+      env: { GROQ_API_KEY: FAKE_KEY },
+      fetch: provider.fetch,
+      context: { dataClasses: ["synthetic_demo"], toolsRequired: true },
+      budgetAdmission: {
+        reserve: input => {
+          reservations.push(input);
+          return Promise.resolve({ settle: usage => { settlements.push(usage); return Promise.resolve(); } });
+        },
+      },
+    });
+    expect(reply.message.content).toBe("Budgetgeprüft.");
+    expect(reservations).toHaveLength(1);
+    expect(reservations[0]).toMatchObject({ profileId: "groq-oss-120b", outputTokens: 1_536 });
+    expect(settlements).toEqual([{ inputTokens: 12, outputTokens: 5 }]);
+    expect(provider.calls).toHaveLength(1);
+  } finally { vi.unstubAllEnvs(); }
+});
+
+const providerMessageSchema = z.object({
+  role: z.string(),
+  content: z.unknown().optional(),
+  tool_call_id: z.string().optional(),
+  tool_calls: z.array(z.object({
+    name: z.string().optional(),
+    function: z.object({ name: z.string() }).loose().optional(),
+  }).loose()).optional(),
+}).loose();
+const providerToolSchema = z.object({
+  name: z.string().optional(),
+  function: z.object({ name: z.string() }).loose().optional(),
+}).loose();
+const providerRequestSchema = z.object({
+  model: z.string().optional(),
+  max_tokens: z.number().optional(),
+  temperature: z.number().optional(),
+  reasoning_effort: z.string().optional(),
+  parallel_tool_calls: z.boolean().optional(),
+  store: z.boolean().optional(),
+  messages: z.array(providerMessageSchema).optional(),
+  tools: z.array(providerToolSchema).optional(),
+}).loose();
+type ProviderRequest = z.infer<typeof providerRequestSchema>;
+type RouterOptions = NonNullable<Parameters<typeof runModelStep>[1]>;
+type RouterTelemetry = NonNullable<RouterOptions["telemetry"]>;
+
+function telemetrySpy() {
+  return vi.fn<RouterTelemetry>();
+}
+
+function providerBodyText(init: RequestInit | undefined): string {
+  if (typeof init?.body !== "string") throw new TypeError("Expected a serialized provider request");
+  return init.body;
+}
+
+function providerRequest(init: RequestInit | undefined): ProviderRequest {
+  return providerRequestSchema.parse(JSON.parse(providerBodyText(init)) as unknown);
+}
+
+function requiredMessages(body: ProviderRequest) {
+  if (!body.messages) throw new TypeError("Expected provider messages");
+  return body.messages;
+}
+
+function messageContent(body: ProviderRequest, index: number): string {
+  const message = requiredValue(requiredMessages(body)[index], `provider message ${String(index)}`);
+  if (typeof message.content !== "string") throw new TypeError("Expected textual provider message content");
+  return message.content;
+}
+
+function requiredTools(body: ProviderRequest) {
+  if (!body.tools) throw new TypeError("Expected provider tools");
+  return body.tools;
+}
+
+function providerToolNames(body: ProviderRequest): string[] {
+  return requiredTools(body).map((tool) => {
+    const name = tool.function?.name ?? tool.name;
+    if (!name) throw new TypeError("Expected a named provider tool");
+    return name;
+  });
+}
+
+function requiredValue<T>(value: T | undefined, label: string): T {
+  if (value === undefined) throw new TypeError(`Expected ${label}`);
+  return value;
+}
+
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
 const calendarCases = [
   { now: '2026-10-16T22:30:00Z', today: '2026-10-17', tomorrow: '2026-10-18', after: '2026-10-19' },
   { now: '2026-10-24T22:30:00Z', today: '2026-10-25', tomorrow: '2026-10-26', after: '2026-10-27' },
@@ -35,10 +159,36 @@ function request(profileId: ChatRequest["profileId"] = "groq-oss-120b"): ChatReq
   };
 }
 
+function pluginDescriptor(overrides: Partial<{
+  pluginId: string;
+  name: string;
+  modelName: string;
+  inputSchema: Record<string, unknown>;
+}> = {}) {
+  const pluginId = overrides.pluginId ?? "example.status";
+  const name = overrides.name ?? "status.read";
+  return {
+    pluginId,
+    name,
+    title: "Systemstatus",
+    description: "Liest einen freigegebenen Systemstatus.",
+    inputSchema: overrides.inputSchema ?? {
+      type: "object",
+      properties: { query: { type: "string", minLength: 1, maxLength: 40 } },
+      required: ["query"],
+      additionalProperties: false,
+    },
+    outputSchema: { type: "object", additionalProperties: true },
+    effect: "read" as const,
+    requiredPermissions: ["status:read"],
+    modelName: overrides.modelName ?? `hasi_${createHash("sha256").update(pluginId).update("\u0000").update(name).digest("hex").slice(0, 24)}`,
+  };
+}
+
 function completion(options: {
   content?: string | null;
   finishReason?: string;
-  toolCalls?: Array<{ id: string; name: string; arguments: string }>;
+  toolCalls?: { id: string; name: string; arguments: string }[];
   usage?: { prompt_tokens?: number | null; completion_tokens: number; prompt_tokens_details?: { cached_tokens?: number | null } | null };
 } = {}) {
   return {
@@ -70,19 +220,19 @@ function completion(options: {
 }
 
 function fakeProvider(body: unknown, status = 200, responseHeaders: Record<string, string> = {}) {
-  const calls: Array<{ url: string; init?: RequestInit }> = [];
-  const fetch: typeof globalThis.fetch = async (input, init) => {
+  const calls: { url: string; init?: RequestInit | undefined }[] = [];
+  const fetch: typeof globalThis.fetch = (input, init) => {
     const url =
       typeof input === "string"
         ? input
-        : input instanceof URL
-          ? input.href
-          : input.url;
+      : input instanceof URL
+        ? input.href
+        : input.url;
     calls.push({ url, init });
-    return new Response(JSON.stringify(body), {
+    return Promise.resolve(new Response(JSON.stringify(body), {
       status,
       headers: { "content-type": "application/json", ...responseHeaders },
-    });
+    }));
   };
   return { fetch, calls };
 }
@@ -105,8 +255,8 @@ describe('server-owned Berlin calendar context', () => {
         fetch: provider.fetch,
         now: new Date(now),
       });
-      const sent = JSON.parse(String(provider.calls[0]?.init?.body)) as { messages: { role: string; content: string }[] };
-      const system = sent.messages.find(message => message.role === 'system')?.content;
+      const sent = providerRequest(provider.calls[0]?.init);
+      const system = requiredMessages(sent).find(message => message.role === 'system')?.content;
       expect(system).toContain(`heute=${today}, morgen=${tomorrow}, übermorgen=${after}`);
       expect(system).toContain('Europe/Berlin, nicht das UTC-Kalenderdatum');
       expect(system).toContain('ältere Nachricht');
@@ -123,23 +273,25 @@ describe("verified per-message time context", () => {
       { role: "user", content: "Amrum, wie oben gewünscht." },
     ] };
     await runModelStep(input, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: new Date("2026-10-16T22:30:00Z"), messageTimes: ["2026-10-16T21:30:00.000Z", null, "2026-10-16T22:29:00.000Z"] });
-    const sent = JSON.parse(String(provider.calls[0]?.init?.body));
-    expect(sent.messages[0].content).toContain('"position":1,"role":"user","serverReceivedAt":"2026-10-16T21:30:00.000Z"');
-    expect(sent.messages[0].content).toContain('"today":"2026-10-16","tomorrow":"2026-10-17"');
-    expect(sent.messages[0].content).toContain('"today":"2026-10-17","tomorrow":"2026-10-18"');
-    expect(sent.messages[0].content).not.toContain('"position":2');
-    expect(sent.messages.slice(1).map((message: { content: string }) => message.content)).toEqual(input.messages.map(message => message.content));
+    const sent = providerRequest(provider.calls[0]?.init);
+    const sentMessages = requiredMessages(sent);
+    expect(sentMessages[0]?.content).toContain('"position":1,"role":"user","serverReceivedAt":"2026-10-16T21:30:00.000Z"');
+    expect(sentMessages[0]?.content).toContain('"today":"2026-10-16","tomorrow":"2026-10-17"');
+    expect(sentMessages[0]?.content).toContain('"today":"2026-10-17","tomorrow":"2026-10-18"');
+    expect(sentMessages[0]?.content).not.toContain('"position":2');
+    expect(sentMessages.slice(1).map(message => message.content)).toEqual(input.messages.map(message => message.content));
   });
 
   it("does not promote raw client timestamp claims or forward receipts to the model", async () => {
     const provider = fakeProvider(completion({ content: "Datum unbekannt." }));
     const input = request();
-    input.messages[0] = { ...input.messages[0]!, id: "ae93bd5b-49b1-40a9-8250-370d6c355fa7", timestamp: { createdAt: "2000-01-01T00:00:00.000Z", receipt: "A".repeat(43) } };
+    input.messages[0] = { ...requiredValue(input.messages[0], "first request message"), id: "ae93bd5b-49b1-40a9-8250-370d6c355fa7", timestamp: { createdAt: "2000-01-01T00:00:00.000Z", receipt: "A".repeat(43) } };
     await runModelStep(input, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
-    const body = String(provider.calls[0]?.init?.body);
-    expect(body).not.toContain("2000-01-01");
-    expect(body).not.toContain("A".repeat(43));
-    expect(JSON.parse(body).messages[0].content).toContain('"serverReceivedAt":null');
+    const body = providerRequest(provider.calls[0]?.init);
+    const bodyText = JSON.stringify(body);
+    expect(bodyText).not.toContain("2000-01-01");
+    expect(bodyText).not.toContain("A".repeat(43));
+    expect(requiredMessages(body)[0]?.content).toContain('"serverReceivedAt":null');
   });
 });
 
@@ -156,6 +308,199 @@ async function expectRouterError(
   }
   throw new Error("Expected the model router to reject the request.");
 }
+
+describe("per-attempt model budget admission", () => {
+  function runAnthropicUsageCase(usage: Record<string, unknown>, settlements: unknown[]) {
+    const config = loadModelConfiguration({});
+    config.connections.push({ id: "anthropic-budget", label: "Anthropic budget test", provider: "anthropic", credentialRef: "env:ANTHROPIC_API_KEY" });
+    config.profiles.push({ id: "anthropic-budget-model", label: "Anthropic budget test", connectionId: "anthropic-budget", modelId: "operator-selected-model", capabilities: { tools: true }, allowedDataClasses: ["synthetic_demo"], parameters: { temperature: null, maxOutputTokens: 1536, timeoutMs: 20000 } });
+    config.policy.userChoice.profileIds.push("anthropic-budget-model");
+    const provider = fakeProvider({
+      id: "msg_usage_test",
+      type: "message",
+      role: "assistant",
+      model: "operator-selected-model",
+      content: [{ type: "text", text: "Usage checked." }],
+      stop_reason: "end_turn",
+      stop_sequence: null,
+      usage,
+    });
+    const budgetAdmission: NonNullable<RouterOptions["budgetAdmission"]> = {
+      reserve: () => Promise.resolve({ settle: value => { settlements.push(value); return Promise.resolve(); } }),
+    };
+    return {
+      provider,
+      run: () => runModelStep(request("anthropic-budget-model"), {
+        env: { ANTHROPIC_API_KEY: "fake-anthropic-key", HASI_LLM_CONFIG: JSON.stringify(config) },
+        fetch: provider.fetch,
+        now: NOW,
+        budgetAdmission,
+      }),
+    };
+  }
+
+  it("fails closed before provider I/O when the shared budget rejects reservation", async () => {
+    const provider = fakeProvider(completion({ content: "must not run" }));
+    const config = loadModelConfiguration({});
+    config.policy.fallbacks = [{ from: "groq-oss-120b", targets: ["gwdg-qwen3-30b"], on: ["server_error", "timeout", "rate_limit"] }];
+    const env = { GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY, HASI_LLM_CONFIG: JSON.stringify(config) };
+    const input: ChatRequest = { profileId: "groq-oss-120b", messages: [{ id: "ae93bd5b-49b1-40a9-8250-370d6c355fa7", role: "user", content: "must not run" }] };
+    const routingPins = createRoutingPins("test-only-routing-secret", "workspace:student", () => NOW);
+    let reservations = 0;
+    await expectRouterError(runModelStep(input, {
+      env,
+      fetch: provider.fetch,
+      now: NOW,
+      routingPins,
+      budgetAdmission: { reserve: () => { reservations += 1; return Promise.reject(Object.assign(new Error("private ledger detail"), { code: "exhausted" })); } },
+    }), "budget_exhausted");
+    expect(reservations).toBe(1);
+    expect(provider.calls).toHaveLength(0);
+  });
+
+  it("reserves and settles each Groq regeneration attempt independently", async () => {
+    const failed = fakeProvider({ error: { message: "bad tool", code: "tool_use_failed" } }, 400);
+    const success = fakeProvider(completion({ content: "Erneut geprüft.", usage: { prompt_tokens: 1400, completion_tokens: 30 } }));
+    const reserveInputs: { profileId: string; inputTokens: number; outputTokens: number }[] = [];
+    const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[][] = [];
+    const budgetAdmission: NonNullable<RouterOptions["budgetAdmission"]> = {
+      reserve: input => {
+        reserveInputs.push(input);
+        const settled: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+        settlements.push(settled);
+        return Promise.resolve({ settle: usage => { settled.push(usage); return Promise.resolve(); } });
+      },
+    };
+    let count = 0;
+    await runModelStep({ ...request(), messages: [{ role: "user", content: "Ich brauche morgen einen Raum." }] }, {
+      env: { GROQ_API_KEY: FAKE_KEY },
+      now: NOW,
+      budgetAdmission,
+      fetch: (input, init) => ++count === 1 ? failed.fetch(input, init) : success.fetch(input, init),
+    });
+
+    expect(reserveInputs).toHaveLength(2);
+    expect(reserveInputs.map(({ profileId }) => profileId)).toEqual(["groq-oss-120b", "groq-oss-120b"]);
+    expect(reserveInputs.every(({ inputTokens, outputTokens }) => inputTokens >= 4_096 && outputTokens === 1_536)).toBe(true);
+    expect(settlements).toEqual([[undefined], [{ inputTokens: 1_400, outputTokens: 30 }]]);
+  });
+
+  it("reserves the fallback profile separately after settling a failed provider attempt", async () => {
+    const config = loadModelConfiguration({});
+    config.policy.fallbacks = [{ from: "groq-oss-120b", targets: ["gwdg-qwen3-30b"], on: ["server_error"] }];
+    const env = { GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY, HASI_LLM_CONFIG: JSON.stringify(config) };
+    const turnId = "ae93bd5b-49b1-40a9-8250-370d6c355fa7";
+    const turn: ChatRequest = { profileId: "groq-oss-120b", messages: [{ id: turnId, role: "user", content: "Hallo." }] };
+    const calls: string[] = [];
+    const fetch: typeof globalThis.fetch = (url) => {
+      calls.push(requestUrl(url));
+      return Promise.resolve(calls.length === 1
+        ? new Response(JSON.stringify({ error: { message: "temporary failure" } }), { status: 503, headers: { "content-type": "application/json" } })
+        : new Response(JSON.stringify(completion({ content: "Weitergeleitet.", usage: { prompt_tokens: 20, completion_tokens: 4 } })), { headers: { "content-type": "application/json" } }));
+    };
+    const reserveInputs: { profileId: string; inputTokens: number; outputTokens: number }[] = [];
+    const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[][] = [];
+    const budgetAdmission: NonNullable<RouterOptions["budgetAdmission"]> = {
+      reserve: input => {
+        reserveInputs.push(input);
+        const settled: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+        settlements.push(settled);
+        return Promise.resolve({ settle: usage => { settled.push(usage); return Promise.resolve(); } });
+      },
+    };
+    const reply = await runModelStep(turn, {
+      env,
+      fetch,
+      now: NOW,
+      routingPins: createRoutingPins("test-only-routing-secret", "workspace:student", () => NOW),
+      budgetAdmission,
+    });
+
+    expect(reply.profile.id).toBe("gwdg-qwen3-30b");
+    expect(reserveInputs.map(({ profileId }) => profileId)).toEqual(["groq-oss-120b", "gwdg-qwen3-30b"]);
+    expect(settlements).toEqual([[undefined], [{ inputTokens: 20, outputTokens: 4 }]]);
+  });
+
+  it("holds the full reservation when provider usage is missing and does not fall back", async () => {
+    const provider = fakeProvider({ ...completion({ content: "Antwort ohne belastbare Nutzung." }), usage: undefined });
+    const settlements: unknown[] = [];
+    await expectRouterError(runModelStep(request(), {
+      env: { GROQ_API_KEY: FAKE_KEY },
+      fetch: provider.fetch,
+      now: NOW,
+      budgetAdmission: { reserve: () => Promise.resolve({ settle: usage => { settlements.push(usage); return Promise.resolve(); } }) },
+    }), "budget_usage_invalid");
+    expect(provider.calls).toHaveLength(1);
+    expect(settlements).toEqual([undefined]);
+  });
+
+  it("keeps the full reservation when a nonempty model response reports zero input usage", async () => {
+    const provider = fakeProvider(completion({
+      content: "Eine erzeugte Antwort.",
+      usage: { prompt_tokens: 0, completion_tokens: 30 },
+    }));
+    const settlements: unknown[] = [];
+
+    await expectRouterError(runModelStep(request(), {
+      env: { GROQ_API_KEY: FAKE_KEY },
+      fetch: provider.fetch,
+      now: NOW,
+      budgetAdmission: {
+        reserve: () => Promise.resolve({
+          settle: usage => { settlements.push(usage); return Promise.resolve(); },
+        }),
+      },
+    }), "budget_usage_invalid");
+
+    expect(provider.calls).toHaveLength(1);
+    expect(settlements).toEqual([undefined]);
+  });
+
+  it("includes Anthropic cache input in the bound and holds the reservation when that total exceeds it", async () => {
+    const settlements: unknown[] = [];
+    const { provider, run } = runAnthropicUsageCase({
+      input_tokens: 12,
+      cache_creation_input_tokens: 1_000_000,
+      cache_read_input_tokens: 0,
+      output_tokens: 4,
+    }, settlements);
+
+    await expectRouterError(run(), "budget_usage_invalid");
+
+    expect(provider.calls).toHaveLength(1);
+    expect(settlements).toEqual([undefined]);
+  });
+
+  it("accepts an Anthropic response with zero uncached input and positive cache input", async () => {
+    const settlements: unknown[] = [];
+    const { provider, run } = runAnthropicUsageCase({
+      input_tokens: 0,
+      cache_creation_input_tokens: 500,
+      cache_read_input_tokens: 300,
+      output_tokens: 4,
+    }, settlements);
+
+    await run();
+
+    expect(provider.calls).toHaveLength(1);
+    expect(settlements).toEqual([{ inputTokens: 800, outputTokens: 4 }]);
+  });
+
+  it("holds the full reservation for malformed Anthropic cache counts", async () => {
+    const settlements: unknown[] = [];
+    const { provider, run } = runAnthropicUsageCase({
+      input_tokens: 12,
+      cache_creation_input_tokens: 0,
+      cache_read_input_tokens: -1,
+      output_tokens: 4,
+    }, settlements);
+
+    await expectRouterError(run(), "budget_usage_invalid");
+
+    expect(provider.calls).toHaveLength(1);
+    expect(settlements).toEqual([undefined]);
+  });
+});
 
 describe("model router", () => {
   it("reports approved profiles without exposing a credential value", () => {
@@ -205,9 +550,9 @@ describe("model router", () => {
 
   it("rejects missing credentials before attempting a provider request", async () => {
     let fetchCalled = false;
-    const fetch: typeof globalThis.fetch = async () => {
+    const fetch: typeof globalThis.fetch = () => {
       fetchCalled = true;
-      throw new Error("Network should not be called.");
+      return Promise.reject(new Error("Network should not be called."));
     };
 
     await expectRouterError(
@@ -219,9 +564,9 @@ describe("model router", () => {
 
   it("rejects a missing GWDG key without borrowing Groq credentials", async () => {
     let fetchCalled = false;
-    const fetch: typeof globalThis.fetch = async () => {
+    const fetch: typeof globalThis.fetch = () => {
       fetchCalled = true;
-      throw new Error("Network should not be called.");
+      return Promise.reject(new Error("Network should not be called."));
     };
     await expectRouterError(runModelStep(request("gwdg-qwen3-30b"), { env: { GROQ_API_KEY: FAKE_KEY }, fetch, now: NOW }), "missing_credentials");
     expect(fetchCalled).toBe(false);
@@ -229,14 +574,14 @@ describe("model router", () => {
 
   it("rejects an unapproved profile before resolving credentials or calling Groq", async () => {
     let fetchCalled = false;
-    const fetch: typeof globalThis.fetch = async () => {
+    const fetch: typeof globalThis.fetch = () => {
       fetchCalled = true;
-      throw new Error("Network should not be called.");
+      return Promise.reject(new Error("Network should not be called."));
     };
 
     await expectRouterError(
       runModelStep(
-        { ...request(), profileId: "openai-gpt-4" } as unknown as ChatRequest,
+        { ...request(), profileId: "openai-gpt-4" },
         { env: { GROQ_API_KEY: FAKE_KEY }, fetch, now: NOW },
       ),
       "profile_not_approved",
@@ -263,19 +608,13 @@ describe("model router", () => {
     expect(new Headers(provider.calls[0]?.init?.headers).get("authorization")).toBe(
       `Bearer ${FAKE_KEY}`,
     );
-    const sentBody = JSON.parse(String(provider.calls[0]?.init?.body)) as {
-      model: string;
-      max_tokens: number;
-      messages: Array<{ role: string; content: string }>;
-      tools: Array<{ function: { name: string } }>;
-      parallel_tool_calls: boolean;
-    };
+    const sentBody = providerRequest(provider.calls[0]?.init);
     expect(sentBody.model).toBe("openai/gpt-oss-120b");
     expect(sentBody.max_tokens).toBe(1536);
     expect(sentBody.parallel_tool_calls).toBe(false);
-    expect(sentBody.messages[0]?.role).toBe("system");
-    expect(sentBody.messages[0]?.content).toContain("Europe/Berlin");
-    expect(sentBody.tools.map(({ function: definition }) => definition.name)).toEqual([
+    expect(requiredMessages(sentBody)[0]?.role).toBe("system");
+    expect(requiredMessages(sentBody)[0]?.content).toContain("Europe/Berlin");
+    expect(providerToolNames(sentBody)).toEqual([
       "knowledge_search",
       "anny_search_resources",
       "anny_get_availability",
@@ -330,6 +669,34 @@ describe("model router", () => {
     });
   });
 
+  it("exposes only server-authorized dynamic tools and returns their hash-bound calls for host execution", async () => {
+    const descriptor = pluginDescriptor();
+    const provider = fakeProvider(completion({
+      finishReason: "tool_calls",
+      toolCalls: [{ id: "plugin-call-1", name: descriptor.modelName, arguments: '{"query":"health"}' }],
+    }));
+    const reply = await runModelStep(request(), {
+      env: { GROQ_API_KEY: FAKE_KEY },
+      fetch: provider.fetch,
+      now: NOW,
+      authorizedTools: [descriptor],
+    });
+
+    expect(providerToolNames(providerRequest(provider.calls[0]?.init))).toContain(descriptor.modelName);
+    expect(reply.message.toolCalls).toEqual([{ id: "plugin-call-1", name: descriptor.modelName, arguments: { query: "health" } }]);
+    expect(providerBodyText(provider.calls[0]?.init)).not.toContain("/api/tools/call");
+  });
+
+  it("rejects forged dynamic names and arguments outside the authorized schema", async () => {
+    const descriptor = pluginDescriptor();
+    const forged = fakeProvider(completion({ toolCalls: [{ id: "forged-call", name: "hasi_aaaaaaaaaaaaaaaaaaaaaaaa", arguments: '{"query":"health"}' }] }));
+    await expectRouterError(runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: forged.fetch, now: NOW, authorizedTools: [descriptor] }), "invalid_model_response");
+    expect(providerToolNames(providerRequest(forged.calls[0]?.init))).not.toContain("hasi_aaaaaaaaaaaaaaaaaaaaaaaa");
+
+    const invalidArgs = fakeProvider(completion({ toolCalls: [{ id: "invalid-args", name: descriptor.modelName, arguments: '{"query":"health","admin":true}' }] }));
+    await expectRouterError(runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: invalidArgs.fetch, now: NOW, authorizedTools: [descriptor] }), "invalid_model_response");
+  });
+
   it("regenerates a rejected room-search call once on the same model without replaying failed output", async () => {
     const failed = fakeProvider({ error: {
       message: `private provider message ${FAKE_KEY}`,
@@ -337,23 +704,25 @@ describe("model router", () => {
       failed_generation: '{"name":"anny_search_resources","parameters":{"capacity":4,"query":""}}',
     }, usage: { prompt_tokens: 500, prompt_tokens_details: { cached_tokens: 500 } } }, 400);
     const success = fakeProvider(completion({ toolCalls: [{ id: "room-1", name: "anny_search_resources", arguments: '{"capacity":4}' }], usage: { prompt_tokens: 1400, completion_tokens: 30, prompt_tokens_details: { cached_tokens: 1024 } } }));
-    const telemetry = vi.fn();
+    const telemetry = telemetrySpy();
     let count = 0;
     const reply = await runModelStep({ ...request(), messages: [{ role: "user", content: "Ich brauche morgen um 14 Uhr einen Raum für vier Personen für eine Stunde." }] }, {
       env: { GROQ_API_KEY: FAKE_KEY }, now: NOW, telemetry,
-      fetch: async (input, init) => ++count === 1 ? failed.fetch(input, init) : success.fetch(input, init),
+      fetch: (input, init) => ++count === 1 ? failed.fetch(input, init) : success.fetch(input, init),
     });
     expect(count).toBe(2);
     expect(telemetry).toHaveBeenCalledTimes(1);
     expect(telemetry).toHaveBeenCalledWith(expect.objectContaining({ attempts: 2, inputTokens: 1400, cache: { readTokens: 1024, uncachedTokens: 376, readRatio: 1024 / 1400 } }));
-    const initial = JSON.parse(String(failed.calls[0]?.init?.body));
-    const retry = JSON.parse(String(success.calls[0]?.init?.body));
+    const initial = providerRequest(failed.calls[0]?.init);
+    const retry = providerRequest(success.calls[0]?.init);
     expect(initial.model).toBe(retry.model);
     expect(initial.temperature).toBe(0.2);
     expect(retry.temperature).toBe(0);
-    expect(retry.messages.slice(1)).toEqual(initial.messages.slice(1));
-    expect(retry.messages[0].content).toContain("Generierungsversuch");
-    expect(JSON.stringify(retry.messages)).not.toMatch(/private provider|parameters/);
+    const initialMessages = requiredMessages(initial);
+    const retryMessages = requiredMessages(retry);
+    expect(retryMessages.slice(1)).toEqual(initialMessages.slice(1));
+    expect(retryMessages[0]?.content).toContain("Generierungsversuch");
+    expect(JSON.stringify(retryMessages)).not.toMatch(/private provider|parameters/);
     expect(reply.message.toolCalls).toEqual([{ id: "room-1", name: "anny_search_resources", arguments: { capacity: 4 } }]);
   });
 
@@ -374,12 +743,12 @@ describe("model router", () => {
   it("uses Qwen-specific reasoning settings with the same tool contract", async () => {
     const provider = fakeProvider(completion({ toolCalls: [{ id: "qwen-room-1", name: "anny_search_resources", arguments: '{"capacity":4}' }] }));
     const reply = await runModelStep(request("groq-qwen-3.8-27b"), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
-    const body = JSON.parse(String(provider.calls[0]?.init?.body));
+    const body = providerRequest(provider.calls[0]?.init);
     expect(body.model).toBe("qwen/qwen3.8-27b");
     expect(body.reasoning_effort).toBe("none");
-    expect(body.tools).toHaveLength(6);
-    expect(body.tools.map((entry: { function: { name: string } }) => entry.function.name)).toContain("anny_propose_cancellation");
-    expect(body.tools.map((entry: { function: { name: string } }) => entry.function.name)).not.toContain("anny_execute_cancellation");
+    expect(requiredTools(body)).toHaveLength(6);
+    expect(providerToolNames(body)).toContain("anny_propose_cancellation");
+    expect(providerToolNames(body)).not.toContain("anny_execute_cancellation");
     expect(reply.profile.id).toBe("groq-qwen-3.8-27b");
   });
 
@@ -397,7 +766,7 @@ describe("model router", () => {
     const headers = new Headers(provider.calls[0]?.init?.headers);
     expect(headers.get("authorization")).toBe(`Bearer ${GWDG_FAKE_KEY}`);
     expect(headers.get("authorization")).not.toContain(FAKE_KEY);
-    const body = JSON.parse(String(provider.calls[0]?.init?.body));
+    const body = providerRequest(provider.calls[0]?.init);
     expect(body.model).toBe("qwen3-30b-a3b-instruct-2507");
     expect(body.reasoning_effort).toBeUndefined();
     expect(body.parallel_tool_calls).toBeUndefined();
@@ -423,9 +792,9 @@ describe("model router", () => {
       { id: "gwdg-anny-1", name: "anny_search_resources", arguments: JSON.stringify({ capacity: 4 }) },
     ] }));
     const secondResponse = fakeProvider(completion({ content: "Beide Demoabfragen sind ausgewertet." }));
-    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const calls: { url: string; init?: RequestInit | undefined }[] = [];
     let count = 0;
-    const fetch: typeof globalThis.fetch = async (input, init) => {
+    const fetch: typeof globalThis.fetch = (input, init) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       calls.push({ url, init });
       return (++count === 1 ? firstResponse : secondResponse).fetch(input, init);
@@ -438,34 +807,36 @@ describe("model router", () => {
     ]);
     const toolCalls = initial.message.toolCalls;
     if (!toolCalls) throw new Error("Expected GWDG tool calls.");
+    const knowledgeCall = requiredValue(toolCalls[0], "knowledge search call");
+    const resourceCall = requiredValue(toolCalls[1], "resource search call");
     const followUp = await runModelStep({
       profileId: "gwdg-qwen3-30b",
       messages: [
         { role: "user", content: "Suche Wissen und einen Raum." },
         initial.message,
-        { role: "tool", toolCallId: toolCalls[0]!.id, name: toolCalls[0]!.name, content: JSON.stringify({ documents: [] }) },
-        { role: "tool", toolCallId: toolCalls[1]!.id, name: toolCalls[1]!.name, content: JSON.stringify({ resources: [] }) },
+        { role: "tool", toolCallId: knowledgeCall.id, name: knowledgeCall.name, content: JSON.stringify({ documents: [] }) },
+        { role: "tool", toolCallId: resourceCall.id, name: resourceCall.name, content: JSON.stringify({ resources: [] }) },
         { role: "user", content: "Fasse die Ergebnisse zusammen." },
       ],
     }, { env: { GWDG_API_KEY: GWDG_FAKE_KEY }, fetch, now: NOW });
 
-    const body = JSON.parse(String(calls[1]?.init?.body)) as { messages: Array<{ role: string; tool_call_id?: string; content?: string; tool_calls?: Array<{ function: { name: string } }> }> };
+    const body = providerRequest(calls[1]?.init);
     expect(calls.map(({ url }) => url)).toEqual([
       "https://chat-ai.academiccloud.de/v1/chat/completions",
       "https://chat-ai.academiccloud.de/v1/chat/completions",
     ]);
-    expect(body.messages.find(({ role }) => role === "assistant")?.tool_calls?.map(({ function: definition }) => definition.name)).toEqual(["knowledge_search", "anny_search_resources"]);
-    expect(body.messages.filter(({ role }) => role === "tool").map(({ tool_call_id }) => tool_call_id)).toEqual(["gwdg-knowledge-1", "gwdg-anny-1"]);
-    expect(body.messages.filter(({ role }) => role === "tool").map(({ content }) => content)).toEqual(['{"documents":[]}', '{"resources":[],"requiresFreshRead":true}']);
+    expect(requiredMessages(body).find(({ role }) => role === "assistant")?.tool_calls?.map((call) => call.function?.name ?? call.name)).toEqual(["knowledge_search", "anny_search_resources"]);
+    expect(requiredMessages(body).filter(({ role }) => role === "tool").map(({ tool_call_id }) => tool_call_id)).toEqual(["gwdg-knowledge-1", "gwdg-anny-1"]);
+    expect(requiredMessages(body).filter(({ role }) => role === "tool").map(({ content }) => content)).toEqual(['{"documents":[]}', '{"resources":[],"requiresFreshRead":true}']);
     expect(followUp.message.content).toBe("Beide Demoabfragen sind ausgewertet.");
   });
 
   it("rejects GWDG redirects without following them and returns sanitized failures", async () => {
-    const calls: Array<{ url: string; redirect?: RequestRedirect }> = [];
-    const fetch: typeof globalThis.fetch = async (input, init) => {
+    const calls: { url: string; redirect?: RequestRedirect | undefined }[] = [];
+    const fetch: typeof globalThis.fetch = (input, init) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       calls.push({ url, redirect: init?.redirect });
-      return new Response(null, { status: 302, headers: { location: "https://attacker.example/collect" } });
+      return Promise.resolve(new Response(null, { status: 302, headers: { location: "https://attacker.example/collect" } }));
     };
     const error = await expectRouterError(runModelStep(request("gwdg-qwen3-30b"), { env: { GWDG_API_KEY: GWDG_FAKE_KEY }, fetch, now: NOW }), "provider_unavailable");
     expect(error.message).toBe("The model service could not complete this request.");
@@ -486,9 +857,9 @@ describe("model router", () => {
 
   it("does not allow client input to override profile connections or secret references", async () => {
     let fetchCalled = false;
-    const fetch: typeof globalThis.fetch = async () => {
+    const fetch: typeof globalThis.fetch = () => {
       fetchCalled = true;
-      throw new Error("Network should not be called.");
+      return Promise.reject(new Error("Network should not be called."));
     };
     for (const profileId of ["groq-oss-120b", "gwdg-qwen3-30b", "custom-default"] as const) {
       for (const override of [
@@ -500,7 +871,7 @@ describe("model router", () => {
         await expectRouterError(runModelStep({
           ...request(profileId),
           ...override,
-        } as unknown as ChatRequest, {
+        }, {
           env: {
             GWDG_API_KEY: GWDG_FAKE_KEY,
             GROQ_API_KEY: FAKE_KEY,
@@ -553,7 +924,7 @@ describe("model router", () => {
     expect(new Headers(provider.calls[0]?.init?.headers).get("authorization")).toBe(`Bearer ${CUSTOM_FAKE_KEY}`);
     expect(new Headers(provider.calls[0]?.init?.headers).get("authorization")).not.toContain(FAKE_KEY);
     expect(new Headers(provider.calls[0]?.init?.headers).get("authorization")).not.toContain(GWDG_FAKE_KEY);
-    const body = JSON.parse(String(provider.calls[0]?.init?.body));
+    const body = providerRequest(provider.calls[0]?.init);
     expect(body.model).toBe("custom-model-id");
     expect(body.reasoning_effort).toBeUndefined();
     expect(body.parallel_tool_calls).toBeUndefined();
@@ -563,9 +934,9 @@ describe("model router", () => {
 
   it("does not borrow configured Groq or GWDG keys when custom credentials are missing", async () => {
     let fetchCalled = false;
-    const fetch: typeof globalThis.fetch = async () => {
+    const fetch: typeof globalThis.fetch = () => {
       fetchCalled = true;
-      throw new Error("Network should not be called.");
+      return Promise.reject(new Error("Network should not be called."));
     };
     const env = validCustomEnvironment({ CUSTOM_API_KEY: undefined, GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY });
     const profiles = listModelProfiles(env);
@@ -583,7 +954,7 @@ describe("model router", () => {
     expect(profile?.label.length).toBeLessThanOrEqual(82);
     const provider = fakeProvider(completion({ content: "Ready." }));
     const reply = await runModelStep(request("custom-default"), { env, fetch: provider.fetch, now: NOW });
-    expect(JSON.parse(String(provider.calls[0]?.init?.body)).model).toBe(modelId);
+    expect(providerRequest(provider.calls[0]?.init).model).toBe(modelId);
     expect(reply.profile.label.length).toBeLessThanOrEqual(82);
   });
 
@@ -597,9 +968,9 @@ describe("model router", () => {
     "not a URL",
   ])("does not expose or call a custom connection with invalid endpoint %s", async (endpoint) => {
     let fetchCalled = false;
-    const fetch: typeof globalThis.fetch = async () => {
+    const fetch: typeof globalThis.fetch = () => {
       fetchCalled = true;
-      throw new Error("Network should not be called.");
+      return Promise.reject(new Error("Network should not be called."));
     };
     const env = validCustomEnvironment({ CUSTOM_ENDPOINT: endpoint });
     expect(listModelProfiles(env).profiles.some((profile) => profile.id === "custom-default")).toBe(false);
@@ -609,9 +980,9 @@ describe("model router", () => {
 
   it.each(["", "\ncustom-model", "x".repeat(129)])("does not expose or call a custom connection with invalid model ID %j", async (modelId) => {
     let fetchCalled = false;
-    const fetch: typeof globalThis.fetch = async () => {
+    const fetch: typeof globalThis.fetch = () => {
       fetchCalled = true;
-      throw new Error("Network should not be called.");
+      return Promise.reject(new Error("Network should not be called."));
     };
     const env = validCustomEnvironment({ CUSTOM_MODEL_ID: modelId });
     expect(listModelProfiles(env).profiles.some((profile) => profile.id === "custom-default")).toBe(false);
@@ -625,7 +996,7 @@ describe("model router", () => {
       { id: "custom-anny-1", name: "anny_search_resources", arguments: JSON.stringify({ capacity: 4 }) },
     ] }));
     const secondResponse = fakeProvider(completion({ content: "Die custom tool responses wurden verarbeitet." }));
-    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const calls: { url: string; init?: RequestInit | undefined }[] = [];
     let count = 0;
     const fetch: typeof globalThis.fetch = async (input, init) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -637,31 +1008,33 @@ describe("model router", () => {
     const toolCalls = initial.message.toolCalls;
     expect(toolCalls?.map(({ name }) => name)).toEqual(["knowledge_search", "anny_search_resources"]);
     if (!toolCalls) throw new Error("Expected custom tool calls.");
+    const knowledgeCall = requiredValue(toolCalls[0], "knowledge search call");
+    const resourceCall = requiredValue(toolCalls[1], "resource search call");
     const followUp = await runModelStep({
       profileId: "custom-default",
       messages: [
         { role: "user", content: "Suche Wissen und einen Raum." },
         initial.message,
-        { role: "tool", toolCallId: toolCalls[0]!.id, name: toolCalls[0]!.name, content: JSON.stringify({ documents: [] }) },
-        { role: "tool", toolCallId: toolCalls[1]!.id, name: toolCalls[1]!.name, content: JSON.stringify({ resources: [] }) },
+        { role: "tool", toolCallId: knowledgeCall.id, name: knowledgeCall.name, content: JSON.stringify({ documents: [] }) },
+        { role: "tool", toolCallId: resourceCall.id, name: resourceCall.name, content: JSON.stringify({ resources: [] }) },
         { role: "user", content: "Fasse die Ergebnisse zusammen." },
       ],
     }, { env, fetch, now: NOW });
-    const body = JSON.parse(String(calls[1]?.init?.body)) as { messages: Array<{ role: string; tool_call_id?: string; content?: string; tool_calls?: Array<{ function: { name: string } }> }> };
+    const body = providerRequest(calls[1]?.init);
     expect(calls.map(({ url }) => url)).toEqual([
       "https://custom.example.test/api/v2/chat/completions",
       "https://custom.example.test/api/v2/chat/completions",
     ]);
-    expect(body.messages.find(({ role }) => role === "assistant")?.tool_calls?.map(({ function: definition }) => definition.name)).toEqual(["knowledge_search", "anny_search_resources"]);
-    expect(body.messages.filter(({ role }) => role === "tool").map(({ tool_call_id }) => tool_call_id)).toEqual(["custom-knowledge-1", "custom-anny-1"]);
-    expect(body.messages.filter(({ role }) => role === "tool").map(({ content }) => content)).toEqual(['{"documents":[]}', '{"resources":[],"requiresFreshRead":true}']);
+    expect(requiredMessages(body).find(({ role }) => role === "assistant")?.tool_calls?.map((call) => call.function?.name ?? call.name)).toEqual(["knowledge_search", "anny_search_resources"]);
+    expect(requiredMessages(body).filter(({ role }) => role === "tool").map(({ tool_call_id }) => tool_call_id)).toEqual(["custom-knowledge-1", "custom-anny-1"]);
+    expect(requiredMessages(body).filter(({ role }) => role === "tool").map(({ content }) => content)).toEqual(['{"documents":[]}', '{"resources":[],"requiresFreshRead":true}']);
     expect(followUp.message.content).toBe("Die custom tool responses wurden verarbeitet.");
   });
 
   it("rejects custom redirects and sanitizes custom provider HTTP errors", async () => {
     const redirect = await expectRouterError(runModelStep(request("custom-default"), {
       env: validCustomEnvironment(),
-      fetch: async () => new Response(null, { status: 302, headers: { location: "https://attacker.example/collect" } }),
+      fetch: () => Promise.resolve(new Response(null, { status: 302, headers: { location: "https://attacker.example/collect" } })),
       now: NOW,
     }), "provider_unavailable");
     expect(redirect.message).toBe("The model service could not complete this request.");
@@ -699,8 +1072,8 @@ describe("model router", () => {
   });
 
   it("rejects a redirect without following it", async () => {
-    const calls: Array<{ url: string; redirect?: RequestRedirect }> = [];
-    const fetch: typeof globalThis.fetch = async (input, init) => {
+    const calls: { url: string; redirect?: RequestRedirect | undefined }[] = [];
+    const fetch: typeof globalThis.fetch = (input, init) => {
       const url =
         typeof input === "string"
           ? input
@@ -708,10 +1081,10 @@ describe("model router", () => {
             ? input.href
             : input.url;
       calls.push({ url, redirect: init?.redirect });
-      return new Response(null, {
+      return Promise.resolve(new Response(null, {
         status: 302,
         headers: { location: "https://other.example/collect" },
-      });
+      }));
     };
 
     const error = await expectRouterError(
@@ -841,13 +1214,13 @@ describe("operator routing policy", () => {
   it.each([429, 503])("falls back after HTTP %i and pins the actual model through a tool turn", async status => {
     const env = environment(config => { config.policy.userChoice.profileIds = ["groq-oss-120b"]; });
     const calls: string[] = [];
-    const fetch: typeof globalThis.fetch = async (url) => {
-      calls.push(String(url));
-      return calls.length === 1 ? new Response(JSON.stringify({ error: { message: "transient private detail" } }), { status, headers: { "content-type": "application/json" } })
-        : new Response(JSON.stringify(completion({ toolCalls: [{ id: "fallback-search", name: "anny_search_resources", arguments: '{"kind":"meeting_room"}' }] })), { headers: { "content-type": "application/json" } });
+    const fetch: typeof globalThis.fetch = (url) => {
+      calls.push(requestUrl(url));
+      return Promise.resolve(calls.length === 1 ? new Response(JSON.stringify({ error: { message: "transient private detail" } }), { status, headers: { "content-type": "application/json" } })
+        : new Response(JSON.stringify(completion({ toolCalls: [{ id: "fallback-search", name: "anny_search_resources", arguments: '{"kind":"meeting_room"}' }] })), { headers: { "content-type": "application/json" } }));
     };
     const routingPins = pins();
-    const telemetry = vi.fn();
+    const telemetry = telemetrySpy();
     const first = await runModelStep(input(), { env, fetch, now: NOW, routingPins, telemetry });
     expect(telemetry.mock.calls.map(call => [call[0].outcome, call[0].profileId])).toEqual([["failure", "groq-oss-120b"], ["success", "gwdg-qwen3-30b"]]);
     expect(telemetry.mock.calls[0]?.[0].inputTokens).toBeUndefined();
@@ -860,8 +1233,8 @@ describe("operator routing policy", () => {
     const reply = await runModelStep(next, { env, fetch: subsequent.fetch, now: NOW, routingPins });
     expect(reply.profile.id).toBe("gwdg-qwen3-30b");
     expect(subsequent.calls.map(call => call.url)).toEqual(["https://chat-ai.academiccloud.de/v1/chat/completions"]);
-    expect(String(subsequent.calls[0]?.init?.body)).not.toContain(first.routingToken);
-    await expectRouterError(runModelStep({ ...next, messages: [{ ...input().messages[0]!, content: "changed task" }] }, { env, fetch: subsequent.fetch, now: NOW, routingPins }), "profile_not_approved");
+    expect(providerBodyText(subsequent.calls[0]?.init)).not.toContain(first.routingToken);
+    await expectRouterError(runModelStep({ ...next, messages: [{ ...requiredValue(input().messages[0], "first request message"), content: "changed task" }] }, { env, fetch: subsequent.fetch, now: NOW, routingPins }), "profile_not_approved");
     expect(subsequent.calls).toHaveLength(1);
   });
 
@@ -869,7 +1242,9 @@ describe("operator routing policy", () => {
     const env = environment(config => {
       config.policy.userChoice.profileIds = ["groq-oss-120b"];
       config.policy.maxAttempts = 3;
-      config.profiles.find(profile => profile.id === "groq-qwen-3.8-27b")!.capabilities.tools = false;
+      const ineligible = config.profiles.find(profile => profile.id === "groq-qwen-3.8-27b");
+      if (!ineligible) throw new Error("Expected the Qwen sibling profile");
+      ineligible.capabilities.tools = false;
       config.policy.fallbacks = [
         {
           from: "groq-oss-120b",
@@ -879,17 +1254,17 @@ describe("operator routing policy", () => {
         { from: "gwdg-qwen3-30b", targets: ["groq-oss-20b"], on: ["server_error"] },
       ];
     });
-    const calls: Array<{ url: string; model: string }> = [];
-    const fetch: typeof globalThis.fetch = async (url, init) => {
-      const body = JSON.parse(String(init?.body)) as { model: string };
-      calls.push({ url: String(url), model: body.model });
+    const calls: { url: string; model: string }[] = [];
+    const fetch: typeof globalThis.fetch = (url, init) => {
+      const body = providerRequest(init);
+      calls.push({ url: requestUrl(url), model: requiredValue(body.model, "provider model") });
       if (calls.length === 1) {
-        return new Response(JSON.stringify({ error: { message: "transient A failure" } }), { status: 429, headers: { "content-type": "application/json" } });
+        return Promise.resolve(new Response(JSON.stringify({ error: { message: "transient A failure" } }), { status: 429, headers: { "content-type": "application/json" } }));
       }
       if (calls.length === 2) {
-        return new Response(JSON.stringify({ error: { message: "transient B failure" } }), { status: 503, headers: { "content-type": "application/json" } });
+        return Promise.resolve(new Response(JSON.stringify({ error: { message: "transient B failure" } }), { status: 503, headers: { "content-type": "application/json" } }));
       }
-      return new Response(JSON.stringify(completion({ content: "D succeeded." })), { headers: { "content-type": "application/json" } });
+      return Promise.resolve(new Response(JSON.stringify(completion({ content: "D succeeded." })), { headers: { "content-type": "application/json" } }));
     };
     const routingPins = pins();
     const turn = input();
@@ -901,9 +1276,12 @@ describe("operator routing policy", () => {
       { url: "https://chat-ai.academiccloud.de/v1/chat/completions", model: "qwen3-30b-a3b-instruct-2507" },
       { url: "https://api.groq.com/openai/v1/chat/completions", model: "openai/gpt-oss-20b" },
     ]);
-    const user = turn.messages.find(message => message.role === "user")!;
+    const user = turn.messages.find(message => message.role === "user");
+    if (!user) throw new Error("Expected a user message in the test turn");
     const config = loadModelConfiguration(env);
-    expect(routingPins.verify(reply.routingToken!, {
+    const routingToken = reply.routingToken;
+    if (!routingToken) throw new Error("Expected a routing token from fallback");
+    expect(routingPins.verify(routingToken, {
       turnId,
       turnHash: createHash("sha256").update(JSON.stringify([turnId, user.content])).digest("hex"),
       revision: createHash("sha256").update(JSON.stringify(config)).digest("hex"),
@@ -915,7 +1293,7 @@ describe("operator routing policy", () => {
   });
 
   it.each([400, 401, 403])("never falls back for HTTP %i or reruns an external action", async status => {
-    const env = environment(() => {});
+    const env = environment(() => undefined);
     const provider = fakeProvider({ error: { message: "private authentication detail" } }, status);
     await expectRouterError(runModelStep(input(), { env, fetch: provider.fetch, now: NOW, routingPins: pins() }), "provider_unavailable");
     expect(provider.calls).toHaveLength(1);
@@ -923,7 +1301,8 @@ describe("operator routing policy", () => {
 
   it.each(["missing-key", "data-policy", "tool-capability", "no-rule"] as const)("does not contact an ineligible fallback: %s", async reason => {
     const env = environment(config => {
-      const target = config.profiles.find(profile => profile.id === "gwdg-qwen3-30b")!;
+      const target = config.profiles.find(profile => profile.id === "gwdg-qwen3-30b");
+      if (!target) throw new Error("Expected the GWDG profile");
       if (reason === "data-policy") target.allowedDataClasses = ["internal"];
       if (reason === "tool-capability") target.capabilities.tools = false;
       if (reason === "no-rule") config.policy.fallbacks = [];
@@ -935,7 +1314,7 @@ describe("operator routing policy", () => {
   });
 
   it("rejects disallowed classes across the full outgoing context before any provider fetch", async () => {
-    const env = environment(() => {});
+    const env = environment(() => undefined);
     const provider = fakeProvider(completion({ content: "unused" }));
     await expectRouterError(runModelStep(input(), {
       env,
@@ -947,12 +1326,12 @@ describe("operator routing policy", () => {
   });
 
   it("counts Groq regeneration against the same budget before considering fallback", async () => {
-    const env = environment(() => {});
+    const env = environment(() => undefined);
     const calls: string[] = [];
-    const fetch: typeof globalThis.fetch = async url => {
-      calls.push(String(url));
+    const fetch: typeof globalThis.fetch = url => {
+      calls.push(requestUrl(url));
       const first = calls.length === 1;
-      return new Response(JSON.stringify({ error: { message: "failed", ...(first ? { code: "tool_use_failed" } : {}) } }), { status: first ? 400 : 429, headers: { "content-type": "application/json" } });
+      return Promise.resolve(new Response(JSON.stringify({ error: { message: "failed", ...(first ? { code: "tool_use_failed" } : {}) } }), { status: first ? 400 : 429, headers: { "content-type": "application/json" } }));
     };
     await expectRouterError(runModelStep(input(), { env, fetch, now: NOW, routingPins: pins() }), "provider_rate_limited");
     expect(calls).toHaveLength(2);
@@ -960,12 +1339,12 @@ describe("operator routing policy", () => {
   });
 
   it("falls back for an explicit transport timeout, with no external tool execution", async () => {
-    const env = environment(() => {});
+    const env = environment(() => undefined);
     const calls: string[] = [];
-    const fetch: typeof globalThis.fetch = async url => {
-      calls.push(String(url));
-      if (calls.length === 1) throw new DOMException("test timeout", "TimeoutError");
-      return new Response(JSON.stringify(completion({ content: "Anfrage übernommen." })), { headers: { "content-type": "application/json" } });
+    const fetch: typeof globalThis.fetch = url => {
+      calls.push(requestUrl(url));
+      if (calls.length === 1) return Promise.reject(new DOMException("test timeout", "TimeoutError"));
+      return Promise.resolve(new Response(JSON.stringify(completion({ content: "Anfrage übernommen." })), { headers: { "content-type": "application/json" } }));
     };
     const reply = await runModelStep(input(), { env, fetch, now: NOW, routingPins: pins() });
     expect(reply.profile.id).toBe("gwdg-qwen3-30b");
@@ -975,7 +1354,7 @@ describe("operator routing policy", () => {
   it("fails closed for invalid explicit configuration and forged routing tokens", async () => {
     const provider = fakeProvider(completion({ content: "unused" }));
     await expectRouterError(runModelStep(input(), { env: { GROQ_API_KEY: FAKE_KEY, HASI_LLM_CONFIG: '{"unsafe":"configuration"}' }, fetch: provider.fetch }), "configuration_invalid");
-    await expectRouterError(runModelStep({ ...input(), routingToken: "forged" }, { env: environment(() => {}), fetch: provider.fetch, routingPins: pins() }), "profile_not_approved");
+    await expectRouterError(runModelStep({ ...input(), routingToken: "forged" }, { env: environment(() => undefined), fetch: provider.fetch, routingPins: pins() }), "profile_not_approved");
     expect(provider.calls).toHaveLength(0);
   });
 });
@@ -998,7 +1377,7 @@ describe("standard provider adapters", () => {
     expect(reply.message.toolCalls?.[0]).toMatchObject({ name: "anny_search_resources", arguments: { kind: "meeting_room" } });
     const expectedPath = adapter === "anthropic" ? "https://api.anthropic.com/v1/messages" : adapter === "openai-chat" ? "https://api.openai.com/v1/chat/completions" : "https://api.openai.com/v1/responses";
     expect(upstream.calls[0]?.url).toBe(expectedPath);
-    const sent = JSON.parse(String(upstream.calls[0]?.init?.body));
+    const sent = providerRequest(upstream.calls[0]?.init);
     expect(sent.temperature).toBeUndefined();
     if (provider === "openai") expect(sent.store).toBe(false);
     expect(upstream.calls[0]?.init?.redirect).toBe("error");
@@ -1011,7 +1390,7 @@ describe("standard provider adapters", () => {
 describe("bounded provider context and usage", () => {
   it.each([0, 1024])("records Groq's explicit cache-read counter %s while preserving the existing chat reply contract", async (cachedTokens) => {
     const provider = fakeProvider(completion({ content: "Private answer.", usage: { prompt_tokens: 1400, completion_tokens: 30, prompt_tokens_details: { cached_tokens: cachedTokens } } }));
-    const telemetry = vi.fn();
+    const telemetry = telemetrySpy();
     const reply = await runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW, telemetry });
     const cache = { readTokens: cachedTokens, uncachedTokens: 1400 - cachedTokens, readRatio: cachedTokens / 1400 };
     expect(reply.usage).toEqual({ inputTokens: 1400, outputTokens: 30 });
@@ -1026,14 +1405,14 @@ describe("bounded provider context and usage", () => {
     { prompt_tokens: 1400, completion_tokens: 1, prompt_tokens_details: { cached_tokens: 1401 } },
   ])("omits unreported or inconsistent Groq cache counters rather than inventing savings: %j", async (usage) => {
     const provider = fakeProvider(completion({ content: "Hallo.", usage }));
-    const telemetry = vi.fn();
+    const telemetry = telemetrySpy();
     const reply = await runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW, telemetry });
     expect(reply.usage).not.toHaveProperty("cache");
     expect(telemetry.mock.calls[0]?.[0].cache).toBeUndefined();
   });
   it("does not assume cache semantics for unqualified compatible adapters", async () => {
     const provider = fakeProvider(completion({ content: "Hallo.", usage: { prompt_tokens: 1400, completion_tokens: 30, prompt_tokens_details: { cached_tokens: 1024 } } }));
-    const telemetry = vi.fn();
+    const telemetry = telemetrySpy();
     const reply = await runModelStep(request("custom-default"), { env: validCustomEnvironment(), fetch: provider.fetch, now: NOW, telemetry });
     expect(reply.usage).not.toHaveProperty("cache");
     expect(telemetry).toHaveBeenCalledTimes(1);
@@ -1041,11 +1420,11 @@ describe("bounded provider context and usage", () => {
   });
   it("records only counts and allowlisted quota metadata while keeping the request bounded", async () => {
     const provider = fakeProvider(completion({ content: "Hallo.", usage: { prompt_tokens: 1400, completion_tokens: 30 } }), 200, { "x-ratelimit-limit-tokens": "8000", "x-ratelimit-remaining-tokens": "6600", "x-private": FAKE_KEY });
-    const telemetry = vi.fn();
+    const telemetry = telemetrySpy();
     await runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW, telemetry });
     expect(telemetry).toHaveBeenCalledWith(expect.objectContaining({ profileId: "groq-oss-120b", attempts: 1, inputTokens: 1400, outputTokens: 30, rateLimits: { tokenLimit: 8000, tokenRemaining: 6600 } }));
     expect(JSON.stringify(telemetry.mock.calls)).not.toMatch(/test-groq-key-only|Hallo|authorization|x-private/iu);
-    expect(new TextEncoder().encode(String(provider.calls[0]?.init?.body)).byteLength).toBeLessThan(12_500);
+    expect(new TextEncoder().encode(providerBodyText(provider.calls[0]?.init)).byteLength).toBeLessThan(12_500);
   });
   it("retains the upstream quota dimension and bounded wait without exposing provider text", async () => {
     const provider = fakeProvider({ error: { message: `Private ${FAKE_KEY} tokens per minute (TPM)`, code: "rate_limit_exceeded" } }, 429, { "retry-after": "7", "x-ratelimit-limit-tokens": "8000", "x-ratelimit-remaining-tokens": "0", "x-private": FAKE_KEY });
@@ -1059,11 +1438,11 @@ describe("bounded provider context and usage", () => {
     const second = fakeProvider(completion({ content: "Hallo." }));
     await runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: first.fetch, now: NOW });
     await runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: second.fetch, now: new Date("2026-10-18T10:00:00Z") });
-    const a = JSON.parse(String(first.calls[0]?.init?.body));
-    const b = JSON.parse(String(second.calls[0]?.init?.body));
-    expect(a.messages[0].content.split("Die aktuelle Zeit ist")[0]).toBe(b.messages[0].content.split("Die aktuelle Zeit ist")[0]);
-    expect(a.messages[1].content).toBe("Hallo.");
-    expect(b.messages[1].content).toBe("Hallo.");
+    const a = providerRequest(first.calls[0]?.init);
+    const b = providerRequest(second.calls[0]?.init);
+    expect(messageContent(a, 0).split("Die aktuelle Zeit ist")[0]).toBe(messageContent(b, 0).split("Die aktuelle Zeit ist")[0]);
+    expect(requiredMessages(a)[1]?.content).toBe("Hallo.");
+    expect(requiredMessages(b)[1]?.content).toBe("Hallo.");
   });
 });
 
@@ -1076,10 +1455,10 @@ it.each([
   ["Meine Reservierungen und VPN", ["knowledge_search", "anny_search_resources", "anny_get_availability", "anny_list_my_bookings", "anny_propose_cancellation", "anny_propose_booking"]],
 ])("advertises only needed tools for a clear task and preserves mixed tasks: %s", async (text, names) => {
   const provider = fakeProvider(completion({ content: "Bereit." }));
-  await runModelStep({ ...request(), messages: [{ role: "user", content: text as string }] }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
-  const body = JSON.parse(String(provider.calls[0]?.init?.body));
-  expect(body.tools.map((entry: { function: { name: string } }) => entry.function.name)).toEqual(names);
-  if (String(text).startsWith("Ich suche")) expect(new TextEncoder().encode(String(provider.calls[0]?.init?.body)).byteLength).toBeLessThan(10_000);
+  await runModelStep({ ...request(), messages: [{ role: "user", content: text }] }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
+  const body = providerRequest(provider.calls[0]?.init);
+  expect(providerToolNames(body)).toEqual(names);
+  if (text.startsWith("Ich suche")) expect(new TextEncoder().encode(providerBodyText(provider.calls[0]?.init)).byteLength).toBeLessThan(10_000);
 });
 
 it("rejects an unadvertised tool without invoking any action", async () => {
@@ -1098,9 +1477,9 @@ it("keeps room tools for a contextual availability/WLAN follow-up", async () => 
     { role: "user", content: "Ist es morgen frei und gibt es WLAN?" },
   ];
   await runModelStep({ ...request(), messages }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
-  const sent = JSON.parse(String(provider.calls[0]?.init?.body));
-  expect(sent.tools.map((entry: { function: { name: string } }) => entry.function.name)).toContain("anny_get_availability");
-  expect(sent.tools.map((entry: { function: { name: string } }) => entry.function.name)).toContain("knowledge_search");
+  const sent = providerRequest(provider.calls[0]?.init);
+  expect(providerToolNames(sent)).toContain("anny_get_availability");
+  expect(providerToolNames(sent)).toContain("knowledge_search");
 });
 
 it("synthesizes a combined knowledge/room batch without advertising further tools", async () => {
@@ -1112,10 +1491,10 @@ it("synthesizes a combined knowledge/room batch without advertising further tool
     { role: "tool", toolCallId: "r", name: "anny_search_resources", content: '{"resources":[]}' },
   ];
   await runModelStep({ ...request(), messages }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
-  const sent = JSON.parse(String(provider.calls[0]?.init?.body));
+  const sent = providerRequest(provider.calls[0]?.init);
   expect(sent.tools ?? []).toEqual([]);
-  expect(JSON.stringify(sent.messages)).toContain("Fiktive WLAN-Anleitung");
-  expect(sent.messages[0].content).toContain("Keine weiteren Tool-Aufrufe");
+  expect(JSON.stringify(requiredMessages(sent))).toContain("Fiktive WLAN-Anleitung");
+  expect(requiredMessages(sent)[0]?.content).toContain("Keine weiteren Tool-Aufrufe");
 });
 
 
@@ -1131,14 +1510,14 @@ it.each([true, false])("preserves a sequential mixed task and stops repeated ret
   ];
   const secondProvider = fakeProvider(completion({ toolCalls: [{ id: "second-goal", name: secondName, arguments: JSON.stringify(secondArgs) }] }));
   const planned = await runModelStep({ ...request(), messages }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: secondProvider.fetch, now: NOW });
-  const sent = JSON.parse(String(secondProvider.calls[0]?.init?.body));
-  const names = sent.tools.map((entry: { function: { name: string } }) => entry.function.name);
+  const sent = providerRequest(secondProvider.calls[0]?.init);
+  const names = providerToolNames(sent);
   expect(names).toContain(secondName);
   expect(names).not.toContain(firstName);
   messages.push(planned.message, { role: "tool", toolCallId: "second-goal", name: secondName, content: JSON.stringify(knowledgeFirst ? { resources: [] } : { documents: [] }) });
   const finalProvider = fakeProvider(completion({ content: "Die Wissenssuche liefert keine Belege; Raumkarten stehen bereit." }));
   await runModelStep({ ...request(), messages }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: finalProvider.fetch, now: NOW });
-  expect(JSON.parse(String(finalProvider.calls[0]?.init?.body)).tools ?? []).toEqual([]);
+  expect(providerRequest(finalProvider.calls[0]?.init).tools ?? []).toEqual([]);
 });
 
 
@@ -1150,6 +1529,6 @@ it("does not carry unrelated Anny schemas into a new clear knowledge question", 
     { role: "tool", toolCallId: "old-room", name: "anny_search_resources", content: '{"resources":[]}' },
     { role: "user", content: "Wie funktioniert VPN?" },
   ] }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
-  const sent = JSON.parse(String(provider.calls[0]?.init?.body));
-  expect(sent.tools.map((entry: { function: { name: string } }) => entry.function.name)).toEqual(["knowledge_search"]);
+  const sent = providerRequest(provider.calls[0]?.init);
+  expect(providerToolNames(sent)).toEqual(["knowledge_search"]);
 });

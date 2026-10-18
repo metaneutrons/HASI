@@ -3,6 +3,23 @@ import type { ActorContext } from '@hasi/plugin-sdk';
 import { RequestError } from './registry.js';
 
 export interface Persona { id: string; displayName: string; role: 'student' | 'employee' | 'admin'; actor: ActorContext }
+
+/** Projects server-owned demo actor fields into namespaced plugin claims for v2 contracts. */
+export function withDemoPluginClaims(actor: ActorContext): ActorContext {
+  const claims = { ...actor.claims };
+  if (actor.customerId !== undefined) claims['anny.customerId'] = actor.customerId;
+  if (actor.resourceIds !== undefined) claims['anny.resourceIds'] = [...actor.resourceIds];
+  return { ...actor, claims };
+}
+
+/** Claims from an ID token after signature, issuer, audience and time checks. */
+export interface VerifiedOidcIdentity {
+  issuer: string;
+  subject: string;
+  claims: Readonly<Record<string, unknown>>;
+}
+/** Operator-owned projection from a verified upstream identity into HASI policy. */
+export type OidcIdentityMapper = (identity: VerifiedOidcIdentity) => Persona | Promise<Persona>;
 export interface IdentityProvider {
   login(id: string): { token: string; user: Persona } | Promise<{ token: string; user: Persona }>;
   resolve(token: string | undefined): Persona | undefined | Promise<Persona | undefined>;
@@ -26,6 +43,7 @@ export class MockIdentityProvider {
     const user = template ? structuredClone(template) : undefined;
     if (!user) throw new RequestError(400, 'Unbekanntes Testkonto.');
     if (this.resourceIds) user.actor.resourceIds = [...this.resourceIds];
+    user.actor = withDemoPluginClaims(user.actor);
     const token = randomBytes(32).toString('base64url');
     this.sessions.set(token, { persona: user, expires: Date.now() + 3600000 });
     return { token, user };

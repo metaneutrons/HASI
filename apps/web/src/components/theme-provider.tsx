@@ -12,10 +12,10 @@ import {
 
 export type Theme = "light" | "dark" | "system";
 
-type ThemeContextValue = {
+interface ThemeContextValue {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-};
+}
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
@@ -30,12 +30,13 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     try {
       const saved = window.localStorage.getItem("hasi-theme-v1");
       if (isTheme(saved)) {
-        const frame = window.requestAnimationFrame(() => updateTheme(saved));
-        return () => window.cancelAnimationFrame(frame);
+        const frame = window.requestAnimationFrame(() => { updateTheme(saved); });
+        return () => { window.cancelAnimationFrame(frame); };
       }
     } catch {
       // The current system theme remains available when storage is disabled.
     }
+    return undefined;
   }, []);
 
   const setTheme = useCallback((nextTheme: Theme) => {

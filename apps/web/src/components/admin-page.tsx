@@ -15,8 +15,10 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, postJson } from "@/lib/api";
 import type { Plugin, PluginTool } from "@/lib/types";
+import { PluginConfigPanel } from "./plugin-config-panel";
+import { PluginSourcePanel } from "./plugin-source-panel";
 
-type UpdateState = { status: "current" | "available" | "blocked"; message: string };
+interface UpdateState { status: "current" | "available" | "blocked"; message: string }
 type PendingById = Record<string, "toggle" | "check" | "activate" | undefined>;
 
 const effectLabels: Record<PluginTool["effect"], string> = {
@@ -67,7 +69,7 @@ function PluginCard({
           aria-checked={plugin.enabled}
           aria-label={`${plugin.enabled ? "Deaktivieren" : "Aktivieren"}: ${plugin.name}`}
           disabled={pending !== undefined}
-          onClick={() => onToggle(plugin)}
+          onClick={() => { onToggle(plugin); }}
         >
           <span className="toggle-thumb" />
         </button>
@@ -94,7 +96,7 @@ function PluginCard({
 
       <div className="plugin-card-footer">
         <span className="plugin-install-label"><ShieldCheck size={15} aria-hidden="true" /> Installiert · {plugin.version}</span>
-        <button className="text-button" type="button" onClick={() => onCheck(plugin)} disabled={pending !== undefined}>
+        <button className="text-button" type="button" onClick={() => { onCheck(plugin); }} disabled={pending !== undefined}>
           {pending === "check" ? <><span className="spinner" /> Prüfen</> : <>Updates prüfen <ArrowDownToLine size={14} aria-hidden="true" /></>}
         </button>
       </div>
@@ -106,12 +108,13 @@ function PluginCard({
             <span><strong>{updateState.status === "current" ? "Aktuell" : updateState.status === "available" ? "Update verfügbar" : "Update blockiert"}</strong><small>{updateState.message}</small></span>
           </span>
           {updateState.status === "available" && (
-            <button className="button button--secondary button--wide update-activate" type="button" disabled={pending !== undefined} onClick={() => onActivate(plugin)}>
+            <button className="button button--secondary button--wide update-activate" type="button" disabled={pending !== undefined} onClick={() => { onActivate(plugin); }}>
               {pending === "activate" ? <><span className="spinner" /> Version wird aktiviert</> : <>Version aktivieren <Check size={15} aria-hidden="true" /></>}
             </button>
           )}
         </div>
       )}
+      <PluginConfigPanel pluginId={plugin.id} name={plugin.name} tools={plugin.tools} />
     </article>
   );
 }
@@ -230,7 +233,7 @@ export function AdminPage() {
         <span className="summary-divider" />
         <div className="admin-summary-state">
           <span className="summary-label">AKTIV</span>
-          <span className="summary-state-value"><span className="status-dot" />{loading ? "Wird geladen" : `${enabledCount} von ${plugins.length}`}</span>
+          <span className="summary-state-value"><span className="status-dot" />{loading ? "Wird geladen" : `${String(enabledCount)} von ${String(plugins.length)}`}</span>
           <span className="summary-caption">Freigeschaltet</span>
         </div>
         <div className="admin-summary-note"><Clock3 size={16} aria-hidden="true" /><span>Änderungen werden direkt gespeichert.</span></div>
@@ -240,8 +243,9 @@ export function AdminPage() {
         <div><span className="section-kicker">INTEGRATIONEN</span><h2>Verbundene Plug-ins</h2></div>
         <span className="environment-badge"><span className="status-dot" /> Testdaten</span>
       </div>
+      <PluginSourcePanel onChanged={loadPlugins} />
 
-      {notice && <div className="admin-notice" role="status"><span>{notice}</span><button className="icon-button" type="button" aria-label="Meldung schließen" onClick={() => setNotice(null)}><CircleAlert size={16} /></button></div>}
+      {notice && <div className="admin-notice" role="status"><span>{notice}</span><button className="icon-button" type="button" aria-label="Meldung schließen" onClick={() => { setNotice(null); }}><CircleAlert size={16} /></button></div>}
 
       {loading ? (
         <div className="plugin-grid" aria-label="Plug-ins werden geladen" aria-busy="true">
@@ -261,7 +265,7 @@ export function AdminPage() {
       ) : (
         <div className="plugin-grid">
           {plugins.map((plugin) => (
-            <PluginCard key={plugin.id} plugin={plugin} pending={pending[plugin.id]} updateState={updateStates[plugin.id]} onToggle={togglePlugin} onCheck={checkUpdate} onActivate={activateUpdate} />
+            <PluginCard key={plugin.id} plugin={plugin} pending={pending[plugin.id]} {...(updateStates[plugin.id] !== undefined ? { updateState: updateStates[plugin.id] } : {})} onToggle={(plugin) => { void togglePlugin(plugin); }} onCheck={(plugin) => { void checkUpdate(plugin); }} onActivate={(plugin) => { void activateUpdate(plugin); }} />
           ))}
         </div>
       )}

@@ -2,7 +2,7 @@
 
 import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, MessageCircle, PanelLeft, Plus, Search, Sparkles, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type SyntheticEvent } from "react";
 import { apiRequest, formatDateTime, formatTime } from "@/lib/api";
 import { classifyIntent, matchingResources, mergeRoomRequest, missingRoomDetails, requestStartDate, roomRequestSummary, workplaceGroupQuestion, workplaceOfficeTypeCounts, workplaceRefinementQuestion, type RoomRequest } from "@/lib/chat-demo";
 import type { Booking, Resource, TimeInterval, User } from "@/lib/types";
@@ -10,10 +10,10 @@ import { useChatWorkspaceStore } from "@/components/chat-sidebar-context";
 import { useSession } from "@/components/session-provider";
 import { availabilityInputForSlot, createAnnyChatTools, type AnnyChatToolResult } from "@/lib/anny-chat-tools";
 import { searchKnowledge, knowledgeDocumentHref, knowledgeSourceLabel } from "@/lib/knowledge";
-import { chatProfileIdSchema, modelProfilesResponseSchema, modelReplySchema, type ModelProfile, type ModelProfileId, type WireMessage } from "@/lib/chat-contract";
+import { chatProfileIdSchema, chatToolSchemas, isChatToolName, modelProfilesResponseSchema, modelReplySchema, type ChatToolCallName, type ChatToolName, type MessageTimestamp, type ModelProfile, type ModelProfileId, type WireMessage } from "@/lib/chat-contract";
 import { createChatMessageClock } from "@/lib/chat-message-clock";
 import { appendChatText, trimChatHistory } from "@/lib/chat-history";
-import type { ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
+import type { AnnyChatProposal, ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
 import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError, RoomTimeUnresolvedError } from "@/lib/chat-room-time";
 import { canStartNewChat } from "@/lib/chat-workspace-store";
 import { ChatSessionList } from "@/components/chat-session-list";
@@ -21,8 +21,10 @@ import { MAX_MODEL_STEPS, toolNeedsModelFollowUp, toolBatchNeedsModelFollowUp, i
 import { ChatMessageCopy } from "@/components/chat-message-copy";
 import { bookingStatusLabel } from "@/lib/chat-message-copy";
 import { ChatRoomResults } from "@/components/chat-room-results";
+import { PluginResultApp } from "@/components/plugin-result-app";
+import { boundedPluginToolResult, compactPluginToolResult, parsePluginProposal, parsePluginProposalSnapshot, parsePluginTools, pluginToolProposalPresentation, samePluginProposalSnapshot, type PluginToolDescriptor, type PluginToolProposal } from "@/lib/plugin-tools";
 
-type ModelConfiguration = { profiles: ModelProfile[]; userChoiceEnabled: boolean; defaultProfileId: ModelProfileId; loading: boolean; error: string | null };
+interface ModelConfiguration { profiles: ModelProfile[]; userChoiceEnabled: boolean; defaultProfileId: ModelProfileId; loading: boolean; error: string | null }
 
 const suggestions = [
   { icon: Search, title: "Einen Raum finden", text: "Ich brauche morgen um 14 Uhr einen Raum für vier Personen für eine Stunde.", caption: "Gemeinsam planen und buchen" },
@@ -45,7 +47,7 @@ function canRequestCancellation(booking: Booking, now = Date.now()) {
     && Date.parse(booking.startDate) > now;
 }
 
-function sameProposalSnapshot(displayed: Proposal, authoritative: Proposal) {
+function sameProposalSnapshot(displayed: AnnyChatProposal, authoritative: AnnyChatProposal) {
   const sameInstant = (left: string, right: string) => {
     const leftTime = Date.parse(left);
     const rightTime = Date.parse(right);
@@ -60,6 +62,12 @@ function sameProposalSnapshot(displayed: Proposal, authoritative: Proposal) {
 
 function roomIdentityKey(resource: Resource) {
   return `${resource.serviceId}:${resource.id}`;
+}
+
+const pluginAppsEnabled = process.env.NEXT_PUBLIC_HASI_PLUGIN_APPS === "1";
+
+function requestWasAborted(active: boolean, signal: AbortSignal | undefined) {
+  return !active || signal?.aborted === true;
 }
 
 export function AssistantPage() {
@@ -99,15 +107,15 @@ function ChatWorkspace({ user }: { user: User }) {
   return <section className="chat-workspace" aria-label="Deine Chatverläufe">
     <dialog className="chat-history-dialog" ref={drawer} id="chat-conversations-dialog" aria-label="Unterhaltungen" onClick={(event) => { if (event.target === event.currentTarget) drawer.current?.close(); }}><div className="chat-history-dialog-body"><ChatSessionList view={view} store={store} close={() => drawer.current?.close()} /></div></dialog>
     <div className="chat-conversations">
-      {view.notice && <div className="chat-storage-notice" role="status"><span>{view.notice}</span><button className="icon-button" type="button" aria-label="Hinweis schließen" onClick={store.dismissNotice}><X size={16} /></button></div>}
-      {!configuration.loading && view.workspace.sessions.map((session) => <Conversation key={session.id} sessionId={session.id} ownerId={user.id} initial={session.snapshot} name={user.displayName.split(/\s|·/)[0] ?? ""} active={session.id === view.workspace.activeId} configuration={configuration} onSnapshot={store.update} onNewChat={newChat} newChatDisabled={!canStartNewChat(view)} onShowHistory={() => drawer.current?.showModal()} />)}
+      {view.notice && <div className="chat-storage-notice" role="status"><span>{view.notice}</span><button className="icon-button" type="button" aria-label="Hinweis schließen" onClick={() => { store.dismissNotice(); }}><X size={16} /></button></div>}
+      {!configuration.loading && view.workspace.sessions.map((session) => <Conversation key={session.id} sessionId={session.id} ownerId={user.id} initial={session.snapshot} name={user.displayName.split(/\s|·/)[0] ?? ""} active={session.id === view.workspace.activeId} configuration={configuration} onSnapshot={(id, snapshot, busy) => { store.updateConversation(id, snapshot, busy); }} onDraft={(id, input) => { store.updateDraft(id, input); }} onNewChat={newChat} newChatDisabled={!canStartNewChat(view)} onShowHistory={() => drawer.current?.showModal()} />)}
     </div>
   </section>;
 }
 
-type ConversationProps = { sessionId: string; ownerId: string; name: string; initial: ChatSnapshot; active: boolean; configuration: ModelConfiguration; onSnapshot: (id: string, snapshot: ChatSnapshot, busy: boolean) => void; onNewChat: () => void; newChatDisabled: boolean; onShowHistory: () => void };
+interface ConversationProps { sessionId: string; ownerId: string; name: string; initial: ChatSnapshot; active: boolean; configuration: ModelConfiguration; onSnapshot: (id: string, snapshot: ChatSnapshot, busy: boolean) => void; onDraft: (id: string, input: string) => void; onNewChat: () => void; newChatDisabled: boolean; onShowHistory: () => void }
 
-function Conversation({ sessionId, ownerId, name, initial, active, configuration, onSnapshot, onNewChat, newChatDisabled, onShowHistory }: ConversationProps) {
+function Conversation({ sessionId, ownerId, name, initial, active, configuration, onSnapshot, onDraft, onNewChat, newChatDisabled, onShowHistory }: ConversationProps) {
   const [messages, setMessages] = useState<Message[]>(initial.messages);
   const [input, setInput] = useState(initial.input);
   const [busy, setBusy] = useState(false);
@@ -162,6 +170,27 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
 
   function updateRequest(next: RoomRequest) { roomIntent.current = next; setRequest(next); }
 
+  function updateInput(next: string) {
+    onDraft(sessionId, next);
+    setInput(next);
+  }
+
+  function getMessageClock() {
+    const clock = messageClock.current;
+    if (!clock) throw new Error("Chat message clock unavailable.");
+    return clock;
+  }
+
+  function withWireTimestamp(message: WireMessage, timestamps: Map<string, MessageTimestamp>): WireMessage {
+    const timestamp = message.id ? timestamps.get(message.id) : undefined;
+    return timestamp ? { ...message, timestamp } : message;
+  }
+
+  function withChatTimestamp(message: Message, timestamps: Map<string, MessageTimestamp>): Message {
+    const timestamp = message.id ? timestamps.get(message.id) : undefined;
+    return timestamp ? { ...message, timestamp } : message;
+  }
+
   function tools() {
     toolBridge.current ??= createAnnyChatTools(requestForChat);
     return toolBridge.current;
@@ -183,18 +212,24 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
 
   async function requestForChat<T>(path: string, init: RequestInit = {}): Promise<T> {
     const signal = pendingRequest.current?.signal;
-    if (!alive.current || signal?.aborted) throw new DOMException("Chat closed", "AbortError");
-    const session = await apiRequest<{ user: User | null }>("/api/session", { signal });
-    if (!alive.current || signal?.aborted || session.user?.id !== ownerId) throw new Error("Das Testkonto wurde gewechselt. Bitte öffne den Chat erneut.");
-    const result = await apiRequest<T>(path, { ...init, signal });
-    if (!alive.current || signal?.aborted) throw new DOMException("Chat closed", "AbortError");
+    if (requestWasAborted(alive.current, signal)) throw new DOMException("Chat closed", "AbortError");
+    const session = await apiRequest<{ user: User | null }>("/api/session", signal === undefined ? {} : { signal });
+    if (requestWasAborted(alive.current, signal) || session.user?.id !== ownerId) throw new Error("Das Testkonto wurde gewechselt. Bitte öffne den Chat erneut.");
+    const result = await apiRequest<T>(path, { ...init, ...(signal === undefined ? {} : { signal }) });
+    if (requestWasAborted(alive.current, signal)) throw new DOMException("Chat closed", "AbortError");
     return result;
   }
 
   function postForChat<T>(path: string, body: unknown) { return requestForChat<T>(path, { method: "POST", body: JSON.stringify(body) }); }
 
+  async function loadModelTools(): Promise<PluginToolDescriptor[]> {
+    const parsed = parsePluginTools(await requestForChat<unknown>("/api/tools"));
+    if (!parsed) throw new Error("Die freigegebenen Werkzeuge konnten nicht sicher geladen werden.");
+    return parsed;
+  }
+
   function remember<T extends WireMessage>(message: T): T {
-    return messageClock.current!.track(message);
+    return getMessageClock().track(message);
   }
 
   function appendHistory(role: "user" | "assistant", text: string, eventId = id()) {
@@ -206,9 +241,9 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   }
 
   async function stampMessages() {
-    const timestamps = await messageClock.current!.flush();
-    if (timestamps.size) history.current = history.current.map(message => message.id && timestamps.has(message.id) ? { ...message, timestamp: timestamps.get(message.id)! } : message);
-    if (timestamps.size) setMessages(previous => previous.map(message => timestamps.has(message.id) ? { ...message, timestamp: timestamps.get(message.id)! } : message));
+    const timestamps = await getMessageClock().flush();
+    if (timestamps.size) history.current = history.current.map(message => withWireTimestamp(message, timestamps));
+    if (timestamps.size) setMessages(previous => previous.map(message => withChatTimestamp(message, timestamps)));
     return timestamps;
   }
 
@@ -244,7 +279,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     setBusy(false);
   }
 
-  function recordTool(name: import("@/lib/chat-contract").ChatToolName, arguments_: Record<string, unknown>, output: Record<string, unknown>) {
+  function recordTool(name: ChatToolCallName, arguments_: Record<string, unknown>, output: Record<string, unknown>) {
     const callId = id();
     history.current.push(remember({ role: "assistant", content: "", toolCalls: [{ id: callId, name, arguments: arguments_ }] }));
     history.current.push(remember({ role: "tool", content: JSON.stringify(output), toolCallId: callId, name }));
@@ -269,7 +304,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     const returned = typeof result.output.returned === "number" && Number.isInteger(result.output.returned) && result.output.returned >= 0 ? result.output.returned : 0;
     const truncated = typeof result.output.truncated === "number" && Number.isInteger(result.output.truncated) && result.output.truncated > 0 ? result.output.truncated : 0;
     const truncatedSearchText = result.name === "anny_search_resources" && truncated > 0
-      ? `${returned + truncated} passende Katalogtreffer. Die Karten enthalten die ersten ${returned}; die Verfügbarkeit wurde noch nicht geprüft. Mit einem Büronamen oder Standort kannst du die Suche eingrenzen.`
+      ? `${String(returned + truncated)} passende Katalogtreffer. Die Karten enthalten die ersten ${String(returned)}; die Verfügbarkeit wurde noch nicht geprüft. Mit einem Büronamen oder Standort kannst du die Suche eingrenzen.`
       : undefined;
     const text = result.proposal?.action === "cancel_booking" ? "Der Stornierungsvorschlag ist vorbereitet. Prüfe die Buchung; erst die separate Bestätigung auf dieser Karte führt die Stornierung aus."
       : result.proposal ? "Bitte prüfe den Buchungsvorschlag. Erst die Bestätigung auf dieser Karte löst die Testbuchung aus."
@@ -277,7 +312,16 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
       : truncatedSearchText ?? questionText
       ?? (result.rooms ? (result.rooms.length ? "Ergebnisse aus den anny-Testdaten." : "Keine Treffer für diese Suchfilter. Die Verfügbarkeit wurde noch nicht geprüft.")
       : result.bookings ? (result.bookings.length ? "Deine Buchungen aus der Testumgebung." : "Du hast noch keine Testbuchungen.") : "Tool-Abfrage abgeschlossen.");
-    add({ role: "assistant", text, tool: labels[result.name], rooms: result.rooms, bookings: result.bookings, proposal: result.proposal, model, interactionId });
+    add({
+      role: "assistant",
+      text,
+      tool: labels[result.name],
+      ...(result.rooms === undefined ? {} : { rooms: result.rooms }),
+      ...(result.bookings === undefined ? {} : { bookings: result.bookings }),
+      ...(result.proposal === undefined ? {} : { proposal: result.proposal }),
+      model,
+      interactionId,
+    });
     if (result.rooms) setActiveResult(interactionId);
     if (result.proposal) setActiveProposal(result.proposal.id);
   }
@@ -286,11 +330,14 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     // Keep complete exchanges, including direct tool actions with no inference.
     if (!trimChatHistory(history.current)) throw new Error("Dieser einzelne Gesprächsschritt ist für den Modellkontext zu umfangreich. Beginne bitte einen neuen Chat mit einer kürzeren Anfrage; deine vorhandenen Karten bleiben erhalten.");
     const interactionId = id();
-    const controller = pendingRequest.current!;
+    const controller = pendingRequest.current;
+    if (!controller) throw new Error("Chat request was not started.");
     const latestUserText = history.current.findLast(message => message.role === "user")?.content ?? "";
     const mixedRequest = isMixedKnowledgeRequest(latestUserText, roomContext);
     const stepLimit = mixedRequest ? 3 : MAX_MODEL_STEPS;
     try {
+      const authorizedTools = await loadModelTools();
+      const pluginToolsByModelName = new Map(authorizedTools.map(descriptor => [descriptor.modelName, descriptor]));
       for (let step = 0; step < stepLimit; step += 1) {
         setActivity(`${resolvedProfile.current ? modelProviderName(resolvedProfile.current) : providerLabel ?? "Das Modell"} antwortet …`);
         await stampMessages();
@@ -311,32 +358,66 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         setFallbackLabel(reply.profile.id !== profileId ? actualLabel : null);
         if (reply.routingToken) routingToken.current = reply.routingToken;
         history.current.push(reply.message);
-        if (reply.message.content.trim()) add({ role: "assistant", text: reply.message.content, model: actualLabel, timestamp: reply.message.timestamp }, reply.message.id);
+        if (reply.message.content.trim()) add({
+          role: "assistant",
+          text: reply.message.content,
+          model: actualLabel,
+          ...(reply.message.timestamp === undefined ? {} : { timestamp: reply.message.timestamp }),
+        }, reply.message.id);
         if (!reply.message.toolCalls?.length) return;
         let actionableResult = false;
-        const successfulTools: import("@/lib/chat-contract").ChatToolName[] = [];
+        const successfulTools: ChatToolName[] = [];
         for (const call of reply.message.toolCalls) {
-          setActivity(`anny · ${call.name === "anny_propose_booking" ? "Buchung vorbereiten" : call.name === "anny_propose_cancellation" ? "Stornierung beginnen" : "Testdaten abfragen"}`);
+          const pluginDescriptor = isChatToolName(call.name) ? undefined : pluginToolsByModelName.get(call.name);
+          setActivity(pluginDescriptor ? `Plugin · ${pluginDescriptor.title}` : `anny · ${call.name === "anny_propose_booking" ? "Buchung vorbereiten" : call.name === "anny_propose_cancellation" ? "Stornierung beginnen" : "Testdaten abfragen"}`);
           let output: Record<string, unknown>;
           try {
-            if (call.name === "knowledge_search") {
+            if (!isChatToolName(call.name)) {
+              if (!pluginDescriptor) throw new Error("Das freigegebene Werkzeug ist in dieser Sitzung nicht verfügbar.");
+              const raw = await postForChat<unknown>("/api/tools/call", {
+                pluginId: pluginDescriptor.pluginId,
+                name: pluginDescriptor.name,
+                arguments: call.arguments,
+              });
+              output = boundedPluginToolResult(raw);
+              if (pluginDescriptor.effect === "prepare") {
+                const proposal = parsePluginProposal(raw, pluginDescriptor);
+                if (!proposal) throw new Error("Der Vorschlag konnte nicht sicher geprüft werden.");
+                add({
+                  role: "assistant",
+                  text: `Der Vorschlag „${proposal.title}“ ist vorbereitet. Prüfe die angegebenen Daten; erst die gesonderte Bestätigung auf dieser Karte führt die Aktion aus.`,
+                  tool: `Plugin · ${proposal.title}`,
+                  proposal,
+                  model: actualLabel,
+                });
+                setActiveProposal(proposal.id);
+                actionableResult = true;
+              } else {
+                add({ role: "assistant", text: compactPluginToolResult(output), tool: `Plugin · ${pluginDescriptor.title}`, model: actualLabel });
+              }
+            } else if (call.name === "knowledge_search") {
               setActivity("Wissensdienst · Demoquellen suchen");
-              const result = await searchKnowledge(requestForChat, call.arguments as { query: string; sourceSystem?: "service_it" | "intranet" });
+              const args = chatToolSchemas.knowledge_search.parse(call.arguments);
+              const result = await searchKnowledge(requestForChat, {
+                query: args.query,
+                ...(args.sourceSystem === undefined ? {} : { sourceSystem: args.sourceSystem }),
+              });
               output = { ...result };
               successfulTools.push("knowledge_search");
               add({ role: "assistant", text: result.documents.length ? "Gefundene Demoquellen. Die folgende Antwort wertet diese Beispiele aus." : "Keine passenden, für dein Testkonto freigegebenen Demoquellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents, model: actualLabel });
             } else {
-            assertRequestedRoomTime(call.name, call.arguments, roomIntent.current);
-            const result = await tools().run(call.name, call.arguments);
-            output = result.output;
-            successfulTools.push(result.name);
-            showToolResult(result, interactionId, actualLabel);
-            actionableResult ||= !toolNeedsModelFollowUp(result.name);
+              assertRequestedRoomTime(call.name, call.arguments, roomIntent.current);
+              const result = await tools().run(call.name, call.arguments);
+              output = result.output;
+              successfulTools.push(result.name);
+              showToolResult(result, interactionId, actualLabel);
+              actionableResult ||= !toolNeedsModelFollowUp(result.name);
             }
           } catch (cause) {
             if (cause instanceof RoomTimeUnresolvedError) actionableResult = true;
             output = { error: cause instanceof Error ? cause.message : "Das Tool konnte die Anfrage nicht abschließen.", ...(cause instanceof RoomTimeMismatchError ? { requestedInterval: cause.expectedInterval } : {}) };
-            add({ role: "assistant", text: String(output.error), tool: call.name === "knowledge_search" ? "Wissensdienst · Anfrage fehlgeschlagen" : "anny · Anfrage fehlgeschlagen" });
+            const failedLabel = pluginDescriptor ? `Plugin · ${pluginDescriptor.title} · Anfrage fehlgeschlagen` : call.name === "knowledge_search" ? "Wissensdienst · Anfrage fehlgeschlagen" : "anny · Anfrage fehlgeschlagen";
+            add({ role: "assistant", text: String(output.error), tool: failedLabel });
           }
           history.current.push(remember({ role: "tool", toolCallId: call.id, name: call.name, content: JSON.stringify(output) }));
         }
@@ -369,14 +450,16 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
       return;
     }
     if (next.kind === "workplace" && next.officeType && next.officeType !== "any" && matches.length === 0) {
-      const unfiltered = matchingResources(result.resources, { ...next, officeType: undefined });
+      const unfilteredRequest = { ...next };
+      delete unfilteredRequest.officeType;
+      const unfiltered = matchingResources(result.resources, unfilteredRequest);
       const unknown = workplaceOfficeTypeCounts(unfiltered).unknown;
       if (unknown > 0) {
         const requestedName = next.officeType === "single" ? "Einzelbüro/1er-Büro" : "geteiltes/2er-/3er-Büro";
         add({
           role: "assistant",
           tool: "anny · Raumsuche",
-          text: `Kein Arbeitsplatz-Treffer ist ausdrücklich als ${requestedName} dokumentiert. Bei ${unknown} weiteren Treffern ist der Bürotyp nicht dokumentiert; daraus folgt nicht, dass es dort keine passenden Büros gibt. Verfügbarkeit wurde nicht geprüft.`,
+          text: `Kein Arbeitsplatz-Treffer ist ausdrücklich als ${requestedName} dokumentiert. Bei ${String(unknown)} weiteren Treffern ist der Bürotyp nicht dokumentiert; daraus folgt nicht, dass es dort keine passenden Büros gibt. Verfügbarkeit wurde nicht geprüft.`,
         });
         return;
       }
@@ -388,16 +471,17 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     }
     const startDate = requestStartDate(next);
     if (missing.length || !startDate || !next.durationMinutes) {
-      const resultId = add({ role: "assistant", tool: "anny · Ressourcen suchen", text: `${selected ? `Wir planen mit ${selected.name}.` : `${matches.length} passende ${next.kind === 'workplace' ? 'Arbeitsplätze' : 'Ressourcen'} gefunden.${matches.length > resources.length ? ' Ich zeige die ersten acht; mit einem Büronamen oder Standort kannst du eingrenzen.' : ''}`} Für die Verfügbarkeitsprüfung brauche ich noch: ${missing.join(", ") || "ein gültiges Datum und eine gültige Startzeit"}. Antworte einfach hier im Chat, zum Beispiel „morgen um 14 Uhr für eine Stunde“.`, rooms: resources.map((resource) => ({ resource, intervals: [], checked: false })) });
+      const resultId = add({ role: "assistant", tool: "anny · Ressourcen suchen", text: `${selected ? `Wir planen mit ${selected.name}.` : `${String(matches.length)} passende ${next.kind === 'workplace' ? 'Arbeitsplätze' : 'Ressourcen'} gefunden.${matches.length > resources.length ? ' Ich zeige die ersten acht; mit einem Büronamen oder Standort kannst du eingrenzen.' : ''}`} Für die Verfügbarkeitsprüfung brauche ich noch: ${missing.join(", ") || "ein gültiges Datum und eine gültige Startzeit"}. Antworte einfach hier im Chat, zum Beispiel „morgen um 14 Uhr für eine Stunde“.`, rooms: resources.map((resource) => ({ resource, intervals: [], checked: false })) });
       setActiveResult(resultId);
       return;
     }
     setActivity("anny · Verfügbarkeit prüfen");
+    const requestedEndDate = new Date(Date.parse(startDate) + next.durationMinutes * 60_000).toISOString();
     const options = await Promise.all(resources.map(async (resource) => {
       const availability = await postForChat<{ intervals: TimeInterval[] }>("/api/availability", { resourceId: resource.id, serviceId: resource.serviceId, startDate, durationMinutes: next.durationMinutes });
       const freeIntervals = availability.intervals.filter((interval) => interval.available);
       const exactInterval = freeIntervals.find((interval) => Date.parse(interval.startDate) === Date.parse(startDate));
-      return { resource, requestedStartDate: startDate, intervals: exactInterval ? [exactInterval] : freeIntervals.slice(0, 3), checked: true };
+      return { resource, requestedStartDate: startDate, requestedEndDate, intervals: exactInterval ? [exactInterval] : freeIntervals.slice(0, 3), checked: true };
     }));
     const count = options.filter((option) => option.intervals.length).length;
     const resultId = add({ role: "assistant", tool: "anny · Raumsuche und Verfügbarkeit", text: `${roomRequestSummary(next)}\n${count ? "Verfügbarkeit geprüft. Die Karten kennzeichnen Treffer im gewünschten Zeitraum und alternative freie Zeiten. Wähle eine Zeit, dann bereite ich den Buchungsvorschlag vor." : "Zu diesen Anforderungen sind keine Zeiten frei. Nenne mir einen anderen Zeitraum."}`, rooms: options });
@@ -410,7 +494,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     routingToken.current = undefined;
     resolvedProfile.current = null;
     setFallbackLabel(null);
-    setInput("");
+    updateInput("");
     const eventId = add({ role: "user", text: trimmed });
     if (!offline) appendHistory("user", trimmed, eventId);
     setActiveResult(null);
@@ -421,7 +505,9 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
       if (/^(ja|ok(?:ay)?|bestätigen|buche(?:n)?|mach das)[.!\s]*$/i.test(trimmed) && pendingProposal) {
         setActiveProposal(pendingProposal);
         const proposal = messages.find((message) => message.proposal?.id === pendingProposal)?.proposal;
-        const text = proposal?.action === "cancel_booking"
+        const text = proposal?.action === "execute_tool"
+          ? `Bitte prüfe „${pluginToolProposalPresentation(proposal).actionTitle}“ auf der Vorschlagskarte und bestätige die Aktion dort ausdrücklich.`
+          : proposal?.action === "cancel_booking"
           ? "Bitte prüfe die Buchung im Stornierungsvorschlag und nutze dort „Stornierung bestätigen“. Erst dieser Schritt löst die Stornierung aus."
           : "Bitte prüfe Raum und Zeitraum im Buchungsvorschlag und nutze dort „Buchung bestätigen“. Erst dieser Schritt löst die Buchung aus.";
         if (!offline) {
@@ -581,7 +667,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
       await stampMessages();
       const args = { bookingId: booking.id };
       const result = await tools().run("anny_propose_cancellation", args);
-      if (!result.proposal || result.proposal.action !== "cancel_booking") throw new Error("Es wurde kein Stornierungsvorschlag zurückgegeben.");
+      if (result.proposal?.action !== "cancel_booking") throw new Error("Es wurde kein Stornierungsvorschlag zurückgegeben.");
       if (!offline) recordTool("anny_propose_cancellation", args, result.output);
       addActionResult({
         text: "Der Stornierungsvorschlag ist vorbereitet. Prüfe die angezeigte Buchung und bestätige die Stornierung ausdrücklich.",
@@ -597,7 +683,63 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     }
   }
 
+  async function confirmPluginProposal(proposal: PluginToolProposal) {
+    const presentation = pluginToolProposalPresentation(proposal);
+    const actionName = presentation.actionTitle;
+    const toolLabel = `Plugin · ${presentation.confirmLabel}`;
+    if (activeProposal !== proposal.id || !start(`Plugin · ${presentation.confirmLabel}`)) return;
+    let executionAttempted = false;
+    const action = `Ich bestätige die angezeigte Aktion „${actionName}“ über die Schaltfläche.`;
+    const eventId = add({ role: "user", text: action });
+    if (!offline) appendHistory("user", action, eventId);
+    try {
+      await stampMessages();
+      const proposalUrl = `/api/proposals/${encodeURIComponent(proposal.id)}`;
+      const current = await requestForChat<unknown>(proposalUrl);
+      const authoritative = parsePluginProposalSnapshot(current, proposal);
+      if (authoritative?.status !== "pending" || !samePluginProposalSnapshot(proposal, authoritative)) {
+        setActiveProposal(null);
+        const statusText = authoritative?.status === "outcome_unknown"
+          ? "Der Status dieser Aktion ist unklar. Prüfe den aktuellen Stand im zuständigen Dienst, bevor du erneut vorgehst."
+          : authoritative?.status === "confirmed"
+            ? "Diese Aktion wurde bereits abgeschlossen."
+            : "Der Vorschlag stimmt nicht mehr mit dem gespeicherten Stand überein oder ist nicht mehr offen. Bereite ihn erneut vor.";
+        addActionResult({ text: statusText, tool: toolLabel });
+        return;
+      }
+      executionAttempted = true;
+      const rawResult = await postForChat<unknown>(`${proposalUrl}/confirm`, {});
+      const confirmed = parsePluginProposalSnapshot(rawResult, proposal);
+      if (confirmed?.status === "confirmed" && samePluginProposalSnapshot(proposal, confirmed)) {
+        setActiveProposal(null);
+        addActionResult({
+          text: `Die Aktion „${actionName}“ wurde bestätigt. ${compactPluginToolResult(rawResult)}`,
+          tool: `${toolLabel} · bestätigt`,
+        });
+      } else {
+        setActiveProposal(null);
+        const text = confirmed?.status === "outcome_unknown"
+          ? "Der Dienst konnte den Ausgang der Aktion nicht eindeutig bestätigen. Prüfe den aktuellen Stand, bevor du einen weiteren Vorschlag erstellst."
+          : "Die Antwort stimmt nicht eindeutig mit der angezeigten Aktion überein. Prüfe den aktuellen Stand, bevor du erneut vorgehst.";
+        addActionResult({ text, tool: toolLabel });
+      }
+    } catch (cause) {
+      setActiveProposal(null);
+      const detail = cause instanceof Error ? cause.message : "Der Dienst hat nicht geantwortet.";
+      const text = executionAttempted
+        ? `Die Antwort auf „${actionName}“ war nicht eindeutig. ${detail} Prüfe zuerst den aktuellen Stand und löse die Aktion nicht erneut aus, bevor das Ergebnis geklärt ist.`
+        : `Der Vorschlag konnte nicht vorab geprüft werden; eine Ausführung wurde nicht angefordert. ${detail}`;
+      addActionResult({ text, tool: toolLabel });
+    } finally {
+      await finish();
+    }
+  }
+
   async function confirm(proposal: Proposal) {
+    if (proposal.action === "execute_tool") {
+      await confirmPluginProposal(proposal);
+      return;
+    }
     const cancellation = proposal.action === "cancel_booking";
     if (activeProposal !== proposal.id || !start(cancellation ? "anny · Stornierung ausführen" : "anny · Bestätigte Buchung ausführen")) return;
     let executionAttempted = false;
@@ -609,11 +751,11 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     try {
       await stampMessages();
       const proposalUrl = `/api/proposals/${encodeURIComponent(proposal.id)}`;
-      const current = await requestForChat<{ proposal?: Proposal & { arguments?: { bookingId?: string } } }>(proposalUrl);
+      const current = await requestForChat<{ proposal?: AnnyChatProposal & { arguments?: { bookingId?: string } } }>(proposalUrl);
       const authoritative = current.proposal;
       const currentAction = authoritative?.action ?? "book";
       const canonicalBookingId = authoritative?.arguments?.bookingId;
-      if (!authoritative || authoritative.status !== "pending" || !sameProposalSnapshot(proposal, authoritative)
+      if (authoritative?.status !== "pending" || !sameProposalSnapshot(proposal, authoritative)
         || (cancellation && (currentAction !== "cancel_booking" || typeof canonicalBookingId !== "string" || !canonicalBookingId.trim()))) {
         setActiveProposal(null);
         const text = authoritative?.status === "outcome_unknown"
@@ -625,7 +767,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         return;
       }
       executionAttempted = true;
-      const result = await postForChat<{ proposal: Proposal; bookingId?: string; status?: "cancelled" }>(`${proposalUrl}/confirm`, {});
+      const result = await postForChat<{ proposal: AnnyChatProposal; bookingId?: string; status?: "cancelled" }>(`${proposalUrl}/confirm`, {});
       const responseMatches = sameProposalSnapshot(proposal, result.proposal);
       const bookingIdMatches = cancellation && typeof result.bookingId === "string"
         && result.bookingId.trim().length > 0 && result.bookingId === canonicalBookingId;
@@ -687,7 +829,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     return rooms.length === message.rooms.length ? [message] : [{ ...message, rooms }];
   });
 
-  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void send(input); }
+  function submit(event: SyntheticEvent<HTMLFormElement>) { event.preventDefault(); void send(input); }
 
   return (
     <section className="chat-page" aria-label="HASI Chat" hidden={!active}>
@@ -707,7 +849,10 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
           </div>
         ) : (
           <div className="chat-transcript" role="log" aria-label="Gesprächsverlauf" aria-live="polite" aria-relevant="additions">
-            {renderedMessages.map((message) => (
+            {renderedMessages.map((message) => {
+              const pluginProposal = message.proposal?.action === "execute_tool" ? message.proposal : null;
+              const pluginProposalView = pluginProposal ? pluginToolProposalPresentation(pluginProposal) : null;
+              return (
               <article key={message.id} className={`chat-message chat-message--${message.role}`} aria-label={message.role === "user" ? "Du" : "HASI"}>
                 <span className="chat-speaker">{message.role === "user" ? "Du" : <><Sparkles size={14} aria-hidden="true" /> HASI {message.model && <small>{message.model}</small>}</>}</span>
                 <div className="chat-message-meta">{message.timestamp ? <time className="chat-message-time" dateTime={message.timestamp.createdAt} title="Servereingang · Europe/Berlin">{formatMessageTime(message.timestamp.createdAt)}</time> : <span className="chat-message-time">Zeitpunkt unbekannt</span>}<ChatMessageCopy message={message} /></div>
@@ -720,14 +865,37 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                     onChooseRoom={(resource) => void chooseRoom(resource)}
                     onChooseSlot={(resource, interval) => void prepare(resource, interval)}
                   />}
+                  {pluginAppsEnabled && message.rooms && <PluginResultApp
+                    pluginId="de.hsh.hasi.anny"
+                    presentationId="resources"
+                    initialResult={{
+                      resources: message.rooms.map(room => room.resource),
+                      ...(message.rooms[0]?.requestedStartDate ? { requestedStartDate: message.rooms[0].requestedStartDate } : {}),
+                      ...(message.rooms[0]?.requestedEndDate ? { requestedEndDate: message.rooms[0].requestedEndDate } : {}),
+                      availabilityChecked: message.rooms.every(room => room.checked),
+                    }}
+                  />}
                   {message.sources && message.sources.length > 0 && <div className="chat-source-list" aria-label="Gefundene Demoquellen">{message.sources.map((source) => <Link className="chat-source-card" href={knowledgeDocumentHref(source.id)} target="_blank" rel="noreferrer" key={source.id}><BookOpen size={18} aria-hidden="true" /><span><small>{knowledgeSourceLabel(source.sourceSystem)} · Fassung {source.revision}</small><strong>{source.title}</strong><code>{source.citationId}</code></span><ArrowRight size={16} aria-hidden="true" /></Link>)}</div>}
-                  {message.proposal && <div className="chat-tool-card chat-proposal">
+                  {pluginProposal && pluginProposalView && <div className="chat-tool-card chat-proposal">
+                    <span className="chat-proposal-label">PLUGINAKTION PRÜFEN</span>
+                    <h2>{pluginProposalView.actionTitle}</h2>
+                    {pluginProposalView.executionDescription && <p>{pluginProposalView.executionDescription}</p>}
+                    <small>Plugin: {pluginProposalView.pluginId} · Werkzeug: <code>{pluginProposalView.executionTool}</code></small>
+                    {pluginProposal.resourceName && <p>{pluginProposal.resourceName}</p>}
+                    <p>{compactPluginToolResult(pluginProposal.arguments, 800)}</p>
+                    <small>Vorbereitet durch: {pluginProposalView.preparationTitle} · Gültig bis {formatTime(pluginProposal.expiresAt)} Uhr</small>
+                    <button className="button button--primary button--wide" type="button" disabled={busy || activeProposal !== pluginProposal.id} onClick={() => { void confirm(pluginProposal); }}>
+                      {activeProposal === pluginProposal.id ? pluginProposalView.confirmLabel : "Vorschlag abgeschlossen oder ersetzt"}
+                      <Check size={16} aria-hidden="true" />
+                    </button>
+                  </div>}
+                  {message.proposal && message.proposal.action !== "execute_tool" && <div className="chat-tool-card chat-proposal">
                     <span className="chat-proposal-label">{message.proposal.action === "cancel_booking" ? "STORNIERUNG PRÜFEN" : "BITTE PRÜFEN UND BESTÄTIGEN"}</span>
                     <h2>{message.proposal.resourceName}</h2>
                     <p>{formatDateTime(message.proposal.startDate)} bis {formatTime(message.proposal.endDate)} Uhr</p>
                     {message.proposal.action === "cancel_booking" && <p>Diese bestehende Buchung wird erst nach deiner Bestätigung storniert.</p>}
                     <small>Gültig bis {formatTime(message.proposal.expiresAt)} Uhr · Testumgebung</small>
-                    <button className="button button--primary button--wide" type="button" disabled={busy || activeProposal !== message.proposal.id} onClick={() => void confirm(message.proposal!)}>
+                    <button className="button button--primary button--wide" type="button" disabled={busy || activeProposal !== message.proposal.id} onClick={() => { if (message.proposal) void confirm(message.proposal); }}>
                       {activeProposal === message.proposal.id ? message.proposal.action === "cancel_booking" ? "Stornierung bestätigen" : "Buchung bestätigen" : message.proposal.action === "cancel_booking" ? "Stornierungsvorschlag abgeschlossen oder ersetzt" : "Vorschlag abgeschlossen oder ersetzt"}
                       <Check size={16} aria-hidden="true" />
                     </button>
@@ -736,7 +904,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                   {message.confirmed && <Link className="chat-card-action" href="/bookings">Meine Buchungen öffnen <ArrowRight size={15} aria-hidden="true" /></Link>}
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
         {busy && <div className="chat-activity" role="status"><span className="spinner" />{activity}</div>}
@@ -744,8 +913,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
       <div className="chat-composer-dock">
         <form className="chat-composer" onSubmit={submit}>
           <label className="sr-only" htmlFor={inputId}>Nachricht an HASI</label>
-          <textarea id={inputId} ref={composer} rows={2} maxLength={2000} value={input} onChange={(event) => setInput(event.currentTarget.value)} placeholder="Frag HASI oder beschreibe, was du vorhast …" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(input); } }} />
-          <div className="chat-composer-bottom"><span><span className="status-dot" /> {offline ? "Dialog-Demo · ohne Sprachmodell" : modelLoading ? "Modellstatus wird geladen …" : selectedProfile?.configured ? `${providerLabel} · anny-Testdaten` : `${providerLabel ?? "Modellanbieter"} nicht konfiguriert`}</span><button type="submit" aria-label="Nachricht senden" disabled={busy || !canSend || !input.trim()}><ArrowUp size={20} aria-hidden="true" /></button></div>
+          <textarea id={inputId} ref={composer} rows={2} maxLength={2000} value={input} onChange={(event) => { updateInput(event.currentTarget.value); }} placeholder="Frag HASI oder beschreibe, was du vorhast …" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(input); } }} />
+          <div className="chat-composer-bottom"><span><span className="status-dot" /> {offline ? "Dialog-Demo · ohne Sprachmodell" : modelLoading ? "Modellstatus wird geladen …" : selectedProfile?.configured ? `${providerLabel ?? "Modellanbieter"} · anny-Testdaten` : `${providerLabel ?? "Modellanbieter"} nicht konfiguriert`}</span><button type="submit" aria-label="Nachricht senden" disabled={busy || !canSend || !input.trim()}><ArrowUp size={20} aria-hidden="true" /></button></div>
         </form>
         <p className="chat-footnote">{offline ? "Dialog-Demo mit Testdaten · synthetisches IT- und Intranet-Wissen" : `Nachrichten und ausgewählte Toolergebnisse gehen an ${providerLabel ?? "den ausgewählten Modellanbieter"}. Bitte nur Testdaten eingeben.${selectedProfile?.fallbackLabels?.length ? ` Konfigurierte Ausweichmodelle: ${selectedProfile.fallbackLabels.join(", ")}.` : ""}`}</p>
       </div>

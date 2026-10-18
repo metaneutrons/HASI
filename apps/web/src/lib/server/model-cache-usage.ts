@@ -1,9 +1,9 @@
-export type InputCacheUsage = {
+export interface InputCacheUsage {
   readTokens: number;
   uncachedTokens: number;
   /** Share of input tokens reused, not a share of requests or a price discount. */
   readRatio?: number;
-};
+}
 
 /** Missing/invalid provider counters are unknown, never a synthetic cache miss. */
 export function measuredInputCache(total: unknown, read: unknown): InputCacheUsage | undefined {

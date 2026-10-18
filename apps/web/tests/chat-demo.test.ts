@@ -12,6 +12,7 @@ import {
   type RoomRequest,
 } from "../src/lib/chat-demo";
 import type { Resource } from "../src/lib/types";
+import { required } from "./test-utils";
 
 const rooms: Resource[] = [
   {
@@ -52,9 +53,9 @@ describe("bounded German chat demo parser", () => {
   });
   it('distinguishes one workplace in an office from rooms with person capacities', () => {
     const resources: Resource[] = [
-      { ...rooms[0]!, id: 'desk', name: 'Platz 1', kind: 'workplace', parentId: 'office', parentName: 'Büro Amrum', capacity: null },
-      { ...rooms[1]!, id: 'meeting', kind: 'meeting_room', capacity: 8 },
-      { ...rooms[0]!, id: 'hall', name: 'Synthetic lecture hall', kind: 'lecture_hall', capacity: 120 },
+      { ...required(rooms[0]), id: 'desk', name: 'Platz 1', kind: 'workplace', parentId: 'office', parentName: 'Büro Amrum', capacity: null },
+      { ...required(rooms[1]), id: 'meeting', kind: 'meeting_room', capacity: 8 },
+      { ...required(rooms[0]), id: 'hall', name: 'Synthetic lecture hall', kind: 'lecture_hall', capacity: 120 },
     ];
     const office = mergeRoomRequest('Ich möchte ein Büro buchen', {});
     expect(classifyIntent('Ich möchte ein Büro buchen', false)).toBe('rooms');
@@ -74,8 +75,8 @@ describe("bounded German chat demo parser", () => {
     expect(matchingResources(resources, { kind: 'room' }).map(r => r.id)).toEqual(['meeting', 'hall']);
     expect(matchingResources(resources, mergeRoomRequest('Besprechungsraum für 6 Personen', {})).map(r => r.id)).toEqual(['meeting']);
     expect(matchingResources(resources, mergeRoomRequest('Hörsaal für 100 Personen', {})).map(r => r.id)).toEqual(['hall']);
-    expect(mergeRoomRequest('lieber ein Büro', { kind: 'meeting_room', capacity: 8 })).toMatchObject({ kind: 'workplace', capacity: undefined });
-    expect(mergeRoomRequest('einzelne Arbeitsplätze', { kind: 'workplace', capacity: 2 })).toMatchObject({ kind: 'workplace', capacity: undefined });
+    expect(mergeRoomRequest('lieber ein Büro', { kind: 'meeting_room', capacity: 8 })).toEqual({ kind: 'workplace' });
+    expect(mergeRoomRequest('einzelne Arbeitsplätze', { kind: 'workplace', capacity: 2 })).toEqual({ kind: 'workplace' });
     expect(mergeRoomRequest('einen Besprechungsraum', { kind: 'workplace', capacity: 2 })).toMatchObject({ kind: 'meeting_room', capacity: 2 });
     expect(roomRequestSummary(mergeRoomRequest('Ich brauche zwei Arbeitsplätze', {}))).toContain('Jede Buchung reserviert genau einen Arbeitsplatz');
   });
@@ -102,12 +103,12 @@ describe("bounded German chat demo parser", () => {
 
   it("filters only explicitly named single or shared offices and requests clarification for broad catalogs", () => {
     const workplaces: Resource[] = [
-      { ...rooms[0]!, id: "single", kind: "workplace", name: "Arbeitsplatz 1", parentName: "Einzelbüro 1.01" },
-      { ...rooms[0]!, id: "two", kind: "workplace", name: "Arbeitsplatz 2", parentName: "2er Büro 1.02" },
-      { ...rooms[0]!, id: "three", kind: "workplace", name: "Arbeitsplatz 3", parentName: "3er Büro 1.03" },
-      { ...rooms[0]!, id: "shared", kind: "workplace", name: "Arbeitsplatz 4", parentName: "Shared Office 1.04" },
-      { ...rooms[0]!, id: "unknown", kind: "workplace", name: "Arbeitsplatz 5", parentName: "Büro 1.05" },
-      { ...rooms[0]!, id: "one-desk", kind: "workplace", name: "Einzelarbeitsplatz", parentName: "Büro 1.06" },
+      { ...required(rooms[0]), id: "single", kind: "workplace", name: "Arbeitsplatz 1", parentName: "Einzelbüro 1.01" },
+      { ...required(rooms[0]), id: "two", kind: "workplace", name: "Arbeitsplatz 2", parentName: "2er Büro 1.02" },
+      { ...required(rooms[0]), id: "three", kind: "workplace", name: "Arbeitsplatz 3", parentName: "3er Büro 1.03" },
+      { ...required(rooms[0]), id: "shared", kind: "workplace", name: "Arbeitsplatz 4", parentName: "Shared Office 1.04" },
+      { ...required(rooms[0]), id: "unknown", kind: "workplace", name: "Arbeitsplatz 5", parentName: "Büro 1.05" },
+      { ...required(rooms[0]), id: "one-desk", kind: "workplace", name: "Einzelarbeitsplatz", parentName: "Büro 1.06" },
     ];
     expect(matchingResources(workplaces, { kind: "workplace", officeType: "single" }).map(({ id }) => id)).toEqual(["single"]);
     expect(matchingResources(workplaces, { kind: "workplace", officeType: "shared" }).map(({ id }) => id)).toEqual(["two", "three", "shared"]);
@@ -115,8 +116,8 @@ describe("bounded German chat demo parser", () => {
     expect(matchingResources(workplaces, { kind: "workplace", officeType: "single" })).not.toContain(workplaces[5]);
 
     const many = Array.from({ length: 9 }, (_, index) => ({
-      ...workplaces[index % workplaces.length]!,
-      id: `workplace-${index}`,
+      ...required(workplaces[index % workplaces.length]),
+      id: `workplace-${String(index)}`,
       parentName: index === 0 ? "1er Büro A" : index === 1 ? "3er Büro B" : `Büro ${String(index)}`,
     }));
     const refinement = workplaceRefinementQuestion(many, { kind: "workplace" });
@@ -135,9 +136,9 @@ describe("bounded German chat demo parser", () => {
   });
   it("uses the complete catalog office count as authoritative and leaves standalone desks unknown", () => {
     const workplaces: Resource[] = [
-      { ...rooms[0]!, id: "count-one", kind: "workplace", name: "Arbeitsplatz", parentName: "2er Büro", officeWorkplaceCount: 1 },
-      { ...rooms[0]!, id: "count-many", kind: "workplace", name: "Arbeitsplatz", parentName: "Einzelbüro", officeWorkplaceCount: 2 },
-      { ...rooms[0]!, id: "standalone", kind: "workplace", name: "Einzelarbeitsplatz", parentName: null, officeWorkplaceCount: null },
+      { ...required(rooms[0]), id: "count-one", kind: "workplace", name: "Arbeitsplatz", parentName: "2er Büro", officeWorkplaceCount: 1 },
+      { ...required(rooms[0]), id: "count-many", kind: "workplace", name: "Arbeitsplatz", parentName: "Einzelbüro", officeWorkplaceCount: 2 },
+      { ...required(rooms[0]), id: "standalone", kind: "workplace", name: "Einzelarbeitsplatz", parentName: null, officeWorkplaceCount: null },
     ];
     expect(matchingResources(workplaces, { kind: "workplace", officeType: "single" }).map(({ id }) => id)).toEqual(["count-one"]);
     expect(matchingResources(workplaces, { kind: "workplace", officeType: "shared" }).map(({ id }) => id)).toEqual(["count-many"]);
@@ -336,7 +337,7 @@ describe("bounded German chat demo parser", () => {
     expect(matchingResources(workplaces, { kind: "workplace", location: "Geb. 1J" })).toHaveLength(27);
     expect(matchingResources(workplaces, { kind: "workplace", location: "Building 1J" })).toHaveLength(27);
     expect(matchingResources(workplaces, { kind: "workplace", location: "Gebäude 1" })).toEqual([]);
-    expect(matchingResources([{ ...rooms[0]!, kind: "workplace", name: "Desk", location: "11J", parentName: "Office 11J.1.03" }], { kind: "workplace", location: "Gebäude 1J" })).toEqual([]);
+    expect(matchingResources([{ ...required(rooms[0]), kind: "workplace", name: "Desk", location: "11J", parentName: "Office 11J.1.03" }], { kind: "workplace", location: "Gebäude 1J" })).toEqual([]);
     expect(matchingResources(workplaces, buildingQuery)).toHaveLength(27);
     expect(matchingResources(workplaces, { kind: "workplace", query: "Schreibtischarbeitsplatz im Gebäude 1J" })).toHaveLength(27);
     expect(matchingResources(workplaces, { kind: "workplace", query: "J1" })).toHaveLength(17);

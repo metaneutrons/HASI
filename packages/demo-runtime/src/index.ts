@@ -2,7 +2,7 @@ import { createHmac, createPrivateKey, createPublicKey, hkdfSync, randomUUID, ti
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { AnnyClient } from '@hasi/anny-client';
-import { createAnnyPlugin, annyManifest, demoPresentation } from '@hasi/anny-plugin';
+import { createAnnyPlugin, annyManifest, annyAppManifest, annyAppViewSha256, demoPresentation } from '@hasi/anny-plugin';
 import { createAnnyMock, MOCK_IDS, type AnnyMockCatalog } from '@hasi/anny-mock';
 import { createKnowledgePlugin, knowledgeManifest } from '@hasi/knowledge-plugin';
 import { digest } from '@hasi/plugin-sdk';
@@ -29,6 +29,8 @@ export interface DemoRuntimeOptions {
   secret: string;
   fetch?: typeof fetch;
   catalog?: AnnyMockCatalog;
+  /** Reviewed local feasibility flag. Third-party UI activation is not implied. */
+  enablePluginApps?: boolean;
 }
 
 function equal(a: string, b: string): boolean {
@@ -69,6 +71,7 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
     return uuid.parse(parts[1]);
   };
   const plugin = createAnnyPlugin({
+    enableAppView: options.enablePluginApps === true,
     publicKey, serviceToken: pluginToken, presentation: options.catalog ? Object.fromEntries(options.catalog.resources.map(({ id, capacity, location, features, serviceId, kind, parentId, parentName, officeWorkplaceCount }) => [id, { capacity, location, features, serviceId, ...(kind ? { kind } : {}), ...(parentId !== undefined ? { parentId } : {}), ...(parentName !== undefined ? { parentName } : {}), ...(officeWorkplaceCount !== undefined ? { officeWorkplaceCount } : {}) }])) : demoPresentation, allowedHosts: [origin.hostname],
     consumeInvocation: (jti, expiresAt) => options.store.compareAndSet(`invocation:${jti}`, null, { consumed: true }, expiresAt * 1000),
     client: actor => {
@@ -107,8 +110,8 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
     if (new URL(request.url).origin !== origin.origin) return failure(403);
     const space = workspace(request);
     const store = workspaceStore(space.id);
-    const registry = new PluginRegistry(privateKey, { store, scope: space.id, fetch: internalFetch });
-    await registry.install({ endpoint: `${origin.origin}/mcp`, serviceToken: pluginToken, expectedManifestDigest: digest(annyManifest), approvedPreviousManifestDigests: ['f730a360b3f108d5980994994c0fdbb740c1e624245b815af1f2339ef5a3ff45', '61b8360b00745238bbdfc1dfa134bb20d7e4790581d47bb46091e27ef1c691fb', '325f50953082e8b1156d3c1807a1310b492e61bbcdc84d9d6fd9cd48952db66b'], allowLoopback: !secure });
+    const registry = new PluginRegistry(privateKey, { store, scope: space.id, fetch: internalFetch, reviewedAppDigests: options.enablePluginApps ? [annyAppViewSha256] : [] });
+    await registry.install({ endpoint: `${origin.origin}/mcp`, serviceToken: pluginToken, expectedManifestDigest: digest(options.enablePluginApps ? annyAppManifest : annyManifest), approvedPreviousManifestDigests: ['f730a360b3f108d5980994994c0fdbb740c1e624245b815af1f2339ef5a3ff45', '61b8360b00745238bbdfc1dfa134bb20d7e4790581d47bb46091e27ef1c691fb', '325f50953082e8b1156d3c1807a1310b492e61bbcdc84d9d6fd9cd48952db66b'], allowLoopback: !secure });
     await registry.install({ endpoint: `${origin.origin}/plugins/knowledge/mcp`, serviceToken: knowledgeToken, expectedManifestDigest: digest(knowledgeManifest), allowLoopback: !secure });
     const app = await createApi({ mode: secure ? 'public-demo' : 'test', registry, identity: new DurableDemoIdentity(store, space.id, options.catalog?.resources.map(resource => resource.id)), store, origin: origin.origin, allowedHosts: [origin.hostname], secureCookies: secure, sessionCookieName: sessionName });
     try {

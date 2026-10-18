@@ -14,7 +14,7 @@
   },
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1 --port ${PORT:-3001}",
-    "build": "pnpm --filter @hasi/demo-runtime... run build && next build",
+    "build": "pnpm --filter @hasi/demo-runtime... run build && node --conditions=react-server --import tsx scripts/initialize-model-budget.ts --if-enabled && next build",
     "start": "next start --hostname 127.0.0.1 --port ${PORT:-3001}",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit"
@@ -26,7 +26,9 @@
     "@ai-sdk/openai-compatible": "3.0.69",
     "@hasi/demo-fixtures": "workspace:*",
     "@hasi/demo-runtime": "workspace:*",
+    "@hasi/plugin-sdk": "workspace:*",
     "@hasi/state": "workspace:*",
+    "@modelcontextprotocol/ext-apps": "2.0.3",
     "@vercel/firewall": "1.2.6",
     "ai": "7.0.142",
     "lucide-react": "1.58.0",
@@ -43,5 +45,6 @@
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.2"
-  }
+  },
+  "type": "module"
 }

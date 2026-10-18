@@ -15,14 +15,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ChatSessionList } from "@/components/chat-session-list";
-import { ChatWorkspaceStoreProvider } from "@/components/chat-sidebar-context";
+import { useChatWorkspaceStore } from "@/components/chat-sidebar-context";
 import { useSession } from "@/components/session-provider";
 import { PublicDemoNotice } from "@/components/public-demo-notice";
 import { useChatViewport } from "@/components/use-chat-viewport";
 import { useTheme, type Theme } from "@/components/theme-provider";
-import { browserChatStorage, createChatWorkspaceStore, type ChatWorkspaceStore } from "@/lib/chat-workspace-store";
+import type { ChatWorkspaceStore } from "@/lib/chat-workspace-store";
 import type { Role } from "@/lib/types";
 
 const navItems = [
@@ -63,12 +63,12 @@ function HasiMark({ compact = false }: { compact?: boolean }) {
 function ThemeControl() {
   const { theme, setTheme } = useTheme();
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const options: { value: Theme; label: string; icon: typeof Sun }[] = [
-    { value: "light", label: "Hell", icon: Sun },
-    { value: "dark", label: "Dunkel", icon: Moon },
-    { value: "system", label: "System", icon: LaptopMinimal },
-  ];
-  const current = options.find((option) => option.value === theme) ?? options[2];
+  const options: Record<Theme, { value: Theme; label: string; icon: typeof Sun }> = {
+    light: { value: "light", label: "Hell", icon: Sun },
+    dark: { value: "dark", label: "Dunkel", icon: Moon },
+    system: { value: "system", label: "System", icon: LaptopMinimal },
+  };
+  const current = options[theme];
   const Icon = current.icon;
 
   return (
@@ -78,7 +78,7 @@ function ThemeControl() {
       </summary>
       <div className="theme-menu" aria-label="Darstellung wählen">
         <p className="theme-menu-label">Darstellung</p>
-        {options.map((option) => {
+        {Object.values(options).map((option) => {
           const OptionIcon = option.icon;
           return (
             <button
@@ -130,9 +130,7 @@ function AccountMenu({
           className="account-logout"
           type="button"
           disabled={loggingOut}
-          onClick={async () => {
-            if (await onLogout() && detailsRef.current) detailsRef.current.open = false;
-          }}
+          onClick={() => { void onLogout().then((loggedOut) => { if (loggedOut && detailsRef.current) detailsRef.current.open = false; }); }}
         >
           <LogOut size={16} aria-hidden="true" />
           <span>{loggingOut ? "Wird abgemeldet …" : "Abmelden"}</span>
@@ -152,7 +150,9 @@ function WordmarkLink() {
 }
 
 function LoginScreen() {
+  const pathname = usePathname();
   const {
+    mode,
     error,
     login,
     personas,
@@ -196,7 +196,7 @@ function LoginScreen() {
           </p>
           <div className="welcome-note">
             <span className="welcome-note-icon"><UserRound size={17} strokeWidth={1.8} /></span>
-            <span>Zum Ausprobieren einfach ein Testkonto auswählen.</span>
+            <span>{mode === "oidc" ? "Anmeldung über den konfigurierten Identitätsdienst." : "Zum Ausprobieren einfach ein Testkonto auswählen."}</span>
           </div>
           <div className="welcome-orbit" aria-hidden="true">
             <div className="orbit-ring orbit-ring--one" />
@@ -215,16 +215,16 @@ function LoginScreen() {
             </div>
             <span className="login-lock"><UserRound size={19} strokeWidth={1.7} aria-hidden="true" /></span>
           </div>
-          <p className="login-intro">Wähle die Perspektive, die du ausprobieren möchtest.</p>
+          <p className="login-intro">{mode === "oidc" ? "Dein Konto und deine Freigaben werden vom Identitätsdienst bestätigt." : "Wähle die Perspektive, die du ausprobieren möchtest."}</p>
 
-          {(error || loginError || personasError) && (
+          {(error ?? loginError ?? personasError) && (
             <div className="inline-alert" role="alert">
               <CircleAlert size={18} aria-hidden="true" />
               <span>{loginError ?? personasError ?? error}</span>
             </div>
           )}
 
-          {personasLoading && personas.length === 0 ? (
+          {mode === "oidc" ? <form action="/api/auth/login" method="get"><input type="hidden" name="returnTo" value={pathname} /><button className="button button--primary button--wide" type="submit">Mit SSO anmelden <ArrowRight size={18} aria-hidden="true" /></button></form> : personasLoading && personas.length === 0 ? (
             <div className="persona-skeletons" aria-label="Testkonten werden geladen" aria-busy="true">
               {[0, 1, 2].map((item) => <div className="persona-skeleton" key={item} />)}
             </div>
@@ -304,7 +304,7 @@ function NavLink({
   count?: number;
 }) {
   return (
-    <Link className={`nav-link${active ? " is-active" : ""}`} href={href} aria-label={count && count > 1 ? `${label}, ${count} Unterhaltungen` : undefined} aria-current={active ? "page" : undefined}>
+    <Link className={`nav-link${active ? " is-active" : ""}`} href={href} aria-label={count !== undefined && count > 1 ? `${label}, ${String(count)} Unterhaltungen` : undefined} aria-current={active ? "page" : undefined}>
       <Icon size={19} strokeWidth={active ? 2 : 1.8} aria-hidden="true" />
       <span>{label}</span>
       {count !== undefined && count > 1 && <small className="chat-count-badge" aria-hidden="true">{count}</small>}
@@ -330,7 +330,7 @@ function ChatNavigation({ active, store, onOpenChat }: { active: boolean; store:
           aria-label={expanded ? "Unterhaltungen ausblenden" : "Unterhaltungen einblenden"}
           aria-expanded={expanded}
           aria-controls="primary-chat-sessions"
-          onClick={() => setExpanded((value) => !value)}
+          onClick={() => { setExpanded((value) => !value); }}
         >
           <ChevronDown size={16} strokeWidth={1.8} aria-hidden="true" />
         </button>
@@ -342,25 +342,16 @@ function ChatNavigation({ active, store, onOpenChat }: { active: boolean; store:
   );
 }
 
-function AppFrame({ children, ownerId }: Readonly<{ children: ReactNode; ownerId: string }>) {
+function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, mode, logout } = useSession();
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
-  const [chatStore] = useState(() => createChatWorkspaceStore(ownerId, browserChatStorage()));
+  const chatStore = useChatWorkspaceStore();
   const activeKey = pathname === "/bookings" ? "bookings" : pathname === "/admin" ? "admin" : "assistant";
   const frameRef = useChatViewport(activeKey === "assistant");
   const initial = user ? initials(user.displayName) : "H";
-
-  useEffect(() => {
-    const flush = () => chatStore.flush();
-    window.addEventListener("pagehide", flush);
-    return () => {
-      window.removeEventListener("pagehide", flush);
-      chatStore.flush();
-    };
-  }, [chatStore]);
 
   async function handleLogout(): Promise<boolean> {
     setLoggingOut(true);
@@ -377,7 +368,6 @@ function AppFrame({ children, ownerId }: Readonly<{ children: ReactNode; ownerId
   }
 
   return (
-    <ChatWorkspaceStoreProvider store={chatStore}>
     <div ref={frameRef} className={`app-frame${activeKey === "assistant" ? " app-frame--chat" : ""}`}>
       <aside className="side-nav" aria-label="HASI Navigation">
         <WordmarkLink />
@@ -435,7 +425,6 @@ function AppFrame({ children, ownerId }: Readonly<{ children: ReactNode; ownerId
         </nav>
       </div>
     </div>
-    </ChatWorkspaceStoreProvider>
   );
 }
 
@@ -446,7 +435,7 @@ export function WorkspaceShell({ children }: Readonly<{ children: ReactNode }>) 
   if (!user) return <LoginScreen />;
   if (pathname === "/admin" && user.role !== "admin") {
     return (
-      <AppFrame key={user.id} ownerId={user.id}>
+      <AppFrame key={user.id}>
         <div className="access-denied">
           <span className="access-icon"><CircleAlert size={23} aria-hidden="true" /></span>
           <p className="eyebrow">KEIN ZUGRIFF</p>
@@ -456,5 +445,5 @@ export function WorkspaceShell({ children }: Readonly<{ children: ReactNode }>) 
       </AppFrame>
     );
   }
-  return <AppFrame key={user.id} ownerId={user.id}>{children}</AppFrame>;
+  return <AppFrame key={user.id}>{children}</AppFrame>;
 }

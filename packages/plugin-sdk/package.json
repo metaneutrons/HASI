@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./schema-pattern": {
+      "types": "./dist/schema-pattern.d.ts",
+      "import": "./dist/schema-pattern.js"
     }
   },
   "files": [
@@ -19,6 +23,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/core": "2.3.1",
+    "@modelcontextprotocol/ext-apps": "2.0.3",
     "@modelcontextprotocol/fastify": "2.0.1",
     "@modelcontextprotocol/node": "2.1.1",
     "@modelcontextprotocol/server": "2.3.1",

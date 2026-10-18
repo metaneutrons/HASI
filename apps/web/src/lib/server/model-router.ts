@@ -7,7 +7,8 @@ import { loadModelConfiguration, resolveModelConnection, type ModelConfiguration
 import type { createRoutingPins } from "./routing-pins";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { APICallError, generateText, isStepCount, tool, type ModelMessage, type ToolSet } from "ai";
+import { APICallError, generateText, isStepCount, jsonSchema, tool, type ModelMessage, type ToolSet } from "ai";
+import { z } from "zod";
 import { ModelRouterError } from "./model-router-error";
 import { isAvailabilityFollowUp, isMixedKnowledgeRequest } from "../chat-tool-loop";
 import { classifyIntent } from "../chat-demo";
@@ -23,13 +24,26 @@ import {
   modelReplySchema,
   type ChatRequest,
   type ChatToolName,
+  isChatToolName,
   type ModelReply,
   type WireMessage,
 } from "../chat-contract";
+import {
+  MAX_PLUGIN_TOOL_CONTEXT_BYTES,
+  MODEL_PLUGIN_TOOL_NAME,
+  type PluginToolDescriptor,
+} from "../plugin-tools";
+import { expectedModelToolName, knownToolAlias, validatePluginToolArguments } from "./authorized-tools";
 
 type SecretEnvironment = Readonly<Record<string, string | undefined>>;
-type ProviderConnection = { baseURL: string };
-type RouterOptions = {
+interface ProviderConnection { baseURL: string }
+export interface ModelBudgetAdmission {
+  reserve(input: { profileId: string; inputTokens: number; outputTokens: number }): Promise<{
+    settle(usage?: { inputTokens: number; outputTokens: number }): Promise<void>;
+  }>;
+}
+
+interface RouterOptions {
   env?: SecretEnvironment;
   fetch?: typeof fetch;
   now?: Date | (() => Date);
@@ -38,8 +52,13 @@ type RouterOptions = {
   routingPins?: ReturnType<typeof createRoutingPins>;
   /** Trusted host context; client/model input cannot change its classification. */
   context?: { dataClasses: readonly string[]; toolsRequired: boolean };
+  /** Current server-fetched actor-eligible tools; omitted only by legacy router fixtures. */
+  authorizedTools?: readonly PluginToolDescriptor[];
+  budgetAdmission?: ModelBudgetAdmission;
+  /** Conservative per-call protocol overhead included in admission, defaulting to 4096 tokens. */
+  budgetProtocolOverheadTokens?: number;
   telemetry?: (metrics: { outcome: "success" | "failure"; providerStatus?: number; profileId: string; attempts: number; systemChars: number; historyChars: number; modelHistoryChars: number; inputTokens?: number; outputTokens?: number; cache?: InputCacheUsage; rateLimits?: GroqRateLimitDiagnostics }) => void;
-};
+}
 
 // Secret references have already passed the operator configuration allowlist.
 class EnvironmentSecretResolver {
@@ -71,16 +90,21 @@ const CHAT_TOOLS = {
   }),
 } satisfies ToolSet;
 
-function toolsForTurn(messages: WireMessage[]): ToolSet {
+interface TurnToolSet {
+  providerTools: ToolSet;
+  budgetDefinitions: Record<string, unknown>[];
+  dynamicByModelName: Map<string, PluginToolDescriptor>;
+}
+
+function toolsForTurn(messages: WireMessage[], authorizedTools?: readonly PluginToolDescriptor[]): TurnToolSet {
   const userIndex = messages.findLastIndex(message => message.role === "user");
   const text = messages[userIndex]?.content ?? "";
-  const priorAnny = messages.some(message => message.role === "tool" && message.name !== "knowledge_search");
+  const priorAnny = messages.some(message => message.role === "tool" && isAnnyToolName(message.name));
   const contextualAvailability = priorAnny && isAvailabilityFollowUp(text);
   const mixed = isMixedKnowledgeRequest(text, contextualAvailability);
   const turnResults = messages.slice(userIndex + 1).filter(message => message.role === "tool");
   const knowledgeRead = turnResults.some(message => message.name === "knowledge_search");
-  const annyRead = turnResults.some(message => message.name !== "knowledge_search");
-  if (knowledgeRead && !mixed) return {};
+  const annyRead = turnResults.some(message => isAnnyToolName(message.name));
   const intent = classifyIntent(text, false);
   const mixedKnowledge = /\b(?:wie|hilfe|problem|anleitung|erkläre|wissen|intranet|vpn|passwort|eduroam)\b/iu.test(text);
   const names: readonly ChatToolName[] = mixed ? Object.keys(CHAT_TOOLS) as ChatToolName[] : intent === "rooms" && !mixedKnowledge
@@ -89,8 +113,66 @@ function toolsForTurn(messages: WireMessage[]): ToolSet {
       ? ["anny_list_my_bookings", "anny_propose_cancellation"]
       : intent === "knowledge" && !contextualAvailability && !/\b(?:buch\w*|reservier\w*|storni\w*)\b/iu.test(text)
         ? ["knowledge_search"] : Object.keys(CHAT_TOOLS) as ChatToolName[];
-  const scoped = mixed ? names.filter(name => name === "knowledge_search" ? !knowledgeRead : !annyRead) : names;
-  return Object.fromEntries(scoped.map(name => [name, CHAT_TOOLS[name]]));
+  const scoped = mixed ? names.filter(name => name === "knowledge_search" ? !knowledgeRead : !annyRead)
+    : knowledgeRead ? names.filter(name => name !== "knowledge_search") : names;
+  const eligibleAliases = authorizedTools === undefined
+    ? new Set(Object.keys(CHAT_TOOLS))
+    : new Set(authorizedTools.flatMap(descriptor => {
+      const alias = knownToolAlias(descriptor);
+      return alias ? [alias] : [];
+    }));
+  const staticNames = scoped.filter(name => eligibleAliases.has(name));
+  const dynamicDescriptors = (authorizedTools ?? []).filter(descriptor => knownToolAlias(descriptor) === undefined);
+  const dynamicByModelName = new Map(dynamicDescriptors.map(descriptor => [descriptor.modelName, descriptor]));
+  const dynamicProviderTools = dynamicDescriptors.map(descriptor => [descriptor.modelName, tool({
+    description: `${descriptor.title}: ${descriptor.description}`,
+    inputSchema: jsonSchema<Record<string, unknown>>(
+      descriptor.inputSchema as Parameters<typeof jsonSchema>[0],
+      { validate: value => validatePluginToolArguments(descriptor, value)
+        ? { success: true, value }
+        : { success: false, error: new Error("Tool arguments do not match the authorized schema.") } },
+    ),
+  })] as const);
+  const providerTools = Object.fromEntries([
+    ...staticNames.map(name => [name, CHAT_TOOLS[name]] as const),
+    ...dynamicProviderTools,
+  ]) as ToolSet;
+  const budgetDefinitions = [
+    ...staticNames.map(name => ({ name, description: chatToolDescriptions[name], inputSchema: z.toJSONSchema(chatToolSchemas[name]) })),
+    ...dynamicDescriptors.map(descriptor => ({ name: descriptor.modelName, title: descriptor.title, description: descriptor.description, inputSchema: descriptor.inputSchema })),
+  ];
+  if (Object.keys(providerTools).length > 32 || Buffer.byteLength(JSON.stringify(budgetDefinitions)) > MAX_PLUGIN_TOOL_CONTEXT_BYTES) {
+    throw new ModelRouterError("tools_unavailable", "Authorized tool definitions exceed the model context limit.");
+  }
+  return { providerTools, budgetDefinitions, dynamicByModelName };
+}
+
+function isAnnyToolName(value: string): boolean {
+  return isChatToolName(value) && value !== "knowledge_search";
+}
+
+function validateAuthorizedToolHistory(request: ChatRequest, authorizedTools?: readonly PluginToolDescriptor[]): void {
+  if (authorizedTools === undefined) return;
+  const dynamicTools = new Map(authorizedTools.map(descriptor => [descriptor.modelName, descriptor]));
+  for (const message of request.messages) {
+    if (message.role === "assistant") {
+      for (const call of message.toolCalls ?? []) {
+        if (isChatToolName(call.name)) continue;
+        const descriptor = dynamicTools.get(call.name);
+        if (!descriptor?.modelName || descriptor.modelName !== expectedModelToolName(descriptor.pluginId, descriptor.name) || !validatePluginToolArguments(descriptor, call.arguments)) {
+          throw new ModelRouterError("invalid_request", "The conversation contains an unauthorized tool call.");
+        }
+      }
+    } else if (message.role === "tool" && MODEL_PLUGIN_TOOL_NAME.test(message.name) && !dynamicTools.has(message.name)) {
+      throw new ModelRouterError("invalid_request", "The conversation contains an unavailable tool result.");
+    }
+  }
+}
+
+function budgetAdmissionError(cause: unknown): ModelRouterError {
+  if (cause instanceof ModelRouterError && cause.code.startsWith("budget_")) return cause;
+  const code = cause && typeof cause === "object" && "code" in cause ? cause.code : undefined;
+  return new ModelRouterError(code === "exhausted" ? "budget_exhausted" : "budget_unavailable", "The model budget could not admit this attempt.");
 }
 
 function createPinnedFetch(connection: ProviderConnection, upstream: typeof fetch, onResponse?: (response: Response) => void): typeof fetch {
@@ -123,10 +205,6 @@ function createPinnedFetch(connection: ProviderConnection, upstream: typeof fetc
   };
 }
 
-function isChatToolName(value: string): value is ChatToolName {
-  return Object.hasOwn(chatToolSchemas, value);
-}
-
 function eligible(profile: ModelConfiguration["profiles"][number], options: RouterOptions): boolean {
   const context = options.context ?? { dataClasses: ["synthetic_demo"], toolsRequired: true };
   return (!context.toolsRequired || profile.capabilities.tools) && context.dataClasses.length > 0 && context.dataClasses.every(value => profile.allowedDataClasses.includes(value as typeof profile.allowedDataClasses[number]));
@@ -137,13 +215,19 @@ function configured(environment: SecretEnvironment): ModelConfiguration {
   catch { throw new ModelRouterError("configuration_invalid", "The server model configuration is invalid."); }
 }
 
+function configuredConnection(config: ModelConfiguration, connectionId: string) {
+  const connection = config.connections.find(candidate => candidate.id === connectionId);
+  if (!connection) throw new ModelRouterError("configuration_invalid", "The selected profile connection is unavailable.");
+  return connection;
+}
+
 export function listModelProfiles(env?: SecretEnvironment) {
   const environment = env ?? process.env;
   const config = configured(environment);
   const resolver = new EnvironmentSecretResolver(environment);
   const allowed = new Set([config.policy.defaultProfileId, ...(config.policy.userChoice.enabled ? config.policy.userChoice.profileIds : [])]);
   const profiles = config.profiles.filter(profile => allowed.has(profile.id)).map(profile => {
-    const connection = config.connections.find(connection => connection.id === profile.connectionId)!;
+    const connection = configuredConnection(config, profile.connectionId);
     const reachable = new Set<string>();
     const visit = (id: string) => {
       for (const target of config.policy.fallbacks.find(rule => rule.from === id)?.targets ?? []) {
@@ -166,11 +250,12 @@ function formatBerlinNow(now: Date): string {
   }).format(now);
 }
 
-function berlinCalendarDates(now: Date): string[] {
+function berlinCalendarDates(now: Date): [string, string, string] {
   const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
   const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find(part => part.type === type)?.value);
   // Advance calendar days, not 24-hour durations, across daylight-saving changes.
-  return [0, 1, 2].map(offset => new Date(Date.UTC(value('year'), value('month') - 1, value('day') + offset)).toISOString().slice(0, 10));
+  const dateAtOffset = (offset: number) => new Date(Date.UTC(value('year'), value('month') - 1, value('day') + offset)).toISOString().slice(0, 10);
+  return [dateAtOffset(0), dateAtOffset(1), dateAtOffset(2)];
 }
 
 // Stable instructions precede changing calendar metadata so a provider may reuse a prefix.
@@ -263,9 +348,12 @@ function invalidModelResponse(): ModelRouterError {
 }
 
 export async function runModelStep(input: ChatRequest, options: RouterOptions = {}): Promise<ModelReply> {
+  if (process.env.NODE_ENV === "production" && !options.context) throw new ModelRouterError("profile_not_approved", "Production model calls require an explicit trusted context policy.");
+  if (process.env.NODE_ENV === "production" && !options.budgetAdmission) throw new ModelRouterError("budget_unavailable", "Production model calls require shared budget admission.");
   const parsed = chatRequestSchema.safeParse(input);
   if (!parsed.success) throw new ModelRouterError("invalid_request", "The chat request does not match the HASI contract.");
   const request = parsed.data;
+  validateAuthorizedToolHistory(request, options.authorizedTools);
   const environment = options.env ?? process.env;
   const config = configured(environment);
   const allowed = new Set([config.policy.defaultProfileId, ...(config.policy.userChoice.enabled ? config.policy.userChoice.profileIds : [])]);
@@ -286,20 +374,21 @@ export async function runModelStep(input: ChatRequest, options: RouterOptions = 
   for (;;) {
     const profile = config.profiles.find(profile => profile.id === actualId);
     if (!profile || !eligible(profile, options)) throw new ModelRouterError("profile_not_approved", "The profile is not eligible for this context.");
-    const configuredConnection = config.connections.find(connection => connection.id === profile.connectionId)!;
-    const apiKey = resolver.resolve(configuredConnection.credentialRef);
+    const providerConnection = configuredConnection(config, profile.connectionId);
+    const apiKey = resolver.resolve(providerConnection.credentialRef);
     if (!apiKey) throw new ModelRouterError("missing_credentials", "The selected model provider is not configured.");
     try {
-      const result = await generateProfile(request, { ...profile, provider: configuredConnection.provider }, resolveModelConnection(configuredConnection), apiKey, options, budget);
+      const result = await generateProfile(request, { ...profile, provider: providerConnection.provider }, resolveModelConnection(providerConnection), apiKey, options, budget);
       if (actualId !== request.profileId) {
         if (!turnId || !options.routingPins) throw new ModelRouterError("profile_not_approved", "Fallback requires a current authenticated turn.");
         result.routingToken = options.routingPins.issue({ ...expected, actualProfileId: actualId, attemptedProfileIds: attempted });
       }
       return result;
     } catch (cause) {
-      if (!(cause instanceof ModelRouterError) || !cause.transientFailure || budget.remaining < 1 || Date.now() >= budget.deadline || !turnId || !options.routingPins) throw cause;
-      if (!rule?.on.includes(cause.transientFailure)) {
-        rule = config.policy.fallbacks.find(rule => rule.from === actualId && rule.on.includes(cause.transientFailure!));
+      const transientFailure = cause instanceof ModelRouterError ? cause.transientFailure : undefined;
+      if (!(cause instanceof ModelRouterError) || !transientFailure || budget.remaining < 1 || Date.now() >= budget.deadline || !turnId || !options.routingPins) throw cause;
+      if (!rule?.on.includes(transientFailure)) {
+        rule = config.policy.fallbacks.find(rule => rule.from === actualId && rule.on.includes(transientFailure));
         candidates = [];
       }
       if (!rule) throw cause;
@@ -312,7 +401,7 @@ export async function runModelStep(input: ChatRequest, options: RouterOptions = 
       });
       let next = findEligible();
       if (!next && rule.from !== actualId) {
-        const ownRule = config.policy.fallbacks.find(rule => rule.from === actualId && rule.on.includes(cause.transientFailure!));
+        const ownRule = config.policy.fallbacks.find(rule => rule.from === actualId && rule.on.includes(transientFailure));
         if (ownRule) { rule = ownRule; candidates = [...ownRule.targets]; next = findEligible(); }
       }
       if (!next) throw cause;
@@ -338,30 +427,69 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
     : connection.adapter === "anthropic" ? createAnthropic(adapterOptions)(profile.modelId)
     : createOpenAICompatible({ name: profile.provider, ...adapterOptions }).chatModel(profile.modelId);
 
-  const allowedTools = toolsForTurn(request.messages);
+  const turnTools = toolsForTurn(request.messages, options.authorizedTools);
+  const allowedTools = turnTools.providerTools;
   const instructions = buildSystemPrompt(getNow(options.now), request.messages, options.messageTimes) + (Object.keys(allowedTools).length ? "" : "\nDie angefragten Quellen sind bereits im Verlauf. Formuliere jetzt die belegte Wissensantwort daraus; erfinde bei fehlenden Belegen nichts. Raumkarten liefern bereits deren Ergebnisse und nächste Schritte. Keine weiteren Tool-Aufrufe.");
   const messages = toModelMessages(request.messages);
   const deadline = Math.min(budget.deadline, Date.now() + profile.parameters.timeoutMs);
   let attempts = 0;
-  const generate = (retry: boolean) => {
+  const generate = async (retry: boolean) => {
     if (budget.remaining-- < 1) throw new ModelRouterError("provider_unavailable", "Generation attempt budget exhausted.");
     attempts += 1;
-    return generateText({
-    model,
-    instructions: retry
+    const attemptInstructions = retry
       ? `${instructions}\n\nDer vorige Generierungsversuch enthielt einen ungültigen Tool-Aufruf und wurde verworfen. Erzeuge die Antwort erneut gemäß den bereitgestellten Schemata. Verwende nur definierte Tool-Namen und Felder; lasse nicht benötigte optionale Felder weg.`
-      : instructions,
-    messages,
-    tools: allowedTools,
-    ...(profile.parameters.temperature === null ? {} : { temperature: retry ? 0 : profile.parameters.temperature }),
-    ...(connection.adapter === "groq"
-      ? { providerOptions: { groq: { reasoningEffort: profile.parameters.reasoningEffort ?? "low", parallelToolCalls: false } } }
-      : connection.adapter === "openai" ? { providerOptions: { openai: { store: false } } } : {}),
-    maxOutputTokens: profile.parameters.maxOutputTokens,
-    maxRetries: 0,
-    timeout: Math.max(1, deadline - Date.now()),
-    stopWhen: isStepCount(1),
-  });
+      : instructions;
+    const overhead = options.budgetProtocolOverheadTokens ?? 4_096;
+    if (!Number.isSafeInteger(overhead) || overhead < 0 || overhead > 65_536) {
+      throw new ModelRouterError("configuration_invalid", "The model budget overhead is invalid.");
+    }
+    const serializedContext = JSON.stringify({ instructions: attemptInstructions, messages, tools: turnTools.budgetDefinitions });
+    const inputTokens = Buffer.byteLength(serializedContext, "utf8") + overhead;
+    const outputTokens = profile.parameters.maxOutputTokens;
+    if (!Number.isSafeInteger(inputTokens) || inputTokens < 1 || !Number.isSafeInteger(outputTokens) || outputTokens < 1) {
+      throw new ModelRouterError("budget_unavailable", "The model request could not be bounded for budget admission.");
+    }
+    let reservation: Awaited<ReturnType<ModelBudgetAdmission["reserve"]>> | undefined;
+    try {
+      reservation = await options.budgetAdmission?.reserve({ profileId: profile.id, inputTokens, outputTokens });
+    } catch (cause) {
+      throw budgetAdmissionError(cause);
+    }
+
+    let settlementAttempted = false;
+    try {
+      const result = await generateText({
+        model,
+        instructions: attemptInstructions,
+        messages,
+        tools: allowedTools,
+        ...(profile.parameters.temperature === null ? {} : { temperature: retry ? 0 : profile.parameters.temperature }),
+        ...(connection.adapter === "groq"
+          ? { providerOptions: { groq: { reasoningEffort: profile.parameters.reasoningEffort ?? "low", parallelToolCalls: false } } }
+          : connection.adapter === "openai" ? { providerOptions: { openai: { store: false } } } : {}),
+        maxOutputTokens: profile.parameters.maxOutputTokens,
+        maxRetries: 0,
+        timeout: Math.max(1, deadline - Date.now()),
+        stopWhen: isStepCount(1),
+      });
+      if (reservation) {
+        const usage = providerReportedUsage(result.usage.raw, connection);
+        if (!usage || usage.inputTokens > inputTokens || usage.outputTokens > outputTokens) {
+          settlementAttempted = true;
+          try { await reservation.settle(); } catch { throw new ModelRouterError("budget_unavailable", "Model usage could not be settled safely."); }
+          throw new ModelRouterError("budget_usage_invalid", "The provider did not report usage within the admitted limit.");
+        }
+        settlementAttempted = true;
+        try { await reservation.settle(usage); } catch { throw new ModelRouterError("budget_unavailable", "Model usage could not be settled safely."); }
+      }
+      return result;
+    } catch (cause) {
+      if (reservation && !settlementAttempted) {
+        settlementAttempted = true;
+        try { await reservation.settle(); } catch { throw new ModelRouterError("budget_unavailable", "The failed model attempt could not be settled safely."); }
+      }
+      throw cause;
+    }
   };
   let result: Awaited<ReturnType<typeof generate>>;
   try {
@@ -376,6 +504,7 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
       result = await generate(true);
     }
   } catch (cause) {
+    if (cause instanceof ModelRouterError && ["budget_exhausted", "budget_unavailable", "budget_unpriced", "budget_usage_invalid", "tools_unavailable", "configuration_invalid"].includes(cause.code)) throw cause;
     const status = APICallError.isInstance(cause) ? cause.statusCode : undefined;
     const failedQuota = connection.adapter === "groq" && APICallError.isInstance(cause)
       ? parseGroqRateLimitDiagnostics(cause.responseHeaders ?? {}, cause.responseBody, getNow(options.now)) : undefined;
@@ -403,7 +532,6 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
       toolCall.invalid ||
       toolCall.dynamic ||
       toolCall.providerExecuted ||
-      !isChatToolName(toolCall.toolName) ||
       !Object.hasOwn(allowedTools, toolCall.toolName) ||
       typeof toolCall.toolCallId !== "string" ||
       toolCall.toolCallId.trim().length === 0 ||
@@ -412,16 +540,15 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
       throw invalidModelResponse();
     }
 
-    const argumentResult = chatToolSchemas[toolCall.toolName].safeParse(
-      toolCall.input,
-    );
-    if (!argumentResult.success) throw invalidModelResponse();
-
-    toolCalls.push({
-      id: toolCall.toolCallId,
-      name: toolCall.toolName,
-      arguments: argumentResult.data as Record<string, unknown>,
-    });
+    if (isChatToolName(toolCall.toolName)) {
+      const argumentResult = chatToolSchemas[toolCall.toolName].safeParse(toolCall.input);
+      if (!argumentResult.success) throw invalidModelResponse();
+      toolCalls.push({ id: toolCall.toolCallId, name: toolCall.toolName, arguments: argumentResult.data });
+    } else {
+      const descriptor = turnTools.dynamicByModelName.get(toolCall.toolName);
+      if (!MODEL_PLUGIN_TOOL_NAME.test(toolCall.toolName) || !descriptor || !validatePluginToolArguments(descriptor, toolCall.input)) throw invalidModelResponse();
+      toolCalls.push({ id: toolCall.toolCallId, name: toolCall.toolName, arguments: toolCall.input });
+    }
   }
 
   if (
@@ -436,6 +563,7 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
   const cache = connection.adapter === "groq"
     ? measuredInputCache(result.usage.raw?.prompt_tokens, result.usage.inputTokenDetails.cacheReadTokens)
     : undefined;
+  const reportedUsage = options.budgetAdmission ? providerReportedUsage(result.usage.raw, connection) : undefined;
   const reply = {
     message: {
       role: "assistant",
@@ -449,8 +577,8 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
       provider: profile.provider,
     },
     usage: {
-      inputTokens: toTokenCount(result.usage.inputTokens),
-      outputTokens: toTokenCount(result.usage.outputTokens),
+      inputTokens: reportedUsage?.inputTokens ?? toTokenCount(result.usage.inputTokens),
+      outputTokens: reportedUsage?.outputTokens ?? toTokenCount(result.usage.outputTokens),
     },
   };
 
@@ -464,4 +592,38 @@ function toTokenCount(value: number | undefined): number {
   return Number.isFinite(value) && value !== undefined
     ? Math.max(0, Math.trunc(value))
     : 0;
+}
+
+function providerReportedUsage(
+  raw: unknown,
+  connection: { adapter: string; api?: string },
+): { inputTokens: number; outputTokens: number } | undefined {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return undefined;
+  const fields = raw as Record<string, unknown>;
+  if (connection.adapter === "anthropic") {
+    const input = fields.input_tokens;
+    const cacheCreation = optionalUsageCount(fields, "cache_creation_input_tokens");
+    const cacheRead = optionalUsageCount(fields, "cache_read_input_tokens");
+    const output = fields.output_tokens;
+    if (!Number.isSafeInteger(input) || Number(input) < 0 || cacheCreation === undefined || cacheRead === undefined ||
+      !Number.isSafeInteger(output) || Number(output) < 0) return undefined;
+    const totalInput = Number(input) + cacheCreation + cacheRead;
+    return Number.isSafeInteger(totalInput) && totalInput > 0
+      ? { inputTokens: totalInput, outputTokens: Number(output) }
+      : undefined;
+  }
+  const responseUsage = connection.adapter === "openai" && connection.api === "responses";
+  const input = fields[responseUsage ? "input_tokens" : "prompt_tokens"];
+  const output = fields[responseUsage ? "output_tokens" : "completion_tokens"];
+  return Number.isSafeInteger(input) && Number(input) > 0 && Number.isSafeInteger(output) && Number(output) >= 0
+    ? { inputTokens: Number(input), outputTokens: Number(output) }
+    : undefined;
+}
+
+function optionalUsageCount(fields: Record<string, unknown>, key: string): number | undefined {
+  // Anthropic documents the cache counters as conditional on prompt caching.
+  // Absence therefore means zero; a present null/invalid value is not evidence.
+  if (!Object.hasOwn(fields, key)) return 0;
+  const value = fields[key];
+  return Number.isSafeInteger(value) && Number(value) >= 0 ? Number(value) : undefined;
 }

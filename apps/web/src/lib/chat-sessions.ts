@@ -14,13 +14,14 @@ import {
 import { knowledgeDocumentSchema, type KnowledgeDocument } from "./knowledge";
 import type { RoomRequest } from "./chat-demo";
 import type { Booking, Resource, TimeInterval } from "./types";
+import { boundedPluginToolResult, type PluginToolProposal } from "./plugin-tools";
 
 export const MAX_CHAT_SESSIONS = 20;
 export const MAX_CHAT_MESSAGES = 200;
 export const MAX_CHAT_HISTORY = 64;
 export const MAX_CHAT_WORKSPACE_BYTES = 2 * 1024 * 1024;
 
-export type ChatProposal = {
+export interface AnnyChatProposal {
   action?: "book" | "cancel_booking";
   id: string;
   resourceName: string;
@@ -28,16 +29,19 @@ export type ChatProposal = {
   endDate: string;
   status: "pending" | "confirmed" | "outcome_unknown" | "failed";
   expiresAt: string;
-};
+}
 
-export type ChatRoomOption = {
+export type ChatProposal = AnnyChatProposal | PluginToolProposal;
+
+export interface ChatRoomOption {
   requestedStartDate?: string;
+  requestedEndDate?: string;
   resource: Resource;
   intervals: TimeInterval[];
   checked: boolean;
-};
+}
 
-export type ChatMessage = {
+export interface ChatMessage {
   id: string;
   timestamp?: MessageTimestamp;
   role: "user" | "assistant";
@@ -50,11 +54,11 @@ export type ChatMessage = {
   confirmed?: boolean;
   model?: string;
   interactionId?: string;
-};
+}
 
-export type ChatProfileId = ModelProfileId | "offline";
+export type ChatProfileId = z.infer<typeof chatProfileIdSchema>;
 
-export type ChatSnapshot = {
+export interface ChatSnapshot {
   messages: ChatMessage[];
   history: WireMessage[];
   input: string;
@@ -66,26 +70,26 @@ export type ChatSnapshot = {
   activeProposal: string | null;
   interrupted: boolean;
   messagesTruncated: boolean;
-};
+}
 
-export type ChatSession = {
+export interface ChatSession {
   id: string;
   title: string;
   titleSource: "auto" | "manual";
   createdAt: string;
   updatedAt: string;
   snapshot: ChatSnapshot;
-};
+}
 
-export type ChatWorkspace = {
+export interface ChatWorkspace {
   version: 1;
   ownerId: string;
   activeId: string;
   sessions: ChatSession[];
-};
+}
 
-export type ChatStorageReader = { getItem(key: string): string | null };
-export type ChatStorageWriter = { setItem(key: string, value: string): void };
+export interface ChatStorageReader { getItem(key: string): string | null }
+export interface ChatStorageWriter { setItem(key: string, value: string): void }
 
 const STORAGE_PREFIX = "hasi:chat-workspace:v1:";
 const DEFAULT_PROFILE: ChatProfileId = "groq-oss-120b";
@@ -135,6 +139,34 @@ const proposalSchema = z
   })
   .refine(({ startDate, endDate }) => Date.parse(endDate) > Date.parse(startDate));
 
+const pluginProposalArgumentsSchema = z.record(z.string().max(256), z.unknown()).superRefine((value, context) => {
+  try {
+    const serialized = JSON.stringify(value);
+    if (new TextEncoder().encode(serialized).byteLength > 8_000 || JSON.stringify(boundedPluginToolResult(value)) !== serialized) {
+      context.addIssue({ code: "custom", message: "Plugin proposal arguments exceed the storage bounds." });
+    }
+  } catch {
+    context.addIssue({ code: "custom", message: "Plugin proposal arguments are not valid JSON." });
+  }
+});
+
+const pluginToolProposalSchema = z.strictObject({
+  action: z.literal("execute_tool"),
+  id: z.uuid(),
+  pluginId: z.string().min(1).max(128),
+  executionTool: z.string().min(1).max(128),
+  executionTitle: plainTextSchema(256).optional(),
+  executionDescription: plainTextSchema(4_096).optional(),
+  toolName: z.string().min(1).max(128),
+  title: plainTextSchema(256),
+  arguments: pluginProposalArgumentsSchema,
+  resourceName: plainTextSchema(200),
+  startDate: z.string().max(64),
+  endDate: z.string().max(64),
+  status: z.enum(["pending", "confirmed", "outcome_unknown", "failed"]),
+  expiresAt: offsetDateTimeSchema,
+});
+
 const bookingSchema = z
   .strictObject({
     id: idSchema,
@@ -155,6 +187,7 @@ const chatMessageSchema = z.strictObject({
     .array(
       z.strictObject({
         requestedStartDate: offsetDateTimeSchema.optional(),
+        requestedEndDate: offsetDateTimeSchema.optional(),
         resource: resourceSchema,
         intervals: z.array(intervalSchema).max(8),
         checked: z.boolean(),
@@ -163,7 +196,7 @@ const chatMessageSchema = z.strictObject({
     .max(8)
     .optional(),
   sources: z.array(knowledgeDocumentSchema).max(5).optional(),
-  proposal: proposalSchema.optional(),
+  proposal: z.union([proposalSchema, pluginToolProposalSchema]).optional(),
   bookings: z.array(bookingSchema).max(10).optional(),
   confirmed: z.boolean().optional(),
   model: plainTextSchema(128).optional(),
@@ -341,22 +374,23 @@ function salvageInterruptedToolExchange(messages: unknown[], profileId: ChatProf
 
 function normalizeHistory(value: unknown, profileId: ChatProfileId): WireMessage[] | null {
   if (!Array.isArray(value) || value.length > MAX_CHAT_HISTORY) return null;
+  const entries: unknown[] = value;
 
-  const sentinelResult = parseWithSentinel(value, profileId);
+  const sentinelResult = parseWithSentinel(entries, profileId);
   if (sentinelResult.success) {
     return sentinelResult.data.messages.slice(0, -1);
   }
 
-  if (value.length === MAX_CHAT_HISTORY) {
+  if (entries.length === MAX_CHAT_HISTORY) {
     const directResult = chatRequestSchema.safeParse({
       profileId: profileForHistory(profileId),
-      messages: value,
+      messages: entries,
     });
     if (directResult.success) return directResult.data.messages;
 
-    const finalMessage = finalAssistantMessageSchema.safeParse(value.at(-1));
+    const finalMessage = finalAssistantMessageSchema.safeParse(entries.at(-1));
     if (finalMessage.success) {
-      const prior = value.slice(0, -1);
+      const prior = entries.slice(0, -1);
       const priorLast = prior.at(-1);
       if (isRecord(priorLast) && priorLast.role === "assistant") return null;
       const priorResult = parseWithSentinel(prior, profileId);
@@ -385,6 +419,89 @@ function activeProposalIsUsable(
   );
 }
 
+function normalizeRoomRequest(request: z.infer<typeof roomRequestSchema>): RoomRequest {
+  return {
+    ...(request.kind === undefined ? {} : { kind: request.kind }),
+    ...(request.officeType === undefined ? {} : { officeType: request.officeType }),
+    ...(request.date === undefined ? {} : { date: request.date }),
+    ...(request.time === undefined ? {} : { time: request.time }),
+    ...(request.durationMinutes === undefined ? {} : { durationMinutes: request.durationMinutes }),
+    ...(request.capacity === undefined ? {} : { capacity: request.capacity }),
+    ...(request.features === undefined ? {} : { features: request.features }),
+    ...(request.location === undefined ? {} : { location: request.location }),
+    ...(request.query === undefined ? {} : { query: request.query }),
+  };
+}
+
+function normalizeResource(resource: z.infer<typeof resourceSchema>): Resource {
+  return {
+    id: resource.id,
+    name: resource.name,
+    description: resource.description,
+    capacity: resource.capacity,
+    location: resource.location,
+    features: resource.features,
+    serviceId: resource.serviceId,
+    ...(resource.kind === undefined ? {} : { kind: resource.kind }),
+    ...(resource.parentId === undefined ? {} : { parentId: resource.parentId }),
+    ...(resource.parentName === undefined ? {} : { parentName: resource.parentName }),
+    ...(resource.officeWorkplaceCount === undefined ? {} : { officeWorkplaceCount: resource.officeWorkplaceCount }),
+  };
+}
+
+function normalizeChatMessage(message: z.infer<typeof chatMessageSchema>): ChatMessage {
+  const proposal: ChatProposal | undefined = message.proposal === undefined
+    ? undefined
+    : message.proposal.action === "execute_tool"
+      ? {
+          action: "execute_tool",
+          id: message.proposal.id,
+          pluginId: message.proposal.pluginId,
+          executionTool: message.proposal.executionTool,
+          ...(message.proposal.executionTitle === undefined ? {} : { executionTitle: message.proposal.executionTitle }),
+          ...(message.proposal.executionDescription === undefined ? {} : { executionDescription: message.proposal.executionDescription }),
+          toolName: message.proposal.toolName,
+          title: message.proposal.title,
+          arguments: message.proposal.arguments,
+          resourceName: message.proposal.resourceName,
+          startDate: message.proposal.startDate,
+          endDate: message.proposal.endDate,
+          status: message.proposal.status,
+          expiresAt: message.proposal.expiresAt,
+        }
+      : {
+          ...(message.proposal.action === undefined ? {} : { action: message.proposal.action }),
+          id: message.proposal.id,
+          resourceName: message.proposal.resourceName,
+          startDate: message.proposal.startDate,
+          endDate: message.proposal.endDate,
+          status: message.proposal.status,
+          expiresAt: message.proposal.expiresAt,
+        };
+  return {
+    id: message.id,
+    role: message.role,
+    text: message.text,
+    ...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }),
+    ...(message.tool === undefined ? {} : { tool: message.tool }),
+    ...(message.rooms === undefined ? {} : {
+      rooms: message.rooms.map((room) => ({
+        ...(room.requestedStartDate === undefined ? {} : { requestedStartDate: room.requestedStartDate }),
+        ...(room.requestedEndDate === undefined ? {} : { requestedEndDate: room.requestedEndDate }),
+        resource: normalizeResource(room.resource),
+        intervals: room.intervals,
+        checked: room.checked,
+      })),
+    }),
+    ...(message.sources === undefined ? {} : { sources: message.sources }),
+    ...(proposal === undefined ? {} : { proposal }),
+    ...(message.bookings === undefined ? {} : { bookings: message.bookings }),
+    ...(message.confirmed === undefined ? {} : { confirmed: message.confirmed }),
+    ...(message.model === undefined ? {} : { model: message.model }),
+    ...(message.interactionId === undefined ? {} : { interactionId: message.interactionId }),
+  };
+}
+
 function parseSnapshot(value: unknown, options: { trimMessages: boolean; now: Date }): ChatSnapshot | null {
   const trimmed = truncateDisplayMessages(value, options.trimMessages);
   const parsed = snapshotEnvelopeSchema.safeParse(trimmed.value);
@@ -392,15 +509,19 @@ function parseSnapshot(value: unknown, options: { trimMessages: boolean; now: Da
 
   const history = normalizeHistory(parsed.data.history, parsed.data.profileId);
   if (history === null) return null;
+  const messages = parsed.data.messages.map(normalizeChatMessage);
 
   const activeProposal = activeProposalIsUsable(
-    parsed.data.messages,
+    messages,
     parsed.data.activeProposal,
     options.now,
   ) ? parsed.data.activeProposal : null;
 
   return {
     ...parsed.data,
+    messages,
+    request: normalizeRoomRequest(parsed.data.request),
+    chosenRoom: parsed.data.chosenRoom === null ? null : normalizeResource(parsed.data.chosenRoom),
     history,
     activeProposal,
     messagesTruncated: parsed.data.messagesTruncated || trimmed.truncated,
@@ -558,7 +679,8 @@ export function updateChatSnapshot(
   }
 
   const sessions = workspace.sessions.slice();
-  const session = sessions[sessionIndex]!;
+  const session = sessions[sessionIndex];
+  if (!session) return workspace;
   const title = session.titleSource === "auto"
     ? automaticTitle(normalizedSnapshot.messages) ?? session.title
     : session.title;
@@ -585,8 +707,10 @@ export function renameChat(workspace: ChatWorkspace, id: string, title: string):
   if (normalizedTitle.length === 0) return workspace;
 
   const sessions = workspace.sessions.slice();
+  const session = sessions[sessionIndex];
+  if (!session) return workspace;
   sessions[sessionIndex] = {
-    ...sessions[sessionIndex]!,
+    ...session,
     title: normalizedTitle,
     titleSource: "manual",
   };

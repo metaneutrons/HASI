@@ -9,8 +9,8 @@ export function ChatMessageCopy({ message }: { message: ChatMessage }) {
   const [status, setStatus] = useState<"idle" | "copying" | "copied" | "failed">("idle");
   useEffect(() => {
     if (status !== "copied") return;
-    const timeout = window.setTimeout(() => setStatus("idle"), 2000);
-    return () => window.clearTimeout(timeout);
+    const timeout = window.setTimeout(() => { setStatus("idle"); }, 2000);
+    return () => { window.clearTimeout(timeout); };
   }, [status]);
 
   async function copy() {

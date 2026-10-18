@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Räume und Arbeitsplätze · HASI</title>
+  <!--__HASI_APP_SDK_LICENSE__*/
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f7f8fa; color: #18212f; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; }
+    main { max-width: 940px; margin: 0 auto; }
+    header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+    header > div { min-width: 0; }
+    h1 { overflow-wrap: anywhere; margin: 3px 0 5px; font-size: clamp(1.25rem, 4vw, 1.7rem); line-height: 1.2; }
+    .eyebrow { margin: 0; color: #586579; font-size: .78rem; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+    .intro { margin: 0; color: #586579; font-size: .9rem; }
+    button, input, select { min-height: 44px; border: 1px solid #c7ced8; border-radius: 10px; background: #fff; color: inherit; font: inherit; }
+    button { padding: 0 14px; font-weight: 650; cursor: pointer; }
+    button:disabled { cursor: default; opacity: .5; }
+    input, select { width: 100%; padding: 8px 11px; }
+    .filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(155px, .45fr); gap: 10px; margin-bottom: 10px; }
+    label { display: grid; gap: 5px; color: #586579; font-size: .8rem; font-weight: 600; }
+    #status { min-height: 24px; margin: 12px 0; color: #586579; font-size: .87rem; }
+    #period, #availability-note { margin: 6px 0; color: #586579; font-size: .82rem; line-height: 1.4; }
+    #availability-note { padding: 9px 11px; border-radius: 10px; background: #edf2fa; }
+    #cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .resource-card { min-width: 0; padding: 14px; border: 1px solid #d9dee6; border-radius: 14px; background: #fff; box-shadow: 0 1px 3px #18212f0b; }
+    .resource-card h2 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+    .resource-kind { margin: 4px 0 10px; color: #47618c; font-size: .74rem; font-weight: 700; text-transform: capitalize; }
+    .description { margin: 0 0 10px; color: #455164; font-size: .86rem; line-height: 1.45; overflow-wrap: anywhere; }
+    .facts { display: grid; gap: 5px; }
+    .facts p { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px; margin: 0; font-size: .78rem; overflow-wrap: anywhere; }
+    .fact-label { color: #6a7483; }
+    #pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px 0 4px; }
+    #pager[hidden] { display: none; }
+    #current-page { min-width: 52px; text-align: center; color: #586579; font-size: .85rem; }
+    @media (max-width: 560px) { body { padding: 12px; } header { align-items: center; } .filters, #cards { grid-template-columns: 1fr; } header button { padding: 0 10px; } }
+    :root[data-theme="dark"] { background: #10151d; color: #edf1f7; }
+      :root[data-theme="dark"] :is(.eyebrow, .intro, #status, #current-page) { color: #aeb9c8; }
+      :root[data-theme="dark"] :is(#period, #availability-note) { color: #c5ceda; }
+      :root[data-theme="dark"] #availability-note { background: #202d3c; }
+      :root[data-theme="dark"] :is(.resource-card, input, select, button) { border-color: #364252; background: #18212c; color: #edf1f7; }
+      :root[data-theme="dark"] .description { color: #c5ceda; }
+      :root[data-theme="dark"] .resource-kind { color: #adc7ff; }
+      :root[data-theme="dark"] .fact-label { color: #aeb9c8; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div><p class="eyebrow">Hochschule Hannover</p><h1>Räume und Arbeitsplätze</h1><p class="intro">Freigegebene Ressourcen durchsuchen</p></div>
+      <button id="reload" type="button">Aktualisieren</button>
+    </header>
+    <section class="filters" aria-label="Filter">
+      <label>Suche<input id="search" type="search" maxlength="100" autocomplete="off" placeholder="Name, Standort oder Ausstattung"></label>
+      <label>Art<select id="kind"><option value="">Alle Ressourcen</option><option value="meeting_room">Besprechungsraum</option><option value="lecture_hall">Hörsaal</option><option value="workplace">Arbeitsplatz</option><option value="room">Raum</option></select></label>
+    </section>
+    <p id="period" aria-live="polite"></p>
+    <p id="availability-note">Diese Ansicht prüft keine Verfügbarkeit. Bitte lass sie im Chat für eine Ressource prüfen.</p>
+    <p id="status" role="status" aria-live="polite">Räume werden geladen …</p>
+    <section id="cards" aria-label="Suchergebnisse"></section>
+    <nav id="pager" aria-label="Ergebnisseiten" hidden>
+      <button id="previous" type="button">Zurück</button><span id="current-page"></span><button id="next" type="button">Weiter</button>
+    </nav>
+  </main>
+  <script type="module">/*__HASI_APP_SDK_BUNDLE__*/
+const sdk = globalThis.__HASI_APPS_SDK__;
+const app = new sdk.App({ name: "HASI Anny View", version: "1.0.0" }, {}, { autoResize: true });
+const cards = document.getElementById("cards");
+const search = document.getElementById("search");
+const kind = document.getElementById("kind");
+const status = document.getElementById("status");
+const period = document.getElementById("period");
+const availabilityNote = document.getElementById("availability-note");
+const pager = document.getElementById("pager");
+const previous = document.getElementById("previous");
+const next = document.getElementById("next");
+const reload = document.getElementById("reload");
+const PAGE_SIZE = 6;
+let resources = [];
+let total = 0;
+let page = 0;
+let loading = false;
+let catalogPageLoaded = false;
+let requestedStartDate;
+let requestedEndDate;
+let chatAvailabilityChecked = false;
+let requestTimer;
+
+function valueText(value, fallback) {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function resourceItems(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 200).filter((item) => item && typeof item === "object" && !Array.isArray(item));
+}
+
+function appendFact(parent, label, value) {
+  if (value === undefined || value === null || value === "") return;
+  const fact = document.createElement("p");
+  const name = document.createElement("span");
+  name.className = "fact-label";
+  name.textContent = label;
+  const detail = document.createElement("span");
+  detail.textContent = String(value);
+  fact.append(name, detail);
+  parent.append(fact);
+}
+
+function isOffsetDateTime(value) {
+  return typeof value === "string" && value.length <= 64
+    && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.test(value)
+    && Number.isFinite(Date.parse(value));
+}
+
+function formatDateTime(value) {
+  if (!isOffsetDateTime(value)) return "";
+  return new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function formatPeriod() {
+  const start = formatDateTime(requestedStartDate);
+  const end = formatDateTime(requestedEndDate);
+  period.textContent = start && end ? "Zeitraum aus dem Chat: " + start + " bis " + end : "";
+}
+
+function renderAvailabilityNote() {
+  availabilityNote.textContent = chatAvailabilityChecked
+    ? "Die ursprüngliche Chat-Anfrage wurde auf Verfügbarkeit geprüft. Weitere Katalogtreffer sind ungeprüft; bitte prüfe sie im Chat."
+    : "Diese Ansicht prüft keine Verfügbarkeit. Bitte lass sie im Chat für eine Ressource prüfen.";
+}
+
+function setBusy(value) {
+  loading = value;
+  search.disabled = value;
+  kind.disabled = value;
+  reload.disabled = value;
+  previous.disabled = value || page <= 0;
+  next.disabled = value || page >= Math.min(100, Math.max(0, Math.ceil(total / PAGE_SIZE) - 1));
+  reload.textContent = value ? "Suche läuft …" : "Aktualisieren";
+}
+
+function render() {
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  cards.replaceChildren();
+  for (const resource of resources.slice(0, PAGE_SIZE)) {
+    const card = document.createElement("article");
+    card.className = "resource-card";
+    const title = document.createElement("h2");
+    title.textContent = valueText(resource.name, "Raum");
+    const type = document.createElement("p");
+    type.className = "resource-kind";
+    const kindLabels = new Map([["workplace", "Arbeitsplatz"], ["meeting_room", "Besprechungsraum"], ["lecture_hall", "Hörsaal"], ["room", "Raum"]]);
+    type.textContent = kindLabels.get(resource.kind) ?? "Ressource";
+    const description = document.createElement("p");
+    description.className = "description";
+    description.textContent = valueText(resource.description, "Keine Beschreibung vorhanden.");
+    const facts = document.createElement("div");
+    facts.className = "facts";
+    appendFact(facts, "Standort", valueText(resource.location, ""));
+    if (Number.isInteger(resource.capacity) && resource.capacity > 0) {
+      appendFact(facts, "Plätze", resource.capacity);
+    }
+    if (Number.isInteger(resource.officeWorkplaceCount) && resource.officeWorkplaceCount > 0) {
+      appendFact(facts, "Arbeitsplätze", resource.officeWorkplaceCount);
+    }
+    const features = Array.isArray(resource.features)
+      ? resource.features.filter((feature) => typeof feature === "string").slice(0, 8)
+      : [];
+    if (features.length) appendFact(facts, "Ausstattung", features.join(" · "));
+    card.append(title, type, description, facts);
+    cards.append(card);
+  }
+  status.textContent = total ? String(total) + " Treffer · Seite " + String(page + 1) + " von " + String(pageCount) : "Keine passenden Räume oder Arbeitsplätze gefunden.";
+  pager.hidden = !catalogPageLoaded || total <= PAGE_SIZE;
+  previous.disabled = loading || page <= 0;
+  next.disabled = loading || page >= Math.min(100, pageCount - 1);
+  const currentPage = document.getElementById("current-page");
+  currentPage.textContent = String(page + 1) + " / " + String(pageCount);
+  formatPeriod();
+}
+
+function applyResult(result) {
+  const payload = result && result.structuredContent;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return;
+  if (Array.isArray(payload.resources)) {
+    resources = resourceItems(payload.resources);
+    total = Number.isSafeInteger(payload.total) && payload.total >= resources.length ? payload.total : resources.length;
+    page = Number.isSafeInteger(payload.page) && payload.page >= 0 && payload.page <= 100 ? payload.page : 0;
+    if (isOffsetDateTime(payload.requestedStartDate) && isOffsetDateTime(payload.requestedEndDate)
+      && Date.parse(payload.requestedEndDate) > Date.parse(payload.requestedStartDate)) {
+      requestedStartDate = payload.requestedStartDate;
+      requestedEndDate = payload.requestedEndDate;
+    }
+    render();
+  }
+}
+
+function argumentsForPage(nextPage) {
+  const arguments_ = { page: Math.max(0, Math.min(100, nextPage)), pageSize: PAGE_SIZE };
+  const query = search.value.trim();
+  if (query) arguments_.query = query.slice(0, 100);
+  if (kind.value) arguments_.kind = kind.value;
+  if (isOffsetDateTime(requestedStartDate) && isOffsetDateTime(requestedEndDate)
+    && Date.parse(requestedEndDate) > Date.parse(requestedStartDate)) {
+    arguments_.requestedStartDate = requestedStartDate;
+    arguments_.requestedEndDate = requestedEndDate;
+  }
+  return arguments_;
+}
+
+async function searchResources(nextPage = page) {
+  if (loading) return;
+  page = Math.max(0, Math.min(100, nextPage));
+  setBusy(true);
+  status.textContent = "Freigegebene Ressourcen werden gesucht …";
+  try {
+    const result = await app.callServerTool({ name: "anny.view_resources", arguments: argumentsForPage(page) });
+    if (result.isError) {
+      status.textContent = "Die Katalogsuche ist derzeit nicht verfügbar. Bisherige Ergebnisse bleiben sichtbar.";
+    } else {
+      catalogPageLoaded = true;
+      applyResult(result);
+    }
+  } catch {
+    status.textContent = "Die Katalogsuche ist derzeit nicht verfügbar. Bisherige Ergebnisse bleiben sichtbar.";
+  } finally {
+    setBusy(false);
+  }
+}
+
+function scheduleSearch(nextPage, delay = 250) {
+  if (requestTimer !== undefined) window.clearTimeout(requestTimer);
+  page = Math.max(0, Math.min(100, nextPage));
+  status.textContent = "Filter werden angewendet …";
+  requestTimer = window.setTimeout(() => {
+    requestTimer = undefined;
+    void searchResources(page);
+  }, delay);
+}
+
+search.addEventListener("input", () => { scheduleSearch(0); });
+kind.addEventListener("change", () => { scheduleSearch(0, 0); });
+previous.addEventListener("click", () => { scheduleSearch(page - 1, 0); });
+next.addEventListener("click", () => { scheduleSearch(page + 1, 0); });
+reload.addEventListener("click", () => { scheduleSearch(0, 0); });
+app.ontoolresult = applyResult;
+app.ontoolcancelled = () => { status.textContent = "Die Anfrage wurde abgebrochen."; };
+app.ontoolinput = (input) => {
+  const arguments_ = input?.arguments;
+  if (!arguments_ || typeof arguments_ !== "object" || Array.isArray(arguments_)) return;
+  if (typeof arguments_.chatAvailabilityChecked === "boolean") {
+    chatAvailabilityChecked = arguments_.chatAvailabilityChecked;
+    renderAvailabilityNote();
+  }
+  if (isOffsetDateTime(arguments_.requestedStartDate) && isOffsetDateTime(arguments_.requestedEndDate)
+    && Date.parse(arguments_.requestedEndDate) > Date.parse(arguments_.requestedStartDate)) {
+    requestedStartDate = arguments_.requestedStartDate;
+    requestedEndDate = arguments_.requestedEndDate;
+    formatPeriod();
+  }
+};
+function applyHostContext(context) {
+  const theme = context?.theme;
+  document.documentElement.dataset.theme = theme === "dark" || theme === "light"
+    ? theme : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+app.onhostcontextchanged = applyHostContext;
+applyHostContext();
+renderAvailabilityNote();
+render();
+await app.connect(new sdk.PostMessageTransport(window.parent, window.parent));
+applyHostContext(app.getHostContext());
+</script>
+</body>
+</html>

@@ -25,7 +25,7 @@ async function readBody(request: Request): Promise<unknown> {
   const chunks: Uint8Array[] = [];
   let length = 0;
   try {
-    while (true) {
+    for (;;) {
       const chunk = await reader.read();
       if (chunk.done) break;
       length += chunk.value.byteLength;
@@ -33,7 +33,7 @@ async function readBody(request: Request): Promise<unknown> {
       chunks.push(chunk.value);
     }
   } finally {
-    await reader.cancel().catch(() => {});
+    await reader.cancel().catch(() => undefined);
     reader.releaseLock();
   }
   const bytes = new Uint8Array(length);
@@ -82,9 +82,18 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
     if (cause instanceof ModelRouterError && cause.code === "profile_not_approved") {
       return error("Das gewählte Modell oder die Routing-Freigabe ist für diese Anfrage nicht zugelassen. Beginne einen neuen Chat mit dem konfigurierten Standardmodell.", 403);
     }
+    if (cause instanceof ModelRouterError && cause.code === "budget_exhausted") {
+      return error("Das gemeinsame Tagesbudget für Modellanfragen ist ausgeschöpft. Bestehende Suchergebnisse und Buchungen kannst du weiter nutzen. Das Budget wird um 00:00 UTC erneuert.", 429);
+    }
+    if (cause instanceof ModelRouterError && cause.code === "budget_unpriced") {
+      return error("Für dieses Modell ist noch kein freigegebener Tarif hinterlegt. Bitte wähle ein anderes Modell.", 503);
+    }
+    if (cause instanceof ModelRouterError && (cause.code === "budget_unavailable" || cause.code === "budget_usage_invalid")) {
+      return error("Die gemeinsame Budgetprüfung ist vorübergehend nicht verfügbar. Es werden keine weiteren Modellanfragen gestartet. Vorhandene Buchungskarten bleiben nutzbar.", 503);
+    }
     if (cause instanceof ModelRouterError && cause.code === "provider_rate_limited") {
       const retryAfter = cause.rateLimits?.retryAfterSeconds ?? 60;
-      return Response.json({ error: `Das Anfragelimit des ausgewählten Modellanbieters ist erreicht. Bitte versuche es in ${retryAfter} Sekunden erneut. Vorhandene Buchungskarten kannst du weiter nutzen.` }, { status: 429, headers: { ...headers, "retry-after": String(retryAfter) } });
+      return Response.json({ error: `Das Anfragelimit des ausgewählten Modellanbieters ist erreicht. Bitte versuche es in ${String(retryAfter)} Sekunden erneut. Vorhandene Buchungskarten kannst du weiter nutzen.` }, { status: 429, headers: { ...headers, "retry-after": String(retryAfter) } });
     }
     return error("Der ausgewählte Modellanbieter konnte die Anfrage nicht abschließen. Bitte versuche es erneut oder wähle ausdrücklich die Dialog-Demo.", 503);
   }

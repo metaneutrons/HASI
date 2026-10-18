@@ -6,7 +6,7 @@ import {
 import { modelProfileIdSchema, type ModelProfileId } from "./chat-contract";
 
 type StorageLike = Pick<Storage, "getItem" | "setItem">;
-type View = { workspace: ChatWorkspace; busy: Readonly<Record<string, boolean>>; notice: string | null };
+interface View { workspace: ChatWorkspace; busy: Readonly<Record<string, boolean>>; notice: string | null }
 
 function unusedChat(view: View) {
   const empty = (session: ChatWorkspace["sessions"][number]) => !view.busy[session.id]
@@ -33,7 +33,7 @@ export function createChatWorkspaceStore(ownerId: string, storage?: StorageLike)
   let configuredDefault: ModelProfileId = "groq-oss-120b";
   let timer: ReturnType<typeof setTimeout> | undefined;
   const listeners = new Set<() => void>();
-  const emit = () => listeners.forEach((listener) => listener());
+  const emit = () => { listeners.forEach((listener) => { listener(); }); };
 
   function flush() {
     clearTimeout(timer);
@@ -53,23 +53,42 @@ export function createChatWorkspaceStore(ownerId: string, storage?: StorageLike)
     if (changed) { clearTimeout(timer); timer = setTimeout(flush, 180); }
   }
 
+  function updateSnapshot(sessionId: string, snapshot: ChatSnapshot, busy: boolean, preserveCurrentDraft: boolean) {
+    const session = view.workspace.sessions.find((item) => item.id === sessionId);
+    if (!session) return;
+    let next: ChatWorkspace;
+    try {
+      const candidate = updateChatSnapshot(view.workspace, sessionId, preserveCurrentDraft
+        ? { ...snapshot, input: session.snapshot.input }
+        : snapshot);
+      const updatedSession = candidate.sessions.find((item) => item.id === sessionId);
+      if (!updatedSession) throw new Error("Updated chat session is missing.");
+      const normalized = updatedSession.snapshot;
+      next = JSON.stringify(session.snapshot) === JSON.stringify(normalized) ? view.workspace : candidate;
+    } catch {
+      view = { ...view, busy: { ...view.busy, [sessionId]: busy }, notice: "Dieser Chat überschreitet die Speichergrenzen und kann gerade nicht gespeichert werden. Beginne für weitere Fragen einen neuen Chat." }; emit(); return;
+    }
+    publish(next, Boolean(view.busy[sessionId]) === busy ? view.busy : { ...view.busy, [sessionId]: busy });
+  }
+
   return {
     getSnapshot: () => view,
     subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
     flush,
     dismissNotice() { view = { ...view, notice: null }; emit(); },
-    update(sessionId: string, snapshot: ChatSnapshot, busy: boolean) {
+    update(sessionId: string, snapshot: ChatSnapshot, busy: boolean) { updateSnapshot(sessionId, snapshot, busy, false); },
+    updateConversation(sessionId: string, snapshot: ChatSnapshot, busy: boolean) { updateSnapshot(sessionId, snapshot, busy, true); },
+    updateDraft(sessionId: string, input: string) {
       const session = view.workspace.sessions.find((item) => item.id === sessionId);
-      if (!session) return;
-      let next: ChatWorkspace;
+      if (!session || session.snapshot.input === input) return;
       try {
-        const candidate = updateChatSnapshot(view.workspace, sessionId, snapshot);
-        const normalized = candidate.sessions.find((item) => item.id === sessionId)!.snapshot;
-        next = JSON.stringify(session.snapshot) === JSON.stringify(normalized) ? view.workspace : candidate;
+        // Update only the draft against the latest store snapshot. Composer
+        // events must not replace messages or room state from a stale render.
+        publish(updateChatSnapshot(view.workspace, sessionId, { ...session.snapshot, input }));
       } catch {
-        view = { ...view, busy: { ...view.busy, [sessionId]: busy }, notice: "Dieser Chat überschreitet die Speichergrenzen und kann gerade nicht gespeichert werden. Beginne für weitere Fragen einen neuen Chat." }; emit(); return;
+        const notice = "Dieser Chat überschreitet die Speichergrenzen und kann gerade nicht gespeichert werden. Beginne für weitere Fragen einen neuen Chat.";
+        if (view.notice !== notice) { view = { ...view, notice }; emit(); }
       }
-      publish(next, Boolean(view.busy[sessionId]) === busy ? view.busy : { ...view.busy, [sessionId]: busy });
     },
     setDefaultProfile(profileId: ModelProfileId) {
       const nextDefault = modelProfileIdSchema.parse(profileId);
@@ -93,7 +112,7 @@ export function createChatWorkspaceStore(ownerId: string, storage?: StorageLike)
         return;
       }
       if (view.workspace.sessions.length >= MAX_CHAT_SESSIONS) {
-        view = { ...view, notice: `Du kannst bis zu ${MAX_CHAT_SESSIONS} Chats speichern. Lösche einen nicht mehr benötigten Verlauf, um einen neuen Chat zu beginnen.` }; emit(); return;
+        view = { ...view, notice: `Du kannst bis zu ${String(MAX_CHAT_SESSIONS)} Chats speichern. Lösche einen nicht mehr benötigten Verlauf, um einen neuen Chat zu beginnen.` }; emit(); return;
       }
       const session = createChatSession(modelProfileIdSchema.parse(defaultProfileId));
       publish({ ...view.workspace, activeId: session.id, sessions: [...view.workspace.sessions, session] });
@@ -102,7 +121,7 @@ export function createChatWorkspaceStore(ownerId: string, storage?: StorageLike)
     rename(sessionId: string, title: string) { publish(renameChat(view.workspace, sessionId, title)); },
     remove(sessionId: string) {
       if (view.busy[sessionId]) return;
-      const busy = { ...view.busy }; delete busy[sessionId];
+      const busy = { ...view.busy }; Reflect.deleteProperty(busy, sessionId);
       publish(deleteChat(view.workspace, sessionId, new Date(), configuredDefault), busy);
     },
   };

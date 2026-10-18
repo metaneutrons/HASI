@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import type { JsonStore } from '@hasi/state';
-import { personas, type IdentityProvider, type Persona } from '@hasi/api';
+import { personas, withDemoPluginClaims, type IdentityProvider, type Persona } from '@hasi/api';
 import { RequestError } from '@hasi/api';
 
 const sessionSchema = z.strictObject({ workspaceId: z.uuid(), personaId: z.enum(['student', 'employee', 'admin']) });
@@ -14,7 +14,7 @@ export class DurableDemoIdentity implements IdentityProvider {
   private persona(id: string): Persona {
     const template = personas.find(persona => persona.id === id);
     if (!template) throw new RequestError(400, 'Unbekanntes Testkonto.');
-    return { ...structuredClone(template), id: `${this.workspaceId}:${id}`, actor: { ...structuredClone(template.actor), subject: `demo:${this.workspaceId}:${id}`, ...(this.resourceIds ? { resourceIds: [...this.resourceIds] } : {}) } };
+    return { ...structuredClone(template), id: `${this.workspaceId}:${id}`, actor: withDemoPluginClaims({ ...structuredClone(template.actor), subject: `demo:${this.workspaceId}:${id}`, ...(this.resourceIds ? { resourceIds: [...this.resourceIds] } : {}) }) };
   }
 
   async login(id: string): Promise<{ token: string; user: Persona }> {

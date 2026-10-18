@@ -19,7 +19,8 @@ export function createChatMessageClock(request: (messages: WireMessage[]) => Pro
         const batch: WireMessage[] = [];
         let bytes = 20;
         while (offset < events.length && batch.length < 16) {
-          const event = events[offset]!;
+          const event = events[offset];
+          if (!event) throw new Error("Chat message batch contains a missing event.");
           const size = new TextEncoder().encode(JSON.stringify(event)).byteLength + 1;
           if (batch.length && bytes + size > 50_000) break;
           batch.push(event);
@@ -28,10 +29,13 @@ export function createChatMessageClock(request: (messages: WireMessage[]) => Pro
         }
         const response = timestampResponseSchema.parse(await request(batch));
         const byId = new Map(response.timestamps.map(event => [event.id, event.timestamp]));
-        if (response.timestamps.length !== batch.length || byId.size !== batch.length || batch.some(event => !byId.has(event.id!))) throw new Error("Die Serverzeiten passen nicht zu den Nachrichten.");
+        if (response.timestamps.length !== batch.length || byId.size !== batch.length || batch.some(event => !event.id || !byId.has(event.id))) throw new Error("Die Serverzeiten passen nicht zu den Nachrichten.");
         for (const event of batch) {
-          event.timestamp = byId.get(event.id!)!;
-          timestamps.set(event.id!, event.timestamp);
+          const id = event.id;
+          const timestamp = id ? byId.get(id) : undefined;
+          if (!id || !timestamp) throw new Error("The server did not return a timestamp for every chat message.");
+          event.timestamp = timestamp;
+          timestamps.set(id, timestamp);
         }
       }
       return timestamps;

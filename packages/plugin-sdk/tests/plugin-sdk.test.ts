@@ -57,6 +57,14 @@ const activeApps: ReturnType<typeof createPluginServer>[] = [];
 
 afterEach(async () => {
   await Promise.all(activeApps.splice(0).map((app) => app.close()));
+  vi.unstubAllEnvs();
+});
+
+describe('production replay boundary', () => {
+  it('rejects execute-capable production servers without durable replay protection', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(() => createPluginServer({ manifest, publicKey: keys.publicKey, serviceToken: 'fixture-only-service-token', handlers: { 'update-record': () => Promise.resolve({ updated: true }) } })).toThrow('shared durable invocation replay guard');
+  });
 });
 
 describe('canonical digest', () => {

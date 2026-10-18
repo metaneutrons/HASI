@@ -268,3 +268,20 @@ limit. Re-run affected suites after model, adapter, prompt, tool or policy chang
 Passing this finite suite is a release gate, not proof that prompt injection is
 impossible. Broaden cases using observed failures and keep authorization and
 outbound controls independently testable.
+
+
+## M2 context-admission boundary (2026-10-18)
+
+Production router calls now require an explicit host-owned context policy; there
+is no implicit production fallback to a synthetic classification. The current
+public/local entrypoints explicitly operate the bundled synthetic demo stack.
+Their label describes the approved deployment/corpus, not automated inspection
+or a guarantee about arbitrary text a visitor types. No deterministic filter or
+model can reliably recognize every confidential free-text disclosure. The demo
+continues to require test input and must not be approved for institutional data.
+
+Before enabling live or third-party institutional sources, implement trusted
+source/result provenance, current rights/classification for retained context and
+provider approval for all outgoing data. Plugin-generated labels and client
+history cannot establish that approval. These remain M3/M6 and production-M2
+qualification gates; the synthetic demo route is not a general production route.
