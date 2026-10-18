@@ -10,9 +10,11 @@ Tracking: [epic #32](https://github.com/metaneutrons/HASI/issues/32),
 Replace the server's fixed model-profile array with a validated, versioned
 configuration for standard OpenAI, Anthropic and Groq adapters, GWDG's
 OpenAI-compatible service and additional OpenAI-compatible connections.
-The current demo has Groq/GWDG credentials, one optional Custom connection,
-a fixed selector and no automatic cross-provider fallback. New chat events
-already have verified server receipt times; those guarantees must survive.
+The pre-delivery baseline had Groq/GWDG credentials, one optional Custom
+connection, a fixed selector and no automatic cross-provider fallback. Message
+time guarantees already existed and remain acceptance requirements. Registry
+and policy delivery is accepted in the linked R1/R2 issues; that acceptance does
+not complete institutional data approval or the wider M6 evaluation.
 
 ## Configuration and authority
 

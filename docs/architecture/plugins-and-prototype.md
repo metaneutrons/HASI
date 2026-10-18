@@ -1,6 +1,6 @@
 # Independent plugins and the server-backed demo
 
-Date: 2026-10-16. This design replaces the earlier suggestion to start with
+Date: 2026-10-16. Updated: 2026-10-18. This design replaces the earlier suggestion to start with
 in-process integration packages. Independently deployed and updated plugins
 are now an explicit requirement. All first-party application code is TypeScript.
 
@@ -104,6 +104,71 @@ The prototype actor includes one fixture customer mapping and room grants.
 Before enabling another integration, resolve and minimize those account/resource
 claims per plugin; an anny customer ID is not a universal institutional account
 identifier. Namespace real upstream subjects by verified issuer.
+
+## External installation and administrator configuration
+
+The agreed target includes plugins from external repositories, independent
+updates and configuration through the HASI administrator interface. A plugin
+is an installed integration that may expose several MCP tools. Package/version
+management and instance configuration belong to the plugin; permission and
+model-exposure decisions also apply to each individual tool and user context.
+
+The measured baseline at main `526241a` provides a generic registry/invoker,
+signed MCP contracts and per-plugin enable/update controls for endpoints
+registered by the operator at startup. An update activates a compatible version
+already served by that endpoint; it does not download or install a release
+artifact. Vercel co-locates the included plugins; only the local launcher starts
+separate processes. Neither mode supplies third-party sandboxing.
+
+The current manifest has no general configuration schema or secret-field
+declarations, and the admin has no install/configuration form or per-tool
+enablement control. The model-facing tool schemas, name allowlist and chat
+wire protocol still enumerate anny and knowledge tools. The generic registry's
+`/api/tools` and `/api/tools/call` alone do not expose an arbitrary installed
+plugin to the LLM. `ActorContext` still requires an anny customer/resource shape.
+These are explicit production gaps, not a claim of complete plugin installability.
+
+The production contract must provide:
+
+- **Reviewed installation sources and artifacts.** Admit operator-approved
+  external repository/release sources and immutable reviewed artifacts, with
+  publisher provenance, compatibility checks and explicit initial trust. Connecting
+  a remote MCP endpoint and deploying executable plugin code are separate modes.
+  A repository URL is not permission to execute its build/install scripts in the
+  HASI host. Plain MCP servers need a reviewed HASI adapter/manifest where they
+  do not implement the host's authorization and effect contract.
+- **Versioned declarative configuration.** Plugins declare a bounded schema,
+  logical secret requirements and configuration/migration compatibility. The
+  server binds approved secret-store references; neither a manifest nor a model
+  chooses arbitrary secret references. Separate package identity/version from
+  installation/instance configuration and upstream tenant/account bindings.
+- **Generic administrator lifecycle.** Authorized institutional administrators
+  install/connect, inspect capabilities and permissions, configure schema-derived
+  forms, validate/save settings, check readiness, activate updates, roll back and
+  disable/remove installations. Validate every change server-side and record its
+  operator/configuration revision. Stored secret values are never read back to
+  the browser, logs or model. Demo personas retain workspace-only authority.
+- **Registry-driven chat integration.** Derive eligible model tools from reviewed
+  installed manifests under server-owned user/turn policy, with collision-safe
+  names, validated inputs/outputs and a generic proposal/confirmation contract.
+  New approved tools must not require anny-specific host enums or customer claims.
+  Untrusted schemas/results cannot widen permissions, origins or execution rights.
+  Plugin settings and per-tool policy are distinct from a plugin's own downstream
+  authorization checks.
+- **Safe update and execution boundaries.** Qualify artifact delivery, signatures,
+  configuration/state migrations, staged activation, rollback and multi-instance
+  consistency. Reapprove expanded schemas/effects/permissions and invalidate
+  incompatible pending actions. Enforce per-plugin credential, filesystem,
+  network/DNS/redirect and resource boundaries; a process or MCP connection alone
+  is insufficient. Keep a validated previous artifact/configuration available.
+
+Tracking: [external plugin installation/admin configuration #65](https://github.com/metaneutrons/HASI/issues/65),
+under [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
+
+These requirements extend the existing production boundary without replacing
+the working registry/SDK. They require an implementation and qualification plan
+before enabling external executable code. Current execution state belongs in
+the linked M2 implementation issue, not in a parallel acceptance checklist here.
 
 ## anny contract fidelity
 
