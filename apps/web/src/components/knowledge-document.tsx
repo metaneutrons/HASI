@@ -108,6 +108,9 @@ function DocumentArticle({ document }: { document: KnowledgeDocument }) {
   const originalHref = !document.synthetic
     ? `/api/knowledge/documents/${encodeURIComponent(document.id)}/original?revision=${String(document.revision)}`
     : undefined;
+  const demoHref = document.synthetic && document.sourceSystem === 'service_it' && document.acquisition?.adapter === 'web'
+    ? `/api/knowledge/documents/${encodeURIComponent(document.id)}/demo-source?revision=${String(document.revision)}`
+    : undefined;
 
   return <article className="knowledge-reader__article">
     {synthetic && <div className="knowledge-demo-label"><BookOpen size={18} aria-hidden="true" /> Synthetisches Demo-Dokument</div>}
@@ -158,6 +161,9 @@ function DocumentArticle({ document }: { document: KnowledgeDocument }) {
       <code>{document.citationId}</code>
       {originalHref && <a className="knowledge-reader__original" href={originalHref} target="_blank" rel="noopener noreferrer">
         <ExternalLink size={16} aria-hidden="true" /> {english ? "Open authorized original" : "Autorisierte Originalquelle öffnen"}
+      </a>}
+      {demoHref && <a className="knowledge-reader__original" href={demoHref} target="_blank" rel="noopener noreferrer">
+        <ExternalLink size={16} aria-hidden="true" /> Demoquelle öffnen · HsH-Netz
       </a>}
     </footer>
   </article>;

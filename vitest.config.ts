@@ -6,6 +6,7 @@ export default defineConfig({
     alias: Object.fromEntries(([
       ['@', './apps/web/src'],
       ['@hasi/demo-fixtures/catalog', './fixtures/catalog.ts'],
+      ['@hasi/demo-fixtures/knowledge-catalog', './fixtures/knowledge-catalog.ts'],
       ['@hasi/demo-runtime', './packages/demo-runtime/src/index.ts'],
       ['@hasi/api', './apps/api/src/index.ts'],
       ['@hasi/state', './packages/state/src/index.ts'],

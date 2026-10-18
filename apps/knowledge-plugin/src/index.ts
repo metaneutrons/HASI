@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { digest, type ActorContext } from '@hasi/plugin-sdk';
 import { createInstitutionalKnowledgePlugin } from './institutional-plugin.js';
 import type { KnowledgeDocumentV2 } from './institutional-contracts.js';
-import knowledgeSeed from '@hasi/demo-fixtures/knowledge-demo-v1.json' with { type: 'json' };
+import { createDemoContentAcquirer, type DemoAcquiredBody, type DemoContentCapability } from './demo-content.js';
+import { knowledgeDocuments, knowledgeCreatedAt } from '@hasi/demo-fixtures/knowledge-catalog';
 
 export { knowledgeManifest } from './manifest.js';
 export { createInstitutionalKnowledgePlugin, institutionalKnowledgeManifest } from './institutional-plugin.js';
@@ -32,6 +33,8 @@ export interface KnowledgePluginOptions {
   serviceToken: string;
   allowedHosts?: string[];
   consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>;
+  /** Explicit host-owned transport capability for the synthetic ServiceIT demo only. */
+  demoContent?: DemoContentCapability;
 }
 
 const searchArguments = z.strictObject({
@@ -44,9 +47,9 @@ const getDocumentArguments = z.strictObject({
   revision: z.number().int().positive().optional(),
 });
 
-const documents = (knowledgeSeed as { documents: KnowledgeDocument[] }).documents;
+const documents: readonly KnowledgeDocument[] = knowledgeDocuments;
 const corpusRevision = digest(documents);
-const snapshotTime = `${knowledgeSeed.createdAt}T00:00:00Z`;
+const snapshotTime = `${knowledgeCreatedAt}T00:00:00Z`;
 
 const stopWords = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'can', 'for', 'from', 'how', 'in', 'is',
@@ -60,26 +63,32 @@ const stopWords = new Set([
 
 /** Demo fixtures use the current MCP contract; only the source adapter differs. */
 export function createKnowledgePlugin(options: KnowledgePluginOptions): FastifyInstance {
+  const { demoContent: demoContentCapability, ...pluginOptions } = options;
+  const demoContent = demoContentCapability ? createDemoContentAcquirer(demoContentCapability) : undefined;
   return createInstitutionalKnowledgePlugin({
-    ...options,
+    ...pluginOptions,
     repository: {
-      search: (actor, rawArgs) => {
+      search: async (actor, rawArgs) => {
         const args = searchArguments.parse(rawArgs);
         const visible = visibleDocuments(actor).filter(document =>
           args.sourceSystem === undefined || document.sourceSystem === args.sourceSystem);
         const queryTokens = tokenize(args.query).filter(token => !stopWords.has(token));
-        return Promise.resolve({ documents: visible
+        const ranked = visible
           .map((document, index) => ({ document, index, score: scoreDocument(document, queryTokens, args.query) }))
           .filter(candidate => candidate.score > 0)
           .sort((left, right) => right.score - left.score || left.index - right.index)
-          .slice(0, args.limit ?? 5).map(({ document }) => toResult(document, actor)) });
+          .slice(0, args.limit ?? 5);
+        const acquired = await acquireRankedServiceIt(ranked.map(({ document }) => document), demoContent);
+        return { documents: ranked.map(({ document }) => toResult(document, actor, acquired.get(document.id))) };
       },
-      getDocument: (actor, rawArgs) => {
+      getDocument: async (actor, rawArgs) => {
         const args = getDocumentArguments.parse(rawArgs);
         const document = visibleDocuments(actor).find(candidate => candidate.id === args.documentId
           && (args.revision === undefined || candidate.revision === args.revision));
         if (!document) throw new Error('Document unavailable.');
-        return Promise.resolve({ document: toResult(document, actor) });
+        const acquired = document.sourceSystem === 'service_it' && demoContent
+          ? await demoContent.read(document.id) : undefined;
+        return { document: toResult(document, actor, acquired) };
       },
       authorityFence: actor => Promise.resolve(digest({ corpusRevision, authority: authorityRevision(actor) })),
     },
@@ -93,18 +102,29 @@ function visibleDocuments(actor: ActorContext): KnowledgeDocument[] {
     && document.demoAudience.includes(audience as Audience));
 }
 
+async function acquireRankedServiceIt(documents: readonly KnowledgeDocument[], acquirer: ReturnType<typeof createDemoContentAcquirer> | undefined) {
+  const acquired = new Map<string, DemoAcquiredBody>();
+  if (!acquirer) return acquired;
+  const serviceDocuments = documents.filter(document => document.sourceSystem === 'service_it');
+  const bodies = await Promise.all(serviceDocuments.map(async document => [document.id, await acquirer.read(document.id)] as const));
+  for (const [id, body] of bodies) acquired.set(id, body);
+  return acquired;
+}
+
 function authorityRevision(actor: ActorContext) {
   return digest({ subject: actor.subject, audience: actor.claims?.['knowledge.demoAudience'] ?? null,
     allowed: actor.permissions.includes('knowledge:read') });
 }
 
-function toResult(document: KnowledgeDocument, actor: ActorContext): KnowledgeDocumentV2 {
+function toResult(document: KnowledgeDocument, actor: ActorContext, acquired?: DemoAcquiredBody): KnowledgeDocumentV2 {
   if (!document.synthetic) throw new Error('Document is not synthetic.');
   return {
     id: document.id, citationId: `knowledge:${document.sourceSystem}:${document.id}:${String(document.revision)}`,
     title: document.title, sourceSystem: document.sourceSystem, language: document.language,
-    revision: document.revision, synthetic: true, text: document.text,
-    updatedAt: snapshotTime, fetchedAt: snapshotTime, authorityRevision: authorityRevision(actor),
+    revision: document.revision, synthetic: true, text: acquired?.text ?? document.text,
+    updatedAt: snapshotTime, fetchedAt: acquired?.acquiredAt ?? snapshotTime,
+    ...(acquired ? { acquisition: { adapter: 'web', sourceRevision: acquired.sourceRevision } } : {}),
+    authorityRevision: authorityRevision(actor),
     corpusRevision, dataClass: 'synthetic_demo', images: [],
   };
 }
@@ -143,7 +163,8 @@ function fieldScore(fieldTokens: string[], queryToken: string, exact: number, pr
   let score = 0;
   for (const fieldToken of fieldTokens) {
     if (fieldToken === queryToken) score = Math.max(score, exact);
-    else if (fieldToken.startsWith(queryToken) || queryToken.startsWith(fieldToken)) score = Math.max(score, prefix);
+    else if (queryToken.length >= 3 && fieldToken.length >= 3
+      && (fieldToken.startsWith(queryToken) || queryToken.startsWith(fieldToken))) score = Math.max(score, prefix);
   }
   return score;
 }
@@ -163,3 +184,5 @@ function normalize(value: string): string {
 export * from './content/contracts.js';
 export * from './content/adapters.js';
 export * from './content/acquisition.js';
+export { createDemoContentAcquirer, SERVICE_IT_DEMO_ORIGIN } from './demo-content.js';
+export type { DemoAcquiredBody, DemoContentAcquirer, DemoContentCapability } from './demo-content.js';

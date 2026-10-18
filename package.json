@@ -13,7 +13,7 @@
     "dev": "pnpm build:backend && tsx scripts/dev.ts",
     "preview": "pnpm build && tsx scripts/dev.ts --preview",
     "typecheck": "tsc --noEmit && pnpm --filter @hasi/web typecheck",
-    "lint": "eslint packages apps/api apps/knowledge-plugin apps/anny-plugin apps/anny-mock scripts tests --max-warnings=0 && pnpm --filter @hasi/web lint",
+    "lint": "eslint packages apps/api apps/knowledge-plugin apps/anny-plugin apps/anny-mock apps/service-it-demo scripts tests --max-warnings=0 && pnpm --filter @hasi/web lint",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "research:anny": "tsx scripts/fetch-anny-specs.ts",

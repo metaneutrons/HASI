@@ -10,6 +10,8 @@ import type { JsonStore } from '@hasi/state';
 import { createApi, createRegistryKnowledgeContexts, PluginRegistry, PluginAccountService, personas, withDemoPluginClaims } from '@hasi/api';
 import { DurableDemoIdentity } from './identity.js';
 import { DemoPluginAccountAdapter } from './plugin-account-adapter.js';
+import { knowledgeDocuments, SERVICE_IT_DEMO_ORIGIN } from '@hasi/demo-fixtures/knowledge-catalog';
+import { createContentHttpClient } from '@hasi/api';
 export { DemoPluginAccountAdapter } from './plugin-account-adapter.js';
 
 const workspaceCookie = '__Host-hasi-demo-workspace';
@@ -33,6 +35,8 @@ export interface DemoRuntimeOptions {
   catalog?: AnnyMockCatalog;
   /** Reviewed local feasibility flag. Third-party UI activation is not implied. */
   enablePluginApps?: boolean;
+  /** Operator-only fixed-origin synthetic HTML acquisition, never an HsH cookie. */
+  serviceItContentOrigin?: string;
 }
 
 function equal(a: string, b: string): boolean {
@@ -45,6 +49,9 @@ function cookieValue(header: string | null, name: string): string | undefined {
 }
 
 export function createDemoRuntime(options: DemoRuntimeOptions) {
+  if (options.serviceItContentOrigin !== undefined && options.serviceItContentOrigin !== SERVICE_IT_DEMO_ORIGIN) {
+    throw new Error('Unapproved synthetic ServiceIT origin.');
+  }
   const origin = new URL(options.origin);
   if (origin.origin !== options.origin || origin.username || origin.password || (origin.protocol !== 'https:' && !['127.0.0.1', 'localhost'].includes(origin.hostname))) throw new Error('Invalid configured demo origin.');
   if (!/^[A-Za-z0-9_-]{43}$/.test(options.secret)) throw new Error('A dedicated 256-bit demo secret is required.');
@@ -90,7 +97,16 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
     },
   });
 
-  const knowledge = createKnowledgePlugin({ publicKey, serviceToken: knowledgeToken, allowedHosts: [origin.hostname], consumeInvocation: (jti, expiresAt) => options.store.compareAndSet(`invocation:${jti}`, null, { consumed: true }, expiresAt * 1000) });
+  const contentClient = options.serviceItContentOrigin ? createContentHttpClient({
+    origin: SERVICE_IT_DEMO_ORIGIN,
+    pageUrls: knowledgeDocuments.filter(document => document.sourceSystem === 'service_it')
+      .map(document => `${SERVICE_IT_DEMO_ORIGIN}/de/faqs/${document.id}/`),
+    minIntervalMs: 100,
+    timeoutMs: 5_000,
+  }) : undefined;
+  const knowledge = createKnowledgePlugin({ publicKey, serviceToken: knowledgeToken, allowedHosts: [origin.hostname],
+    ...(contentClient ? { demoContent: { transport: contentClient } } : {}),
+    consumeInvocation: (jti, expiresAt) => options.store.compareAndSet(`invocation:${jti}`, null, { consumed: true }, expiresAt * 1000) });
 
   function handleKnowledgePlugin(request: Request) {
     const url = new URL(request.url);
@@ -131,7 +147,8 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
       const template = personas.find(persona => subject.endsWith(`:${persona.id}`));
       return Promise.resolve(template ? withDemoPluginClaims({ ...structuredClone(template.actor), subject }) : undefined);
     } });
-    const app = await createApi({ mode: secure ? 'public-demo' : 'test', registry, identity, knowledgeContexts, store, origin: origin.origin, allowedHosts: [origin.hostname], secureCookies: secure, sessionCookieName: sessionName });
+    const app = await createApi({ mode: secure ? 'public-demo' : 'test', registry, identity, knowledgeContexts, store, origin: origin.origin, allowedHosts: [origin.hostname], secureCookies: secure, sessionCookieName: sessionName,
+      ...(contentClient ? { knowledgeDemoServiceItOrigin: SERVICE_IT_DEMO_ORIGIN } : {}) });
     try {
       const response = await forward(app, request);
       if (space.cookie) response.headers.append('set-cookie', space.cookie);
@@ -158,7 +175,7 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
     return (await chatScope(request)) !== null;
   }
 
-  return { handleCore, handleMock, hasSession, chatScope, handleKnowledgePlugin, handlePlugin: (request: Request) => forward(plugin, request), close: async () => { await Promise.all([plugin.close(), knowledge.close()]); } };
+  return { handleCore, handleMock, hasSession, chatScope, handleKnowledgePlugin, handlePlugin: (request: Request) => forward(plugin, request), close: async () => { await Promise.all([plugin.close(), knowledge.close(), contentClient?.close()]); } };
 }
 
 function failure(status: number) { return Response.json({ error: 'Die Anfrage konnte nicht abgeschlossen werden.' }, { status, headers: { 'cache-control': 'private, no-store' } }); }

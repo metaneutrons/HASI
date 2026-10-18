@@ -10,6 +10,7 @@ import { PluginSettingsError } from './plugin-settings.js';
 import { actionPreviewSchema, actionResolutionSchema, type ActionPolicy, type ActionPreview, type ActionResolution } from './action-policy.js';
 import type { KnowledgeContextStore } from './knowledge-context.js';
 import { PluginAccountError } from './plugin-accounts.js';
+import { SERVICE_IT_DEMO_ORIGIN } from '@hasi/demo-fixtures/knowledge-catalog';
 
 export { PluginRegistry, compatibleUpdate, RequestError } from './registry.js';
 export { OidcIdentityProvider, OidcAuthenticationError } from './oidc.js';
@@ -42,10 +43,13 @@ export interface ApiOptions {
   identity?: IdentityProvider; store?: JsonStore; pluginCatalog?: readonly ApprovedPluginSource[]; allowedHosts?: readonly string[];
   knowledgeContexts?: KnowledgeContextStore;
   knowledgeOriginalOrigins?: Readonly<Record<'service_it' | 'intranet', string>>;
+  knowledgeDemoServiceItOrigin?: string;
   secureCookies?: boolean; sessionCookieName?: string; actionPolicies?: Readonly<Record<string, ActionPolicy>>;
 }
 
 export async function createApi(options: ApiOptions) {
+  if (options.knowledgeDemoServiceItOrigin !== undefined && (options.mode === 'production'
+    || options.knowledgeDemoServiceItOrigin !== SERVICE_IT_DEMO_ORIGIN)) throw new Error('Unapproved synthetic source origin.');
   const app = Fastify({ logger: false, bodyLimit: 65536 });
   options.registry.configureCatalog(options.pluginCatalog ?? []);
   await options.registry.restoreConnections();
@@ -249,6 +253,18 @@ export async function createApi(options: ApiOptions) {
     const canonical = new URL(document.canonicalUrl);
     if (canonical.protocol !== 'https:' || canonical.username || canonical.password || canonical.search || canonical.origin !== origins[document.sourceSystem]) throw new RequestError(404, 'Originalquelle nicht verfügbar.');
     return reply.redirect(canonical.href);
+  });
+  app.get('/api/knowledge/documents/:id/demo-source', async (request, reply) => {
+    const user = await requireUser(request.cookies[cookieName]);
+    const { id } = z.strictObject({ id: documentId }).parse(request.params);
+    const { revision } = documentQuery.parse(request.query);
+    if (!options.knowledgeDemoServiceItOrigin) throw new RequestError(404, 'Demoquelle nicht verfügbar.');
+    const { document } = await readKnowledge(user, id, revision);
+    const acquisition = document.acquisition as Record<string, unknown> | undefined;
+    if (document.synthetic !== true || document.sourceSystem !== 'service_it' || acquisition?.adapter !== 'web') {
+      throw new RequestError(404, 'Demoquelle nicht verfügbar.');
+    }
+    return reply.redirect(`${options.knowledgeDemoServiceItOrigin}/de/faqs/${encodeURIComponent(id)}/`);
   });
   app.post('/api/knowledge/contexts/resolve', async request => {
     const user = await requireUser(request.cookies[cookieName]);

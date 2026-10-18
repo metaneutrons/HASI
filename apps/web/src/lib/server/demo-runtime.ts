@@ -37,7 +37,8 @@ async function initialize() {
     if (preview && process.env.VERCEL_AUTOMATION_BYPASS_SECRET) headers.set('x-vercel-protection-bypass', process.env.VERCEL_AUTOMATION_BYPASS_SECRET);
     return fetch(input, { ...init, headers, redirect: 'error' });
   };
-  return createDemoRuntime({ origin, store, secret: requiredSecret('HASI_DEMO_SECRET'), fetch: internalFetch, catalog: hshDemoCatalog });
+  return createDemoRuntime({ origin, store, secret: requiredSecret('HASI_DEMO_SECRET'), fetch: internalFetch, catalog: hshDemoCatalog,
+    ...(process.env.HASI_DEMO_SERVICE_IT_ORIGIN !== undefined ? { serviceItContentOrigin: process.env.HASI_DEMO_SERVICE_IT_ORIGIN } : {}) });
 }
 
 export function canonicalDemoRequest(request: Request): Request | null {

@@ -5,6 +5,11 @@
   "type": "module",
   "exports": {
     "./knowledge-demo-v1.json": "./knowledge-demo-v1.json",
+    "./service-it-synthetic-v1.json": "./service-it-synthetic-v1.json",
+    "./knowledge-catalog": {
+      "types": "./dist/knowledge-catalog.d.ts",
+      "import": "./dist/knowledge-catalog.js"
+    },
     "./anny-hsh-rooms-v1.json": "./anny-hsh-rooms-v1.json",
     "./catalog": {
       "types": "./dist/catalog.d.ts",
