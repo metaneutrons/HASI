@@ -6,8 +6,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/docker run --rm --name hasi-deploy-controller --network host --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit 64 --memory 128m --cpus 0.25 --mount type=bind,src=/opt/hasi-deploy/controller.mjs,dst=/app/controller.mjs,readonly --mount type=bind,src=/etc/hasi/deploy-config.json,dst=/etc/hasi/deploy-config.json,readonly --mount type=bind,src=/data/hasi/secrets/coolify-deploy-token,dst=/run/secrets/coolify-token,readonly --mount type=bind,src=/var/lib/hasi-deploy,dst=/var/lib/hasi-deploy node:24-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 node /app/controller.mjs
-ExecStop=/usr/bin/docker stop --time 20 hasi-deploy-controller
+ExecStart=/usr/bin/docker run --init --rm --name hasi-deploy-controller --network host --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit 64 --memory 128m --cpus 0.25 --mount type=bind,src=/opt/hasi-deploy/controller.mjs,dst=/app/controller.mjs,readonly --mount type=bind,src=/etc/hasi/deploy-config.json,dst=/etc/hasi/deploy-config.json,readonly --mount type=bind,src=/data/hasi/secrets/coolify-deploy-token,dst=/run/secrets/coolify-token,readonly --mount type=bind,src=/var/lib/hasi-deploy,dst=/var/lib/hasi-deploy node:24-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 node /app/controller.mjs
+ExecStop=/usr/bin/docker stop --timeout 20 hasi-deploy-controller
+SuccessExitStatus=143
 Restart=on-failure
 RestartSec=30
 TimeoutStopSec=30

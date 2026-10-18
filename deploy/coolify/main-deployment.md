@@ -119,7 +119,9 @@ systemctl status hasi-deploy-controller.service --no-pager
 journalctl -u hasi-deploy-controller.service -n 20 --no-pager
 ```
 
-The pinned Node container has a read-only filesystem, dropped capabilities,
+The pinned Node container uses Docker's init process to forward stop signals;
+exit 143 during an operator-requested stop is treated as clean. Unexpected exit
+137 is still a failure and is not masked. It has a read-only filesystem, dropped capabilities,
 bounded memory/CPU and no Docker socket. Only its journal directory is writable.
 Host networking is used solely to reach Coolify loopback; it opens no listener.
 Do not start a second copy: the fixed Docker container name is the instance

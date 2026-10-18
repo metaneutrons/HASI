@@ -112,3 +112,10 @@ A documentation-only main merge and actual retained-image rollback/rollforward
 are the remaining qualification steps. Final identities and readback are kept
 in [#79](https://github.com/metaneutrons/HASI/issues/79) to avoid a recursive
 documentation/deployment loop. This record does not pre-claim those results.
+
+A real controller restart resumed the submitted job and completed it after
+public health verification, retaining the original deployment identity. This
+also exposed Node PID 1 signal handling: Docker had to kill the original service
+after its stop timeout. The follow-up service uses `--init` and recognizes clean
+SIGTERM exit 143, while preserving failure handling for unexpected exit 137.
+That service correction precedes the final documentation-only merge probe.
