@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "research:anny": "tsx scripts/fetch-anny-specs.ts",
+    "reference:prepare": "tsx scripts/package-reference-plugin.ts --prepare",
     "prepare": "node scripts/install-hooks.mjs",
     "config:models": "node --conditions=react-server --import tsx apps/web/scripts/check-model-config.ts",
     "probe:groq-cache": "node --conditions=react-server --import tsx apps/web/scripts/probe-groq-cache.ts",

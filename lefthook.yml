@@ -45,4 +45,4 @@ pre-push:
     typecheck:
       run: pnpm typecheck
     tests:
-      run: pnpm test
+      run: pnpm reference:prepare && pnpm test

@@ -141,7 +141,15 @@ The local reference package is produced by
 `scripts/package-reference-plugin.ts`. It contains the built SDK and its locked
 production dependency tree, per-file SHA-256 records, the canonical manifest
 digest, an artifact payload digest and the package-version/license inventory.
-Packaging is offline and disables lifecycle scripts. The qualification runs
+Run `pnpm reference:prepare` before qualification to populate pnpm's deployment
+metadata and production dependency cache. This explicit online step uses a
+frozen lockfile with the normal supply-chain policies enabled; it does not
+change the source lockfile or distribute its temporary deployment. Use the
+same pnpm store and `XDG_CACHE_HOME` for preparation and qualification.
+Packaging itself uses `--offline --frozen-lockfile`, disables lifecycle scripts
+and has no automatic online retry. A missing cache entry fails the build.
+Subprocess failures expose only an allowlisted category, phase and exit status,
+never raw registry responses, paths or credentials. The qualification runs
 the packaged app from independent directories, checks its bounded `/healthz`
 endpoint and exercises update/route recovery using a shared in-memory store.
 The proxy has focused tests for service authentication, path allowlisting,

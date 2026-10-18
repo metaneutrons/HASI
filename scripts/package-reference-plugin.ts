@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import type { Dirent } from 'node:fs';
-import { copyFile, lstat, mkdir, readFile, readdir, readlink, rm, writeFile } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, readlink, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -37,7 +38,31 @@ export interface ReferencePluginArtifactEvidence {
   readonly licenseInventory: readonly { readonly name: string; readonly version: string; readonly license: string }[];
 }
 
-function runLocalCommand(command: string, args: readonly string[], cwd: string): void {
+type CommandPhase = 'sdk-build' | 'dependency-preparation' | 'offline-deploy';
+const failureCategories = [
+  'ERR_PNPM_NO_OFFLINE_META', 'ERR_PNPM_NO_OFFLINE_TARBALL',
+  'ERR_PNPM_FROZEN_LOCKFILE_WITH_OUTDATED_LOCKFILE', 'ERR_PNPM_OUTDATED_LOCKFILE',
+  'ERR_PNPM_LOCKFILE_CONFIG_MISMATCH', 'ERR_PNPM_TARBALL_INTEGRITY',
+  'ERR_PNPM_DEPLOY_AMBIGUOUS_PEER', 'ERR_PNPM_META_FETCH_FAIL',
+] as const;
+
+/** Only fixed diagnostic categories leave the subprocess boundary, never raw output. */
+export class ReferencePackagingCommandError extends Error {
+  constructor(phase: CommandPhase, error: unknown) {
+    const record = typeof error === 'object' && error !== null
+      ? error as Record<string, unknown> : {};
+    const output = [record.stdout, record.stderr].map(value =>
+      typeof value === 'string' ? value : Buffer.isBuffer(value) ? value.toString('utf8') : '').join('\n');
+    const category = failureCategories.find(value => output.includes(value))
+      ?? (record.code === 'ETIMEDOUT' ? 'timeout' : record.code === 'ENOENT' ? 'command_unavailable' : 'unclassified');
+    const status = typeof record.status === 'number' && Number.isInteger(record.status)
+      && record.status >= 0 && record.status <= 255 ? String(record.status) : 'unknown';
+    super(`Reference artifact command failed during ${phase} (category: ${category}; exit: ${status}).`);
+    this.name = 'ReferencePackagingCommandError';
+  }
+}
+
+function runLocalCommand(command: string, args: readonly string[], cwd: string, phase: CommandPhase): void {
   try {
     execFileSync(command, [...args], {
       cwd,
@@ -46,13 +71,31 @@ function runLocalCommand(command: string, args: readonly string[], cwd: string):
       timeout: 60_000,
       maxBuffer: 4 * 1024 * 1024,
     });
-  } catch {
-    throw new Error(`Reference artifact packaging command failed: ${command} ${args[0] ?? ''}.`);
+  } catch (error) {
+    throw new ReferencePackagingCommandError(phase, error);
+  }
+}
+
+function deploySdk(outputDirectory: string, offline: boolean): void {
+  runLocalCommand('pnpm', [
+    ...(offline ? ['--offline'] : []),
+    '--frozen-lockfile', '--ignore-scripts', '--ignore-pnpmfile',
+    '--filter', '@hasi/plugin-sdk', 'deploy', '--prod', outputDirectory,
+  ], WORKSPACE_ROOT, offline ? 'offline-deploy' : 'dependency-preparation');
+}
+
+/** Explicit online preparation for pnpm's dedicated deployment-lockfile metadata. */
+export async function prepareReferencePluginDependencies(): Promise<void> {
+  const directory = await mkdtemp(join(tmpdir(), 'hasi-reference-dependencies-'));
+  try {
+    deploySdk(join(directory, 'sdk'), false);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
   }
 }
 
 async function loadManifestApi(): Promise<ManifestApi> {
-  runLocalCommand('pnpm', ['--filter', '@hasi/plugin-sdk', 'build'], WORKSPACE_ROOT);
+  runLocalCommand('pnpm', ['--filter', '@hasi/plugin-sdk', 'build'], WORKSPACE_ROOT, 'sdk-build');
   const module = await import(pathToFileURL(join(SDK_ROOT, 'dist/index.js')).href) as ManifestApi;
   return module;
 }
@@ -225,15 +268,7 @@ export async function packageReferencePlugin(input: {
     createdOutput = true;
     const sdkDeployDirectory = join(outputDirectory, SDK_DEPLOY_ROOT);
     await mkdir(dirname(sdkDeployDirectory), { recursive: true });
-    runLocalCommand('pnpm', [
-      '--offline',
-      '--ignore-scripts',
-      '--ignore-pnpmfile',
-      '--filter', '@hasi/plugin-sdk',
-      'deploy',
-      '--prod',
-      sdkDeployDirectory,
-    ], WORKSPACE_ROOT);
+    deploySdk(sdkDeployDirectory, true);
     await assertNoMachineSpecificDeploymentMetadata(sdkDeployDirectory);
     await assertSelfContainedSymlinks(sdkDeployDirectory, sdkDeployDirectory);
 
@@ -303,15 +338,20 @@ export async function packageReferencePlugin(input: {
 const scriptPath = process.argv[1];
 if (scriptPath && resolve(scriptPath) === fileURLToPath(import.meta.url)) {
   const outputDirectory = process.argv[2];
-  if (!outputDirectory) {
-    process.stderr.write('Usage: pnpm exec tsx scripts/package-reference-plugin.ts <new-output-directory>\n');
+  if (!outputDirectory || process.argv.length !== 3) {
+    process.stderr.write('Usage: pnpm exec tsx scripts/package-reference-plugin.ts <new-output-directory>|--prepare\n');
     process.exitCode = 2;
   } else {
     try {
-      const evidence = await packageReferencePlugin({ outputDirectory });
-      process.stdout.write(`${JSON.stringify(evidence, null, 2)}\n`);
-    } catch {
-      process.stderr.write('Reference plugin packaging failed.\n');
+      if (outputDirectory === '--prepare') {
+        await prepareReferencePluginDependencies();
+        process.stdout.write('Reference SDK dependencies prepared; artifact packaging remains offline.\n');
+      } else {
+        const evidence = await packageReferencePlugin({ outputDirectory });
+        process.stdout.write(`${JSON.stringify(evidence, null, 2)}\n`);
+      }
+    } catch (error) {
+      process.stderr.write(error instanceof ReferencePackagingCommandError ? `${error.message}\n` : 'Reference plugin packaging failed.\n');
       process.exitCode = 1;
     }
   }

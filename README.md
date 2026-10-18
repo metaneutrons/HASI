@@ -121,11 +121,14 @@ pnpm build
 pnpm lint
 pnpm typecheck
 pnpm research:anny
+pnpm reference:prepare
 pnpm test
 pnpm test:coverage
 ```
 
 Build first after a clean install: workspace declaration files are emitted to `dist` and are needed by linting, type checks and tests. Integration tests use loopback HTTP and MCP calls. `pnpm research:anny` fetches the third-party anny specifications, verifies their pinned SHA-256 values and materializes them for contract tests; the specifications are not redistributed here.
+
+`pnpm reference:prepare` explicitly prepares the locked reference SDK deployment dependencies online. The subsequent reference artifact packaging stays offline, with lifecycle scripts disabled and the lockfile frozen. Preparation and tests must share the same pnpm store and metadata cache (`XDG_CACHE_HOME` when set); CI prepares a fresh metadata cache for each matrix job.
 
 ## Architecture and boundaries
 
