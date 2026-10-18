@@ -1,7 +1,8 @@
 # Groq context and planning-call budget
 
-Date: 2026-10-18. Status: implementation and local tests complete; exact-head CI,
-automatic main deployment and live qualification pending.
+Date: 2026-10-18. Router implementation merged in PR #43 and deployed at main
+`25586c1c462e0cd826a8a7fdb9f4e0eb05d4db73`. Exact deployment and subsequent
+end-to-end qualification evidence is recorded in the implementation PR.
 
 ## Cause and evidence
 
@@ -96,10 +97,23 @@ provider-only context projection, receipt/user/knowledge preservation, exact
 availability reduction, task-scoped tool rejection, strict quota parsing,
 sanitary telemetry on success/failure/fallback, and provider Retry-After.
 Existing authorization, ownership, confirmation, provider policy, native adapter
-and Berlin midnight/DST tests remain required. CI and live evidence follow in
-the implementation PR; this report does not claim a completed deployment yet.
+and Berlin midnight/DST tests remain required. PR #43 passed all required checks
+at head `336d5061caab3ae061e64583e81fc8a24c02ff22`, including both Node versions
+and PostgreSQL. Its deployment was READY in `fra1` under the public domain.
 
-Actual account quota, live token use, inference count and public-domain workflow
-must be qualified after deployment. No live anny writes or credentials are needed
+Live Groq headers confirmed a token limit of 8,000 TPM and a request limit of
+1,000 RPD for the selected profile. The first broad Monday 1J office search used
+one upstream attempt, 2,337 input tokens and 63 output tokens. Standalone office
+preference, availability, proposal preparation, confirmation and own-booking list
+made no further `/api/chat` calls. A separate knowledge request used two model
+calls (1,286/51 and 1,749/70 input/output tokens) and correctly declined an
+unsubstantiated eduroam answer. Cache-hit tokens were not measured.
+
+The initial booking qualification exposed a separate pre-existing mock defect:
+a canceled record released availability but still caused an order-write conflict.
+The follow-up uses one shared active-status predicate for availability and writes,
+with a failing-before/passing-after cancel/rebook regression that also preserves
+the canceled record and rejects active duplicates. The implementation PR records
+subsequent live qualification. No live anny writes or credentials are needed
 for the synthetic workflow. Institutional SSO/data-policy qualification remains
 outside this fix; this is not durable token/currency accounting.

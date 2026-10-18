@@ -109,6 +109,52 @@ describe('durable Anny mock state', () => {
     }
   });
 
+  it('allows a canceled interval to be rebooked while retaining the canceled record and rejecting active duplicates', async () => {
+    const store = new MemoryJsonStore('durable-canceled-rebook-test');
+    const app = createAnnyMock({ token: TOKEN, store, scope: 'shared' });
+    const slot = futureSlot();
+    try {
+      await app.ready();
+
+      const original = await postOrder(app, MOCK_IDS.customers.student, slot.start, slot.end);
+      expect(original.statusCode).toBe(200);
+      const originalBookingId = original.json<{ included: { id: string }[] }>().included[0]?.id;
+      if (originalBookingId === undefined) throw new Error('Expected the created order to contain a booking.');
+
+      const activeDuplicate = await postOrder(app, MOCK_IDS.customers.employee, slot.start, slot.end);
+      expect(activeDuplicate.statusCode).toBe(409);
+
+      const cancellation = await app.inject({
+        method: 'GET',
+        url: `/api/v1/bookings/${originalBookingId}/cancel?o=${MOCK_IDS.organization}`,
+        headers: { authorization: `Bearer ${TOKEN}` }
+      });
+      expect(cancellation.statusCode).toBe(200);
+      expect(cancellation.json<{ data: { attributes: { status: string } } }>().data.attributes.status).toBe('canceled');
+
+      const availability = await app.inject({
+        method: 'GET',
+        url: `/api/v1/availability/upcoming-intervals?service_id=${MOCK_IDS.services.students2}&resource_id=${MOCK_IDS.resources.seminarRoom}&start_date=${encodeURIComponent(slot.dayStart)}&duration=60`
+      });
+      expect(availability.statusCode).toBe(200);
+      expect(availability.json<{ data: { start_date: string; available: boolean; resource_ids: string[] }[] }>().data.find(({ start_date }) => start_date === slot.start))
+        .toMatchObject({ available: true, resource_ids: [MOCK_IDS.resources.seminarRoom] });
+
+      const rebooked = await postOrder(app, MOCK_IDS.customers.employee, slot.start, slot.end);
+      expect(rebooked.statusCode).toBe(200);
+      expect(rebooked.json<{ included: { attributes: { status: string } }[] }>().included[0]?.attributes.status).toBe('accepted');
+
+      const retained = await customerBookings(app, MOCK_IDS.customers.student);
+      const originalRecord = retained.json<{ included: { id: string; attributes: { status: string } }[] }>().included.find(({ id }) => id === originalBookingId);
+      expect(originalRecord?.attributes.status).toBe('canceled');
+
+      const duplicateAfterRebook = await postOrder(app, MOCK_IDS.customers.student, slot.start, slot.end);
+      expect(duplicateAfterRebook.statusCode).toBe(409);
+    } finally {
+      await app.close();
+    }
+  });
+
   it('atomically rejects overlapping bookings across customers', async () => {
     const store = new MemoryJsonStore('durable-conflict-test');
     const first = createAnnyMock({ token: TOKEN, store, scope: 'shared' });
