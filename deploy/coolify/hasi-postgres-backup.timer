@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily encrypted HASI PostgreSQL backup
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 UTC
+RandomizedDelaySec=900
+Persistent=true
+Unit=hasi-postgres-backup.service
+
+[Install]
+WantedBy=timers.target

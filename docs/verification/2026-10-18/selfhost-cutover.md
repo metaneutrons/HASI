@@ -3,11 +3,15 @@
 The public HASI prototype now runs on its own Hetzner server under Coolify.
 This is a synthetic-demo hosting qualification, not institutional M3 acceptance.
 
+Subsequent change on the same day: [local PostgreSQL cutover](./local-postgres-cutover.md).
+The initially retained Neon database was migrated and deleted after verification.
+
 ## Runtime and credentials
 
 - Coolify 4.4.6 manages separate HASI and MediaWiki Compose resources.
-- The existing production Neon connection, `production:v1` state namespace and
-  shared `model-budgets:shared:v1` ledger are retained. No budget reset occurred.
+- The initial hosting cutover retained the Neon connection, `production:v1`
+  namespace and shared ledger. The subsequent local-database migration preserved
+  all records and budget state before retiring Neon.
 - A new 32-byte demo secret was explicitly approved by Fabian. Previous signed
   test sessions are intentionally invalidated; stored test records were not deleted.
 - `HASI_DEMO_SECRET`, `GROQ_API_KEY` and `GWDG_API_KEY` are held in fnox and

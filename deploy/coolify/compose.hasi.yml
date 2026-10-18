@@ -16,12 +16,16 @@ services:
       NEXT_PUBLIC_HASI_PUBLIC_DEMO: "1"
       HASI_DEMO_ORIGIN: "https://hasi.metaneutrons.cc"
       HASI_DEMO_STATE_NAMESPACE: "production:v1"
-      DATABASE_URL: ${DATABASE_URL:?Set the existing production Neon DATABASE_URL}
+      DATABASE_URL: ${DATABASE_URL:?Set the private HASI PostgreSQL connection URL}
       HASI_DEMO_SECRET: ${HASI_DEMO_SECRET:?Set the provisioned server-only HASI_DEMO_SECRET}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GWDG_API_KEY: ${GWDG_API_KEY:-}
     networks:
       - coolify
+      - hasi-backend
+    depends_on:
+      hasi-database:
+        condition: service_healthy
     labels:
       - traefik.enable=true
       - traefik.docker.network=coolify
@@ -46,7 +50,50 @@ services:
           cpus: "1.00"
           memory: 768M
 
+  hasi-database:
+    image: postgres:18-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c
+    restart: unless-stopped
+    stop_grace_period: 60s
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: hasi
+      POSTGRES_PASSWORD_FILE: /run/secrets/hasi-postgres-admin-password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - max_connections=50
+      - -c
+      - password_encryption=scram-sha-256
+    volumes:
+      - hasi-postgres-data:/var/lib/postgresql
+      - /data/hasi/secrets/postgres-admin-password:/run/secrets/hasi-postgres-admin-password:ro
+      - /data/hasi/secrets/postgres-app-password:/run/secrets/hasi-postgres-app-password:ro
+      - /data/hasi/postgres-init/10-hasi.sh:/docker-entrypoint-initdb.d/10-hasi.sh:ro
+    networks:
+      - hasi-backend
+    labels:
+      - traefik.enable=false
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 512M
+
+volumes:
+  hasi-postgres-data:
+
 networks:
+  hasi-backend:
+    internal: true
   coolify:
     name: coolify
     external: true

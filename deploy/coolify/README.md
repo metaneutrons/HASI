@@ -7,10 +7,11 @@ available in Coolify. Both target the existing Coolify v4.4.6 server on
 `linux/amd64` and attach their routed service to the external `coolify`
 network.
 
-HASI uses the existing production Neon database and the `production:v1`
-namespace. The shared budget ledger is retained. Fabian approved a new demo
+HASI uses a private PostgreSQL 18.6 container and the `production:v1`
+namespace. All 201 records from Neon, including the shared budget ledger, were
+migrated before the Neon resource was deleted. Fabian approved a new demo
 secret on 2026-10-18; existing signed test sessions will not survive the move.
-These files create no HASI database and do not delete the old test records.
+The database migration did not rotate that secret or discard test records.
 
 ## Images and secrets
 
@@ -25,7 +26,9 @@ from [`deploy/mediawiki`](../mediawiki/README.md). MariaDB uses the pinned
 Set these HASI environment variables in Coolify and mark the credentials as
 secrets:
 
-- `DATABASE_URL`: the existing production Neon URL.
+- `DATABASE_URL`: the private PostgreSQL URL using the restricted `hasi` role
+  and rendered database container hostname. The encrypted exec-only recovery
+  copy is `HASI_DATABASE_URL` in fnox. Never print the URL.
 - `HASI_DEMO_SECRET`: the separately provisioned, server-only demo secret.
   A new value was approved for this move; old signed test sessions are discarded.
 - `GROQ_API_KEY` and `GWDG_API_KEY`: existing provider credentials. Empty
@@ -47,9 +50,26 @@ separately from 32 cryptographically random bytes and stored in encrypted,
 exec-only fnox and Coolify's protected variables. Groq uses `GROQ_API_KEY`,
 which is already held in fnox and is also provisioned in Coolify. Do not echo
 them, put them in command arguments, write them to repository files, or include
-them in logs. Keep the existing database URL and namespace; do
-not provision an empty replacement store or reset the budget ledger. The wiki
+them in logs. Preserve database records and namespaces during migrations;
+never reset the budget ledger when changing database hosts. The wiki
 Compose resource has no dependency on these HASI variables.
+
+Before deploying HASI, provision the PostgreSQL initialization files:
+
+| Host file | Owner/mode | Source or purpose |
+| --- | --- | --- |
+| `/data/hasi/secrets/postgres-admin-password` | root `0600` | `HASI_POSTGRES_ADMIN_PASSWORD` in fnox |
+| `/data/hasi/secrets/postgres-app-password` | UID/GID 999 `0600` | `HASI_POSTGRES_PASSWORD` in fnox; matches the application URL |
+| `/data/hasi/postgres-init/10-hasi.sh` | root `0555` | [`init-postgres.sh`](./init-postgres.sh) |
+
+Keep the host secrets directory root `0700`. The application password file is
+read by the PostgreSQL container's UID 999 during first initialization. The
+script creates a non-superuser `hasi` login and transfers database ownership;
+the runtime role cannot create databases/roles or replicate. Files are mounted
+read-only. An existing data volume skips initialization; changing a password
+file does not rotate the existing database role. Provision secret values through
+protected stdin, never command arguments or repository files. Restore imported
+state with `--no-owner --no-acl --role=hasi` before admitting application traffic.
 
 Before deploying the wiki, create three nonempty, root-owned host secret files
 with mode `0600`:
@@ -88,6 +108,10 @@ bridge to both wiki services; it does not publish a database port. Inspect the
 rendered Compose before starting a resource. Coolify prefixes the volume names
 with its resource UUID, so use the rendered mount names for backups and recovery.
 Wiki configuration, uploaded images and the database persist in these volumes.
+HASI's PostgreSQL uses its internal `hasi-backend` network plus the private
+per-resource bridge Coolify adds. It has no external `coolify` network attachment,
+proxy router or host port; host authentication uses SCRAM. PostgreSQL 18 data
+persists at `/var/lib/postgresql`, not the older image's `/data` mount location.
 
 The separately managed [`proxy.yml`](./proxy.yml) is the persistent Coolify
 proxy configuration. It is managed through Coolify's supported proxy
@@ -108,10 +132,37 @@ a burst of twenty. These limits do not replace the durable USD 1/day model
 budget. No forwarded-IP headers are trusted. Keep this file when upgrading or
 recreating the proxy; a direct application host port would bypass it.
 
-Resource limits are 768 MiB for HASI, 512 MiB for MediaWiki and 512 MiB for
-MariaDB, leaving headroom on the 4 GB host. HASI and MariaDB have Compose health
+Resource limits are 768 MiB for HASI and 512 MiB each for PostgreSQL, MediaWiki
+and MariaDB. PostgreSQL uses 128 MiB shared buffers and at most 50 connections.
+HASI and both databases have Compose health
 checks. MediaWiki inherits its local API health check from its image. Services
 use restart policies, persistent named volumes and graceful stop periods.
+
+## PostgreSQL backups and recovery
+
+Install `age` on the host. Copy [`backup-postgres.sh`](./backup-postgres.sh) to
+`/usr/local/sbin/hasi-backup-postgres` (root `0700`) and the adjacent systemd
+service/timer files to `/etc/systemd/system/`. Write the public age recipients
+from the operator's fnox configuration to `/etc/hasi/backup-recipients.txt`.
+Create `/data/hasi/backups/postgres` as root `0700`, reload systemd and enable
+the timer. Adjust the unit's container name if the resource UUID changes.
+
+Daily backups run from 03:15 UTC with up to 15 minutes jitter and about 14 days
+retention. A consistent custom-format dump streams straight into age encryption;
+only a completed file is atomically published. The service returns failure on
+pipeline errors. No private decryption identity is stored on the server.
+The final source dump and a post-validation local-database snapshot were also
+saved to the operator's Mac under `~/.config/hasi/backups/`. Ongoing off-host
+replication and failure monitoring are not configured; server-local backups
+alone do not survive host loss.
+
+Recover on a trusted workstation using an authorized age identity, then stream
+the dump into an empty PostgreSQL 18 database owned by `hasi` with
+`pg_restore --exit-on-error --no-owner --no-acl --role=hasi`. Preserve namespaces,
+JSON values, revisions, expiries and the complete budget ledger. Stop the old
+writer for the final snapshot/cutover and compare all rows before opening traffic.
+A separate-database restore passed before Neon deletion; an encrypted-artifact
+decryption recovery exercise remains open.
 
 ## Synthetic wiki seed and limits
 
@@ -151,12 +202,15 @@ providers completed real chat requests and produced the expected Anny tool
 call for an individual workplace in building 1J. The HTTP smoke also passed
 explicit mock-account consent, source access, booking confirmation/replay and
 confirmed cancellation. The signed session and canceled booking survived an
-application-container restart using the retained Neon store.
+application-container restart. After moving to local PostgreSQL, the HTTP
+workflows and both real model calls passed again. Signed login, account consent
+and a canceled booking also survived restarting both PostgreSQL and HASI.
 
 `hasi.metaneutrons.cc` now has DNS-only A/AAAA records for this server. IPv4 and
 IPv6 HTTPS checks passed. At the operator's request, the Vercel `hasi` project
 and its deployments were deleted after cutover. The Neon `hasi-demo` database
-was disconnected from that project and retained; the server still uses it.
+was subsequently migrated, verified and deleted too. A fresh resource lookup
+and account-wide resource list confirmed its removal.
 Vercel is no longer a rollback target. The new demo key deliberately invalidates
 the previous test sessions.
 The chat has not yet been switched to MediaWiki-backed retrieval.
@@ -169,3 +223,5 @@ Container release publication remains governed by Release Please.
 This delivery follow-up is tracked in [#79](https://github.com/metaneutrons/HASI/issues/79).
 
 See the [cutover verification](../../docs/verification/2026-10-18/selfhost-cutover.md).
+The subsequent [database cutover](../../docs/verification/2026-10-18/local-postgres-cutover.md)
+records the Neon retirement and backup checks.
