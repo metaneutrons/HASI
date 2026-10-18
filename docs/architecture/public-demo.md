@@ -74,9 +74,14 @@ HsH identity, anny tenant data or institutional knowledge services.
 ## Chat and request limits
 
 The chat server validates the complete wire message/tool sequence and executes
-one inference step. The browser performs at most four steps per user turn and
-stops when host-rendered availability, proposal or booking cards supply the
-next action. Only typed anny read and proposal-preparation tools are model
+one inference step. The browser performs at most two steps for ordinary tasks, or three for explicit mixed knowledge/anny tasks. Every successful anny
+result ends the model loop, including unchecked or empty searches and booking
+lists; the host renders the next action. Knowledge retrieval can use a second
+step for a cited answer. Mixed tasks can read each category once and synthesize
+afterwards; completed categories are removed from the next tool advertisement. Exact standalone office preferences in an existing
+workplace search and simple own-booking list requests use the typed read tools
+directly. Selecting cards, preparing proposals and confirming them need no
+additional generation. Compound/ambiguous requests still use the selected model. Only typed anny read and proposal-preparation tools are model
 facing. A host-owned confirmation card performs the separately authorized
 booking or cancellation execution. Cancellation proposals capture an owned booking’s
 ID, resource and interval and recheck that snapshot at execution. Prepared intervals must match a previously observed
@@ -89,7 +94,14 @@ GPT-OSS uses low reasoning effort. The currently exposed GWDG profile is Qwen3
 knowledge answer and an anny room search. GWDG GPT-OSS 120B is deferred after
 upstream HTTP 500 responses. Each assistant response records the selected
 profile. Messages and bounded tool results are sent to the selected model
-provider, as stated in the UI.
+provider, as stated in the UI. Only user messages require verified calendar
+anchors. Provider-only projection retains compact details for the two newest
+anny results; older details require a fresh read. Knowledge evidence, user text,
+UI cards and the submitted signed history are not rewritten by this projection.
+The rolling client history budget drops complete oldest turns, including
+between model-free UI/read actions, without splitting tool exchanges.
+Clear tasks advertise only the needed tool schemas; mixed/unclear tasks retain
+the full set. Eligibility and secret resolution precede projection.
 
 The chat handler allows a maximum 60-second invocation. Generation deadlines
 are 20 seconds for Groq and custom connections and 45 seconds for GWDG. It
@@ -103,6 +115,19 @@ are never retried. The bundled policy allows at most two provider calls per admi
 within the same deadline, including regeneration. An explicit registry policy
 can allow up to three; fallback and regeneration share that same attempt budget. Failed generations may count toward provider
 usage; this is not monetary accounting.
+
+
+Successful and failed profile generations emit content-free server metrics:
+profile ID, attempts, context character counts and provider-reported usage when
+available. Groq headers contribute allowlisted TPM token counters, RPD request
+counters and bounded Retry-After; an unambiguous error phrase may classify
+TPM/RPM/TPD/RPD. Failed attempts do not claim zero token usage; successful usage
+is not an aggregate of failed regeneration/fallback attempts. No prompts,
+credentials, raw errors, request IDs or arbitrary headers are logged. Provider
+Retry-After replaces the former fixed one-minute advice. This diagnoses limits;
+it is not a durable token reservation or spend ledger.
+
+See [context measurement and workflow qualification](../verification/2026-10-18/groq-context-budget.md).
 
 The chat route uses Vercel Firewall rule `hasi-chat`, configured for 60
 inference requests per 600-second fixed window. It uses a server-owned shared

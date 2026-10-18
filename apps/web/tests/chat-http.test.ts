@@ -110,3 +110,15 @@ describe("server message time boundary", () => {
     expect(clock.verify(body.message, body.message.timestamp)).toBe(now.toISOString());
   });
 });
+
+
+it("uses the provider's sanitized wait time instead of assuming one minute", async () => {
+  const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    const response = await handleChatPost(request(), { run: async () => { throw new ModelRouterError("provider_rate_limited", "private", 429, undefined, "rate_limit", { retryAfterSeconds: 7, tokenLimit: 8000, dimension: "TPM" }); }, admit: async () => true, allowedOrigins: [origin] });
+    expect(response.headers.get("retry-after")).toBe("7");
+    expect((await response.json()).error).toContain("7 Sekunden");
+    expect(JSON.parse(String(warning.mock.calls[0]?.[1])).rateLimits.dimension).toBe("TPM");
+    expect(JSON.stringify(warning.mock.calls)).not.toContain("private");
+  } finally { warning.mockRestore(); }
+});

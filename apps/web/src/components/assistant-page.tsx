@@ -12,11 +12,12 @@ import { availabilityInputForSlot, createAnnyChatTools, type AnnyChatToolResult 
 import { searchKnowledge, knowledgeDocumentHref, knowledgeSourceLabel } from "@/lib/knowledge";
 import { chatProfileIdSchema, modelProfilesResponseSchema, modelReplySchema, type ModelProfile, type ModelProfileId, type WireMessage } from "@/lib/chat-contract";
 import { createChatMessageClock } from "@/lib/chat-message-clock";
-import { appendChatText } from "@/lib/chat-history";
+import { appendChatText, trimChatHistory } from "@/lib/chat-history";
 import type { ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
 import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError, RoomTimeUnresolvedError } from "@/lib/chat-room-time";
 import { canStartNewChat } from "@/lib/chat-workspace-store";
 import { ChatSessionList } from "@/components/chat-session-list";
+import { MAX_MODEL_STEPS, toolNeedsModelFollowUp, toolBatchNeedsModelFollowUp, isAvailabilityFollowUp, isMixedKnowledgeRequest, officePreferenceSearch, isOwnBookingsRequest } from "@/lib/chat-tool-loop";
 import { ChatMessageCopy } from "@/components/chat-message-copy";
 import { bookingStatusLabel } from "@/lib/chat-message-copy";
 import { ChatRoomResults } from "@/components/chat-room-results";
@@ -282,18 +283,15 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   }
 
   async function runModel() {
-    // Drop complete oldest turns only; never separate a tool call from its result.
-    while (history.current.length > 36 || JSON.stringify(history.current).length > 22_000) {
-      const nextTurn = history.current.findIndex((message, index) => index > 0 && message.role === "user");
-      if (nextTurn < 0) { history.current = []; break; }
-      history.current.splice(0, nextTurn);
-    }
+    // Keep complete exchanges, including direct tool actions with no inference.
+    if (!trimChatHistory(history.current)) throw new Error("Dieser einzelne Gesprächsschritt ist für den Modellkontext zu umfangreich. Beginne bitte einen neuen Chat mit einer kürzeren Anfrage; deine vorhandenen Karten bleiben erhalten.");
     const interactionId = id();
     const controller = pendingRequest.current!;
-    const latestUserText = [...history.current].reverse().find((message) => message.role === "user")?.content ?? "";
-    const cancellationRequested = /\b(?:storn\w*|kündig\w*|cancel\w*|annull\w*)\b/iu.test(latestUserText);
+    const latestUserText = history.current.findLast(message => message.role === "user")?.content ?? "";
+    const mixedRequest = isMixedKnowledgeRequest(latestUserText, roomContext);
+    const stepLimit = mixedRequest ? 3 : MAX_MODEL_STEPS;
     try {
-      for (let step = 0; step < 4; step += 1) {
+      for (let step = 0; step < stepLimit; step += 1) {
         setActivity(`${resolvedProfile.current ? modelProviderName(resolvedProfile.current) : providerLabel ?? "Das Modell"} antwortet …`);
         await stampMessages();
         const response = await fetch("/api/chat", {
@@ -316,6 +314,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         if (reply.message.content.trim()) add({ role: "assistant", text: reply.message.content, model: actualLabel, timestamp: reply.message.timestamp }, reply.message.id);
         if (!reply.message.toolCalls?.length) return;
         let actionableResult = false;
+        const successfulTools: import("@/lib/chat-contract").ChatToolName[] = [];
         for (const call of reply.message.toolCalls) {
           setActivity(`anny · ${call.name === "anny_propose_booking" ? "Buchung vorbereiten" : call.name === "anny_propose_cancellation" ? "Stornierung beginnen" : "Testdaten abfragen"}`);
           let output: Record<string, unknown>;
@@ -324,15 +323,15 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
               setActivity("Wissensdienst · Demoquellen suchen");
               const result = await searchKnowledge(requestForChat, call.arguments as { query: string; sourceSystem?: "service_it" | "intranet" });
               output = { ...result };
+              successfulTools.push("knowledge_search");
               add({ role: "assistant", text: result.documents.length ? "Gefundene Demoquellen. Die folgende Antwort wertet diese Beispiele aus." : "Keine passenden, für dein Testkonto freigegebenen Demoquellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents, model: actualLabel });
             } else {
             assertRequestedRoomTime(call.name, call.arguments, roomIntent.current);
             const result = await tools().run(call.name, call.arguments);
             output = result.output;
+            successfulTools.push(result.name);
             showToolResult(result, interactionId, actualLabel);
-            actionableResult ||= Boolean(result.proposal || result.bookings && !cancellationRequested
-              || result.output.refinementRequired === true || typeof result.output.clarificationRequired === "string"
-              || result.rooms?.some((room) => room.checked && room.intervals.length > 0));
+            actionableResult ||= !toolNeedsModelFollowUp(result.name);
             }
           } catch (cause) {
             if (cause instanceof RoomTimeUnresolvedError) actionableResult = true;
@@ -342,8 +341,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
           history.current.push(remember({ role: "tool", toolCallId: call.id, name: call.name, content: JSON.stringify(output) }));
         }
         // Host-rendered cards already provide the answer and next action.
-        // Avoid a redundant generation after availability, proposals or bookings.
-        if (actionableResult) return;
+        // Stop after every successful Anny result, including empty/unchecked searches.
+        if (actionableResult && !mixedRequest && !toolBatchNeedsModelFollowUp(successfulTools)) return;
       }
       add({ role: "assistant", text: "Die maximale Zahl an Modellschritten für diese Nachricht ist erreicht. Du kannst die angezeigten Karten nutzen oder eine weitere Nachricht schreiben." });
     } catch (cause) {
@@ -432,13 +431,35 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         return;
       }
       if (!offline) {
-        if (classifyIntent(trimmed, roomContext) === "rooms") {
+        if (classifyIntent(trimmed, roomContext) === "rooms" || roomContext && isAvailabilityFollowUp(trimmed)) {
           const timestamp = history.current.find(message => message.id === eventId)?.timestamp;
           if (timestamp) {
             const reset = !roomContext || /(?:neue|andere)\s+(?:raum)?suche|(?:anderen|neuen)\s+raum|von vorne/i.test(trimmed);
-            updateRequest(mergeRoomRequest(trimmed, reset ? {} : roomIntent.current, new Date(timestamp.createdAt)));
+            const previous = roomIntent.current;
+            const now = new Date(timestamp.createdAt);
+            const preference = !reset ? officePreferenceSearch(trimmed, previous, now) : null;
+            const next = preference ?? mergeRoomRequest(trimmed, reset ? {} : previous, now);
+            updateRequest(next);
             setRoomContext(true);
+            if (preference) {
+              setChosenRoom(null);
+              const args = Object.fromEntries(["kind", "officeType", "capacity", "features", "location", "query"].flatMap(key => {
+                const value = next[key as keyof RoomRequest];
+                return value === undefined ? [] : [[key, value]];
+              }));
+              const result = await tools().run("anny_search_resources", args);
+              recordTool("anny_search_resources", args, result.output);
+              showToolResult(result, id(), "");
+              return;
+            }
           }
+        }
+        if (isOwnBookingsRequest(trimmed)) {
+          const result = await tools().run("anny_list_my_bookings", {});
+          recordTool("anny_list_my_bookings", {}, result.output);
+          showToolResult(result, id(), "");
+          setRoomContext(false);
+          return;
         }
         await runModel();
         return;

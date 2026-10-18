@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const access = await chatAccess(request);
   if (access instanceof Response) return access;
   return handleChatPost(access.request, {
-    run: input => runModelStep(input, { routingPins: access.routingPins, messageTimes: input.messages.map(message => access.clock.verify(message, message.timestamp)) }),
+    run: input => runModelStep(input, { routingPins: access.routingPins, messageTimes: input.messages.map(message => access.clock.verify(message, message.timestamp)), telemetry: metrics => console.info("HASI model usage", JSON.stringify(metrics)) }),
     clock: access.clock,
     allowedOrigins: access.allowedOrigins,
     admit: admitChat,
