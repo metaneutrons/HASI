@@ -81,5 +81,6 @@ thresholds apply to the selected backend/services, not the entire frontend.
 At the 2026-10-16 audit, the older MVP plan lacked epic/milestone tracking.
 That tracking gap is addressed by the [MVP epic #47](https://github.com/metaneutrons/HASI/issues/47)
 and [roadmap epic #55](https://github.com/metaneutrons/HASI/issues/55) on 2026-10-18.
-The web strictness/coverage findings remain open in [#67](https://github.com/metaneutrons/HASI/issues/67);
+The web strictness/coverage findings remain open as WEB-A1 in [M2 #49](https://github.com/metaneutrons/HASI/issues/49)
+(transferred from superseded #67);
 this tracking update does not change compiler/lint settings or coverage gates.

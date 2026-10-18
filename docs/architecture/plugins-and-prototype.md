@@ -162,13 +162,14 @@ The production contract must provide:
   network/DNS/redirect and resource boundaries; a process or MCP connection alone
   is insufficient. Keep a validated previous artifact/configuration available.
 
-Tracking: [external plugin installation/admin configuration #65](https://github.com/metaneutrons/HASI/issues/65),
-under [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
+Tracking: [plugin milestones P1–P6](../plans/consolidated-delivery.md#plugin-delivery-slices),
+under [M2 #49](https://github.com/metaneutrons/HASI/issues/49). Former #65 is
+superseded by those milestones; its production scope remains unaccepted.
 
 These requirements extend the existing production boundary without replacing
 the working registry/SDK. They require an implementation and qualification plan
 before enabling external executable code. Current execution state belongs in
-the linked M2 implementation issue, not in a parallel acceptance checklist here.
+the linked milestone issues, not in a parallel acceptance checklist here.
 
 ## anny contract fidelity
 

@@ -11,10 +11,10 @@ current execution state, next actions, blockers and evidence. The separate
 [delivery epic #14](https://github.com/metaneutrons/HASI/issues/14) owns demo and
 container delivery, not institutional MVP acceptance.
 
-The proposed [consolidated delivery plan](consolidated-delivery.md) maps the
+The [consolidated delivery plan](consolidated-delivery.md) maps the
 existing issues into a common dependency order and details the plugin-platform
-delivery slices, including the MCP Apps feasibility gate. It does not waive or
-replace the MVP criteria below; its new criteria remain proposed until reviewed.
+milestones, including the MCP Apps feasibility gate. It does not waive or
+replace the MVP criteria below; production Apps adoption still needs qualification.
 
 ## Current implementation slice
 
@@ -99,11 +99,13 @@ and M2 identity/policy foundation; M5 requires qualified M4 identities/rights an
 M2 execution state. M6 institutional workflow qualification uses those integrated
 boundaries. M7 requires all applicable M1–M6 gates. These are qualification
 dependencies, not a prohibition on earlier synthetic fixtures or design work.
-M2 follow-ups include [external plugins/admin configuration #65](https://github.com/metaneutrons/HASI/issues/65),
-[durable model budgets #66](https://github.com/metaneutrons/HASI/issues/66) and
-[web-standard gaps #67](https://github.com/metaneutrons/HASI/issues/67).
-The separate [Groq cache investigation #64](https://github.com/metaneutrons/HASI/issues/64)
-does not establish savings or complete M6.
+M2 tracks [plugin milestones P1–P6](consolidated-delivery.md#plugin-delivery-slices),
+durable budgets (BUD-A1) and frontend findings (WEB-A1) in [#49](https://github.com/metaneutrons/HASI/issues/49).
+The transferred Groq cache investigation (CACHE-A1) remains open within
+[M6 #53](https://github.com/metaneutrons/HASI/issues/53); it does not establish
+savings or complete M6. Former standalone issues #64–#67 are superseded, not
+accepted; see the [successor mapping](consolidated-delivery.md#superseded-standalone-issues).
+
 
 No duration or budget is asserted before operating constraints and team
 availability are known. A read-only anny pilot can begin before write semantics

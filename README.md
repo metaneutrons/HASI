@@ -145,7 +145,7 @@ The roadmap additionally covers [public web search restricted to operator-approv
 
 Track institutional work in the [MVP epic #47](https://github.com/metaneutrons/HASI/issues/47),
 later integrations in the [roadmap epic #55](https://github.com/metaneutrons/HASI/issues/55),
-and external plugin installation/admin configuration in [#65](https://github.com/metaneutrons/HASI/issues/65).
+and external plugin milestones P1–P6 under [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
 The generic MCP registry already supports approved endpoints and compatible
 updates; arbitrary plugin installation, schema-driven configuration and
 registry-driven chat tool discovery remain open.
@@ -153,7 +153,7 @@ See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](doc
 
 ## Project documents
 
-- [Consolidated delivery plan and plugin-platform slices (proposed)](docs/plans/consolidated-delivery.md)
+- [Consolidated delivery plan and plugin-platform milestones](docs/plans/consolidated-delivery.md)
 - [Chat-first interaction](docs/architecture/chat-first.md)
 - [Plugin contract and prototype boundaries](docs/architecture/plugins-and-prototype.md)
 - [Technical basis](docs/architecture/technical-basis.md)
