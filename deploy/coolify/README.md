@@ -1,11 +1,19 @@
 # HASI demo stack for Coolify
 
-The deployment uses two independent raw Compose resources so the synthetic wiki
-can start without waiting for HASI credentials. Deploy `compose.wiki.yml` for
-MediaWiki. Deploy `compose.hasi.yml` when its required HASI values are
-available in Coolify. Both target the existing Coolify v4.4.6 server on
-`linux/amd64` and attach their routed service to the external `coolify`
-network.
+Qualified-main delivery is implemented by the private source-deployment
+controller and a native Git/Dockerfile application. See
+[automatic deployment and rollback](main-deployment.md) for admission, custody,
+state preservation and operator commands. The original `compose.hasi.yml` is
+the bootstrap stack; after cutover the same data resource uses
+[`compose.database.yml`](compose.database.yml) and retains its existing volume.
+Qualification status and exact deployed revisions are tracked in #79.
+
+The bootstrap used independent raw Compose resources for HASI and the synthetic
+wiki. `compose.wiki.yml` still manages MediaWiki. The native HASI application
+builds the public repository Dockerfile; `compose.database.yml` retains its data
+service under the original UUID. All run on the existing Coolify v4.4.6 server
+on `linux/amd64`. The native app reuses the retained private resource network
+already joined by the proxy; the wiki uses the external `coolify` network.
 
 HASI uses a private PostgreSQL 18.6 container and the `production:v1`
 namespace. All 201 records from Neon, including the shared budget ledger, were
@@ -15,11 +23,12 @@ The database migration did not rotate that secret or discard test records.
 
 ## Images and secrets
 
-The server must already have the images loaded locally.
+The bootstrap stack requires its images loaded locally.
 `compose.hasi.yml` defaults to `hasi:demo-selfhost` and
 `compose.wiki.yml` defaults to `hasi-mediawiki-demo:amd64`. Both use
 `pull_policy: never`, so a missing local image fails deployment instead of
-silently pulling another image. The MediaWiki image is built for `linux/amd64`
+silently pulling another image. The native application instead builds the exact
+CI-qualified Git SHA; its secrets are runtime-only variables. The MediaWiki image is built for `linux/amd64`
 from [`deploy/mediawiki`](../mediawiki/README.md). MariaDB uses the pinned
 `lts` digest in the wiki Compose file.
 
@@ -215,12 +224,12 @@ Vercel is no longer a rollback target. The new demo key deliberately invalidates
 the previous test sessions.
 The chat has not yet been switched to MediaWiki-backed retrieval.
 
-The raw Compose resource currently uses a preloaded image. Restarting it does
-not fetch a new Git commit. Deleting the Vercel project also removes its project
-deployment integration; automatic deployment of qualified `main` changes needs a
-separate Git-backed Coolify build/trigger before it can be claimed operational.
-Container release publication remains governed by Release Please.
-This delivery follow-up is tracked in [#79](https://github.com/metaneutrons/HASI/issues/79).
+The original raw Compose web service used a preloaded image and could not fetch
+new commits. The private controller and native Git application replace that
+delivery path; the original resource retains PostgreSQL. Exact runtime,
+automatic-revision and rollback qualification is recorded in
+[#79](https://github.com/metaneutrons/HASI/issues/79), not inferred from a
+restart. Container release publication remains governed by Release Please.
 
 See the [cutover verification](../../docs/verification/2026-10-18/selfhost-cutover.md).
 The subsequent [database cutover](../../docs/verification/2026-10-18/local-postgres-cutover.md)
