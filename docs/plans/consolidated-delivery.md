@@ -46,21 +46,23 @@ and [PostgreSQL cutover verification](../verification/2026-10-18/local-postgres-
 
 M2 and P1–P6 implementation is merged, but final technical acceptance is
 deliberately deferred. [PR #78](https://github.com/metaneutrons/HASI/pull/78) is
-unmerged; its candidate at `1ffd651b1c561b8dba6182435c233093f47a99e2` has
-green CI. M1–M7 now qualify technical behavior against TestIdP, mock/reference
+unmerged. Earlier green CI at `1ffd651` is historical; candidate `095f3c5`
+failed the existing cold-store reference-plugin packaging test on both Node
+versions (tracked in #74). M1–M7 now qualify technical behavior against TestIdP, mock/reference
 authorities and synthetic fixtures. Real institutional identity, source rights,
 Anny tenant behavior, protected-data approval and final go/no-go are reserved for
 M8 [#80](https://github.com/metaneutrons/HASI/issues/80); mock evidence does not
 qualify that milestone.
 
-The Service-IT portal/catalog is in progress as synthetic demo content. The
-reviewed fixture inventory has 301 documents: 271 Service-IT and 30 Intranet.
-The 241 new Service-IT entries comprise 183 authenticated FAQ fixtures, one
-additional valid public RSS FAQ, 22 services, 11 news items, 19 links and five
-forms; category landing pages are excluded. These are inventory counts, not a
-deployed corpus count. The older 60-document seed and 104-page public crawl are
-separate historical evidence. Synthetic fixtures and mock identity support
-technical M3/M4 qualification only; they do not establish HsH rights.
+The synthetic Service-IT HTML path is deployed from application commit
+`d05252f`; [the verification record](../verification/2026-10-18/service-it-portal.md)
+covers 271 served Service-IT articles, signed MCP acquisition and network
+restrictions. The combined fixture inventory has 301 documents (271 Service-IT,
+30 Intranet), including 241 newly inventoried synthetic examples. Intranet chat
+retrieval remains on fixtures. The older 60-document seed and 104-page public
+crawl are separate historical evidence. Synthetic content and mock identity
+support technical M3/M4 qualification; they do not establish HsH rights or
+complete all remaining technical cases.
 
 The accepted model registry/routing work in #32–#34 is reused. DeepInfra with
 DeepSeek-V4.1-Flash is the requested next provider after the synthetic

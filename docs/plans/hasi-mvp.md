@@ -43,24 +43,26 @@ The M3 candidate adds signed source-export ingestion, permission-aware hybrid
 retrieval, incident expiry, source revisions, protected retained context and
 reviewed MediaWiki/BlueSpice or HTML acquisition adapters; see the
 [M3 implementation evidence](../verification/2026-10-18/m3-knowledge-pilot.md).
-[PR #78](https://github.com/metaneutrons/HASI/pull/78) remains unmerged at
-candidate `1ffd651` with green CI. Actual HsH source rights and server-side
-access are not approved. The separate synthetic Service-IT portal/catalog is in
-progress: its reviewed inventory is 301 fixture documents (271 Service-IT, 30
-Intranet), including 241 newly inventoried Service-IT entries: 183 authenticated
-FAQ fixtures, one additional valid public RSS FAQ, 22 services, 11 news items,
-19 links and five forms. Category landing pages are not documents. These counts
-describe the current fixture inventory, not a deployed corpus; verify the exact
-merged artifact and deployment before publishing a deployed count. The demo
-content supports technical M3 qualification only; it does not qualify institutional
-source access.
+[PR #78](https://github.com/metaneutrons/HASI/pull/78) remains unmerged.
+The synthetic HTML path is deployed from application commit `d05252f`; its
+[verification record](../verification/2026-10-18/service-it-portal.md) covers
+271 served Service-IT articles, MCP acquisition, source redirects and network
+restrictions. The combined fixture inventory has 301 documents, including
+30 Intranet fixtures. The 241 new Service-IT examples cover 183 authenticated
+FAQ topics, one public RSS supplement, 22 services, eleven news items, nineteen
+links and five forms. Category landings and five broken references are excluded.
+Actual HsH source rights and server-side access are not approved. This evidence
+supports technical M3 qualification only; remaining technical cases stay in #50.
+At candidate `095f3c5`, hosted CI failed the existing cold-store reference-plugin
+packaging test on both Node versions; #74 tracks that technical gate. Earlier
+green CI at `1ffd651` is not evidence for the later candidate.
 
 The user has set institutional acceptance as the final M8 milestone. M1–M7 may
 close technical criteria using TestIdP, mock/reference authorities and synthetic
 data. Approved institutional website acquisition, actual source ACLs and
 incident freshness, real HsH SSO, Anny customer delegation and eligibility, live
 booking/cancellation writes, protected-data processing, source-owner review and
-recorded institutional go/no-go remains an M8 requirement. Synthetic knowledge
+recorded institutional go/no-go remain M8 requirements. Synthetic knowledge
 fixtures and selectable mock personas do not establish institutional access
 rights. M8 testing may use real systems only after its scope-specific operator
 and institutional authorization; final recorded go/no-go follows that evidence.
@@ -123,7 +125,7 @@ comparison; do not reopen accepted [#32–#34](https://github.com/metaneutrons/H
 | M4. anny read contracts and behavior | Qualify account-link/read behavior against TestIdP and mock/reference anny contracts. | Different mock users see only permitted resources/bookings; conflicting, missing and duplicate mappings fail closed. No real customer rights are inferred. | [#51](https://github.com/metaneutrons/HASI/issues/51) |
 | M5. anny write/cancel/reconcile behavior | Qualify server-bound proposals and action state against mock/reference contracts; do not issue live writes. | Customer eligibility rules represented in fixtures; stale/tampered confirmations rejected; retries are idempotent; cancellation and unknown-outcome reconciliation tested. | [#52](https://github.com/metaneutrons/HASI/issues/52) |
 | M6. Synthetic model and adversarial evaluation | Formal offline evaluation with synthetic fixed evidence/workflows, injected sources/tool output, rendering, network and model-switch tests. | Security cases pass per profile; quality, citations, tool arguments, latency and measured cost compared; no protected context or production writes. Complete before M7; qualify BUD-A1 before paid runs. | [#53](https://github.com/metaneutrons/HASI/issues/53) |
-| M7. Technical pilot and operations | Pilot technical journeys with synthetic data, then qualify actual-device UX and operations. Institutional data approval is not a prerequisite. | Key flows on real iPhone/Safari and Android/Chrome; connection-loss recovery, accessibility, encrypted-backup restore, off-host monitoring, incident procedures and rollback exercised. | [#54](https://github.com/metaneutrons/HASI/issues/54) |
+| M7. Technical pilot and operations | Deliver all three technical mock integrations, pilot synthetic journeys and meet the agreed acceptance thresholds, then qualify actual-device UX and operations. Institutional data approval is not a prerequisite. | Key flows on real iPhone/Safari and Android/Chrome; connection-loss recovery, accessibility, encrypted-backup restore, off-host monitoring, incident procedures and rollback exercised. | [#54](https://github.com/metaneutrons/HASI/issues/54) |
 | M8. Final institutional acceptance | Qualify real institutional identity, source permissions, Anny behavior, protected-data processing and accountable ownership after M1–M7 technical work. | All M8-A1–A6 evidence below and a recorded institutional go/no-go. No real writes or protected context before scoped authorization. | [#80](https://github.com/metaneutrons/HASI/issues/80) |
 
 M1 contract design and offline M6 dataset/harness work can proceed in parallel.
@@ -174,7 +176,7 @@ institutional qualification.
 | M4: real verified HsH-to-Anny account mapping and permitted customer reads | M4 TestIdP identities, mock mappings, permitted-resource and own-booking behaviors | M8-A1 real identity mapping; M8-A3 actual tenant delegation, eligibility and reads |
 | M5: authorized real tenant writes, cancellation, idempotency and reconciliation | M5 proposal binding, confirmation, mock create/cancel/idempotency/unknown-outcome tests | M8-A3 actual create/cancel and vendor reconciliation in the authorized tenant; M8-A6 incident/denial evidence |
 | M6: institutionally approved profiles/data classes and source-approved real evaluation cases | M6 formal synthetic/offline adversarial evaluation and measured provider comparison | M8-A4 protected-data/provider/embedding/retention approval; M8-A5 real reviewed cases; M8-A6 evidence-to-contract mapping |
-| M7: controlled institutional participants, real integration owners and operational acceptance | M7 synthetic pilot, real-device UX, restore, off-host monitoring and incident/rollback exercises | M8-A5 named owners and controlled participant approval; M8-A6 recorded institutional go/no-go |
+| M7: all three integrations delivered; agreed acceptance thresholds met; controlled institutional participants, real integration owners and operational acceptance | M7 technical integrations against mocks, synthetic pilot, real-device UX, restore, off-host monitoring and incident/rollback exercises | M8-A1–A4 real integration and data approvals; M8-A5 named owners, real reviewed cases and controlled participant approval; M8-A6 recorded institutional go/no-go |
 M2 tracks [plugin milestones P1–P6](consolidated-delivery.md#plugin-delivery-slices),
 durable budgets (BUD-A1) and frontend findings (WEB-A1) in [#49](https://github.com/metaneutrons/HASI/issues/49).
 The transferred Groq cache investigation (CACHE-A1) remains open within
@@ -241,9 +243,9 @@ public Service-IT crawl found 104 unique HTML pages; this is historical public-
 site research, not the current synthetic portal inventory. Authenticated research
 captures and details remain local and are excluded from the public repository.
 They do not establish a complete production knowledge index or access policy.
-The current synthetic portal fixture inventory is tracked separately above and
-is still in progress; its count is not a deployed count or an authoritative HsH
-source inventory.
+The completed synthetic fixture inventory is tracked separately above. Portal
+deployment and runtime integration are separate qualification steps; the fixture
+count alone is not a deployed count or an authoritative HsH source inventory.
 An authoritative Intranet inventory, approved connector and access contract
 remain unresolved as M8 institutional inputs; they do not block synthetic M3
 qualification. Model registry/selection/fallback policy is implemented and

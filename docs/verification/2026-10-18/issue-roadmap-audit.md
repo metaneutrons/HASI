@@ -97,3 +97,23 @@ precedes real-system M8 tests; final acceptance follows their evidence.
 No forced closures follow from this audit. Parent-owned issue edits should
 mirror the transfer map and link this plan, preserving #64–#67 successor
 records and each issue's acceptance authority.
+
+## Tracking reconciliation applied
+
+All 26 previously open issue bodies were refreshed and read back after the v2
+plan was pushed in PR #78: #14, #17, #47–#63, #69–#74 and #79. Current-stage,
+next-action and dependency sections now use the technical M1–M7/final M8 split;
+previous bodies are retained as explicitly historical evidence. #80 and #81 were
+created and read back. The nine previously closed issues retain their bodies,
+state and completion/supersession reasons. No additional closure is supported
+by the current technical evidence: 37 issues remain tracked, 28 open and nine
+closed at this reconciliation snapshot.
+
+A separate M1 closure review found missing direct negative-test evidence for
+missing required OIDC claims and duplicate plugin claim declarations/array
+values. Stable subject, changed authority, denial and revocation already have
+tests. This bounded technical gap is now the next action in #48; absence of
+real HsH credentials is not its blocker. M2/P1–P6 retain the explicitly deferred
+technical matrix. Current local qualification passed 728 tests in 85 files with
+isolated PostgreSQL 18, backend build, strict type checks and lint; those green
+checks do not substitute for the explicitly absent acceptance cases.
