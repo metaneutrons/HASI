@@ -39,7 +39,7 @@ function completion(options: {
   content?: string | null;
   finishReason?: string;
   toolCalls?: Array<{ id: string; name: string; arguments: string }>;
-  usage?: { prompt_tokens: number; completion_tokens: number };
+  usage?: { prompt_tokens?: number | null; completion_tokens: number; prompt_tokens_details?: { cached_tokens?: number | null } | null };
 } = {}) {
   return {
     id: "chatcmpl-test",
@@ -335,14 +335,17 @@ describe("model router", () => {
       message: `private provider message ${FAKE_KEY}`,
       code: "tool_use_failed",
       failed_generation: '{"name":"anny_search_resources","parameters":{"capacity":4,"query":""}}',
-    } }, 400);
-    const success = fakeProvider(completion({ toolCalls: [{ id: "room-1", name: "anny_search_resources", arguments: '{"capacity":4}' }] }));
+    }, usage: { prompt_tokens: 500, prompt_tokens_details: { cached_tokens: 500 } } }, 400);
+    const success = fakeProvider(completion({ toolCalls: [{ id: "room-1", name: "anny_search_resources", arguments: '{"capacity":4}' }], usage: { prompt_tokens: 1400, completion_tokens: 30, prompt_tokens_details: { cached_tokens: 1024 } } }));
+    const telemetry = vi.fn();
     let count = 0;
     const reply = await runModelStep({ ...request(), messages: [{ role: "user", content: "Ich brauche morgen um 14 Uhr einen Raum für vier Personen für eine Stunde." }] }, {
-      env: { GROQ_API_KEY: FAKE_KEY }, now: NOW,
+      env: { GROQ_API_KEY: FAKE_KEY }, now: NOW, telemetry,
       fetch: async (input, init) => ++count === 1 ? failed.fetch(input, init) : success.fetch(input, init),
     });
     expect(count).toBe(2);
+    expect(telemetry).toHaveBeenCalledTimes(1);
+    expect(telemetry).toHaveBeenCalledWith(expect.objectContaining({ attempts: 2, inputTokens: 1400, cache: { readTokens: 1024, uncachedTokens: 376, readRatio: 1024 / 1400 } }));
     const initial = JSON.parse(String(failed.calls[0]?.init?.body));
     const retry = JSON.parse(String(success.calls[0]?.init?.body));
     expect(initial.model).toBe(retry.model);
@@ -1006,6 +1009,36 @@ describe("standard provider adapters", () => {
 
 
 describe("bounded provider context and usage", () => {
+  it.each([0, 1024])("records Groq's explicit cache-read counter %s while preserving the existing chat reply contract", async (cachedTokens) => {
+    const provider = fakeProvider(completion({ content: "Private answer.", usage: { prompt_tokens: 1400, completion_tokens: 30, prompt_tokens_details: { cached_tokens: cachedTokens } } }));
+    const telemetry = vi.fn();
+    const reply = await runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW, telemetry });
+    const cache = { readTokens: cachedTokens, uncachedTokens: 1400 - cachedTokens, readRatio: cachedTokens / 1400 };
+    expect(reply.usage).toEqual({ inputTokens: 1400, outputTokens: 30 });
+    expect(telemetry).toHaveBeenCalledWith(expect.objectContaining({ inputTokens: 1400, cache, attempts: 1 }));
+    expect(JSON.stringify(telemetry.mock.calls)).not.toMatch(/Private answer|test-groq-key-only|prompt_tokens_details|authorization/iu);
+  });
+  it.each([
+    { prompt_tokens: 1400, completion_tokens: 1 },
+    { prompt_tokens: 1400, completion_tokens: 1, prompt_tokens_details: null },
+    { prompt_tokens: 1400, completion_tokens: 1, prompt_tokens_details: { cached_tokens: null } },
+    { completion_tokens: 1, prompt_tokens_details: { cached_tokens: 0 } },
+    { prompt_tokens: 1400, completion_tokens: 1, prompt_tokens_details: { cached_tokens: 1401 } },
+  ])("omits unreported or inconsistent Groq cache counters rather than inventing savings: %j", async (usage) => {
+    const provider = fakeProvider(completion({ content: "Hallo.", usage }));
+    const telemetry = vi.fn();
+    const reply = await runModelStep(request(), { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW, telemetry });
+    expect(reply.usage).not.toHaveProperty("cache");
+    expect(telemetry.mock.calls[0]?.[0].cache).toBeUndefined();
+  });
+  it("does not assume cache semantics for unqualified compatible adapters", async () => {
+    const provider = fakeProvider(completion({ content: "Hallo.", usage: { prompt_tokens: 1400, completion_tokens: 30, prompt_tokens_details: { cached_tokens: 1024 } } }));
+    const telemetry = vi.fn();
+    const reply = await runModelStep(request("custom-default"), { env: validCustomEnvironment(), fetch: provider.fetch, now: NOW, telemetry });
+    expect(reply.usage).not.toHaveProperty("cache");
+    expect(telemetry).toHaveBeenCalledTimes(1);
+    expect(telemetry.mock.calls[0]?.[0].cache).toBeUndefined();
+  });
   it("records only counts and allowlisted quota metadata while keeping the request bounded", async () => {
     const provider = fakeProvider(completion({ content: "Hallo.", usage: { prompt_tokens: 1400, completion_tokens: 30 } }), 200, { "x-ratelimit-limit-tokens": "8000", "x-ratelimit-remaining-tokens": "6600", "x-private": FAKE_KEY });
     const telemetry = vi.fn();

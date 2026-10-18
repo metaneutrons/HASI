@@ -14,6 +14,7 @@ import { classifyIntent } from "../chat-demo";
 import { parseGroqRateLimitDiagnostics, type GroqRateLimitDiagnostics } from "./provider-rate-limits";
 import { modelToolContent, retainedAnnyResultIndices } from "../chat-tool-context";
 import { groqErrorDiagnostics } from "./groq-error-diagnostics";
+import { measuredInputCache, type InputCacheUsage } from "./model-cache-usage";
 export { ModelRouterError } from "./model-router-error";
 import {
   chatRequestSchema,
@@ -37,7 +38,7 @@ type RouterOptions = {
   routingPins?: ReturnType<typeof createRoutingPins>;
   /** Trusted host context; client/model input cannot change its classification. */
   context?: { dataClasses: readonly string[]; toolsRequired: boolean };
-  telemetry?: (metrics: { outcome: "success" | "failure"; providerStatus?: number; profileId: string; attempts: number; systemChars: number; historyChars: number; modelHistoryChars: number; inputTokens?: number; outputTokens?: number; rateLimits?: GroqRateLimitDiagnostics }) => void;
+  telemetry?: (metrics: { outcome: "success" | "failure"; providerStatus?: number; profileId: string; attempts: number; systemChars: number; historyChars: number; modelHistoryChars: number; inputTokens?: number; outputTokens?: number; cache?: InputCacheUsage; rateLimits?: GroqRateLimitDiagnostics }) => void;
 };
 
 // Secret references have already passed the operator configuration allowlist.
@@ -430,6 +431,11 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
     throw invalidModelResponse();
   }
 
+  // The Groq SDK preserves cache-read absence but defaults a missing prompt
+  // total to zero. Require the explicit raw total; never log raw usage itself.
+  const cache = connection.adapter === "groq"
+    ? measuredInputCache(result.usage.raw?.prompt_tokens, result.usage.inputTokenDetails.cacheReadTokens)
+    : undefined;
   const reply = {
     message: {
       role: "assistant",
@@ -450,7 +456,7 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
 
   const replyResult = modelReplySchema.safeParse(reply);
   if (!replyResult.success) throw invalidModelResponse();
-  options.telemetry?.({ outcome: "success", profileId: profile.id, attempts, systemChars: instructions.length, historyChars: JSON.stringify(request.messages).length, modelHistoryChars: JSON.stringify(messages).length, ...reply.usage, ...(rateLimits && Object.keys(rateLimits).length ? { rateLimits } : {}) });
+  options.telemetry?.({ outcome: "success", profileId: profile.id, attempts, systemChars: instructions.length, historyChars: JSON.stringify(request.messages).length, modelHistoryChars: JSON.stringify(messages).length, ...reply.usage, ...(cache ? { cache } : {}), ...(rateLimits && Object.keys(rateLimits).length ? { rateLimits } : {}) });
   return replyResult.data;
 }
 

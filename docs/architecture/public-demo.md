@@ -124,8 +124,13 @@ counters and bounded Retry-After; an unambiguous error phrase may classify
 TPM/RPM/TPD/RPD. Failed attempts do not claim zero token usage; successful usage
 is not an aggregate of failed regeneration/fallback attempts. No prompts,
 credentials, raw errors, request IDs or arbitrary headers are logged. Provider
-Retry-After replaces the former fixed one-minute advice. This diagnoses limits;
-it is not a durable token reservation or spend ledger.
+Retry-After replaces the former fixed one-minute advice. Groq successes also
+include `cache.readTokens`, `cache.uncachedTokens` and, for positive input totals,
+`cache.readRatio` when the provider explicitly reports valid cache counters.
+Missing counters remain unknown; an explicit zero records a miss. Cache metrics
+stay in server telemetry so existing strict chat-response consumers remain
+compatible. This diagnoses limits; it is not a durable token reservation or spend ledger.
+See [prompt-cache measurement](../verification/2026-10-18/groq-prompt-cache.md).
 
 See [context measurement and workflow qualification](../verification/2026-10-18/groq-context-budget.md).
 
