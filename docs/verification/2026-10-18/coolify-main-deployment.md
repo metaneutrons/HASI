@@ -1,10 +1,11 @@
-# Qualified main deployment — implementation checkpoint
+# Qualified main deployment — implementation and runtime evidence
 
 Work started 2026-10-18 for #79, against main
 `b815fa43ee202c5161db71704c5660c3f4a4b8f9`. Acceptance authority is
 [CD-A1–CD-A6](../../plans/releases-and-demo.md#qualified-main-deployment--79).
-This checkpoint records implementation/local evidence, not completed runtime
-acceptance. #79 owns subsequent exact-revision rollout and rollback evidence.
+The first sections preserve the implementation checkpoint; subsequent sections
+record actual rollout, restart and rollback evidence. #79 owns final acceptance
+and readback of the last documentation-only main merge.
 
 ## Implemented boundary
 
@@ -55,9 +56,10 @@ acceptance. #79 owns subsequent exact-revision rollout and rollback evidence.
   original database container and volume. Test setup subsequently adds its own
   isolated records; a raw whole-database count is not a preservation assertion.
 
-## Pending runtime qualification
+## Original runtime qualification checklist
 
-Merge only after exact-head CI passes. Then prove private controller startup,
+The original checkpoint required a merge only after exact-head CI passed, then
+private controller startup,
 automatic admission of the exact successful main revision, first source-app
 handoff, signed-session/booking continuity, unchanged database identity and
 budget records, public revision readiness, unauthorized-trigger denial,
@@ -119,3 +121,57 @@ also exposed Node PID 1 signal handling: Docker had to kill the original service
 after its stop timeout. The follow-up service uses `--init` and recognizes clean
 SIGTERM exit 143, while preserving failure handling for unexpected exit 137.
 That service correction precedes the final documentation-only merge probe.
+
+## Regular rolling update and controller stop — 2026-10-19
+
+[PR #83](https://github.com/metaneutrons/HASI/pull/83) passed exact-head
+[CI 39171424116](https://github.com/metaneutrons/HASI/actions/runs/39171424116)
+and merged as `5aa22c096d18cf155969cc6bfb28eee7b97c3a29`. Its exact-main
+[CI 39171629493](https://github.com/metaneutrons/HASI/actions/runs/39171629493)
+also passed. The normal controller loop submitted deployment
+`9ewrvjv7ef7r1pgsykcmxtfj` at `2026-10-18T22:22:00Z`, then Coolify completed
+the regular rolling update without an operator traffic switch. The stable
+healthy container was `tjzdwweelb3zhjtfpgzvjs8k-20261018T222200`, image
+`sha256:265f30ee0ec41f55532d2b060a5ec3eeee056e4dc2ebf5c02ac0d1777cab4af9`.
+Session, consent and original-booking checks passed through both versions during
+the overlap; credentials, database identity and both budget records again matched.
+Anonymous POSTs reached both rate-limited chat routes and returned HTTP 401,
+without inference.
+
+With the init-enabled unit running, an actual stop took 0.23 seconds and
+reported systemd `Result=success`, `ExecMainStatus=143`. A first immediate
+start/stop probe raced Docker container creation and was not a valid steady-state
+stop measurement; it was repeated after verifying the named container was
+running with init enabled. Subsequent restart reported replay, and Coolify's
+history still contained exactly one deployment for the first qualified SHA.
+
+## Immutable-image rollback and rollforward
+
+With both automatic jobs completed in the durable journal, admission was
+stopped without changing that journal. Coolify rollback deployment
+`vzcmh7hjfgypolb2cmumixuy` finished at the first source SHA `9378a1d…` and reused
+exact image ID `sha256:330ff18ca091119c30b4671f1121defaaefe297ace5f36aa36673d25cea243e0`.
+The single remaining healthy container and public readiness reported that prior
+revision. Rollforward deployment `wr38wcpunjmvzceu1gwuajw9` then finished at
+`5aa22c0…`, reusing exact image ID
+`sha256:265f30ee0ec41f55532d2b060a5ec3eeee056e4dc2ebf5c02ac0d1777cab4af9`.
+The running original session/consent/booking observer passed through both
+changes. Database container/volume identity and both complete budget records
+matched before rollback and after rollforward. No budget policy, consumption,
+secret or namespace was reset; no inference or real-system write occurred.
+
+The controller resumed with its existing completed records. The native app's
+root-only `0700` work directory remained protected across rollback/rollforward.
+A second isolated signed session and synthetic booking, created before the final
+documentation merge, observe that last update in memory. The original observer
+can then finish without saving its cookie. Final exact-head/main CI, automatic
+deployment, image/revision readiness and unchanged-ledger readback for that
+**documentation-only** merge are recorded in #79 after they actually pass.
+This avoids claiming evidence from a future merge or creating another evidence
+commit that would recursively require a new deployment.
+
+Limits: cancelled preparatory health-probe jobs are not successful deployment
+proof. A real controller stop/restart and retained-image rollback were exercised;
+no destructive database-restore experiment or deliberately broken main merge was
+performed. Those operational restore and institutional acceptance gates remain
+M7/M8. Future schema changes require a migration-specific compatibility plan.

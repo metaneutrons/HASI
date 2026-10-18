@@ -92,6 +92,12 @@ configuration when cutting over; retain the database and its existing service
 identity. The old image may be retained separately. Wiki and Service-IT resources
 are independent and their campus restrictions remain in force.
 
+Protect the native application's host work directory
+`/data/coolify/applications/tjzdwweelb3zhjtfpgzvjs8k` with root ownership and
+mode `0700`; its generated `.env` starts at `0600`. The private parent directory
+continues to protect regenerated runtime files. Do not display rendered Compose
+or full container environment output when inspecting metadata.
+
 ## Controller installation and operation
 
 Run `pnpm build:deployment-controller` at the reviewed revision. Install the
@@ -145,7 +151,10 @@ missing budget, image/revision mismatches and failed builds remain failures.
 Coolify keeps the previously healthy container during a failed Dockerfile
 rolling update. For a completed deployment that needs reversal, use the
 application's retained immutable image through Coolify's Rollback operation.
-Verify the exact prior source/image identity, public readiness, the existing
+Coolify 4.4.6 may report a null `current`/false `is_current` in its rollback-image
+API when containers have timestamped names. Use the running container's actual
+image ID and public revision to identify the current version; do not infer it
+from that flag. Verify the exact prior source/image identity, public readiness, the existing
 signed test session and booking, the same database volume and unchanged budget
 consumption. Restore the current qualified image with the same operation when
 the incident is resolved, then resume the controller. A completed SHA is not

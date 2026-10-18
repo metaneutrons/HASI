@@ -54,7 +54,8 @@ database have been retired. [PR #82](https://github.com/metaneutrons/HASI/pull/8
 merged the private CI-qualified source controller and native Dockerfile app.
 Main `9378a1d` passed CI and was automatically built and handed over with active
 synthetic state and the shared budget preserved. [#79](https://github.com/metaneutrons/HASI/issues/79)
-owns the final documentation-only update, replay and rollback qualification;
+owns final readback of the documentation-only update; regular rolling delivery,
+restart replay fencing and immutable-image rollback/rollforward were exercised;
 [deployment evidence](../verification/2026-10-18/coolify-main-deployment.md)
 records exact identities. The initial cutover and database
 records are in [self-host verification](../verification/2026-10-18/selfhost-cutover.md)
