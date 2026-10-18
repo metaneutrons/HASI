@@ -1,5 +1,14 @@
 # Issue and roadmap audit
 
+Historical v2 snapshot. The later user-approved
+[v3 consolidation](../../plans/consolidated-delivery.md#v3-issue-graph) targets
+13 open issues: #17, #47–#55 and #79–#81. It transfers #14 to #47,
+#69–#74 to P1–P6 groups in #49 and #56–#63 to #55, with status, criteria and
+evidence retained. Sources close as `not_planned`, not completed. The counts
+and open-state rows below describe the earlier audit, not post-v3 live state;
+GitHub successors own current execution status. The previous nine closed
+records retain their original completion or supersession reasons.
+
 Audit snapshot: 2026-10-18. Base evidence: the complete saved issue body/comment export (35 issues: 26 open, 9 closed; one comment on #49), the five requested plan documents and PR #78 candidate commit `1ffd651b1c561b8dba6182435c233093f47a99e2`. Two approved follow-up issues were added after that export: #80 (M8 institutional acceptance) and #81 (DeepInfra provider work). The current tracking set is therefore 37 issues (28 open, 9 closed); the detailed export audit below maps all original 35 and records both additions separately. Current hosting and work-in-progress facts were checked for this roadmap update. GitHub issues remain the authority for live status, blockers and evidence. No credentials were read.
 
 ## Issue map

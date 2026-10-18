@@ -4,19 +4,27 @@ Created: 2026-10-09. Updated: 2026-10-18. Scope, mobile usability, TypeScript,
 mock identity for the prototype and independently updateable plugins are agreed
 requirements. The deployed synthetic-data prototype is an initial slice of the MVP.
 
-Tracking: [institutional MVP epic #47](https://github.com/metaneutrons/HASI/issues/47)
-and [post-MVP roadmap epic #55](https://github.com/metaneutrons/HASI/issues/55).
-The plan owns scope, dependencies and acceptance criteria; linked issues own
-current execution state, next actions, blockers and evidence. The separate
-[delivery epic #14](https://github.com/metaneutrons/HASI/issues/14) owns demo and
-container delivery, not institutional MVP acceptance.
+Tracking under adopted V3: [unified delivery index #47](https://github.com/metaneutrons/HASI/issues/47),
+[M2 with P1–P6 #49](https://github.com/metaneutrons/HASI/issues/49),
+[post-MVP roadmap #55](https://github.com/metaneutrons/HASI/issues/55),
+[D3 #17](https://github.com/metaneutrons/HASI/issues/17),
+[Coolify delivery #79](https://github.com/metaneutrons/HASI/issues/79), and
+[DeepInfra follow-up #81](https://github.com/metaneutrons/HASI/issues/81).
+The plan owns scope, dependencies and acceptance criteria; successor issues
+own current execution state, next actions, blockers and evidence. V3 preserves
+all criteria, evidence and status. It consolidates #14 into #47, #69–#74 into
+P1–P6 groups under #49, and #56–#63 into the source-specific entries under #55.
+Each source issue stays open until its successor carries its status, next action
+and evidence, then closes as `not_planned`, never as completed work. The prior
+issue-roadmap audit is the pre-V3 snapshot; GitHub remains the live status
+authority during these transfers.
 
 The [consolidated delivery plan](consolidated-delivery.md) is the unified
 execution order for the issue graph and details the plugin-platform milestones,
 including the MCP Apps feasibility gate. The
 [issue-roadmap audit](../verification/2026-10-18/issue-roadmap-audit.md) maps the
-35-issue source export and records the two later follow-ups #80 and #81 (37 issues
-in the current tracking set). Neither document waives or replaces the
+35-issue source export and records the two later follow-ups #80 and #81. Its
+37-issue map is the pre-V3 source snapshot. Neither document waives or replaces the
 MVP criteria below; production Apps adoption remains disabled after the P2 no-go
 decision.
 
@@ -54,8 +62,15 @@ links and five forms. Category landings and five broken references are excluded.
 Actual HsH source rights and server-side access are not approved. This evidence
 supports technical M3 qualification only; remaining technical cases stay in #50.
 At candidate `095f3c5`, hosted CI failed the existing cold-store reference-plugin
-packaging test on both Node versions; #74 tracks that technical gate. Earlier
-green CI at `1ffd651` is not evidence for the later candidate.
+packaging test on both Node versions; this was recorded in [P6 source issue #74](https://github.com/metaneutrons/HASI/issues/74),
+now a P6 qualification group under #49. Earlier green CI at `1ffd651` is not
+evidence for the later candidate. The active PR #78 packaging repair explicitly
+prepares dependencies online, then packages offline with the frozen lockfile;
+local verification also denies all network access. Error categories are fixed,
+with no
+lockfile-policy bypass. [Local verification](../verification/2026-10-18/reference-plugin-offline.md)
+documents that bounded repair. Passing it clears the packaging blocker only;
+the full P6-A1–A4 qualification matrix remains open.
 
 The user has set institutional acceptance as the final M8 milestone. M1–M7 may
 close technical criteria using TestIdP, mock/reference authorities and synthetic
@@ -177,8 +192,11 @@ institutional qualification.
 | M5: authorized real tenant writes, cancellation, idempotency and reconciliation | M5 proposal binding, confirmation, mock create/cancel/idempotency/unknown-outcome tests | M8-A3 actual create/cancel and vendor reconciliation in the authorized tenant; M8-A6 incident/denial evidence |
 | M6: institutionally approved profiles/data classes and source-approved real evaluation cases | M6 formal synthetic/offline adversarial evaluation and measured provider comparison | M8-A4 protected-data/provider/embedding/retention approval; M8-A5 real reviewed cases; M8-A6 evidence-to-contract mapping |
 | M7: all three integrations delivered; agreed acceptance thresholds met; controlled institutional participants, real integration owners and operational acceptance | M7 technical integrations against mocks, synthetic pilot, real-device UX, restore, off-host monitoring and incident/rollback exercises | M8-A1–A4 real integration and data approvals; M8-A5 named owners, real reviewed cases and controlled participant approval; M8-A6 recorded institutional go/no-go |
-M2 tracks [plugin milestones P1–P6](consolidated-delivery.md#plugin-delivery-slices),
+M2 tracks [plugin qualification groups P1–P6](consolidated-delivery.md#plugin-delivery-slices),
 durable budgets (BUD-A1) and frontend findings (WEB-A1) in [#49](https://github.com/metaneutrons/HASI/issues/49).
+The prior P1–P6 issues #69–#74 are source records; their criterion IDs,
+deferred tests, next actions and evidence remain separate qualification gates
+within #49 after transfer.
 The transferred Groq cache investigation (CACHE-A1) remains open within
 [M6 #53](https://github.com/metaneutrons/HASI/issues/53); it does not establish
 savings or complete M6. Former standalone issues #64–#67 are superseded, not
@@ -262,7 +280,9 @@ See [technical basis](../architecture/technical-basis.md) and the linked
 
 ### Zammad topic-routed tickets
 
-Tracking: [#56](https://github.com/metaneutrons/HASI/issues/56).
+V3 tracking: [#55](https://github.com/metaneutrons/HASI/issues/55); transfer source [#56](https://github.com/metaneutrons/HASI/issues/56), to close as `not_planned` after the successor preserves its complete status and evidence.
+
+Next action: With the service owner, establish the HsH Zammad instance, domain owners, topic taxonomy, queue ownership and requester mapping; verify per-domain API rights and data-classification approvals. Create a child issue only when an owner confirms a feasible, approved contract and the integration is selected for active work.
 
 Zammad ticket creation is a proposed later integration for topic-routed support
 requests across administrator-defined security domains. It does not defer or
@@ -284,7 +304,9 @@ eligibility, deadlines, and current source state.
 
 ### Restricted public web search
 
-Tracking: [#57](https://github.com/metaneutrons/HASI/issues/57).
+V3 tracking: [#55](https://github.com/metaneutrons/HASI/issues/55); transfer source [#57](https://github.com/metaneutrons/HASI/issues/57), to close as `not_planned` after the successor preserves its complete status and evidence.
+
+Next action: Select a bounded public source scope, then review query processing with a source owner and choose an eligible search provider. Create a child issue only after the URL/network scope and external query policy are approved and active work is selected.
 
 Add a read-only MCP for public web discovery and reading within server-owned,
 predefined URL scopes, including configurable anchored regex rules. A possible
@@ -301,7 +323,9 @@ for the provider comparison, URL/network policy and acceptance scenarios.
 
 ### Examination-regulations knowledge base for all degree programmes
 
-Tracking: [#58](https://github.com/metaneutrons/HASI/issues/58).
+V3 tracking: [#55](https://github.com/metaneutrons/HASI/issues/55); transfer source [#58](https://github.com/metaneutrons/HASI/issues/58), to close as `not_planned` after the successor preserves its complete status and evidence.
+
+Next action: Reconcile the authoritative HsH programme inventory with document owners and official sources; establish a coverage register before committing ingestion work. Create a child issue when the inventory, source authority and owner-led corpus scope are ready and active work is selected. This corpus work does not depend on HISinOne integration.
 
 Build a future, separately maintained knowledge corpus covering the complete
 HsH degree-programme inventory. Its catalogue must show coverage and gaps for
@@ -344,7 +368,9 @@ and abstain from a substantive answer.
 
 ### Moodle LMS
 
-Tracking: [#59](https://github.com/metaneutrons/HASI/issues/59).
+V3 tracking: [#55](https://github.com/metaneutrons/HASI/issues/55); transfer source [#59](https://github.com/metaneutrons/HASI/issues/59), to close as `not_planned` after the successor preserves its complete status and evidence.
+
+Next action: Confirm the HsH Moodle instance/version, enabled External Services functions, authentication and permission scope with its owner. Create a child issue when the instance-specific API and rights contract is confirmed and active work is selected.
 
 Moodle's External Services framework documents web services for external
 systems; the live site's enabled functions and API documentation are
@@ -361,7 +387,9 @@ instance-specific ([Moodle External Services](https://moodledev.io/docs/5.0/apis
 
 ### Stud.IP learning and campus platform
 
-Tracking: [#60](https://github.com/metaneutrons/HASI/issues/60).
+V3 tracking: [#55](https://github.com/metaneutrons/HASI/issues/55); transfer source [#60](https://github.com/metaneutrons/HASI/issues/60), to close as `not_planned` after the successor preserves its complete status and evidence.
+
+Next action: Confirm the HsH Stud.IP installation/version, JSON:API resources, authentication and source-side permissions with the platform owner. Create a child issue when the instance-specific contract is reviewed and active work is selected.
 
 Stud.IP documents a JSON:API-compatible REST interface with resource reads and
 mutations; routes, available resources and permissions must be checked against
@@ -377,7 +405,9 @@ the HsH installation and its version ([Stud.IP JSON:API documentation](https://h
 
 ### HISinOne campus management
 
-Tracking: [#61](https://github.com/metaneutrons/HASI/issues/61).
+V3 tracking: [#55](https://github.com/metaneutrons/HASI/issues/55); transfer source [#61](https://github.com/metaneutrons/HASI/issues/61), to close as `not_planned` after the successor preserves its complete status and evidence.
+
+Next action: Confirm the HsH HISinOne modules/version, supported business API and permission model with the system owner. Create a child issue only when HsH authorizes a concrete API and the source can return authoritative eligibility; otherwise keep the proposal parked.
 
 HIS documents HISinOne functions for online exam and course registration,
 student progress and results, and web services for connecting third-party
@@ -402,7 +432,9 @@ operation.
 
 ### SAP personnel and time management
 
-Tracking: [#62](https://github.com/metaneutrons/HASI/issues/62).
+V3 tracking: [#55](https://github.com/metaneutrons/HASI/issues/55); transfer source [#62](https://github.com/metaneutrons/HASI/issues/62), to close as `not_planned` after the successor preserves its complete status and evidence.
+
+Next action: Identify the HsH personnel/time system of record, deployed product, supported workflow API and permission model; the HANA database alone does not qualify. Create a child issue when the business-system owner confirms an authorized API and active work is selected.
 
 The SAP HANA estate alone does not identify a business application or a safe
 API. SAP describes HANA as a database and platform; an application may enforce
@@ -426,7 +458,9 @@ these are candidate references only, not evidence of a deployed HsH service.
 
 ### Microsoft 365 Bookings IT appointments
 
-Tracking: [#63](https://github.com/metaneutrons/HASI/issues/63).
+V3 tracking: [#55](https://github.com/metaneutrons/HASI/issues/55); transfer source [#63](https://github.com/metaneutrons/HASI/issues/63), to close as `not_planned` after the successor preserves its complete status and evidence.
+
+Next action: Confirm the tenant, IT appointment use case, data owner and supported interface, then record an explicit go/no-go. Create a child issue only after a positive decision and approved tenant/API scope; until then this integration remains deferred.
 
 HsH IT appointment booking uses Microsoft 365 Bookings; integration remains
 explicitly deferred outside the mandatory MVP. Tenant/API permissions, service

@@ -2,7 +2,7 @@
 
 Date: 2026-10-16. Updated: 2026-10-18. D1/D2 record historical README and Vercel acceptance. Current source-qualified delivery to the self-hosted demo is tracked separately in #79. Versioned container releases remain Release Please-only, with Linux amd64 and arm64 support. Delivery does not declare the institutional MVP complete.
 
-Tracking: [epic #14](https://github.com/metaneutrons/HASI/issues/14), [D1 #15](https://github.com/metaneutrons/HASI/issues/15), [D2 #16](https://github.com/metaneutrons/HASI/issues/16), [D3 #17](https://github.com/metaneutrons/HASI/issues/17). Requirements live here; implementation stages and evidence belong in the linked milestone issues.
+Tracking under adopted V3: [unified delivery index #47](https://github.com/metaneutrons/HASI/issues/47), [D1 #15](https://github.com/metaneutrons/HASI/issues/15), [D2 #16](https://github.com/metaneutrons/HASI/issues/16), [D3 #17](https://github.com/metaneutrons/HASI/issues/17), and current source deployment [#79](https://github.com/metaneutrons/HASI/issues/79). Requirements live here; implementation stages and evidence belong in the linked work issues. The former delivery index [#14](https://github.com/metaneutrons/HASI/issues/14) transfers to #47 as `not_planned`; preserve its historical D1/D2 record and open #17/#79/#81 pointers before closure. This transfer does not accept D3, #79 or #81.
 
 ## Current deployment state — 2026-10-18
 

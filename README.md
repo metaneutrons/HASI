@@ -158,9 +158,11 @@ The roadmap additionally covers [public web search restricted to operator-approv
 
 Technical milestones M1–M7 may qualify with Test-IdP, synthetic content and contract-based mocks. Real HsH identity, effective source rights, actual Anny conformance and protected-data approvals belong to the final [institutional acceptance M8 #80](https://github.com/metaneutrons/HASI/issues/80). Mock qualification cannot authorize those live integrations. The requested DeepInfra addition is tracked in [#81](https://github.com/metaneutrons/HASI/issues/81); the current source does not configure it.
 
-Track delivery in the [MVP epic #47](https://github.com/metaneutrons/HASI/issues/47),
-later integrations in the [roadmap epic #55](https://github.com/metaneutrons/HASI/issues/55),
-and external plugin milestones P1–P6 under [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
+Track delivery in the [unified index #47](https://github.com/metaneutrons/HASI/issues/47),
+later integrations in [roadmap #55](https://github.com/metaneutrons/HASI/issues/55),
+and the six plugin qualification groups P1–P6 in [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
+The approved [v3 plan](docs/plans/consolidated-delivery.md#v3-issue-graph)
+consolidates tracking to 13 open issues while preserving all acceptance criteria and evidence.
 The MCP registry supports approved endpoints, compatible updates, schema-driven
 configuration and registry-driven chat tool discovery. Arbitrary plugin code
 installation is intentionally unsupported. Independent artifact packaging, personal account lifecycle and deployment coordination have implementation paths. Full mobile/production acceptance remains open; final acceptance tests were deferred by Fabian on 2026-10-18.

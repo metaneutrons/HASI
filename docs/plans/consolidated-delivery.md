@@ -1,22 +1,33 @@
 # HASI consolidated delivery plan
 
-Plan version: 2. Unified execution order updated on 2026-10-18. The issue graph
-and acceptance requirements originate from the baseline adopted against main
+Plan version: 3. Adopted 2026-10-18. This version keeps the accepted v2
+execution order and acceptance requirements, and consolidates their GitHub
+tracking into a 13-open-issue target. The issue graph and requirements originate
+from the baseline adopted against main
 `a03fdf2049c99a287397705e1e34b9761c2b2430`.
 
-Decision state: **v2 unifies the current execution order and self-hosted delivery
-boundary; it does not change acceptance authority or mark work accepted.** The
-original planning baseline was adopted by the user on 2026-10-18. Third-party
-MCP Apps remain off by default after the P2 no-go decision; contracts and
-executable-code admission retain their review gates. This plan does not
+Decision state: **v3 changes issue granularity only.** The user approved the
+13-open-issue structure on 2026-10-18. It does not change product scope,
+acceptance authority, implementation state or evidence, and it does not mark
+work accepted. Until each successor issue contains the transferred status,
+next action and evidence, the source issue remains open and authoritative.
+Transferred source issues close with GitHub's `not_planned` reason, never as
+completed work. The original planning baseline was adopted by the user on
+2026-10-18. Third-party MCP Apps remain off by default after the P2 no-go
+decision; contracts and executable-code admission retain their review gates.
+This plan does not
 authorize live writes, new paid resources, a container release or execution of
 third-party code.
 
 ## Purpose and authority
 
-Turn the existing issues into an executable dependency order without creating
-another backlog. HASI remains a chat-first, mobile-first university assistant.
-Intranet, Service-IT and anny remain mandatory for the institutional MVP.
+Keep one executable dependency order without creating another backlog. HASI
+remains a chat-first, mobile-first university assistant. Intranet, Service-IT
+and anny remain mandatory for the institutional MVP. V3 consolidates the open
+tracking records as follows: #47 is the unified delivery index, #49 owns M2 and
+the six P1–P6 qualification groups, and #55 retains all eight post-MVP
+proposals. Existing evidence and criteria move with their status; only the
+number of issue records changes.
 
 This document owns the cross-track sequence and the detailed plugin
 delivery slices. It complements these existing requirements authorities:
@@ -54,6 +65,15 @@ Anny tenant behavior, protected-data approval and final go/no-go are reserved fo
 M8 [#80](https://github.com/metaneutrons/HASI/issues/80); mock evidence does not
 qualify that milestone.
 
+The failed offline reference-plugin packaging check is a bounded repair in the
+PR #78 candidate and remains separate from full P6 qualification. The current
+repair explicitly prepares dependencies online, then builds the package with
+the frozen lockfile in offline mode; local verification also denies all network
+access. It reports fixed sanitized
+error categories and does not bypass lockfile enforcement. [Local verification](../verification/2026-10-18/reference-plugin-offline.md)
+records that repair evidence; PR #78 still needs exact-head CI before merge. A
+passing package check resolves this reported blocker only, not P6-A1–A4.
+
 The synthetic Service-IT HTML path is deployed from application commit
 `d05252f`; [the verification record](../verification/2026-10-18/service-it-portal.md)
 covers 271 served Service-IT articles, signed MCP acquisition and network
@@ -72,58 +92,64 @@ readiness remain unverified. Track this bounded additive work in [#81](https://g
 comparison, without reopening accepted #32–#34. Real SSO, source ACLs, delegated
 anny rights, live writes and institutional model approval remain M8 criteria.
 
-## One issue graph
+## V3 issue graph
 
-Reuse the existing epics and keep one final institutional-acceptance milestone.
-P1–P6 are independently tracked plugin milestones under M2, using #69–#74.
-Each may need several reviewable PRs. The former standalone issues #64–#67 are
-superseded through the explicit mapping below; their work is transferred, not
-accepted or discarded. Technical M1–M7, institutional M8, later roadmap
-milestones and D3 remain open until their own qualification gates pass.
+The target contains 13 open issues: #17, #47–#55, and #79–#81. #47 indexes the
+technical M1–M7 milestones, final institutional M8, and the related D1–D3,
+Coolify and provider tracks. #49 owns M2 plus the six separately evidenced P1–P6
+qualification groups. #55 retains all eight future integration proposals and
+their source-specific discovery gates. P1–P6, M1–M8, D3, #79, #81 and the future
+roadmap remain unaccepted until their own gates pass.
 
-| Record | Responsibility and acceptance authority | Prerequisite or qualification boundary |
+GitHub remains the live status authority during the transfer. Do not close a
+source issue until its successor body links the original issue and preserves
+its stage, next action, blockers, criterion IDs and complete evidence
+references. The transferred issues close with GitHub's `not_planned` reason,
+never as completed work. All 37 issue records and their histories remain.
+
+| Target issue | Responsibility and acceptance authority | Prerequisite or qualification boundary |
 | --- | --- | --- |
-| [#47](https://github.com/metaneutrons/HASI/issues/47) | Institutional MVP epic; MVP plan | Indexes technical M1–M7 and final institutional M8; all three mandatory integrations |
+| [#47](https://github.com/metaneutrons/HASI/issues/47) | Unified delivery index; MVP and delivery plans | Indexes M1–M7 and final M8, D1/D2 history, open D3 #17, current Coolify #79, provider #81 and post-MVP #55 |
 | [#48](https://github.com/metaneutrons/HASI/issues/48) | M1 technical identity/integration contracts | TestIdP, mock authorities and stable interface contracts; real institutional proof transfers to M8 |
-| [#49](https://github.com/metaneutrons/HASI/issues/49) | M2 technical application foundation | TestIdP/mock contracts; includes P1–P6, BUD-A1 and WEB-A1; final tests remain deferred |
+| [#49](https://github.com/metaneutrons/HASI/issues/49) | M2 technical application and plugin foundation | TestIdP/mock contracts; owns P1–P6 as separate P*-A* qualification groups plus BUD-A1 and WEB-A1; final tests remain deferred |
 | [#50](https://github.com/metaneutrons/HASI/issues/50) | M3 synthetic permission-aware knowledge qualification | M1/M2 technical boundaries and signed fixtures for Intranet and HTML/web acquisition; source rights remain M8 |
 | [#51](https://github.com/metaneutrons/HASI/issues/51) | M4 anny read contracts and behavior | M1/M2 technical boundaries; mock identities and reference contracts, not a real tenant |
 | [#52](https://github.com/metaneutrons/HASI/issues/52) | M5 confirmed anny write/cancel/reconcile behavior | Follows M4 against mocks/reference contracts; actual tenant and vendor conformance remain M8 |
 | [#53](https://github.com/metaneutrons/HASI/issues/53) | M6 synthetic/offline model and adversarial evaluation | Formal evaluation before M7; BUD-A1 before paid runs; DI-A1–DI-A4 via #81 before final provider comparison; CACHE-A1 remains separate |
 | [#54](https://github.com/metaneutrons/HASI/issues/54) | M7 synthetic technical pilot and operations | M1–M6 technical gates, real-device UX, restore and off-host monitoring; no institutional data prerequisite |
+| [#55](https://github.com/metaneutrons/HASI/issues/55) | Post-MVP roadmap and discovery register | Retains eight scoped proposals, source-specific next actions and reactivation gates; no connector is committed or implemented |
 | [#80](https://github.com/metaneutrons/HASI/issues/80) | M8 final institutional acceptance | After M1–M7; real identity, source rights, Anny tenant, protected-data approval and recorded go/no-go |
-| [#81](https://github.com/metaneutrons/HASI/issues/81) | Bounded DeepInfra/DeepSeek-V4.1-Flash follow-up | After synthetic Service-IT; DI-A1–DI-A4; additive to #32–#34 and before final M6 comparison |
-| [P1 #69](https://github.com/metaneutrons/HASI/issues/69) | Define plugin contracts and complete user journeys; detailed criteria below | Existing contracts; no live credentials |
-| [P2 #70](https://github.com/metaneutrons/HASI/issues/70) | Qualify the Anny MCP Apps feasibility prototype; detailed criteria below | P1 read/identity/presentation contracts |
-| [P3 #71](https://github.com/metaneutrons/HASI/issues/71) | Integrate registry-driven chat and migrate existing tools; detailed criteria below | P1 and P2 go/no-go |
-| [P4 #72](https://github.com/metaneutrons/HASI/issues/72) | Deliver plugin administration and account lifecycle; detailed criteria below | P3 and durable instance/configuration state |
-| [P5 #73](https://github.com/metaneutrons/HASI/issues/73) | Qualify external plugin connection, distribution and updates; detailed criteria below | P3/P4, trust policy and qualified isolation |
-| [P6 #74](https://github.com/metaneutrons/HASI/issues/74) | Qualify an independent plugin and complete mobile workflows; detailed criteria below | P1–P5; synthetic qualification does not accept real SSO |
-| [#14](https://github.com/metaneutrons/HASI/issues/14) | Demo/container delivery epic; delivery plan | Separate from institutional acceptance; accepted D1/D2 remain accepted |
 | [#17](https://github.com/metaneutrons/HASI/issues/17) | D3 first actual container publication | Separately requested Release Please release; exact-tag amd64/arm64 and real publication evidence |
-| [#55](https://github.com/metaneutrons/HASI/issues/55) | Post-MVP integration index; future-roadmap authority | Per-service discovery may start early; no implied implementation order |
-| [#56](https://github.com/metaneutrons/HASI/issues/56) | Zammad topic-routed tickets | Shared platform plus instance, configurable domains/queues, requester rights and classification approval |
-| [#57](https://github.com/metaneutrons/HASI/issues/57) | Restricted public web MCP | Approved URL/network scope and query-processing policy; never substitutes for protected sources |
-| [#58](https://github.com/metaneutrons/HASI/issues/58) | All-programme examination-regulations corpus | Authoritative inventory/owners, reviewed PDF/OCR, versions/cohorts and page citations; no dependency on HISinOne for corpus work |
-| [#59](https://github.com/metaneutrons/HASI/issues/59) | Moodle | Shared platform plus installed version, enabled functions, personal rights and approved operations |
-| [#60](https://github.com/metaneutrons/HASI/issues/60) | Stud.IP | Shared platform plus installed API/version, account linkage and source permissions |
-| [#61](https://github.com/metaneutrons/HASI/issues/61) | HISinOne discovery and integration | HsH-authorized business API and authoritative eligibility; corpus answers cannot authorize exam writes |
-| [#62](https://github.com/metaneutrons/HASI/issues/62) | SAP leave and time discovery | Identify actual business application/workflow/API; no direct HANA writes |
-| [#63](https://github.com/metaneutrons/HASI/issues/63) | Deferred M365 Bookings | Explicit later go/no-go and approved tenant/API; remains outside mandatory MVP |
+| [#79](https://github.com/metaneutrons/HASI/issues/79) | CI-qualified source deployment to Coolify | Exact main SHA, state/budget preservation, authenticated trigger, health checks and rollback |
+| [#81](https://github.com/metaneutrons/HASI/issues/81) | Bounded DeepInfra/DeepSeek-V4.1-Flash follow-up | After synthetic Service-IT; DI-A1–DI-A4; additive to #32–#34 and before final M6 comparison |
 
-### Superseded standalone issues
+### Issue transfer and evidence preservation
 
-| Former issue | Authoritative successor | Closure meaning |
+| Source issue | Successor | Transfer scope; closure does not signify acceptance |
 | --- | --- | --- |
-| [#65](https://github.com/metaneutrons/HASI/issues/65) | P1–P6 (#69–#74), coordinated by M2 #49 | Split into bounded milestones; installation, UX, isolation and independent updates remain unaccepted |
-| [#66](https://github.com/metaneutrons/HASI/issues/66) | M2 #49, BUD-A1 | Budget reservations/accounting remain open |
-| [#67](https://github.com/metaneutrons/HASI/issues/67) | M2 #49, WEB-A1 | Engineering gaps remain open unless resolved or explicitly excepted |
-| [#64](https://github.com/metaneutrons/HASI/issues/64) | M6 #53, CACHE-A1 and existing measurement contract | Cache hit remains unproven; provider blocker and evidence obligations remain open |
+| [#14](https://github.com/metaneutrons/HASI/issues/14) | #47 | Preserve D1/D2 acceptance history via #15/#16, keep D3 #17 open, and carry #79 and #81 pointers forward. Close as `not_planned` only after #47 and the delivery plan link all successors. |
+| [#69](https://github.com/metaneutrons/HASI/issues/69) | #49 · P1 | Preserve P1-A1–A4, merged implementation status, cross-contract/journey next action and PR/CI evidence. Qualification remains open. |
+| [#70](https://github.com/metaneutrons/HASI/issues/70) | #49 · P2 | Preserve P2-A1–A4, native-results default, Apps-off/no-go decision, security/navigation/egress, accessibility, mobile and latency/token comparisons. Qualification remains open. |
+| [#71](https://github.com/metaneutrons/HASI/issues/71) | #49 · P3 | Preserve P3-A1–A4, merged implementation and adversarial/model-switch/Apps-off/removal/history/deployed-topology next action with PR/CI evidence. Qualification remains open. |
+| [#72](https://github.com/metaneutrons/HASI/issues/72) | #49 · P4 | Preserve P4-A1–A4, merged implementation and actual-device, assistive-technology, reconnect, update and personal-account next action with PR/CI evidence. Qualification remains open. |
+| [#73](https://github.com/metaneutrons/HASI/issues/73) | #49 · P5 | Preserve P5-A1–A5, merged implementation and immutable-image isolation/egress, multi-replica, migration, UI preflight and recovery next action with PR/CI evidence. Qualification remains open. |
+| [#74](https://github.com/metaneutrons/HASI/issues/74) | #49 · P6 | Preserve P6-A1–A4, merged implementation and full mobile, accessibility, hostile-result, cold-cache and lost-connection/recovery matrix. Carry the active PR #78 offline-packaging repair and CI 39166943626 failure as a separate open blocker; passing that packaging repair alone does not qualify P6. |
+| [#56–#63](https://github.com/metaneutrons/HASI/issues/56) | #55 | Preserve all eight capabilities, discovery actions, capability boundaries and reactivation conditions inline in the corresponding MVP roadmap sections. No separate child issue is reopened until work is selected. |
 
-Close these records as superseded, with GitHub's `not_planned` state reason and
-explicit successor links, never as completed work. Their previous bodies and
-historical evidence remain available. No outstanding obligation disappears from
-the successor's execution state.
+The 15 source issues (#14, #56–#63 and #69–#74) close as `not_planned` only
+after complete status/evidence transfer and successor readback. Keep #17, #47–55
+and #79–81 open until their own gates pass. Keep the previous nine closed issue
+records and their closure reasons unchanged. The target is 13 open and 24
+closed issue records; no criteria or acceptance status changes.
+
+### Previously superseded issues
+
+| Former issue | Successor | Existing transfer and status |
+| --- | --- | --- |
+| [#65](https://github.com/metaneutrons/HASI/issues/65) | #49 (P1–P6 groups) | Already closed as not planned; installation, UX, isolation and independent updates remain unaccepted. |
+| [#66](https://github.com/metaneutrons/HASI/issues/66) | #49, BUD-A1 | Already closed as not planned; budget reservations/accounting remain open. |
+| [#67](https://github.com/metaneutrons/HASI/issues/67) | #49, WEB-A1 | Already closed as not planned; engineering gaps remain open unless resolved or explicitly excepted. |
+| [#64](https://github.com/metaneutrons/HASI/issues/64) | #53, CACHE-A1 | Already closed as not planned; cache hit remains unproven and measurement obligations remain open. |
 
 ## Unified delivery order and parallel work
 
@@ -214,14 +240,16 @@ proceed before the shared platform is complete.
 
 ## Plugin delivery slices
 
-Execution: one issue per P milestone, under [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
-Acceptance is recorded against stable P*-A* identifiers and an exact reviewed
-plan revision. Completing one milestone does not complete M2. HASI application
-components remain TypeScript.
+Execution: the adopted V3 structure keeps one M2 issue, [#49](https://github.com/metaneutrons/HASI/issues/49),
+with six distinct P1–P6 criterion groups. Existing P*-A* identifiers and this
+reviewed plan remain the acceptance authority. Transfer the stage, next action,
+blockers and evidence from each source issue #69–#74 before closing it as
+`not_planned`; neither a transfer nor the merged implementation accepts a P
+group or M2. HASI application components remain TypeScript.
 
 ### P1 — Contracts and complete journeys
 
-Execution: [P1 #69](https://github.com/metaneutrons/HASI/issues/69).
+Tracking: #49, P1-A1–P1-A4; former source record [#69](https://github.com/metaneutrons/HASI/issues/69) retains history.
 
 Dependencies: existing plugin architecture; no live HsH credentials required.
 
@@ -248,7 +276,7 @@ Dependencies: existing plugin architecture; no live HsH credentials required.
 
 ### P2 — Bounded MCP Apps feasibility proof
 
-Execution: [P2 #70](https://github.com/metaneutrons/HASI/issues/70).
+Tracking: #49, P2-A1–P2-A4; former source record [#70](https://github.com/metaneutrons/HASI/issues/70) retains history.
 
 Dependencies: P1 contracts relevant to reads, presentation and identity.
 
@@ -287,7 +315,7 @@ visibility; HASI must implement and qualify host enforcement. See the
 
 ### P3 — Registry-driven chat and migration of existing tools
 
-Execution: [P3 #71](https://github.com/metaneutrons/HASI/issues/71).
+Tracking: #49, P3-A1–P3-A4; former source record [#71](https://github.com/metaneutrons/HASI/issues/71) retains history.
 
 Dependencies: P1 and P2 go/no-go; retain the existing signed invocation boundary.
 
@@ -315,7 +343,7 @@ Dependencies: P1 and P2 go/no-go; retain the existing signed invocation boundary
 
 ### P4 — Administrator configuration and account lifecycle
 
-Execution: [P4 #72](https://github.com/metaneutrons/HASI/issues/72).
+Tracking: #49, P4-A1–P4-A4; former source record [#72](https://github.com/metaneutrons/HASI/issues/72) retains history.
 
 Dependencies: P3 and durable instance/configuration state; real administrative
 authorization before institutional use. Demo administration stays workspace-only.
@@ -340,7 +368,7 @@ authorization before institutional use. Demo administration stays workspace-only
 
 ### P5 — External connection and independently updated artifacts
 
-Execution: [P5 #73](https://github.com/metaneutrons/HASI/issues/73).
+Tracking: #49, P5-A1–P5-A5; former source record [#73](https://github.com/metaneutrons/HASI/issues/73) retains history.
 
 Dependencies: P3/P4, P1 trust policy and a qualified isolation/runtime design.
 
@@ -372,7 +400,7 @@ Dependencies: P3/P4, P1 trust policy and a qualified isolation/runtime design.
 
 ### P6 — Independent plugin and end-to-end qualification
 
-Execution: [P6 #74](https://github.com/metaneutrons/HASI/issues/74).
+Tracking: #49, P6-A1–P6-A4; former source record [#74](https://github.com/metaneutrons/HASI/issues/74) retains history. The current PR #78 packaging repair is a separate active blocker; passing it does not complete this qualification group.
 
 Dependencies: P1–P5; synthetic TestIdP and mock authorities support technical qualification. Real institutional SSO is M8.
 
@@ -454,8 +482,9 @@ Reserve native phones, deployment checks and multi-platform container work for
 their stated gates. Refresh/qualify only the next PR in merge order; unrelated
 documentation edits do not justify repeating expensive runtime qualification.
 
-Use reviewed PRs per milestone; reference its P issue and #49 without automatic
-closing words for partial work. D2 (#16) records the completed historical Vercel
+Use reviewed PRs per milestone; reference its P*-A* criterion IDs in #49 without
+automatic closing words for partial work. Source records #69–#74 retain history.
+D2 (#16) records the completed historical Vercel
 delivery and remains closed. Current qualified main builds must use the Coolify
 path in #79: deploy the exact intended main SHA after required CI, preserve
 database and budget state, and verify readiness and rollback. Never deploy an
@@ -473,13 +502,16 @@ and revise the plan through review rather than silently narrowing acceptance.
 
 ## Plan review and completion
 
-Unified sequencing update, 2026-10-18: v2 reconciles the issue graph with the
-Coolify cutover, current source-deployment follow-up #79 and the user decision
-to put institutional acceptance in M8 #80. It preserves all original M1–M7,
-D1–D3, P1–P6 and BUD/WEB/CACHE acceptance criteria through explicit transfer
-to technical mock qualification or M8; nothing is waived. GitHub issues remain
-the status authority. The complete issue map is in
-[the issue-roadmap audit](../verification/2026-10-18/issue-roadmap-audit.md).
+Unified sequencing update, 2026-10-18: v2 reconciled the issue graph with the
+Coolify cutover, source-deployment follow-up #79 and the decision to put
+institutional acceptance in M8 #80. Adopted V3 changes the tracking shape only:
+#47 indexes delivery, #49 contains M2 and six separately qualified P groups,
+and #55 retains the post-MVP roadmap. It preserves all M1–M7, M8, D1–D3,
+P1–P6, BUD/WEB/CACHE criteria, status and evidence; nothing is waived or
+accepted by transfer. GitHub remains the status authority while successor issue
+bodies are updated and source issues close as `not_planned`. The
+[issue-roadmap audit](../verification/2026-10-18/issue-roadmap-audit.md) is the
+pre-V3 snapshot; the target graph is documented here.
 
 Execution decision, 2026-10-18: Fabian requested completion of M2 implementation
 while deferring tests. Deliver the remaining contracts, account/configuration UX,
@@ -493,13 +525,13 @@ mock authorities; institution-specific identity approval is explicitly M8. Recor
 M2 as awaiting qualification rather than closing unverified acceptance criteria.
 
 Review P1 contracts and journeys before P2 implementation, record the P2 Apps
-go/no-go, and review P5 isolation/distribution before admitting external executable
-code. The three epics index their existing milestones; M2 indexes P1–P6 and the
-transferred budget/frontend obligations, while M6 owns the transferred cache
-investigation. Issues link the publicly retrievable plan revision; superseded
-records link their successors and explicitly retain the unaccepted state.
+go/no-go, and review P5 isolation/distribution before admitting external
+executable code. #47 indexes the unified delivery; #49 owns M2, P1–P6 and the
+transferred budget/frontend obligations; #53 owns CACHE-A1; #55 holds the eight
+future proposals. Source records link their successor and retain the explicitly
+unaccepted state in their preserved history.
 
-This plan is complete as a delivery initiative only when the relevant existing
+This plan is complete as a delivery initiative only when the relevant active
 milestones and all adopted P/BUD/WEB criteria have evidence. Technical M1–M7,
 final institutional M8, plugin-platform qualification, container publication
 and later integrations remain distinct acceptance decisions. Future changes record date, decision/PR,
