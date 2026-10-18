@@ -6,7 +6,7 @@ Tracking under adopted V3: [unified delivery index #47](https://github.com/metan
 
 ## Current deployment state — 2026-10-18
 
-The public demo runs on Hetzner under Coolify, with private PostgreSQL 18.6. The Vercel project and Neon database are retired. The current Coolify service uses a preloaded image; automatic source builds and CI-qualified main deployment remain open in [#79](https://github.com/metaneutrons/HASI/issues/79). Use that issue for source pinning, authenticated trigger, state/budget preservation, health checks, unauthorized-trigger rejection and rollback evidence. Do not build or deploy an older main revision over the current candidate.
+The public demo runs on Hetzner under Coolify, with private PostgreSQL 18.6. The Vercel project and Neon database are retired. The native source application and private outbound-only controller replace the preloaded-image delivery path. [#79](https://github.com/metaneutrons/HASI/issues/79) owns current qualification and exact runtime evidence. Its [runbook](../../deploy/coolify/main-deployment.md) defines source pinning, CI admission, state/budget preservation, health checks and rollback. Do not deploy an older main revision over a newer qualified runtime.
 
 The cutover, database migration and their limits are recorded in [self-host verification](../verification/2026-10-18/selfhost-cutover.md) and [PostgreSQL cutover verification](../verification/2026-10-18/local-postgres-cutover.md). These establish synthetic-demo hosting and preserved state, not institutional source rights or M3 acceptance. Encrypted-backup restore and ongoing off-host replication/monitoring remain open operational work.
 
@@ -44,6 +44,18 @@ the Vercel project has since been retired. Current deployment work is #79.
 D1 precedes the first production release. D2 was verified independently and is closed. D3 native/container work may proceed independently; final branch refresh and expensive qualification follow serial merge order without weakening required checks. The existing `CI Success` remains mandatory. #79 is the current demo-deployment path, not a reopening of D2. No npm, Homebrew, APT or other package channel is in scope.
 
 ## Open operational decisions and limits
+
+### Qualified main deployment — #79
+
+These criteria preserve the existing #79 scope and make its evidence explicit.
+They are independent of D3 release/publication and final institutional M8.
+
+- CD-A1: Admit only the fixed repository's current main SHA after the exact CI workflow/attempt and required quality/security/aggregate jobs succeed. Reject fork, PR, failed, pending, stale and ambiguous input; documentation-only merges remain eligible.
+- CD-A2: Keep management private. The controller accepts no public trigger, fixes the one application, durably fences replays and reconciles uncertain submissions without duplicate effects, including after restart. GitHub or storage failure cannot waive admission.
+- CD-A3: Pin and build the admitted SHA with recorded source/image/deployment identities. Keep provider/database/session credentials runtime-only; use a dedicated scoped controller credential with no sensitive-read or root ability and no server credentials in Actions.
+- CD-A4: Preserve the existing PostgreSQL resource/volume, database URL, demo secret, namespaces, active signed test sessions, consent/bookings and budget ledger/policy/consumption. Deployments neither bootstrap budgets nor recreate the data service.
+- CD-A5: Prove an automatic post-merge revision update and readiness bound to that exact image revision, with durable storage and existing budget checks and no inference call. Positive and negative admission probes must observe effects, not just log messages; unauthorized API requests are denied.
+- CD-A6: Retain and exercise a working immutable-image rollback/rollforward without data or budget loss. Record meaningful failed-build/restart/recovery limits, operator procedures and exact evidence. Do not claim schema rollback from an image rollback.
 
 Provider and database credentials remain server-side and are never image build arguments. The requested DeepInfra/DeepSeek-V4.1-Flash addition is not yet verified; issue [#81](https://github.com/metaneutrons/HASI/issues/81) tracks DI-A1–DI-A4 before the final M6 comparison. See the unified order in [consolidated delivery](consolidated-delivery.md). Institutional deployment and protected-data use require M8 identity/source authorization and provider approval separately from shipping a container. The first stable version is determined through the Release Please PR; no manual production tag is permitted. The demo source-deployment work in #79 does not publish a GHCR image or create a release.
 

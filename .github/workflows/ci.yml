@@ -44,6 +44,8 @@ jobs:
       # Workspace package declarations are emitted into dist and are needed by
       # strict type-aware linting as well as type checks and tests.
       - run: pnpm build
+      - name: Compile and validate the deployment controller
+        run: pnpm build:deployment-controller && node --check dist/deploy-controller/controller.js
       - run: pnpm lint
       - name: Validate Git hooks
         run: pnpm exec lefthook validate

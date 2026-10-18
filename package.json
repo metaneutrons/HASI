@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build:backend": "pnpm --filter '!@hasi/web' -r build",
+    "build:deployment-controller": "tsc -p scripts/deploy/tsconfig.json",
     "build": "pnpm -r build",
     "dev": "pnpm build:backend && tsx scripts/dev.ts",
     "preview": "pnpm build && tsx scripts/dev.ts --preview",

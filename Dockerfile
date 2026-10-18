@@ -26,10 +26,12 @@ RUN pnpm --filter @hasi/web build
 FROM ${NODE_IMAGE} AS runtime
 ARG VERSION=0.1.0
 ARG REVISION=unknown
+ARG SOURCE_COMMIT=${REVISION}
 LABEL org.opencontainers.image.source="https://github.com/metaneutrons/HASI"
 LABEL org.opencontainers.image.licenses="GPL-3.0-only"
 LABEL org.opencontainers.image.version="${VERSION}"
-LABEL org.opencontainers.image.revision="${REVISION}"
+LABEL org.opencontainers.image.revision="${SOURCE_COMMIT}"
+ENV HASI_BUILD_REVISION=${SOURCE_COMMIT}
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
@@ -39,6 +41,7 @@ COPY --from=build --chown=node:node /workspace/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /workspace/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build --chown=node:node /workspace/apps/web/public ./apps/web/public
 COPY --chown=node:node LICENSE NOTICE ./
+COPY --chown=node:node scripts/deploy/healthcheck.mjs ./healthcheck.mjs
 
 USER node:node
 EXPOSE 3000

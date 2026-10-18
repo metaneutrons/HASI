@@ -116,6 +116,13 @@ For an optimized local preview, run `pnpm preview`. It builds the application fi
 
 ## Verify changes
 
+The self-hosted demo's private [deployment controller](deploy/coolify/main-deployment.md)
+admits the current `main` revision only after its CI passes, then pins and builds
+that exact commit in Coolify. PostgreSQL, test sessions and the shared budget
+remain in their existing persistent data resource. `GET /api/health` reports
+the ready image revision without a model call. Release Please remains the sole
+authority for published multi-platform container releases.
+
 ```sh
 pnpm build
 pnpm lint
