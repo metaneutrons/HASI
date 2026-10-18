@@ -111,3 +111,31 @@ choice. A rollback restores the prior application/config together; provider-secr
 rotation is a separate operation. No database schema migration or container
 release is required. No new provider credentials or paid infrastructure are
 provisioned by this work.
+
+## DeepInfra follow-up
+
+Requested 2026-10-18, after the synthetic Service-IT integration. This is an
+additive provider delivery; the accepted R1/R2 issues stay closed. Use the
+existing registry and OpenAI-compatible adapter boundary. The requested model
+is `deepseek-ai/DeepSeek-V4.1-Flash`; the operator's dashboard link is a target,
+not evidence that this account can invoke it. Credential readiness is unverified.
+
+The [official chat API documentation](https://docs.deepinfra.com/chat/overview)
+documents `https://api.deepinfra.com/v1/openai`. Verify the exact model contract,
+current tariff and parameters before configuring or making a paid request.
+
+- **DI-A1:** Add a fixed, server-owned DeepInfra connection/profile using
+  `env:DEEPINFRA_API_KEY` through the existing secret resolver. Missing credentials
+  disable it. Forged origins, secret references and redirects remain rejected.
+- **DI-A2:** Verify the exact requested model's native tool-call behavior,
+  supported generation parameters, limits and usage accounting. Mock transport
+  tests cover errors and malformed tool calls; compatibility is not inferred
+  from the API format alone.
+- **DI-A3:** Apply an explicitly verified tariff to the existing shared
+  USD 1/day admission ledger, preserving prior reservations and consumption.
+  Keep Groq as default and GWDG manually selectable; expose DeepInfra only under
+  configured user-choice policy. No automatic fallback is enabled by this work.
+- **DI-A4:** Qualify a bounded synthetic chat and anny tool round trip on the
+  deployed runtime, including a missing-key negative case and sanitized failure
+  handling. Record exact code/model/config identities and update operator docs.
+  Protected HsH processing approval belongs to final M8 institutional acceptance.
