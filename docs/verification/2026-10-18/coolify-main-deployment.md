@@ -67,3 +67,48 @@ Record source/image/deployment identities in #79 and the follow-up evidence.
 M7 encrypted-artifact restore/off-host operations and final institutional M8
 remain separate. This work performs no model inference, real booking write,
 budget reset, release tag or GHCR publication.
+
+## Qualified main merge — 2026-10-19
+
+[PR #82](https://github.com/metaneutrons/HASI/pull/82) merged after all exact-head
+checks passed in [CI 39170490750](https://github.com/metaneutrons/HASI/actions/runs/39170490750).
+Its main revision is `9378a1d9e9b4a5c3735244f1359b6c79cda789fd`;
+[exact-main CI 39170758100](https://github.com/metaneutrons/HASI/actions/runs/39170758100)
+also succeeded. The controller was enabled after the merge, while this main CI
+was pending. Its journal remained empty and it reported `ci_pending`, without
+a Coolify submission. Live missing/invalid bearer probes each returned HTTP 401.
+
+At `2026-10-18T22:10:19Z`, the regular controller loop automatically submitted
+Coolify deployment `xvtiktbl23onuypcust4feak` for that exact SHA and CI attempt 1.
+No manual `/deploy` request authorized this revision. The durable journal bound
+the CI run, source SHA, submission time and returned deployment identity.
+
+## First source-app handoff
+
+Deployment `xvtiktbl23onuypcust4feak` finished successfully. The healthy native
+container is `tjzdwweelb3zhjtfpgzvjs8k-20261018T221019`, image
+`sha256:330ff18ca091119c30b4671f1121defaaefe297ace5f36aa36673d25cea243e0`.
+Both its OCI revision label and runtime readiness bind the exact main SHA.
+The original web container was stopped only after internal readiness; the
+public router and existing rate-limited chat routes now use `hasi-main@docker`.
+Public HTTPS root returned 200 over IPv4; revision readiness also passed over
+IPv6. Coolify now saves only the database definition under the original data
+resource; its generated on-disk Compose retains the same actual volume.
+
+The existing signed test session, linked mock-plugin consent and original
+confirmed synthetic booking passed through the public API after handoff, using
+the same cookie retained only in observer memory. Database container identity
+`6d79e835e0ac43c41ee44058ae96664b2a3b934104f3ee3e1c9ce59d401b5c35`
+and volume `64vadvq4uowpfrr9l0rlrcg1_hasi-postgres-data` remained unchanged.
+Both shared-budget records retained digest
+`af705c3a1077792bff30de1b7d8a7c66fba92446bd4b07a47be360e9dff80b19`.
+Runtime credential equality was checked without printing values; the built
+image contains none of the four database/session/provider credentials and the
+app owns no mounts. Whole-store row counts are not a continuity assertion:
+normal demo initialization cleans expired records; active state and the budget
+ledger were checked independently.
+
+A documentation-only main merge and actual retained-image rollback/rollforward
+are the remaining qualification steps. Final identities and readback are kept
+in [#79](https://github.com/metaneutrons/HASI/issues/79) to avoid a recursive
+documentation/deployment loop. This record does not pre-claim those results.
