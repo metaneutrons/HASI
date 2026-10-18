@@ -81,9 +81,16 @@ OIDC chat persistence is a different route and is deliberately unavailable in
 this demo mode.
 
 The current Coolify service uses a preloaded image. Automatic source builds and
-main-merge deployment to this host are not yet qualified. The existing Vercel
-Git integration and Release Please release workflow were not changed by the
-runtime cutover. PR 78 remains the review location for the M3 candidate; this
+main-merge deployment to this host are not yet qualified. After cutover, the
+operator requested deletion of the Vercel `hasi` project. Its Neon `hasi-demo`
+resource was first disconnected and retained. The CLI confirmed project
+deletion, a subsequent inspection returned `project_not_found`, and the Neon
+resource remained available with no connected Vercel project. Fresh-resolver
+HTTPS still returned 200 from `2.28.199.98`; signed mock login, explicit account
+consent and database-backed booking reads passed after deletion. Both providers
+remained configured; these checks made no additional model calls. Vercel is no
+longer a deployment or rollback target. Release Please is unchanged.
+PR 78 remains the review location for the M3 candidate; this
 deployment does not imply that its institutional milestone is closed.
 
 The source-build/main-deployment follow-up is tracked in

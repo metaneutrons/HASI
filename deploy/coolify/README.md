@@ -154,14 +154,16 @@ confirmed cancellation. The signed session and canceled booking survived an
 application-container restart using the retained Neon store.
 
 `hasi.metaneutrons.cc` now has DNS-only A/AAAA records for this server. IPv4 and
-IPv6 HTTPS checks passed. The old Vercel deployment is retained for rollback;
-restoring it requires restoring the former CNAME and removing the new AAAA
-record. The new demo key deliberately invalidates the previous test sessions.
+IPv6 HTTPS checks passed. At the operator's request, the Vercel `hasi` project
+and its deployments were deleted after cutover. The Neon `hasi-demo` database
+was disconnected from that project and retained; the server still uses it.
+Vercel is no longer a rollback target. The new demo key deliberately invalidates
+the previous test sessions.
 The chat has not yet been switched to MediaWiki-backed retrieval.
 
 The raw Compose resource currently uses a preloaded image. Restarting it does
-not fetch a new Git commit. Vercel's existing Git integration does not deploy
-to this server; automatic deployment of qualified `main` changes needs a
+not fetch a new Git commit. Deleting the Vercel project also removes its project
+deployment integration; automatic deployment of qualified `main` changes needs a
 separate Git-backed Coolify build/trigger before it can be claimed operational.
 Container release publication remains governed by Release Please.
 This delivery follow-up is tracked in [#79](https://github.com/metaneutrons/HASI/issues/79).
