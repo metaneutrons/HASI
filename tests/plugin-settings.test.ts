@@ -46,7 +46,7 @@ describe('durable plugin configuration and policy', () => {
     const result = await api.inject({ method: 'POST', url: '/api/tools/call', headers, payload: { pluginId: manifest.id, name: 'reference.read', arguments: {} } });
     expect(result.statusCode, result.body).toBe(200); expect(result.json()).toEqual({ value: 'Approved' });
     await registry.refreshAll();
-    expect(registry.modelTools({ subject: 'person', permissions: ['rooms:read'] }).map(tool => tool.name)).toEqual(['reference.read']);
+    expect((await registry.modelTools({ subject: 'person', permissions: ['rooms:read'] })).map(tool => tool.name)).toEqual(['reference.read']);
   });
 
   it('rejects stale revisions, unknown fields, unauthorized admins and app calls outside their read visibility', async () => {

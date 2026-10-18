@@ -10,7 +10,7 @@ const MAX_TRANSACTION_LIFETIME_MS = 15 * 60 * 1000;
 const MAX_SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 const CLOCK_TOLERANCE_SECONDS = 60;
 const OIDC_SCOPE = 'openid';
-const STATIC_RETURN_PATHS = new Set(['/', '/admin', '/bookings']);
+const STATIC_RETURN_PATHS = new Set(['/', '/admin', '/bookings', '/account/connections']);
 
 /** Exact same-origin routes the app shell may resume after authentication. */
 export function isAllowedOidcReturnTo(value: unknown): value is string {

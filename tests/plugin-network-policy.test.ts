@@ -3,11 +3,13 @@ import type { AddressInfo } from 'node:net';
 import type { LookupFunction } from 'node:net';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createPluginFetch, PluginNetworkError, type PluginFetch } from '../apps/api/src/network-policy.js';
+import { createPluginDeploymentGateway } from '../apps/api/src/plugin-deployment-proxy.js';
 
 const fetchers: PluginFetch[] = [];
 
 afterEach(async () => {
   await Promise.all(fetchers.splice(0).map(fetcher => fetcher.close()));
+  vi.unstubAllEnvs();
 });
 
 async function withServer<T>(handler: (request: IncomingMessage, response: ServerResponse) => void, run: (origin: string) => Promise<T>): Promise<T> {
@@ -74,13 +76,45 @@ describe('plugin outbound network policy', () => {
     });
   });
 
+  it('permits only the exact operator-created 127.0.0.1 gateway origin in production', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const gateway = await createPluginDeploymentGateway({
+      port: 0,
+      endpointResolver: {
+        resolveActiveEndpoint: () => Promise.resolve(null),
+        assertActiveEndpoint: () => Promise.resolve(false),
+      },
+      authorize: () => false,
+    });
+    try {
+      const url = new URL(gateway.origin);
+      expect(url.hostname).toBe('127.0.0.1');
+      const fetcher = track({ origins: [gateway.origin], operatorManagedLoopbackOrigin: gateway.origin });
+      const health = await fetcher(`${gateway.origin}/healthz`, { signal: AbortSignal.timeout(1_000) });
+      expect(health.status).toBe(200);
+      await health.body?.cancel();
+
+      expect(() => createPluginFetch({
+        origins: [`http://localhost:${url.port}`],
+        operatorManagedLoopbackOrigin: gateway.origin,
+      })).toThrow('Loopback plugin origins must be explicitly enabled.');
+      expect(() => createPluginFetch({
+        origins: [gateway.origin],
+        operatorManagedLoopbackOrigin: `http://127.0.0.1:${String(Number(url.port) + 1)}`,
+      })).toThrow('Loopback plugin origins must be explicitly enabled.');
+      expect(() => createPluginFetch({ origins: [gateway.origin], allowLoopback: true })).toThrow('Loopback plugin access is unavailable in production.');
+    } finally {
+      await gateway.close();
+    }
+  });
+
   it('rejects a mixed DNS answer set before connecting, even when one address is operator-approved', async () => {
     let requests = 0;
     let lookups = 0;
     const lookup: LookupFunction = (_hostname, _options, callback) => {
       lookups += 1;
       callback(null, [
-        { address: '127.0.0.1', family: 4 },
+        { address: '10.0.0.1', family: 4 },
         { address: '169.254.169.254', family: 4 },
       ]);
     };
@@ -92,13 +126,33 @@ describe('plugin outbound network policy', () => {
       const port = new URL(origin).port;
       const fetcher = track({
         origins: [`https://mixed.test:${port}`],
-        allowedPrivateCidrs: ['127.0.0.0/8'],
+        allowedPrivateCidrs: ['10.0.0.0/8'],
         lookup,
       });
       await expect(fetcher(`https://mixed.test:${port}/?credential=private-value`)).rejects.toBeInstanceOf(PluginNetworkError);
       expect(lookups).toBe(1);
       expect(requests).toBe(0);
     });
+  });
+
+  it.each([
+    { label: 'IPv4 metadata/link-local', address: '169.254.169.254', family: 4, cidr: '169.254.0.0/16' },
+    { label: 'IPv6 link-local', address: 'fe80::1', family: 6, cidr: 'fe80::/10' },
+    { label: 'IPv6 metadata', address: 'fd00:ec2::254', family: 6, cidr: 'fd00::/8' },
+  ])('keeps $label blocked even when its range is operator-approved', async ({ address, family, cidr }) => {
+    const lookup: LookupFunction = (_hostname, _options, callback) => {
+      callback(null, [{ address, family }]);
+    };
+    const fetcher = track({
+      origins: ['https://protected.test'],
+      allowedPrivateCidrs: [cidr],
+      lookup,
+    });
+    await expect(fetcher('https://protected.test/')).rejects.toBeInstanceOf(PluginNetworkError);
+  });
+
+  it.each(['127.0.0.0/8', '127.0.0.1/32', '::1/128', '::/4'])('rejects loopback CIDR %s without weakening the explicit loopback guard', cidr => {
+    expect(() => createPluginFetch({ origins: ['https://plugin.example'], allowedPrivateCidrs: [cidr] })).toThrow('loopback policy');
   });
 
   it('does not allow an approved range to include public IPv4 space', () => {

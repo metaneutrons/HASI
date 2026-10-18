@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createInvocationToken,
   createPluginServer,
+  ExecutionJournal,
   digest,
   manifestSchema,
   verifyInvocationToken,
@@ -64,6 +65,13 @@ describe('production replay boundary', () => {
   it('rejects execute-capable production servers without durable replay protection', () => {
     vi.stubEnv('NODE_ENV', 'production');
     expect(() => createPluginServer({ manifest, publicKey: keys.publicKey, serviceToken: 'fixture-only-service-token', handlers: { 'update-record': () => Promise.resolve({ updated: true }) } })).toThrow('shared durable invocation replay guard');
+  });
+  it('requires durable execution receipts in addition to token replay protection', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const options = { manifest, publicKey: keys.publicKey, serviceToken: 'fixture-only-service-token', consumeInvocation: () => Promise.resolve(true), handlers: { 'update-record': () => Promise.resolve({ updated: true }) } };
+    expect(() => createPluginServer(options)).toThrow('shared durable execution journal');
+    const server = createPluginServer({ ...options, executionJournal: new ExecutionJournal(new MemoryJsonStore('synthetic-receipts'), 'fixture') });
+    await server.close();
   });
 });
 

@@ -396,6 +396,15 @@ and revise the plan through review rather than silently narrowing acceptance.
 
 ## Plan review and completion
 
+Execution decision, 2026-10-18: Fabian requested completion of M2 implementation
+while deferring tests. Deliver the remaining contracts, account/configuration UX,
+action reconciliation and independent deployment/runtime implementation now;
+retain focused development regression checks and required CI gates. Final target-
+device, assistive-technology, adversarial/isolation/recovery and institutional
+acceptance tests remain pending. This sequences implementation before acceptance;
+it does not waive those criteria or imply M1 source/identity approval. Record
+M2 as awaiting qualification rather than closing unverified acceptance criteria.
+
 Review P1 contracts and journeys before P2 implementation, record the P2 Apps
 go/no-go, and review P5 isolation/distribution before admitting external executable
 code. The three epics index their existing milestones; M2 indexes P1–P6 and the

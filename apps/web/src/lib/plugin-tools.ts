@@ -1,3 +1,4 @@
+import { actionPreviewSchema, type ActionPreview } from "./action-preview";
 import { z } from "zod";
 import { isSafeJsonSchemaPattern } from "@hasi/plugin-sdk/schema-pattern";
 
@@ -71,6 +72,7 @@ export const pluginToolsResponseSchema = z.strictObject({
 });
 
 export interface PluginToolProposal {
+  preview?: ActionPreview | undefined;
   action: "execute_tool";
   id: string;
   pluginId: string;
@@ -88,6 +90,7 @@ export interface PluginToolProposal {
 }
 
 const genericProposalSchema = z.strictObject({
+  preview: actionPreviewSchema.optional(),
   action: z.literal("execute_tool"),
   id: z.uuid(),
   pluginId: instanceIdSchema,
@@ -314,6 +317,7 @@ export function samePluginProposalSnapshot(displayed: PluginToolProposal, author
     && displayed.executionTool === authoritative.executionTool
     && displayed.executionTitle === authoritative.executionTitle
     && displayed.executionDescription === authoritative.executionDescription
+    && JSON.stringify(displayed.preview ?? null) === JSON.stringify(authoritative.preview ?? null)
     && displayed.resourceName === authoritative.resourceName
     && displayed.startDate === authoritative.startDate
     && displayed.endDate === authoritative.endDate

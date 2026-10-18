@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
       }
     : {}),
   rewrites() {
-    if (publicDemoBuild) return Promise.resolve([]);
+    if (publicDemoBuild || process.env.HASI_APP_MODE === "production") return Promise.resolve([]);
     return Promise.resolve([
       {
         source: "/api/:path*",

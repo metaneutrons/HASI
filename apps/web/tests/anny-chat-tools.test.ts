@@ -89,10 +89,14 @@ function createHarness(startAt = "2030-01-01T10:30:00.000Z", catalog?: Parameter
 }
 
 async function login(request: Request, personaId: "student" | "employee" | "admin") {
-  return request<{ user: { id: string; role: string }; mode: string }>("/api/dev/login", {
-    method: "POST",
-    body: JSON.stringify({ personaId }),
-  });
+  const session = await request<{ user: { id: string; role: string }; mode: string }>("/api/dev/login", { method: "POST", body: JSON.stringify({ personaId }) });
+  const accounts = await request<{ accounts: { installationId: string; status: string }[] }>("/api/plugin-accounts");
+  for (const account of accounts.accounts.filter(item => item.status !== "linked")) {
+    const flow = await request<{ authorizationUrl: string }>(`/api/plugin-accounts/${account.installationId}/authorization`, { method: "POST", body: JSON.stringify({ operation: "consent", returnTo: "/" }) });
+    const state = new URL(flow.authorizationUrl, origin).searchParams.get("state");
+    await request(`/api/plugin-accounts/${account.installationId}/consent`, { method: "POST", body: JSON.stringify({ state, approved: true }) });
+  }
+  return session;
 }
 
 function outputIntervals(result: AnnyChatToolResult): TimeInterval[] {

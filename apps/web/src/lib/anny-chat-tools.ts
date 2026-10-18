@@ -1,3 +1,4 @@
+import { actionPreviewSchema, type ActionPreview } from "./action-preview";
 import { chatToolSchemas, type ChatToolName } from "./chat-contract";
 import { matchingResources, requestStartDate, workplaceGroupQuestion, workplaceOfficeTypeCounts, workplaceRefinementQuestion, type RoomRequest } from "./chat-demo";
 import type { Booking, Resource, TimeInterval } from "./types";
@@ -16,6 +17,7 @@ interface AnnyChatToolOptions { now?: () => Date }
 interface RoomCard { requestedStartDate?: string; resource: Resource; intervals: TimeInterval[]; checked: boolean }
 
 export interface ChatProposal {
+  preview?: ActionPreview | undefined;
   action?: "book" | "cancel_booking";
   id: string;
   resourceName: string;
@@ -202,6 +204,7 @@ function parseProposal(value: unknown): ChatProposal {
     throw new Error("Der Buchungsvorschlag wurde nicht als ausstehend zurückgegeben.");
   }
   return {
+    ...(value.preview === undefined ? {} : { preview: actionPreviewSchema.parse(value.preview) }),
     id: cleanText(value.id, 160),
     resourceName: cleanText(value.resourceName, 160),
     startDate: value.startDate,

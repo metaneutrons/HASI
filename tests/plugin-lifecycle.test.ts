@@ -150,8 +150,9 @@ describe('plugin installation lifecycle bindings', () => {
     });
 
     expect(changedAfterRouteCheck).toBe(true);
-    expect(confirmation.statusCode, confirmation.body).toBe(200);
-    expect(confirmation.json<{ proposal: { status: string } }>().proposal.status).toBe('failed');
+    expect(confirmation.statusCode, confirmation.body).toBe(409);
+    expect(confirmation.body).not.toContain('target-before');
+    expect((await store.read(`proposal:${proposal.id}`))?.value).toMatchObject({ status: 'outcome_unknown' });
     expect(events).toEqual(['prepare:target-before']);
   });
 

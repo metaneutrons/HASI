@@ -11,18 +11,22 @@ import {
   Save,
   ShieldCheck,
 } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { apiRequest } from '@/lib/api';
+import { PluginConfigFields } from '@/components/plugin-config-fields';
 import {
   configurationRequestError,
   getConfigurationFieldSet,
+  getVisibleConfigurationErrorPaths,
+  getUnmappedConfigurationServerErrors,
   hasPendingConfiguration,
   parseConfigurationRevisionResult,
+  parseConfigurationServerErrors,
   parsePluginConnectionTestResult,
   parsePluginConfigurationResponse,
   validateConfigurationDraft,
-  type ConfigurationFieldControl,
-  type ConfigurationFieldDescriptor,
+  setConfigurationPointer,
+  type ConfigurationJson,
   type ConfigurationToolOption,
   type PluginConfigurationDetails,
   type PluginConnectionTestResult,
@@ -63,6 +67,7 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
   const id = useId();
   const [pluginDetails, setPluginDetails] = useState<PluginConfigurationDetails | null>(null);
   const [rawValues, setRawValues] = useState<Record<string, unknown>>({});
+  const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({});
   const [disabledTools, setDisabledTools] = useState<string[]>([]);
   const [busy, setBusy] = useState<Action>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -85,12 +90,16 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
     tools,
     pluginDetails?.secrets,
   ), [pluginDetails?.schema, pluginDetails?.secrets, rawValues, disabledTools, tools]);
+  const fieldErrors = { ...validation.errors, ...serverFieldErrors };
+  const unknownDisabledTools = disabledTools.filter((toolName) => !toolNames.has(toolName));
+  const comparableValues = validation.valid && validation.payload ? validation.payload.values : rawValues;
+  const comparableDisabledTools = validation.valid && validation.payload ? validation.payload.disabledTools : disabledTools;
   const localChanges = pluginDetails !== null && hasPendingConfiguration(
     pluginDetails.draft,
-    rawValues,
+    comparableValues,
     pluginDetails.draftDisabledTools,
-    disabledTools,
-  );
+    comparableDisabledTools,
+  ) || unknownDisabledTools.length > 0;
   const draftPending = pluginDetails !== null && hasPendingConfiguration(
     pluginDetails.configuration,
     pluginDetails.draft,
@@ -98,7 +107,10 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
     pluginDetails.draftDisabledTools,
   );
   const missingSecrets = pluginDetails?.secrets.filter((secret) => secret.required && !secret.configured) ?? [];
-  const unknownDisabledTools = disabledTools.filter((toolName) => !toolNames.has(toolName));
+  const unmappedServerFieldErrors = getUnmappedConfigurationServerErrors(
+    serverFieldErrors,
+    fieldSet.root ? getVisibleConfigurationErrorPaths(fieldSet.root, rawValues) : new Set(),
+  );
   const fieldId = (fieldName: string) => `${id}-${encodeURIComponent(fieldName)}`;
 
   useEffect(() => {
@@ -132,6 +144,7 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
   function adoptDetails(next: PluginConfigurationDetails) {
     setPluginDetails(next);
     setRawValues(next.draft);
+    setServerFieldErrors({});
     setDisabledTools(next.draftDisabledTools);
     setConflict(false);
     setConfirmReload(false);
@@ -230,14 +243,19 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
         draft: payload.values,
         draftDisabledTools: payload.disabledTools,
       } : current);
-      setRawValues(payload.values);
       setDisabledTools(payload.disabledTools);
+      setServerFieldErrors({});
       setConflict(false);
       setNotice('Entwurf gespeichert. Er wird erst nach der getrennten Aktivierung wirksam.');
     } catch (cause) {
       if (!isStillMounted()) return;
       const status = getHttpStatus(cause);
       setLoadError(configurationRequestError(status));
+      const serverErrors = parseConfigurationServerErrors(cause);
+      if (Object.keys(serverErrors).length > 0) {
+        setServerFieldErrors(serverErrors);
+        focusFirstError(serverErrors);
+      }
       if (status === 409) setConflict(true);
     } finally {
       if (isStillMounted()) setBusy(null);
@@ -327,130 +345,18 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
     }
   }
 
-  function updateTextValue(fieldName: string, value: unknown) {
-    setRawValues((current) => ({ ...current, [fieldName]: value }));
+  function updateConfigurationValue(path: string, value: ConfigurationJson) {
+    setRawValues((current) => setConfigurationPointer(current as Record<string, ConfigurationJson>, path, value));
+    setServerFieldErrors({});
+    setLoadError(null);
+    setNotice(null);
   }
 
-  function removeValue(fieldName: string) {
-    setRawValues((current) => Object.fromEntries(Object.entries(current).filter(([name]) => name !== fieldName)));
-  }
-
-  function renderControl(field: Extract<ConfigurationFieldDescriptor, { control: ConfigurationFieldControl }>) {
-    const control = field.control;
-    const inputId = fieldId(field.name);
-    const errorId = `${inputId}-error`;
-    const helpId = field.help ? `${inputId}-help` : undefined;
-    const message = validation.errors[field.name];
-    const descriptionIds = [helpId, message ? errorId : undefined].filter((item): item is string => item !== undefined).join(' ') || undefined;
-    const common = {
-      id: inputId,
-      name: field.name,
-      disabled: busy !== null || conflict,
-      'aria-invalid': message ? true : undefined,
-      'aria-describedby': descriptionIds,
-      'aria-required': field.required,
-      ref: (element: HTMLInputElement | HTMLSelectElement | null) => {
-        if (element) fieldElements.current.set(field.name, element);
-        else fieldElements.current.delete(field.name);
-      },
-      style: {
-        width: '100%',
-        minHeight: 44,
-        minWidth: 0,
-        padding: '9px 10px',
-        border: `1px solid ${message ? 'var(--red)' : 'var(--line-strong)'}`,
-        borderRadius: 10,
-        background: 'var(--surface-solid)',
-        color: 'var(--ink)',
-        font: 'inherit',
-        fontSize: 16,
-      } as const,
-    };
-
-    let controlElement: ReactNode;
-    if (control.kind === 'string') {
-      const value = rawValues[field.name];
-      controlElement = (
-        <input
-          {...common}
-          type="text"
-          value={typeof value === 'string' ? value : ''}
-          minLength={control.minLength}
-          maxLength={control.maxLength}
-          onChange={(event) => { updateTextValue(field.name, event.currentTarget.value); }}
-        />
-      );
-    } else if (control.kind === 'integer' || control.kind === 'number') {
-      const value = rawValues[field.name];
-      controlElement = (
-        <input
-          {...common}
-          type="number"
-          inputMode="decimal"
-          value={typeof value === 'number' || typeof value === 'string' ? String(value) : ''}
-          min={control.minimum}
-          max={control.maximum}
-          step={control.kind === 'integer' ? 1 : control.multipleOf ?? 'any'}
-          onChange={(event) => { updateTextValue(field.name, event.currentTarget.value); }}
-        />
-      );
-    } else if (control.kind === 'boolean') {
-      const value = rawValues[field.name];
-      const selected = value === true ? 'true' : value === false ? 'false' : '';
-      controlElement = (
-        <select
-          {...common}
-          required={field.required}
-          value={selected}
-          onChange={(event) => {
-            if (event.currentTarget.value === '') removeValue(field.name);
-            else updateTextValue(field.name, event.currentTarget.value === 'true');
-          }}
-        >
-          {field.required && <option value="" disabled>Auswählen …</option>}
-          {!field.required && <option value="">Nicht gesetzt</option>}
-          <option value="true">Ja</option>
-          <option value="false">Nein</option>
-        </select>
-      );
-    } else {
-      const optionIndex = control.values.findIndex((value) => value === rawValues[field.name]);
-      controlElement = (
-        <select
-          {...common}
-          required={field.required}
-          value={optionIndex >= 0 ? String(optionIndex) : ''}
-          onChange={(event) => {
-            const selectedIndex = Number(event.currentTarget.value);
-            const selected = control.values[selectedIndex];
-            if (Number.isSafeInteger(selectedIndex) && selected !== undefined) updateTextValue(field.name, selected);
-            else removeValue(field.name);
-          }}
-        >
-          {field.required && <option value="" disabled>Auswählen …</option>}
-          {!field.required && <option value="">Nicht gesetzt</option>}
-          {control.values.map((value, valueIndex) => (
-            <option key={`${typeof value}-${String(value)}-${String(valueIndex)}`} value={String(valueIndex)}>{String(value)}</option>
-          ))}
-        </select>
-      );
-    }
-
-    return (
-      <div key={field.name} className="form-field" style={{ minWidth: 0, gap: 6, fontSize: 13 }}>
-        <label htmlFor={inputId}>{field.label}{field.required && <span aria-hidden="true"> *</span>}</label>
-        {controlElement}
-        {field.help && <span id={helpId} style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 450 }}>{field.help}</span>}
-        {message && <span id={errorId} role="alert" style={{ color: 'var(--red)', fontSize: 13, fontWeight: 550 }}>{message}</span>}
-      </div>
-    );
-  }
-
-  const groupedFields = new Map<string, ConfigurationFieldDescriptor[]>();
-  for (const field of fieldSet.fields) {
-    const groupFields = groupedFields.get(field.group) ?? [];
-    groupFields.push(field);
-    groupedFields.set(field.group, groupFields);
+  function removeConfigurationValue(path: string) {
+    setRawValues((current) => setConfigurationPointer(current as Record<string, ConfigurationJson>, path, undefined));
+    setServerFieldErrors({});
+    setLoadError(null);
+    setNotice(null);
   }
 
   return (
@@ -603,29 +509,37 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
                 <div role="status" style={noticeStyle('warning')}>{fieldSet.reason}</div>
               ) : fieldSet.fields.length === 0 ? (
                 <p style={quietTextStyle}>Dieses Plug-in deklariert keine bearbeitbaren öffentlichen Felder.</p>
-              ) : (
-                <div style={{ display: 'grid', minWidth: 0, gap: 14, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-                  {[...groupedFields.entries()].map(([group, fields]) => (
-                    <fieldset key={group} style={fieldsetStyle}>
-                      <legend style={{ padding: '0 5px', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 650 }}>{group}</legend>
-                      <div style={{ display: 'grid', minWidth: 0, gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-                        {fields.map((field) => 'unsupported' in field ? (
-                          <div key={field.name} style={noticeStyle('warning')}>
-                            <span style={{ display: 'grid', minWidth: 0, gap: 3 }}>
-                              <strong>{field.label}{field.required && ' · Pflichtfeld'}</strong>
-                              <span>{field.unsupported}</span>
-                            </span>
-                          </div>
-                        ) : renderControl(field))}
-                      </div>
-                    </fieldset>
-                  ))}
-                </div>
-              )}
+              ) : fieldSet.root ? (
+                <PluginConfigFields
+                  root={fieldSet.root}
+                  values={rawValues as Record<string, ConfigurationJson>}
+                  errors={fieldErrors}
+                  disabled={busy !== null || conflict}
+                  onChange={updateConfigurationValue}
+                  onRemove={removeConfigurationValue}
+                  onRef={(path, element) => {
+                    if (element) fieldElements.current.set(path, element);
+                    else fieldElements.current.delete(path);
+                  }}
+                />
+              ) : <div role="status" style={noticeStyle('warning')}>Das Konfigurationsschema konnte nicht geladen werden.</div>}
               {pluginDetails.schema && !validation.valid && Object.entries(validation.errors).some(([key]) => key.startsWith('_')) && (
                 <p role="alert" style={{ margin: '10px 0 0', color: 'var(--red)', fontSize: 13 }}>
                   {validation.errors._schema ?? validation.errors._configuration}
                 </p>
+              )}
+              {Object.keys(unmappedServerFieldErrors).length > 0 && (
+                <div role="alert" style={{ display: 'grid', gap: 6, marginTop: 10, padding: 10, border: '1px solid var(--line)', borderRadius: 10, color: 'var(--red)', fontSize: 13 }}>
+                  <strong>Weitere serverseitige Feldhinweise</strong>
+                  <span>Mindestens ein Feld ist in der aktuellen Ansicht nicht sichtbar. Prüfe den angegebenen Pfad oder wechsle die Variante.</span>
+                  <ul style={{ ...listStyle, color: 'var(--red)' }}>
+                    {Object.entries(unmappedServerFieldErrors).map(([path, message]) => (
+                      <li key={path} style={{ padding: '3px 0', overflowWrap: 'anywhere' }}>
+                        <code>{path || '/'}</code>: {message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </section>
 
@@ -782,7 +696,6 @@ const headingStyle = { display: 'inline-flex', minWidth: 0, alignItems: 'center'
 const quietTextStyle = { margin: 0, color: 'var(--muted)', fontSize: 13, lineHeight: 1.5 } as const;
 const listStyle = { display: 'grid', gap: 3, margin: 0, padding: 0, listStyle: 'none' } as const;
 const rowStyle = { display: 'flex', minWidth: 0, minHeight: 44, alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '5px 0', borderBottom: '1px solid var(--line)' } as const;
-const fieldsetStyle = { minWidth: 0, margin: 0, padding: '8px 0 0', border: 0, borderTop: '1px solid var(--line)' } as const;
 const buttonStyle = { minHeight: 44, gap: 7 } as const;
 
 function ConnectionDiagnostic({

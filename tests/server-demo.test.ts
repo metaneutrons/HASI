@@ -34,7 +34,7 @@ for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres', 'snapshot-po
           for (const [name, value] of Object.entries(incoming.headers)) if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(', ') : value);
           const request = new Request(`${origin}${path}`, { method: incoming.method ?? 'GET', headers, ...(chunks.length ? { body: Buffer.concat(chunks) } : {}) });
           const runtime = runtimes[next++ % runtimes.length]!;
-          const response = path.startsWith('/plugins/knowledge/') ? await runtime.handleKnowledgePlugin(request) : path.startsWith('/api/v1/') ? await runtime.handleMock(request) : path === '/mcp' || path.startsWith('/.well-known/') ? await runtime.handlePlugin(request) : await runtime.handleCore(request);
+          const response = path.startsWith('/plugins/knowledge/') ? await runtime.handleKnowledgePlugin(request) : path.startsWith('/api/v1/') ? await runtime.handleMock(request) : path === '/mcp' || path.startsWith('/hasi/actions/') || path.startsWith('/.well-known/') ? await runtime.handlePlugin(request) : await runtime.handleCore(request);
           outgoing.statusCode = response.status;
           response.headers.forEach((value, name) => { if (name !== 'set-cookie') outgoing.setHeader(name, value); });
           if (response.headers.getSetCookie().length) outgoing.setHeader('set-cookie', response.headers.getSetCookie());
@@ -58,6 +58,17 @@ for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres', 'snapshot-po
       for (const entry of response.headers.getSetCookie()) {
         const [pair] = entry.split(';'); const split = pair!.indexOf('=');
         jar.set(pair!.slice(0, split), pair!.slice(split + 1));
+      }
+      if (path === '/api/dev/login' && response.ok) {
+        const accounts = await request(visitor, '/api/plugin-accounts');
+        const list = await accounts.json() as { accounts: { installationId: string; status: string }[] };
+        for (const account of list.accounts.filter(item => item.status !== 'linked')) {
+          const authorization = await request(visitor, `/api/plugin-accounts/${account.installationId}/authorization`, { operation: 'consent', returnTo: '/' });
+          const started = await authorization.json() as { authorizationUrl: string };
+          const state = new URL(started.authorizationUrl, origin).searchParams.get('state');
+          const consent = await request(visitor, `/api/plugin-accounts/${account.installationId}/consent`, { state, approved: true });
+          expect(consent.status, await consent.clone().text()).toBe(200);
+        }
       }
       return response;
     }

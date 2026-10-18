@@ -2,18 +2,19 @@ import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { createHash, generateKeyPairSync, randomBytes } from 'node:crypto';
 import { createServer } from 'node:net';
 import { once } from 'node:events';
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MemoryJsonStore } from '@hasi/state';
 import { digest, manifestSchema, type PluginManifestV2 } from '@hasi/plugin-sdk';
 import { createApi, PluginRegistry, type IdentityProvider, type Persona } from '../apps/api/src/index.js';
+import { PluginRouteController } from '../apps/api/src/plugin-route-controller.js';
 import type { ApprovedPluginSource, Registration } from '../apps/api/src/registry.js';
+import { packageReferencePlugin } from './package-reference-plugin.js';
 
 const WORKSPACE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const EXAMPLE_ROOT = join(WORKSPACE_ROOT, 'examples/reference-plugin');
-const SDK_ROOT = join(WORKSPACE_ROOT, 'packages/plugin-sdk');
 const PLUGIN_ID = 'hasi.reference';
 const LABEL = 'Synthetic reading-room marker';
 const ACCOUNT = 'reference-test-account-17';
@@ -25,17 +26,27 @@ export interface ReferencePluginQualificationEvidence {
   readonly updatedVersion: '1.0.1';
   readonly initialSourceSha: string;
   readonly updatedSourceSha: string;
-  readonly sdkBuildSha256: string;
+  readonly initialManifestDigest: string;
+  readonly updatedManifestDigest: string;
+  readonly initialArtifactSha256: string;
+  readonly updatedArtifactSha256: string;
+  readonly initialArtifactManifestSha256: string;
+  readonly updatedArtifactManifestSha256: string;
+  readonly licenseInventorySha256: string;
+  readonly sdkRuntimePackageCount: number;
+  readonly sdkLicenseCount: number;
   readonly hostPid: number;
   readonly initialPluginPid: number;
   readonly updatedPluginPid: number;
+  readonly recoveryPluginPid: number;
   readonly pluginPort: number;
   readonly confirmedActionCount: 1;
   readonly publicLabel: string;
   readonly scopedAccountClaim: string;
   readonly updateStatus: 'available';
   readonly hostRestarted: false;
-  readonly rollbackSupported: false;
+  readonly rollbackSupported: true;
+  readonly recoveredVersion: '1.0.0';
 }
 
 interface StartedPlugin {
@@ -66,29 +77,6 @@ function runLocalCommand(command: string, args: readonly string[], cwd: string):
   }
 }
 
-async function treeDigest(root: string): Promise<string> {
-  const entries: string[] = [];
-  async function visit(directory: string): Promise<void> {
-    const children = await readdir(directory, { withFileTypes: true });
-    children.sort((left, right) => left.name.localeCompare(right.name));
-    for (const child of children) {
-      const fullPath = join(directory, child.name);
-      if (child.isDirectory()) await visit(fullPath);
-      else if (child.isFile()) entries.push(fullPath);
-    }
-  }
-  await visit(root);
-  const hasher = createHash('sha256');
-  for (const filePath of entries.sort((left, right) => left.localeCompare(right))) {
-    const relativePath = filePath.slice(root.length + 1).replaceAll('\\', '/');
-    hasher.update(relativePath, 'utf8');
-    hasher.update('\0');
-    hasher.update(await readFile(filePath));
-    hasher.update('\0');
-  }
-  return hasher.digest('hex');
-}
-
 async function allocatePort(): Promise<number> {
   const server = createServer();
   await new Promise<void>((resolveListen, reject) => {
@@ -104,17 +92,17 @@ async function allocatePort(): Promise<number> {
   return port;
 }
 
-async function startPlugin(repoPath: string, port: number, serviceToken: string, publicKeyPem: string, sdkBuildPath: string): Promise<StartedPlugin> {
+async function startPlugin(artifactPath: string, port: number, serviceToken: string, publicKeyPem: string): Promise<StartedPlugin> {
   const child = spawn(process.execPath, ['src/server.js'], {
-    cwd: repoPath,
+    cwd: artifactPath,
     env: {
       PATH: process.env.PATH ?? '',
       NODE_ENV: 'test',
       HASI_REFERENCE_PLUGIN_TEST_MODE: '1',
+      HASI_REFERENCE_PLUGIN_HOST: '127.0.0.1',
       HASI_REFERENCE_PLUGIN_PORT: String(port),
       HASI_REFERENCE_PLUGIN_TOKEN: serviceToken,
       HASI_REFERENCE_PLUGIN_PUBLIC_KEY: publicKeyPem,
-      HASI_REFERENCE_PLUGIN_SDK_BUILD: sdkBuildPath,
     },
     stdio: ['ignore', 'ignore', 'pipe'],
   });
@@ -124,7 +112,7 @@ async function startPlugin(repoPath: string, port: number, serviceToken: string,
   });
   if (!child.pid) throw new Error('The independent plugin process did not start.');
 
-  const healthUrl = `http://127.0.0.1:${String(port)}/health`;
+  const healthUrl = `http://127.0.0.1:${String(port)}/healthz`;
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
     if (child.exitCode !== null || child.signalCode !== null) {
@@ -239,11 +227,10 @@ function gitCommit(repoPath: string, message: string, files: readonly string[]):
 }
 
 export async function runReferencePluginQualification(): Promise<ReferencePluginQualificationEvidence> {
-  runLocalCommand('pnpm', ['--filter', '@hasi/plugin-sdk', 'build'], WORKSPACE_ROOT);
-  const sdkBuildPath = join(SDK_ROOT, 'dist/index.js');
-  const sdkBuildSha256 = await treeDigest(SDK_ROOT);
   const tempRoot = await mkdtemp(join(tmpdir(), 'hasi-reference-plugin-'));
   const repoPath = join(tempRoot, 'plugin-repo');
+  const initialArtifactPath = join(tempRoot, 'reference-plugin-v1');
+  const updatedArtifactPath = join(tempRoot, 'reference-plugin-v2');
   await mkdir(join(repoPath, 'src'), { recursive: true });
   await cp(join(EXAMPLE_ROOT, 'package.json'), join(repoPath, 'package.json'));
   await cp(join(EXAMPLE_ROOT, 'README.md'), join(repoPath, 'README.md'));
@@ -257,12 +244,13 @@ export async function runReferencePluginQualification(): Promise<ReferencePlugin
     const initialSourceSha = gitCommit(repoPath, 'Add local reference plugin v1.0.0', ['README.md', 'package.json', 'src']);
     const initialManifest = manifestSchema.parse(JSON.parse(await readFile(join(repoPath, 'src/manifest.json'), 'utf8'))) as PluginManifestV2;
     assert(initialManifest.version === '1.0.0' && initialManifest.id === PLUGIN_ID, 'The committed reference plugin source has the wrong identity or version.');
+    const initialArtifact = await packageReferencePlugin({ outputDirectory: initialArtifactPath, sourceDirectory: repoPath });
 
     const { privateKey, publicKey } = generateKeyPairSync('ed25519');
     const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
     const serviceToken = `reference-test-${randomBytes(24).toString('base64url')}`;
     const pluginPort = await allocatePort();
-    let pluginProcess = await startPlugin(repoPath, pluginPort, serviceToken, publicKeyPem, sdkBuildPath);
+    let pluginProcess = await startPlugin(initialArtifactPath, pluginPort, serviceToken, publicKeyPem);
     activeProcesses.push(pluginProcess.child);
     const initialPluginPid = pluginProcess.pid;
     const store = new MemoryJsonStore(`reference-plugin-${randomBytes(8).toString('hex')}`);
@@ -324,7 +312,8 @@ export async function runReferencePluginQualification(): Promise<ReferencePlugin
     const updatedManifest = { ...initialManifest, version: '1.0.1', description: 'Updated local synthetic reference plugin.' };
     await writeFile(manifestPath, `${JSON.stringify(updatedManifest, null, 2)}\n`, 'utf8');
     const updatedSourceSha = gitCommit(repoPath, 'Update local reference plugin to v1.0.1', ['src/manifest.json']);
-    pluginProcess = await startPlugin(repoPath, pluginPort, serviceToken, publicKeyPem, sdkBuildPath);
+    const updatedArtifact = await packageReferencePlugin({ outputDirectory: updatedArtifactPath, sourceDirectory: repoPath });
+    pluginProcess = await startPlugin(updatedArtifactPath, pluginPort, serviceToken, publicKeyPem);
     activeProcesses.push(pluginProcess.child);
     const updatedPluginPid = pluginProcess.pid;
     assert(updatedPluginPid !== initialPluginPid, 'The plugin update did not replace the independent Node process.');
@@ -338,23 +327,97 @@ export async function runReferencePluginQualification(): Promise<ReferencePlugin
     })).body;
     assertSuccessBody(updatedRead, body => body.label === LABEL && body.account === ACCOUNT && body.version === '1.0.1', 'The existing host did not invoke the updated plugin process after activation.');
 
+    // Keep both packaged versions live on separate loopback ports. Two
+    // independently constructed controller objects share only durable state;
+    // the second one activates the new route and the first one later restores
+    // the retained v1 route.
+    const recoveryPort = await allocatePort();
+    const recoveryProcess = await startPlugin(initialArtifactPath, recoveryPort, serviceToken, publicKeyPem);
+    activeProcesses.push(recoveryProcess.child);
+    const routeStore = new MemoryJsonStore(`reference-route-${randomBytes(8).toString('hex')}`);
+    const routeOptions = { store: routeStore, scope: `reference-route-${randomBytes(8).toString('hex')}`, ownerId: 'reference-operator' } as const;
+    const firstRouteController = new PluginRouteController(routeOptions);
+    const secondRouteController = new PluginRouteController(routeOptions);
+    const installationId = 'reference-artifact-installation';
+    const previousDeploymentId = `reference-v1-${String(recoveryProcess.pid)}`;
+    const updatedDeploymentId = `reference-v2-${String(updatedPluginPid)}`;
+    await firstRouteController.initializeInstallation({
+      installationId,
+      configurationRevision: 'reference-config-1',
+      activeDeploymentId: previousDeploymentId,
+      activeReleaseDigest: initialArtifact.artifactSha256,
+    });
+    const healthInputs = [
+      { deploymentId: previousDeploymentId, artifactPath: initialArtifactPath, port: recoveryPort, version: '1.0.0' },
+      { deploymentId: updatedDeploymentId, artifactPath: updatedArtifactPath, port: pluginPort, version: '1.0.1' },
+    ] as const;
+    for (const target of healthInputs) {
+      const health = await fetch(`http://127.0.0.1:${String(target.port)}/healthz`, { signal: AbortSignal.timeout(1_000) });
+      const packageManifest = JSON.parse(await readFile(join(target.artifactPath, 'src/manifest.json'), 'utf8')) as Record<string, unknown>;
+      assert(health.ok && packageManifest.version === target.version, 'A packaged plugin version failed its health check.');
+      await health.body?.cancel();
+    }
+    await secondRouteController.activate({
+      ownerId: routeOptions.ownerId,
+      installationId,
+      operationId: 'reference-update-activation',
+      candidateDeploymentId: updatedDeploymentId,
+      candidateReleaseDigest: updatedArtifact.artifactSha256,
+      previousDeploymentId,
+      baseCurrentDigest: initialArtifact.artifactSha256,
+      configurationRevision: 'reference-config-1',
+    });
+    assert(await firstRouteController.resolveActiveDeploymentId({ ownerId: routeOptions.ownerId, installationId }) === updatedDeploymentId, 'The independent route controller did not activate the packaged update across instances.');
+    await firstRouteController.rollback({
+      ownerId: routeOptions.ownerId,
+      installationId,
+      operationId: 'reference-update-rollback',
+      currentDeploymentId: updatedDeploymentId,
+      currentReleaseDigest: updatedArtifact.artifactSha256,
+      previousDeploymentId,
+      previousReleaseDigest: initialArtifact.artifactSha256,
+      baseCurrentDigest: updatedArtifact.artifactSha256,
+      configurationRevision: 'reference-config-1',
+    });
+    const recoveredRoute = await secondRouteController.read({ ownerId: routeOptions.ownerId, installationId });
+    assert(recoveredRoute.active?.deploymentId === previousDeploymentId && recoveredRoute.active.releaseDigest === initialArtifact.artifactSha256, 'The independent route controller did not restore the retained compatible artifact.');
+    const recoveredHealth = await fetch(`http://127.0.0.1:${String(recoveryPort)}/healthz`, { signal: AbortSignal.timeout(1_000) });
+    assert(recoveredHealth.ok, 'The restored v1 artifact did not remain healthy.');
+    await recoveredHealth.body?.cancel();
+
+    const sdkLicenseInventory = initialArtifact.licenseInventory.filter(item => item.name !== 'hasi-reference-plugin');
+    const updatedSdkLicenseInventory = updatedArtifact.licenseInventory.filter(item => item.name !== 'hasi-reference-plugin');
+    const licenseInventorySha256 = createHash('sha256').update(JSON.stringify(sdkLicenseInventory)).digest('hex');
+    assert(initialArtifact.runtimePackageCount === updatedArtifact.runtimePackageCount, 'The SDK runtime package inventory changed between reference releases.');
+    assert(licenseInventorySha256 === createHash('sha256').update(JSON.stringify(updatedSdkLicenseInventory)).digest('hex'), 'The SDK license inventory changed between reference releases.');
+
     return {
       pluginId: PLUGIN_ID,
       initialVersion: '1.0.0',
       updatedVersion: '1.0.1',
       initialSourceSha,
       updatedSourceSha,
-      sdkBuildSha256,
+      initialManifestDigest: initialArtifact.manifestDigest,
+      updatedManifestDigest: updatedArtifact.manifestDigest,
+      initialArtifactSha256: initialArtifact.artifactSha256,
+      updatedArtifactSha256: updatedArtifact.artifactSha256,
+      initialArtifactManifestSha256: initialArtifact.artifactManifestSha256,
+      updatedArtifactManifestSha256: updatedArtifact.artifactManifestSha256,
+      licenseInventorySha256,
+      sdkRuntimePackageCount: initialArtifact.runtimePackageCount,
+      sdkLicenseCount: sdkLicenseInventory.length,
       hostPid: process.pid,
       initialPluginPid,
       updatedPluginPid,
+      recoveryPluginPid: recoveryProcess.pid,
       pluginPort,
       confirmedActionCount: 1,
       publicLabel: LABEL,
       scopedAccountClaim: ACCOUNT,
       updateStatus: 'available',
       hostRestarted: false,
-      rollbackSupported: false,
+      rollbackSupported: true,
+      recoveredVersion: '1.0.0',
     };
   } finally {
     for (const child of activeProcesses.reverse()) await stopPlugin(child);

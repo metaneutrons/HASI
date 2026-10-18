@@ -25,6 +25,7 @@ import {
   type ToolDefinitionV2,
 } from './manifest.js';
 import type { PluginPresentation } from './presentation.js';
+import type { ExecutionJournal, ExecutionBinding } from './execution-journal.js';
 
 const MAX_REQUEST_BYTES = 64 * 1_024;
 const MAX_OUTPUT_BYTES = 64 * 1_024;
@@ -39,6 +40,7 @@ export type PluginToolHandler = (
 ) => Promise<Record<string, unknown>>;
 
 export interface CreatePluginServerOptions {
+  executionJournal?: ExecutionJournal;
   manifest: PluginManifest;
   publicKey: KeyObject;
   serviceToken: string;
@@ -90,6 +92,9 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
   const manifest = parsePluginManifest(JSON.parse(manifestJson) as unknown);
   if (process.env.NODE_ENV === 'production' && manifest.tools.some(tool => tool.effect === 'execute') && !options.consumeInvocation) {
     throw new Error('Production execution requires a shared durable invocation replay guard.');
+  }
+  if (process.env.NODE_ENV === 'production' && manifest.tools.some(tool => tool.effect === 'execute') && !options.executionJournal) {
+    throw new Error('Production execution requires a shared durable execution journal.');
   }
   const appResources = validateAppResources(manifest, options.appResources);
   const handlers = { ...options.handlers };
@@ -205,6 +210,24 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
   app.get('/.well-known/hasi-plugin.json', async (_request, reply) => reply.send(manifest));
   app.get('/health', () => ({ status: 'ok' }));
 
+  // This host-only status endpoint never invokes an execution handler.
+  app.post('/hasi/actions/status', async (request, reply) => {
+    if (!options.executionJournal || !hasServiceBearer(request.headers.authorization, options.serviceToken)) return reply.code(401).send({ error: 'Unauthorized' });
+    try {
+      const body = parseJsonRecord(request.body);
+      if (Object.keys(body).sort().join(',') !== 'argsHash,executionId,tool' || typeof body.tool !== 'string' || typeof body.executionId !== 'string' || typeof body.argsHash !== 'string' || !/^[a-f0-9]{64}$/.test(body.argsHash)) throw new Error('Invalid status request');
+      const token = request.headers['x-hasi-invocation'];
+      if (typeof token !== 'string') throw new Error('Invalid status request');
+      const invocation = await verifyInvocationTokenClaims(token, { pluginId: manifest.id, pluginVersion: manifest.version, tool: '__hasi.action_status', args: body }, options.publicKey);
+      const context = invocation.context;
+      const tool = preparedTools.get(body.tool);
+      if (!context || !(options.acceptedInstallationIds ?? [manifest.id]).includes(context.installationId) || context.executionId !== body.executionId || tool?.definition.effect !== 'execute' || !hasRequiredPermissions(invocation.actor, tool.definition)) throw new Error('Invalid status authority');
+      const result = await options.executionJournal.status({ subject: invocation.actor.subject, installationId: context.installationId, executionId: body.executionId, tool: body.tool, argsHash: body.argsHash, configurationRevision: context.configurationRevision });
+      if (result.status === 'confirmed' && !tool.validateOutput(result.result)) throw new Error('Invalid receipt');
+      return result;
+    } catch { return reply.code(409).send({ error: 'Status could not be established' }); }
+  });
+
   app.all('/mcp', async (request, reply) => {
     if (!hasServiceBearer(request.headers.authorization, options.serviceToken)) {
       return reply.code(401).send({ error: 'Unauthorized' });
@@ -300,7 +323,18 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
         }
 
         try {
-          const output = await handler(args, verifiedInvocation.actor, verifiedInvocation.context);
+          const invoke = async () => {
+            const value = await handler(args, verifiedInvocation.actor, verifiedInvocation.context);
+            if (!preparedTool.validateOutput(value)) throw new Error('Invalid execution output');
+            return value;
+          };
+          let output: Record<string, unknown>;
+          if (definition.effect === 'execute' && options.executionJournal) {
+            const context = verifiedInvocation.context;
+            if (!context?.executionId) throw new Error('Missing execution identity');
+            const binding: ExecutionBinding = { subject: verifiedInvocation.actor.subject, installationId: context.installationId, executionId: context.executionId, tool: definition.name, argsHash: verifiedInvocation.argsHash, configurationRevision: context.configurationRevision };
+            output = await options.executionJournal.execute(binding, invoke);
+          } else output = await invoke();
           const outputJson = canonicalJson(output);
           const normalizedOutput = parseJsonRecord(JSON.parse(outputJson) as unknown, 'handler output');
           if (!preparedTool.validateOutput(normalizedOutput)) {

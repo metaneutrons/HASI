@@ -32,10 +32,12 @@ institutional approval or complete the P4/P5/P6 acceptance criteria.
    Confirm an exact proposal only through the trusted host confirmation card.
    Neither a model nor an embedded view can grant confirmation.
 
-The current form editor supports bounded primitive fields. Unsupported nested
-or conditional forms are explicitly withheld rather than submitted unchecked.
-Full schema-driven conditional setup and personal OAuth consent/renewal remain
-P4 work; do not present central service configuration as personal consent.
+The form editor supports bounded nested objects/arrays, primitive/enum fields,
+if/then/else and uniquely discriminated oneOf/anyOf branches. Unsupported rules
+are reported explicitly and preserve stored values. Branch-specific drafts
+survive switching; inactive values are omitted from submissions. Field and
+unmapped server diagnostics remain visible. Central setup never substitutes
+for personal consent.
 
 ## Conflicts, disable and removal
 
@@ -48,10 +50,18 @@ P4 work; do not present central service configuration as personal consent.
 | Disabled instance | New calls are denied and pending approvals become stale. Existing transcript text remains readable; no historical card executes automatically. |
 | Removed catalogue connection | Other replicas reject calls after their next authoritative refresh. Stored configuration/history is retained; removal is not a data-purge operation. Reconnection requires explicit administration. |
 | Expired login or changed account/grants | Reauthenticate through the trusted IdP, return to the retained chat/draft, read current state and prepare a new proposal. Old account/configuration approval cannot be reused. |
-| Unknown action outcome | Do not repeat the write. Check the authoritative source/receipt with the responsible operator. A readable old card or a timeout does not prove failure. Generic automatic reconciliation is not yet qualified. |
+| Unknown action outcome | Do not repeat the write. Use the explicit host status check. It reads the signed receipt or a reviewed authoritative source adapter without replaying the write. Missing/uncertain receipts remain unknown; a timeout does not prove failure. |
 
-Personal disconnect, renewal and retained-data lifecycle are not equivalent to
-central disable/removal. Their complete UI and revocation flow remains open.
+Personal disconnect, renewal and retained-data lifecycle are distinct from
+central disable/removal. Open **Verbundene Dienste** to connect/renew/disconnect
+the current account. The trusted adapter owns provider authorization and returns
+to the retained task. Local disconnect invalidates authority before provider
+revocation; if the provider is unavailable, use the explicit revocation retry.
+Do not recreate a write to recover an unknown outcome after renewal. Receipt
+access requires the same current projected account and rights. Existing chat
+text/bookings are not purged or cancelled by disconnect. The synthetic consent
+screen exists only in demo mode; production requires a trusted provider adapter.
+Actual-device return-to-task and provider recovery qualification is deferred.
 
 ## Rotate credentials
 
@@ -73,18 +83,78 @@ or make an arbitrary repository trustworthy.
 
 The separate operator-local artifact coordinator verifies signed publisher and
 immutable image identities, stages an isolated candidate, checks health and
-configuration, and retains a previous artifact. Supply an approved secret
-resolver and an atomic route controller with a durable, operation-specific
-journal. `committed`/`not-committed` must be terminal and fenced against later
-commits. Pending or unknown outcomes remain unresolved; an old-route snapshot
-alone does not authorize a retry. Trust revocation discards a staged candidate;
-failed cleanup remains pending for reconciliation.
+configuration, and retains a previous artifact. `PluginRouteController` in
+`apps/api/src/plugin-route-controller.ts` supplies the CAS-backed route authority
+for an operator integration. Construct it with a shared durable `JsonStore`, a
+server-owned scope and owner ID. Initialize each installation before exposing
+it, and update its configuration revision from the trusted configuration
+activation path. Each route swap and its terminal operation result are stored
+in one CAS record; separate controller instances over that store therefore
+observe the same route and operation fence. Each installation retains at most
+512 route-operation records. It never prunes a terminal fence: at capacity,
+new route mutations fail closed until an operator rotates the route scope.
+
+`PluginDeploymentBinding` in `apps/api/src/plugin-deployment-binding.ts` joins
+the route's configuration revision to the authoritative settings store. Call
+`configurationActivated(installationId, activatedRevision)` immediately after
+trusted settings activation; it reads the current active revision and
+converges route state using CAS. Gate deployment and invocation with
+`assertCurrent(installationId, revision)`. A missing route, failed settings
+read, or revision mismatch denies the operation.
+
+`createPluginDeploymentGateway` in
+`apps/api/src/plugin-deployment-proxy.ts` starts a separate service bound only
+to `127.0.0.1`. Start it before registry connection restoration or manifest
+refresh, then configure managed registration endpoints as
+`<gateway-origin>/api/plugin-deployments/<installation-id>/mcp`. Its
+server-owned authorization callback compares the incoming service credential
+with the installation's configured credential. Do not register this gateway
+inside the public API listener: public session/CSRF hooks can reject host
+service traffic, and registration restoration needs the gateway before the API
+starts listening. The proxy accepts only MCP, the signed manifest, action
+status and health paths. For every request the Docker driver reads the active
+digest-pinned route, inspects managed container labels and loopback port,
+checks health, then rechecks the route immediately before forwarding. It
+rejects redirects, queries and cookies and bounds both request and response
+bodies. This narrows route-switch races; action receipts remain the authority
+for ambiguous writes.
+
+The production runtime must supply the shared durable state store, the
+server-owned secret resolver and an authorization callback over trusted
+installation data. Recheck release, credential, configuration and review trust
+at stage and activation. `committed`/`not-committed` are terminal and fenced
+against later commits. Pending or unknown outcomes remain unresolved; an
+old-route snapshot alone does not authorize a retry. Trust revocation discards
+a staged candidate; failed cleanup remains pending for reconciliation.
+
+To rotate a route scope after its 512-operation journal fills, quiesce plugin
+traffic and deployment writes on every host, resolve every pending or unknown
+operation, and record the verified active deployment ID, release digest and
+configuration revision. Inspect the active container through the Docker
+driver. Create a new server-owned scope and initialize the same installation
+ID there with that exact active target and configuration revision. Switch all
+hosts to the new scope while still quiesced, verify the route and configuration
+gate from each host, then resume traffic. Keep the old scope read-only for
+audit; never clear the journal or run mixed scopes during the switch.
+
+The local reference package is produced by
+`scripts/package-reference-plugin.ts`. It contains the built SDK and its locked
+production dependency tree, per-file SHA-256 records, the canonical manifest
+digest, an artifact payload digest and the package-version/license inventory.
+Packaging is offline and disables lifecycle scripts. The qualification runs
+the packaged app from independent directories, checks its bounded `/healthz`
+endpoint and exercises update/route recovery using a shared in-memory store.
+The proxy has focused tests for service authentication, path allowlisting,
+cookie/redirect rejection and bounded forwarding, but the reference process
+qualification does not run the Docker endpoint resolver or production gateway
+with an operator store. This does not qualify a production database, Docker
+image build, deployed route proxy, or actual-device recovery.
 
 Rollback revalidates current publisher, credential, configuration and review
 authority. Irreversible migrations require an approved restore/forward-recovery
 plan; an old image cannot reverse migrated state. The remote registry alone has
-no automatic artifact rollback operation. The production route controller,
-healthy independent image, runtime denial and actual recovery exercises remain
+no automatic artifact rollback operation. Production shared-store wiring, a
+healthy immutable image, runtime denial and actual recovery exercises remain
 qualification gates. Never mount the Docker Engine socket into a plugin or
 expose it to the demo admin. Vercel functions cannot host this installer.
 

@@ -90,6 +90,8 @@ export interface DockerPluginRoutingController {
   }): Promise<void>;
   /** Reads the authoritative route target; it must not perform a write or retry. */
   readActiveDeploymentId(input: { readonly ownerId: string; readonly installationId: string }): Promise<string | null>;
+  /** Full digest-pinned active target used only by the trusted host proxy. */
+  readActiveRoute?(input: { readonly ownerId: string; readonly installationId: string }): Promise<{ readonly deploymentId: string; readonly releaseDigest: string } | null>;
   /**
    * Reads a durable operation journal. `committed` and `not-committed` must be
    * terminal and fenced: after either status is returned, that operation ID
@@ -101,6 +103,23 @@ export interface DockerPluginRoutingController {
     readonly operationId: string;
   }): Promise<'committed' | 'not-committed' | 'pending' | 'unknown'>;
 }
+
+export interface DockerPluginActiveEndpoint {
+  readonly deploymentId: string;
+  readonly releaseDigest: string;
+  readonly host: string;
+  readonly port: number;
+  readonly containerPort: number;
+}
+
+export interface DockerPluginActiveEndpointResolver {
+  /** Resolves only the current digest-pinned route after a fresh Docker inspect. */
+  resolveActiveEndpoint(input: { readonly installationId: string }): Promise<DockerPluginActiveEndpoint | null>;
+  /** Rechecks the route and inspected port immediately before a proxy request. */
+  assertActiveEndpoint(input: { readonly installationId: string; readonly endpoint: DockerPluginActiveEndpoint }): Promise<boolean>;
+}
+
+export type DockerPluginDriver = DeploymentDriver & DockerPluginActiveEndpointResolver;
 
 export interface DockerPluginSecretRequest {
   readonly ownerId: string;
@@ -467,7 +486,7 @@ function validateDriverOptions(options: DockerPluginDriverOptions): void {
   }
 }
 
-export function createDockerPluginDriver(options: DockerPluginDriverOptions): DeploymentDriver {
+export function createDockerPluginDriver(options: DockerPluginDriverOptions): DockerPluginDriver {
   validateDriverOptions(options);
   const transport = options.transport ?? new UnixSocketDockerTransport(options.socketPath);
   const healthPath = options.healthPath ?? '/healthz';
@@ -717,7 +736,68 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): De
     return id;
   }
 
+  async function activeRouteTarget(installationId: string): Promise<{ readonly deploymentId: string; readonly releaseDigest: string } | null> {
+    if (!options.routing.readActiveRoute) throw new DockerPluginDriverError('failed');
+    let target: { readonly deploymentId: string; readonly releaseDigest: string } | null;
+    try {
+      target = await bounded(() => options.routing.readActiveRoute?.({ ownerId: options.ownerId, installationId }) ?? null, requestTimeoutMs);
+    } catch {
+      throw new DockerPluginDriverError('unknown');
+    }
+    if (target !== null && (!isContainerId(target.deploymentId) || !RELEASE_DIGEST.test(target.releaseDigest))) {
+      throw new DockerPluginDriverError('unknown');
+    }
+    return target;
+  }
+
+  function matchesRouteTarget(
+    candidate: { readonly deploymentId: string; readonly releaseDigest: string } | null,
+    expected: { readonly deploymentId: string; readonly releaseDigest: string },
+  ): boolean {
+    return candidate !== null
+      && candidate.deploymentId === expected.deploymentId
+      && candidate.releaseDigest === expected.releaseDigest;
+  }
+
   return {
+    async resolveActiveEndpoint(input) {
+      if (!OPAQUE_ID.test(input.installationId)) throw new DockerPluginDriverError('failed');
+      const target = await activeRouteTarget(input.installationId);
+      if (!target) return null;
+      const container = await inspectLabelsBeforeRoute(target.deploymentId, input.installationId, target.releaseDigest);
+      if (!container.running || container.networkMode === 'none' || !container.hostPort || !container.containerPort) {
+        throw new DockerPluginDriverError('failed');
+      }
+      if (!await healthy(container, target.releaseDigest, Math.min(container.startupTimeoutMs, requestTimeoutMs))) {
+        throw new DockerPluginDriverError('failed');
+      }
+      const after = await activeRouteTarget(input.installationId);
+      if (!matchesRouteTarget(after, target)) {
+        throw new DockerPluginDriverError('unknown');
+      }
+      return Object.freeze({
+        deploymentId: target.deploymentId,
+        releaseDigest: target.releaseDigest,
+        host: '127.0.0.1' as const,
+        port: container.hostPort,
+        containerPort: container.containerPort,
+      });
+    },
+
+    async assertActiveEndpoint(input) {
+      if (!OPAQUE_ID.test(input.installationId) || !isContainerId(input.endpoint.deploymentId)
+        || !RELEASE_DIGEST.test(input.endpoint.releaseDigest) || input.endpoint.host !== '127.0.0.1'
+        || !safeInteger(input.endpoint.port, 1, 65_535) || !safeInteger(input.endpoint.containerPort, 1, 65_535)) {
+        throw new DockerPluginDriverError('failed');
+      }
+      const before = await activeRouteTarget(input.installationId);
+      if (!matchesRouteTarget(before, input.endpoint)) return false;
+      const container = await inspectLabelsBeforeRoute(input.endpoint.deploymentId, input.installationId, input.endpoint.releaseDigest);
+      if (!container.running || container.hostPort !== input.endpoint.port || container.containerPort !== input.endpoint.containerPort) return false;
+      const after = await activeRouteTarget(input.installationId);
+      return matchesRouteTarget(after, input.endpoint);
+    },
+
     async stage(input) {
       if (!OPAQUE_ID.test(input.installationId) || !OPAQUE_ID.test(input.operationId) || !RELEASE_DIGEST.test(input.release.releaseDigest)) {
         throw new DockerPluginDriverError('failed');

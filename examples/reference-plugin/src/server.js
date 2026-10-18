@@ -1,7 +1,5 @@
-import { createPublicKey } from 'node:crypto';
+import { createPublicKey, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 if (process.env.HASI_REFERENCE_PLUGIN_TEST_MODE !== '1') {
   throw new Error('The reference plugin is available only in explicit local test mode.');
@@ -10,16 +8,32 @@ if (process.env.HASI_REFERENCE_PLUGIN_TEST_MODE !== '1') {
 const serviceToken = process.env.HASI_REFERENCE_PLUGIN_TOKEN;
 const publicKeyPem = process.env.HASI_REFERENCE_PLUGIN_PUBLIC_KEY;
 const port = Number(process.env.HASI_REFERENCE_PLUGIN_PORT);
-const sdkBuildPath = process.env.HASI_REFERENCE_PLUGIN_SDK_BUILD;
-if (!serviceToken || !publicKeyPem || !sdkBuildPath || !Number.isInteger(port) || port < 1 || port > 65_535) {
+if (!serviceToken || !publicKeyPem || !Number.isInteger(port) || port < 1 || port > 65_535) {
   throw new Error('The reference plugin local test configuration is incomplete.');
 }
 
-const sdk = await import(pathToFileURL(resolve(sdkBuildPath)).href);
-const { createPluginServer } = sdk;
+// The package script places the complete SDK runtime tree beside this source.
+// The plugin can therefore start from its distributed directory without a
+// checkout, workspace alias, package install or host SDK path.
+const sdk = await import(new URL('../vendor/plugin-sdk/dist/index.js', import.meta.url).href);
+const { createPluginServer, ExecutionJournal } = sdk;
 const manifest = JSON.parse(await readFile(new URL('./manifest.json', import.meta.url), 'utf8'));
 let actionCount = 0;
+const journalRecords = new Map();
+const executionStore = {
+  async read(key) {
+    const record = journalRecords.get(key);
+    return record ? structuredClone(record) : undefined;
+  },
+  async compareAndSet(key, revision, value) {
+    const current = journalRecords.get(key);
+    if ((revision === null && current !== undefined) || (revision !== null && current?.revision !== revision)) return false;
+    journalRecords.set(key, { revision: randomUUID(), value: structuredClone(value) });
+    return true;
+  },
+};
 const server = createPluginServer({
+  executionJournal: new ExecutionJournal(executionStore, 'local-reference-test'),
   manifest,
   publicKey: createPublicKey(publicKeyPem),
   serviceToken,
@@ -46,8 +60,9 @@ const server = createPluginServer({
     },
   },
 });
+server.get('/healthz', async () => ({ status: 'ok' }));
 
 process.once('SIGTERM', () => {
   void server.close().then(() => { process.exitCode = 0; }).catch(() => { process.exitCode = 1; });
 });
-await server.listen({ host: '127.0.0.1', port });
+await server.listen({ host: process.env.HASI_REFERENCE_PLUGIN_HOST ?? '0.0.0.0', port });

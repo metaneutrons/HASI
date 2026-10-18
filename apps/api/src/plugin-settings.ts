@@ -18,7 +18,7 @@ function configurationContract(manifest: PluginManifest): string {
 }
 
 export class PluginSettingsError extends Error {
-  constructor(readonly status: number, message: string) { super(message); }
+  constructor(readonly status: number, message: string, readonly errors?: readonly { path: string; message: string }[]) { super(message); }
 }
 
 /** Public configuration only. Secret values and secret-store references never enter this record. */
@@ -51,13 +51,13 @@ export class PluginSettingsStore {
     if (!schema && Object.keys(values).length) throw new PluginSettingsError(400, 'Dieses Plugin deklariert keine Konfigurationsfelder.');
     if (schema) {
       const result = validateConfiguration(schema, values);
-      if (!result.valid) throw new PluginSettingsError(400, 'Die Konfiguration entspricht nicht dem freigegebenen Schema.');
+      if (!result.valid) throw new PluginSettingsError(400, 'Die Konfiguration entspricht nicht dem freigegebenen Schema.', result.diagnostics.slice(0, 32).map(issue => ({ path: issue.path.slice(0, 512), message: issue.message.slice(0, 256) })));
     }
     if (new Set(disabledTools).size !== disabledTools.length || disabledTools.some(name => !manifest.tools.some(tool => tool.name === name))) throw new PluginSettingsError(400, 'Unbekannte oder doppelte Tool-Auswahl.');
   }
-  async describe(instanceId: string, manifest: PluginManifest, secretReady: (name: string) => boolean = () => false) {
+  async describe(instanceId: string, manifest: PluginManifest, secretReady: (name: string) => boolean = () => false, secretRevision?: (name: string) => string | null) {
     const state = await this.read(instanceId, manifest);
-    const secrets = manifest.manifestVersion === 2 ? (manifest.secrets ?? []).map(secret => ({ name: secret.name, required: secret.required, configured: secretReady(secret.name) })) : [];
+    const secrets = manifest.manifestVersion === 2 ? (manifest.secrets ?? []).map(secret => ({ name: secret.name, required: secret.required, configured: secretReady(secret.name), ...(secretRevision ? { revision: secretRevision(secret.name) } : {}) })) : [];
     let configurationValid = state.manifestDigest === configurationContract(manifest);
     try { this.validate(manifest, state.active.values, state.active.disabledTools); } catch { configurationValid = false; }
     return {
@@ -69,8 +69,8 @@ export class PluginSettingsStore {
       audit: state.audit,
     };
   }
-  async binding(instanceId: string, manifest: PluginManifest, secretReady?: (name: string) => boolean) {
-    const state = await this.describe(instanceId, manifest, secretReady);
+  async binding(instanceId: string, manifest: PluginManifest, secretReady?: (name: string) => boolean, secretRevision?: (name: string) => string | null) {
+    const state = await this.describe(instanceId, manifest, secretReady, secretRevision);
     return { ...state, digest: digest({ instanceId, manifest: digest(manifest), revision: state.activeRevision, configuration: state.configuration, disabledTools: state.disabledTools, secretReadiness: state.secrets }) };
   }
   async saveDraft(instanceId: string, manifest: PluginManifest, input: { revision: number; values: Record<string, unknown>; disabledTools: string[] }, subject: string) {

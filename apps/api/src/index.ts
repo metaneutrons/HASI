@@ -7,24 +7,35 @@ import { PluginRegistry, RequestError, type ApprovedPluginSource } from './regis
 import { MockIdentityProvider, personas, type Persona, type IdentityProvider } from './identity.js';
 import { isAllowedOidcReturnTo, OidcIdentityProvider } from './oidc.js';
 import { PluginSettingsError } from './plugin-settings.js';
+import { actionPreviewSchema, actionResolutionSchema, type ActionPolicy, type ActionPreview, type ActionResolution } from './action-policy.js';
+import { PluginAccountError } from './plugin-accounts.js';
 
 export { PluginRegistry, compatibleUpdate, RequestError } from './registry.js';
 export { OidcIdentityProvider, OidcAuthenticationError } from './oidc.js';
 export { startTestIdp } from './test-idp.js';
+export { PluginAccountService, PluginAccountError, type PluginAccountAdapter, type PluginAccountServiceOptions } from './plugin-accounts.js';
+export { createProductionRuntime, ProductionAuthorityDirectory, stableOidcSubject, type ProductionRuntimeOptions } from './production-runtime.js';
+export { EnvironmentPluginSecretCustody, type PluginSecretCustody } from './plugin-secrets.js';
+export { createReviewedPlainMcpAdapter, type ReviewedPlainMcpOptions } from './plain-mcp-adapter.js';
+export { PluginRouteController } from './plugin-route-controller.js';
+export { PluginDeploymentBinding } from './plugin-deployment-binding.js';
+export { createPluginDeploymentGateway } from './plugin-deployment-proxy.js';
+export { createDockerPluginDriver } from './docker-plugin-driver.js';
+export { PluginDeploymentCoordinator, verifyPluginRelease } from './plugin-artifacts.js';
 export { assertMockMode, MockIdentityProvider, withDemoPluginClaims } from './identity.js';
 const ANNY = 'de.hsh.hasi.anny';
 const annyId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/);
 const time = z.iso.datetime({ offset: true });
 const roomRequest = z.strictObject({ resourceId: annyId, serviceId: annyId, startDate: time, endDate: time }).refine(value => Date.parse(value.endDate) > Date.parse(value.startDate) && Date.parse(value.endDate) - Date.parse(value.startDate) <= 86400000, 'Invalid interval');
 const draftSchema = z.strictObject({ executionTool: z.string(), arguments: z.record(z.string(), z.unknown()), resourceName: z.string().max(200) });
-interface Proposal { executionTitle?: string; executionDescription?: string; authorityDigest?: string; bindingDigest?: string; id: string; subject: string; pluginId: string; pluginVersion: string; executionTool: string; args: Record<string, unknown>; resourceName: string; startDate: string; endDate: string; expiresAt: string; status: 'pending' | 'executing' | 'confirmed' | 'failed' | 'outcome_unknown'; result?: Record<string, unknown>; executionId?: string; executionStartedAt?: number }
+interface Proposal { reconciliationAuthorityDigest?: string; preview?: ActionPreview; actionPolicyRevision?: string; reconciledAt?: number; executionTitle?: string; executionDescription?: string; authorityDigest?: string; bindingDigest?: string; id: string; subject: string; pluginId: string; pluginVersion: string; executionTool: string; args: Record<string, unknown>; resourceName: string; startDate: string; endDate: string; expiresAt: string; status: 'pending' | 'executing' | 'confirmed' | 'failed' | 'outcome_unknown'; result?: Record<string, unknown>; executionId?: string; executionStartedAt?: number }
 const publicUser = (user: Persona) => ({ id: user.id, displayName: user.displayName, role: user.role });
-const publicProposal = (proposal: Proposal) => ({ id: proposal.id, resourceName: proposal.resourceName, startDate: proposal.startDate, endDate: proposal.endDate, expiresAt: proposal.expiresAt, status: proposal.status, arguments: proposal.args, pluginId: proposal.pluginId, executionTool: proposal.executionTool, ...(proposal.pluginId !== ANNY ? { executionTitle: proposal.executionTitle ?? proposal.executionTool, executionDescription: proposal.executionDescription ?? '' } : {}), action: proposal.pluginId === ANNY ? proposal.executionTool === 'anny.execute_cancellation' ? 'cancel_booking' : 'book' : 'execute_tool' });
+const publicProposal = (proposal: Proposal) => ({ ...(proposal.preview ? { preview: proposal.preview } : {}), id: proposal.id, resourceName: proposal.resourceName, startDate: proposal.startDate, endDate: proposal.endDate, expiresAt: proposal.expiresAt, status: proposal.status, arguments: proposal.args, pluginId: proposal.pluginId, executionTool: proposal.executionTool, ...(proposal.pluginId !== ANNY ? { executionTitle: proposal.executionTitle ?? proposal.executionTool, executionDescription: proposal.executionDescription ?? '' } : {}), action: proposal.pluginId === ANNY ? proposal.executionTool === 'anny.execute_cancellation' ? 'cancel_booking' : 'book' : 'execute_tool' });
 
 export interface ApiOptions {
   mode: 'development' | 'test' | 'public-demo' | 'production'; registry: PluginRegistry; origin?: string;
   identity?: IdentityProvider; store?: JsonStore; pluginCatalog?: readonly ApprovedPluginSource[]; allowedHosts?: readonly string[];
-  secureCookies?: boolean; sessionCookieName?: string;
+  secureCookies?: boolean; sessionCookieName?: string; actionPolicies?: Readonly<Record<string, ActionPolicy>>;
 }
 
 export async function createApi(options: ApiOptions) {
@@ -51,24 +62,92 @@ export async function createApi(options: ApiOptions) {
     if (!['GET', 'HEAD'].includes(request.method) && request.headers.origin !== origin) throw new RequestError(403, 'Ungültiger Anfrageursprung.');
   });
   app.setErrorHandler((error, _request, reply) => {
+    if (error instanceof PluginAccountError) return reply.code(error.statusCode).send({ error: error.message, code: error.code });
+    if (error instanceof PluginSettingsError && error.errors) return reply.code(error.status).send({ error: error.message, code: 'configuration_invalid', errors: error.errors });
     if (error instanceof RequestError || error instanceof PluginSettingsError) return reply.code(error.status).send({ error: error.message });
     if (error instanceof z.ZodError) return reply.code(400).send({ error: 'Bitte prüfe die eingegebenen Daten.' });
     return reply.code(502).send({ error: 'Die Anfrage konnte nicht abgeschlossen werden.' });
   });
   const requireUser = async (token: string | undefined) => { const user = await identity.resolve(token); if (!user) throw new RequestError(401, oidc ? 'Bitte melde dich an.' : 'Bitte wähle zuerst ein Testkonto.'); return user; };
   const requireAdmin = async (token: string | undefined) => { const user = await requireUser(token); if (user.role !== 'admin' || !user.actor.permissions.includes('plugins:manage')) throw new RequestError(403, 'Diese Funktion ist der Administration vorbehalten.'); return user; };
+  const accountService = (id: string) => {
+    options.registry.manifest(id);
+    const service = options.registry.accounts.get(id);
+    if (!service) throw new RequestError(404, 'Dieser Dienst benötigt keine persönliche Kontoverknüpfung.');
+    return service;
+  };
+  app.get('/api/plugin-accounts', async request => {
+    const user = await requireUser(request.cookies[cookieName]);
+    await options.registry.refreshAll();
+    const installed = options.registry.list();
+    const accounts = [];
+    for (const [id, service] of options.registry.accounts) {
+      const plugin = installed.find(item => item.id === id);
+      if (plugin) accounts.push({ ...await service.status(user.actor.subject), label: plugin.name });
+    }
+    return { accounts };
+  });
+  app.post('/api/plugin-accounts/:id/authorization', async request => {
+    const user = await requireUser(request.cookies[cookieName]);
+    const { id } = z.strictObject({ id: z.string().min(1).max(128) }).parse(request.params);
+    const input = z.strictObject({ operation: z.enum(['consent', 'renewal']), returnTo: z.enum(['/', '/bookings', '/admin', '/account/connections']) }).parse(request.body);
+    return accountService(id).begin(user.actor.subject, input);
+  });
+  app.get('/api/plugin-accounts/:id/callback', async (request, reply) => {
+    const user = await requireUser(request.cookies[cookieName]);
+    const { id } = z.strictObject({ id: z.string().min(1).max(128) }).parse(request.params);
+    const callback = z.record(z.string().max(64), z.string().max(4096)).parse(request.query);
+    const state = z.string().regex(/^[A-Za-z0-9_-]{43}$/).parse(callback.state);
+    const result = await accountService(id).complete(user.actor.subject, state, callback);
+    return reply.redirect(new URL(result.returnTo, origin).href);
+  });
+  app.post('/api/plugin-accounts/:id/consent', async request => {
+    if (options.mode === 'production') throw new RequestError(404, 'Nicht verfügbar.');
+    const user = await requireUser(request.cookies[cookieName]);
+    const { id } = z.strictObject({ id: z.string().min(1).max(128) }).parse(request.params);
+    const { state } = z.strictObject({ state: z.string().regex(/^[A-Za-z0-9_-]{43}$/), approved: z.literal(true) }).parse(request.body);
+    const service = accountService(id);
+    if ((await service.status(user.actor.subject)).adapterTrust !== 'demo-only') throw new RequestError(403, 'Diese Bestätigung ist nur für simulierte Anmeldedienste freigegeben.');
+    return service.complete(user.actor.subject, state, { state, approved: 'true' });
+  });
+  for (const operation of ['disconnect', 'revocation/retry'] as const) app.post(`/api/plugin-accounts/:id/${operation}`, async request => {
+    const user = await requireUser(request.cookies[cookieName]);
+    const { id } = z.strictObject({ id: z.string().min(1).max(128) }).parse(request.params);
+    const { expectedAuthorityRevision } = z.strictObject({ expectedAuthorityRevision: z.number().int().nonnegative() }).parse(request.body);
+    const service = accountService(id);
+    return operation === 'disconnect' ? service.disconnect(user.actor.subject, expectedAuthorityRevision) : service.retryRevocation(user.actor.subject, expectedAuthorityRevision);
+  });
+  const assertProposalReadAccess = async (proposal: Proposal, user: Persona) => {
+    if (proposal.pluginVersion !== options.registry.version(proposal.pluginId) || proposal.bindingDigest !== await options.registry.binding(proposal.pluginId)) throw new RequestError(409, 'Die Dienstfreigabe wurde geändert. Bitte den aktuellen Stand im zuständigen Dienst prüfen.');
+    const matches = proposal.reconciliationAuthorityDigest
+      ? proposal.reconciliationAuthorityDigest === await options.registry.reconciliationAuthorityBinding(proposal.pluginId, user.actor)
+      : proposal.authorityDigest === await options.registry.authorityBinding(proposal.pluginId, user.actor);
+    if (!matches) throw new RequestError(409, 'Die aktuellen Kontorechte geben diesen Aktionsbeleg nicht frei. Bitte die Kontoverbindung prüfen.');
+  };
   const makeProposal = async (user: Persona, pluginId: string, name: string, args: Record<string, unknown>) => {
     const bindingDigest = await options.registry.binding(pluginId);
+    const authorityDigest = await options.registry.authorityBinding(pluginId, user.actor);
+    const reconciliationAuthorityDigest = await options.registry.reconciliationAuthorityBinding(pluginId, user.actor);
     const output = await options.registry.invoke(pluginId, name, args, user.actor);
     if (bindingDigest !== await options.registry.binding(pluginId)) throw new RequestError(409, 'Das Plugin wurde verändert. Bitte den Vorschlag neu vorbereiten.');
     const draft = draftSchema.parse(output.draft);
     const execution = options.registry.list().find(plugin => plugin.id === pluginId)?.tools.find(tool => tool.name === draft.executionTool && tool.effect === 'execute');
     if (!execution?.requiredPermissions.every(permission => user.actor.permissions.includes(permission))) throw new RequestError(403, 'Der Vorschlag ist nicht freigegeben.');
-    const proposal: Proposal = { executionTitle: execution.title, executionDescription: execution.description, authorityDigest: options.registry.authorityBinding(pluginId, user.actor), bindingDigest, id: randomUUID(), subject: user.actor.subject, pluginId, pluginVersion: options.registry.version(pluginId), executionTool: draft.executionTool, args: draft.arguments, resourceName: draft.resourceName, startDate: typeof draft.arguments.startDate === 'string' ? draft.arguments.startDate : '', endDate: typeof draft.arguments.endDate === 'string' ? draft.arguments.endDate : '', expiresAt: new Date(Date.now() + 300000).toISOString(), status: 'pending' };
+    const policy = options.actionPolicies?.[pluginId];
+    if (options.mode === 'production' && !policy) throw new RequestError(409, 'Für diesen Dienst fehlt die freigegebene Aktionsvorschau.');
+    const preview = actionPreviewSchema.parse(policy ? await policy.preview({ actor: user.actor, executionTool: draft.executionTool, arguments: draft.arguments }) : {
+      instance: options.registry.manifest(pluginId).name,
+      account: user.displayName,
+      effect: execution.title,
+      consequences: ['Diese Aktion ändert ausschließlich Daten in der Testumgebung.'],
+      costs: 'Keine echten Buchungen oder Zahlungen in der Testumgebung.',
+    });
+    if (bindingDigest !== await options.registry.binding(pluginId) || authorityDigest !== await options.registry.authorityBinding(pluginId, user.actor)) throw new RequestError(409, 'Konto oder Dienst wurden während der Vorbereitung geändert. Bitte neu vorbereiten.');
+    const proposal: Proposal = { preview, ...(policy ? { actionPolicyRevision: policy.revision } : {}), executionTitle: execution.title, executionDescription: execution.description, reconciliationAuthorityDigest, authorityDigest, bindingDigest, id: randomUUID(), subject: user.actor.subject, pluginId, pluginVersion: options.registry.version(pluginId), executionTool: draft.executionTool, args: draft.arguments, resourceName: draft.resourceName, startDate: typeof draft.arguments.startDate === 'string' ? draft.arguments.startDate : '', endDate: typeof draft.arguments.endDate === 'string' ? draft.arguments.endDate : '', expiresAt: new Date(Date.now() + 300000).toISOString(), status: 'pending' };
     if (!await store.compareAndSet(proposalKey(proposal.id), null, proposal, proposalLifetime())) throw new RequestError(503, 'Der Vorschlag konnte nicht gespeichert werden.');
     return { proposal: publicProposal(proposal) };
   };
-  app.get('/api/session', async request => { const user = await identity.resolve(request.cookies[cookieName]); return { mode: sessionMode, user: user ? publicUser(user) : null }; });
+  app.get('/api/session', async request => { const user = await identity.resolve(request.cookies[cookieName]); return { mode: sessionMode, user: user ? publicUser(user) : null, ...(options.mode === 'production' && user ? { modelContext: { dataClasses: ['public', 'internal', 'confidential'] } } : {}) }; });
   if (oidc) {
     app.get('/api/auth/login', async (request, reply) => {
       const { returnTo } = z.strictObject({ returnTo: z.string().max(128).optional() }).parse(request.query);
@@ -103,7 +182,7 @@ export async function createApi(options: ApiOptions) {
   });
   app.post('/api/logout', async (request, reply) => { await identity.logout(request.cookies[cookieName]); reply.clearCookie(cookieName, { path: '/', secure: options.secureCookies ?? false }); return { ok: true }; });
   app.get('/api/plugins', async request => { await requireUser(request.cookies[cookieName]); await options.registry.refreshAll(); return { plugins: options.registry.list() }; });
-  app.get('/api/tools', async request => { const user = await requireUser(request.cookies[cookieName]); await options.registry.refreshAll(); return { tools: options.registry.modelTools(user.actor) }; });
+  app.get('/api/tools', async request => { const user = await requireUser(request.cookies[cookieName]); await options.registry.refreshAll(); return { tools: await options.registry.authorizedModelTools(user.actor) }; });
   app.get('/api/admin/plugins', async request => { await requireAdmin(request.cookies[cookieName]); await options.registry.refreshAll(); return { plugins: options.registry.list() }; });
   app.get('/api/admin/plugin-catalog', async request => { await requireAdmin(request.cookies[cookieName]); return { sources: options.registry.catalog() }; });
   app.post('/api/admin/plugin-catalog/connect', async request => { await requireAdmin(request.cookies[cookieName]); const { sourceId } = z.strictObject({ sourceId: z.string().min(1).max(128) }).parse(request.body); await options.registry.connectSource(sourceId); return { ok: true }; });
@@ -125,7 +204,9 @@ export async function createApi(options: ApiOptions) {
     const user = await requireAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params);
     const { revision } = z.strictObject({ revision: z.number().int().nonnegative() }).parse(request.body);
     await options.registry.refreshAll();
-    return options.registry.settings.activate(id, options.registry.manifest(id), revision, user.actor.subject, options.registry.registration(id).secretReady);
+    const result = await options.registry.settings.activate(id, options.registry.manifest(id), revision, user.actor.subject, options.registry.registration(id).secretReady);
+    await options.registry.configurationActivated(id);
+    return result;
   });
   app.get('/api/plugin-apps/:id/:presentationId', async request => {
     const user = await requireUser(request.cookies[cookieName]); const { id, presentationId } = z.object({ id: z.string(), presentationId: z.string() }).parse(request.params);
@@ -177,6 +258,7 @@ export async function createApi(options: ApiOptions) {
     const record = await store.read(proposalKey(id));
     const proposal = record?.value as Proposal | undefined;
     if (proposal?.subject !== user.actor.subject) throw new RequestError(404, 'Vorschlag nicht gefunden.');
+    await assertProposalReadAccess(proposal, user);
     return { proposal: publicProposal(proposal) };
   });
   app.post('/api/proposals/:id/confirm', async request => {
@@ -189,15 +271,17 @@ export async function createApi(options: ApiOptions) {
       const record = await store.read(key);
       const proposal = record?.value as Proposal | undefined;
       if (!record || proposal?.subject !== user.actor.subject) throw new RequestError(404, 'Vorschlag nicht gefunden.');
-      if (proposal.status === 'confirmed' || proposal.status === 'outcome_unknown') return { ...(proposal.result ?? {}), proposal: publicProposal(proposal) };
+      if (proposal.status === 'confirmed' || proposal.status === 'outcome_unknown') { await assertProposalReadAccess(proposal, user); return { ...(proposal.result ?? {}), proposal: publicProposal(proposal) }; }
       if (proposal.status === 'executing' && proposal.executionStartedAt && Date.now() - proposal.executionStartedAt > 60000) {
+        await assertProposalReadAccess(proposal, user);
         const unknown = { ...proposal, status: 'outcome_unknown' as const };
-        if (await store.compareAndSet(key, record.revision, unknown, proposalLifetime())) return { proposal: publicProposal(unknown) };
+        if (await store.compareAndSet(key, record.revision, unknown, proposalLifetime())) { await assertProposalReadAccess(unknown, user); return { proposal: publicProposal(unknown) }; }
         continue;
       }
       if (proposal.status !== 'pending') throw new RequestError(409, 'Dieser Vorschlag wird bereits bearbeitet.');
       if (Date.parse(proposal.expiresAt) <= Date.now() || proposal.pluginVersion !== options.registry.version(proposal.pluginId) || (proposal.bindingDigest === undefined || proposal.bindingDigest !== await options.registry.binding(proposal.pluginId))) throw new RequestError(409, 'Der Vorschlag ist abgelaufen oder das Plugin wurde aktualisiert. Bitte neu prüfen.');
-      if (proposal.authorityDigest !== options.registry.authorityBinding(proposal.pluginId, user.actor)) throw new RequestError(409, 'Die Kontoverknüpfung oder Berechtigung wurde geändert. Bitte neu vorbereiten.');
+      if (proposal.actionPolicyRevision !== options.actionPolicies?.[proposal.pluginId]?.revision) throw new RequestError(409, 'Die Aktionsbedingungen wurden geändert. Bitte neu vorbereiten.');
+      if (proposal.authorityDigest !== await options.registry.authorityBinding(proposal.pluginId, user.actor)) throw new RequestError(409, 'Die Kontoverknüpfung oder Berechtigung wurde geändert. Bitte neu vorbereiten.');
       const next = { ...proposal, status: 'executing' as const, executionId: randomUUID(), executionStartedAt: Date.now() };
       if (await store.compareAndSet(key, record.revision, next, proposalLifetime())) { claimed = next; break; }
     }
@@ -205,16 +289,56 @@ export async function createApi(options: ApiOptions) {
     let result: Record<string, unknown> | undefined;
     let status: Proposal['status'];
     try {
-      result = await options.registry.invoke(claimed.pluginId, claimed.executionTool, claimed.args, user.actor, true, 'model', claimed.bindingDigest);
+      result = await options.registry.invoke(claimed.pluginId, claimed.executionTool, claimed.args, user.actor, true, 'model', claimed.bindingDigest, claimed.executionId);
       status = 'confirmed';
-    } catch (error) {
+    } catch {
       // Once claimed, an ambiguous external failure never authorizes a retry.
-      status = error instanceof RequestError && error.status < 500 ? 'failed' : 'outcome_unknown';
+      // Even a post-call permission/configuration conflict may follow a completed write.
+      // Only authoritative reconciliation is allowed to establish terminal failure.
+      status = 'outcome_unknown';
     }
     const completed: Proposal = { ...claimed, status, ...(result ? { result } : {}) };
     const record = await store.read(key);
     const current = record?.value as Proposal | undefined;
-    if (!record || current?.executionId !== claimed.executionId || !await store.compareAndSet(key, record.revision, completed, proposalLifetime())) throw new RequestError(503, 'Das Ergebnis ist noch nicht sicher gespeichert. Bitte den Buchungsstatus prüfen.');
+    if (!record || !current || current.executionId !== claimed.executionId) throw new RequestError(503, 'Das Ergebnis ist noch nicht sicher gespeichert. Bitte den Buchungsstatus prüfen.');
+    // A later status transition owns the outcome. A slow original response must
+    // never discard a receipt or replace reconciliation with an older unknown.
+    if (current.status !== 'executing' || current.reconciledAt !== undefined) {
+      await assertProposalReadAccess(current, user);
+      return { ...(current.result ?? {}), proposal: publicProposal(current) };
+    }
+    if (!await store.compareAndSet(key, record.revision, completed, proposalLifetime())) throw new RequestError(503, 'Das Ergebnis ist noch nicht sicher gespeichert. Bitte den Buchungsstatus prüfen.');
+    await assertProposalReadAccess(completed, user);
+    return { ...(completed.result ?? {}), proposal: publicProposal(completed) };
+  });
+  app.post('/api/proposals/:id/reconcile', async request => {
+    const user = await requireUser(request.cookies[cookieName]);
+    z.strictObject({}).parse(request.body);
+    const { id } = z.strictObject({ id: z.uuid() }).parse(request.params);
+    const key = proposalKey(id);
+    const record = await store.read(key);
+    const proposal = record?.value as Proposal | undefined;
+    if (!record || proposal?.subject !== user.actor.subject) throw new RequestError(404, 'Vorschlag nicht gefunden.');
+    await assertProposalReadAccess(proposal, user);
+    if (proposal.status === 'confirmed' || proposal.status === 'failed') return { ...(proposal.result ?? {}), proposal: publicProposal(proposal) };
+    if (proposal.status === 'pending' || (proposal.status === 'executing' && Date.now() - (proposal.executionStartedAt ?? Date.now()) < 60000)) throw new RequestError(409, 'Die Aktion ist noch nicht zur Statusklärung bereit.');
+    if (!proposal.executionId || !proposal.bindingDigest) throw new RequestError(409, 'Für diesen alten Vorschlag fehlt ein sicherer Ausführungsbeleg. Bitte den Dienst prüfen.');
+    if (proposal.reconciledAt && Date.now() - proposal.reconciledAt < 10000) throw new RequestError(429, 'Bitte vor der nächsten Statusprüfung kurz warten.');
+    if (proposal.pluginVersion !== options.registry.version(proposal.pluginId) || proposal.bindingDigest !== await options.registry.binding(proposal.pluginId) || proposal.actionPolicyRevision !== options.actionPolicies?.[proposal.pluginId]?.revision) throw new RequestError(409, 'Konto oder Dienst wurden geändert. Der Status muss mit aktueller Dienstfreigabe geklärt werden.');
+    const checking: Proposal = { ...proposal, status: 'outcome_unknown', reconciledAt: Date.now() };
+    if (!await store.compareAndSet(key, record.revision, checking, proposalLifetime())) throw new RequestError(409, 'Der Status wird bereits geprüft.');
+    let resolution: ActionResolution;
+    try {
+      const policy = options.actionPolicies?.[proposal.pluginId];
+      resolution = actionResolutionSchema.parse(policy ? await policy.reconcile({ actor: user.actor, arguments: proposal.args, executionTool: proposal.executionTool, executionId: proposal.executionId }) : await options.registry.reconcile(proposal.pluginId, proposal.executionTool, proposal.args, user.actor, proposal.executionId, proposal.bindingDigest));
+      if (resolution.status === 'confirmed') resolution = { status: 'confirmed', result: await options.registry.projectExecutionReceipt(proposal.pluginId, proposal.executionTool, resolution.result, user.actor) };
+    } catch { resolution = { status: 'outcome_unknown' as const }; }
+    // Recheck authority and installation after the status read, before exposing a receipt.
+    await assertProposalReadAccess(proposal, user);
+    const completed: Proposal = { ...checking, status: resolution.status, ...(resolution.status === 'confirmed' ? { result: resolution.result } : {}) };
+    const latest = await store.read(key);
+    const value = latest?.value as Proposal | undefined;
+    if (!latest || value?.reconciledAt !== checking.reconciledAt || value?.executionId !== checking.executionId || !await store.compareAndSet(key, latest.revision, completed, proposalLifetime())) throw new RequestError(409, 'Der Aktionsstatus wurde gleichzeitig geändert. Bitte neu laden.');
     return { ...(completed.result ?? {}), proposal: publicProposal(completed) };
   });
   return app;

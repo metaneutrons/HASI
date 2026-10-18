@@ -6,7 +6,7 @@ import { parseActorContext, type ActorContext } from './manifest.js';
 const ISSUER = 'hasi-core';
 const MAX_TOKEN_AGE_SECONDS = 60;
 
-export interface InvocationContext { installationId: string; configurationRevision: number; configuration: Record<string, unknown> }
+export interface InvocationContext { installationId: string; configurationRevision: number; configuration: Record<string, unknown>; executionId?: string }
 
 export interface CreateInvocationTokenParams {
   context?: InvocationContext;
@@ -152,8 +152,8 @@ function isUuid(value: string): boolean {
 
 function validateContext(value: unknown): InvocationContext {
   const object = parseJsonRecord(value, 'invocation context');
-  if (Object.keys(object).some(key => !['installationId', 'configurationRevision', 'configuration'].includes(key)) || typeof object.installationId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(object.installationId) || typeof object.configurationRevision !== 'number' || !Number.isSafeInteger(object.configurationRevision) || object.configurationRevision < 0) throw new Error('Invalid invocation context');
+  if (Object.keys(object).some(key => !['installationId', 'configurationRevision', 'configuration', 'executionId'].includes(key)) || typeof object.installationId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(object.installationId) || typeof object.configurationRevision !== 'number' || !Number.isSafeInteger(object.configurationRevision) || object.configurationRevision < 0 || (object.executionId !== undefined && (typeof object.executionId !== 'string' || !isUuid(object.executionId)))) throw new Error('Invalid invocation context');
   const configuration = parseJsonRecord(object.configuration, 'configuration');
   if (Buffer.byteLength(JSON.stringify(configuration)) > 32768) throw new Error('Configuration too large');
-  return { installationId: object.installationId, configurationRevision: object.configurationRevision, configuration };
+  return { installationId: object.installationId, configurationRevision: object.configurationRevision, configuration, ...(typeof object.executionId === 'string' ? { executionId: object.executionId } : {}) };
 }
