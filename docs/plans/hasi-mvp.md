@@ -33,8 +33,11 @@ receipts and independent artifact/runtime composition are implemented. Final
 M2 qualification is deferred; production source contracts remain external M1
 work. See the [implementation ledger](../verification/2026-10-18/m2-implementation.md).
 
-Real HsH SSO, production permission-aware retrieval from Intranet and
-Service-IT, current IT incident information, authoritative anny customer and
+The current M3 implementation adds signed source-export ingestion, permission-aware
+hybrid retrieval, incident expiry, source revisions and protected retained context;
+see the [M3 implementation evidence](../verification/2026-10-18/m3-knowledge-pilot.md).
+Approved HsH export producers, actual content/ACL/incident freshness and source-owner
+qualification remain open. Real HsH SSO, authoritative anny customer and
 resource mapping, production booking/cancellation writes, and verified
 uncertain-outcome reconciliation remain open. Formal model evaluation and
 institutional approval of profiles for protected data also remain open.

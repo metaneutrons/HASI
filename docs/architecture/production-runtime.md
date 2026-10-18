@@ -140,3 +140,19 @@ to regain access. Retained chat text is not an execution authorization.
 
 Final production topology, actual isolation/recovery, browser/assistive-technology
 and institutional end-to-end qualification remain explicitly deferred/open.
+
+## Protected knowledge workspaces
+
+The institutional knowledge implementation and separate worker/MCP launcher are
+specified in [knowledge operations](institutional-knowledge-operations.md). Both
+source exports must map identities to HASI's stable `stableOidcSubject(issuer,
+subject)` projection and carry fresh authoritative source grants; e-mail or a
+demo role is insufficient. Source/IdP owners must approve that mapping.
+
+In OIDC mode the frontend requires durable `DATABASE_URL` workspace storage and
+`HASI_CHAT_SIGNING_SECRET`. Protected chat contents stay out of localStorage.
+`/api/chat/workspace` authenticates, checks origins, bounds input, sanitizes
+source/derived context and uses subject-bound signed PostgreSQL CAS records.
+The same reference resolution is repeated before model dispatch and on load.
+The public Vercel fixture demo continues its separate local-history behavior;
+adding a provider key never enables institutional access or processing approval.

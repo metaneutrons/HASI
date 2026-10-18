@@ -24,6 +24,18 @@ const FAKE_KEY = "test-groq-key-only";
 const GWDG_FAKE_KEY = "test-gwdg-key-only";
 const CUSTOM_FAKE_KEY = "test-custom-key-only";
 
+it("rechecks source authority immediately before dispatch and releases only a never-started call", async () => {
+  const provider = fakeProvider(completion({ content: "must not run" }));
+  const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+  await expectRouterError(runModelStep(request(), {
+    env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch,
+    budgetAdmission: { reserve: () => Promise.resolve({ settle: usage => { settlements.push(usage); return Promise.resolve(); } }) },
+    beforeProviderCall: () => Promise.reject(new Error("synthetic revoked source")),
+  }), "context_unavailable");
+  expect(provider.calls).toHaveLength(0);
+  expect(settlements).toEqual([{ inputTokens: 0, outputTokens: 0 }]);
+});
+
 it("requires an explicit host-owned context policy in production before provider I/O", async () => {
   vi.stubEnv("NODE_ENV", "production");
   try {
@@ -1483,11 +1495,11 @@ it("keeps room tools for a contextual availability/WLAN follow-up", async () => 
 });
 
 it("synthesizes a combined knowledge/room batch without advertising further tools", async () => {
-  const provider = fakeProvider(completion({ content: "Belegte Demoantwort [demo:knowledge:service-it:001]." }));
+  const provider = fakeProvider(completion({ content: "Belegte Demoantwort [knowledge:service_it:svc-001:1]." }));
   const messages: ChatRequest["messages"] = [
     { role: "user", content: "Suche Wissen und einen Raum" },
     { role: "assistant", content: "", toolCalls: [{ id: "k", name: "knowledge_search", arguments: { query: "WLAN" } }, { id: "r", name: "anny_search_resources", arguments: { capacity: 4 } }] },
-    { role: "tool", toolCallId: "k", name: "knowledge_search", content: '{"documents":[{"citationId":"demo:knowledge:service-it:001","text":"Fiktive WLAN-Anleitung"}]}' },
+    { role: "tool", toolCallId: "k", name: "knowledge_search", content: '{"documents":[{"citationId":"knowledge:service_it:svc-001:1","text":"Fiktive WLAN-Anleitung"}]}' },
     { role: "tool", toolCallId: "r", name: "anny_search_resources", content: '{"resources":[]}' },
   ];
   await runModelStep({ ...request(), messages }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });

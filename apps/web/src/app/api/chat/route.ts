@@ -4,6 +4,10 @@ import { chatAccess } from "@/lib/server/chat-access";
 import { admitChat } from "@/lib/server/chat-admission";
 import { loadAuthorizedModelTools } from "@/lib/server/authorized-tools";
 import { getModelBudgetAdmission, loadModelPrices, modelPrice } from "@/lib/server/model-budgets";
+import { createKnowledgeEvidence, rebuildKnowledgeContext } from "@/lib/server/knowledge-evidence";
+import { productionKnowledgeResolver } from "@/lib/server/knowledge-context";
+import type { ChatRequest } from "@/lib/chat-contract";
+import { ModelRouterError } from "@/lib/server/model-router-error";
 import { loadModelConfiguration } from "@/lib/server/model-config";
 
 export const runtime = "nodejs";
@@ -23,8 +27,27 @@ export function GET() {
 export async function POST(request: Request) {
   const access = await chatAccess(request);
   if (access instanceof Response) return access;
+  const signer = access.production ? createKnowledgeEvidence(access.production.secret, access.production.scope) : undefined;
+  const resolve = productionKnowledgeResolver(access.request);
+  let rebuilt: Awaited<ReturnType<typeof rebuildKnowledgeContext>> | undefined;
+  const assertCurrent = async () => {
+    if (!rebuilt?.contextIds.length) return;
+    const current = await resolve(rebuilt.contextIds);
+    if (current.some(item => item.status !== "valid")) throw new ModelRouterError("context_unavailable", "Source authority changed");
+  };
   return handleChatPost(access.request, {
-    run: async input => runModelStep(input, { context: access.modelContext, budgetAdmission: await getModelBudgetAdmission(), routingPins: access.routingPins, authorizedTools: await loadAuthorizedModelTools(access.request), messageTimes: input.messages.map(message => access.clock.verify(message, message.timestamp)), telemetry: metrics => { console.info("HASI model usage", JSON.stringify(metrics)); } }),
+    run: async (input: ChatRequest) => {
+      rebuilt = signer ? await rebuildKnowledgeContext(input, signer, resolve) : undefined;
+      const request = rebuilt?.request ?? input;
+      const reply = await runModelStep(request, { context: access.modelContext, budgetAdmission: await getModelBudgetAdmission(), routingPins: access.routingPins, authorizedTools: await loadAuthorizedModelTools(access.request), messageTimes: request.messages.map(message => access.clock.verify(message, message.timestamp)), ...(signer ? { beforeProviderCall: assertCurrent } : {}), telemetry: metrics => { console.info("HASI model usage", JSON.stringify(metrics)); } });
+      await assertCurrent();
+      if (rebuilt?.changed) reply.contextNotice = "Frühere Inhalte ohne aktuelle Quellenfreigabe wurden aus dem Modellkontext entfernt.";
+      return reply;
+    },
+    finalize: (reply, input) => {
+      if (signer && input.conversationId) reply.message.evidence = signer.stamp(input.conversationId, reply.message, rebuilt?.contextIds ?? []);
+      return Promise.resolve();
+    },
     clock: access.clock,
     allowedOrigins: access.allowedOrigins,
     admit: admitChat,

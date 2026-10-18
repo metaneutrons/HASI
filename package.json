@@ -19,7 +19,8 @@
     "research:anny": "tsx scripts/fetch-anny-specs.ts",
     "prepare": "node scripts/install-hooks.mjs",
     "config:models": "node --conditions=react-server --import tsx apps/web/scripts/check-model-config.ts",
-    "probe:groq-cache": "node --conditions=react-server --import tsx apps/web/scripts/probe-groq-cache.ts"
+    "probe:groq-cache": "node --conditions=react-server --import tsx apps/web/scripts/probe-groq-cache.ts",
+    "knowledge:serve": "tsx scripts/serve-institutional-knowledge.ts"
   },
   "dependencies": {
     "@hasi/plugin-sdk": "workspace:*",

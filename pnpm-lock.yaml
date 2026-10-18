@@ -357,6 +357,9 @@ importers:
       '@hasi/demo-runtime':
         specifier: workspace:*
         version: link:../../packages/demo-runtime
+      '@hasi/knowledge-plugin':
+        specifier: workspace:*
+        version: link:../knowledge-plugin
       '@hasi/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk

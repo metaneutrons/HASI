@@ -36,7 +36,7 @@ export function chatMessageCopyText(message: ChatMessage, origin: string): strin
     ].filter(Boolean).join("\n"));
   }
   for (const source of message.sources ?? []) {
-    sections.push(`${source.title}\n${source.citationId}\n${new URL(knowledgeDocumentHref(source.id), origin).href}`);
+    sections.push(`${source.title}\n${source.citationId}\n${new URL(knowledgeDocumentHref(source.id, source.revision), origin).href}`);
   }
   if (message.proposal) {
     const proposal = message.proposal;

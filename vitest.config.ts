@@ -12,6 +12,7 @@ export default defineConfig({
       ['@hasi/plugin-sdk/schema-pattern', './packages/plugin-sdk/src/schema-pattern.ts'],
       ['@hasi/plugin-sdk', './packages/plugin-sdk/src/index.ts'],
       ['@hasi/anny-client', './packages/anny-client/src/index.ts'],
+      ['@hasi/knowledge-plugin/contracts', './apps/knowledge-plugin/src/institutional-contracts.ts'],
       ['@hasi/knowledge-plugin', './apps/knowledge-plugin/src/index.ts'],
       ['@hasi/anny-plugin', './apps/anny-plugin/src/index.ts'],
       ['@hasi/anny-mock', './apps/anny-mock/src/index.ts'],

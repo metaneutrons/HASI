@@ -7,7 +7,7 @@ import { createAnnyMock, MOCK_IDS, type AnnyMockCatalog } from '@hasi/anny-mock'
 import { createKnowledgePlugin, knowledgeManifest } from '@hasi/knowledge-plugin';
 import { digest, ExecutionJournal } from '@hasi/plugin-sdk';
 import type { JsonStore } from '@hasi/state';
-import { createApi, PluginRegistry, PluginAccountService, personas, withDemoPluginClaims } from '@hasi/api';
+import { createApi, createRegistryKnowledgeContexts, PluginRegistry, PluginAccountService, personas, withDemoPluginClaims } from '@hasi/api';
 import { DurableDemoIdentity } from './identity.js';
 import { DemoPluginAccountAdapter } from './plugin-account-adapter.js';
 export { DemoPluginAccountAdapter } from './plugin-account-adapter.js';
@@ -122,10 +122,16 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
       return { permissions: actor.permissions, customerId: actor.customerId, resourceIds: actor.resourceIds, claims: actor.claims };
     } });
     const account = new PluginAccountService({ mode: 'public-demo', privateKey, store, scope: space.id, installationId, adapter });
-    const registry = new PluginRegistry(privateKey, { accounts: new Map([[installationId, account]]), envelopeResults: true, defaultSourcePolicy: { sourceId: 'synthetic-demo', revision: '1', dataClasses: ['synthetic_demo'] }, store, scope: space.id, fetch: internalFetch, reviewedAppDigests: options.enablePluginApps ? [annyAppViewSha256] : [] });
-    await registry.install({ endpoint: `${origin.origin}/mcp`, serviceToken: pluginToken, expectedManifestDigest: digest(options.enablePluginApps ? annyAppManifest : annyManifest), approvedPreviousManifestDigests: ['f730a360b3f108d5980994994c0fdbb740c1e624245b815af1f2339ef5a3ff45', '61b8360b00745238bbdfc1dfa134bb20d7e4790581d47bb46091e27ef1c691fb', '325f50953082e8b1156d3c1807a1310b492e61bbcdc84d9d6fd9cd48952db66b'], allowLoopback: !secure });
+    const registry = new PluginRegistry(privateKey, { accounts: new Map([[installationId, account]]), envelopeResults: true, defaultSourcePolicy: { sourceId: 'synthetic-demo', revision: '1', dataClasses: ['synthetic_demo'] }, store, scope: `${space.id}:knowledge-current`, fetch: internalFetch, reviewedAppDigests: options.enablePluginApps ? [annyAppViewSha256] : [] });
+    await registry.install({ endpoint: `${origin.origin}/mcp`, serviceToken: pluginToken, expectedManifestDigest: digest(options.enablePluginApps ? annyAppManifest : annyManifest), allowLoopback: !secure });
     await registry.install({ endpoint: `${origin.origin}/plugins/knowledge/mcp`, serviceToken: knowledgeToken, expectedManifestDigest: digest(knowledgeManifest), allowLoopback: !secure });
-    const app = await createApi({ mode: secure ? 'public-demo' : 'test', registry, identity: new DurableDemoIdentity(store, space.id, options.catalog?.resources.map(resource => resource.id)), store, origin: origin.origin, allowedHosts: [origin.hostname], secureCookies: secure, sessionCookieName: sessionName });
+    const identity = new DurableDemoIdentity(store, space.id, options.catalog?.resources.map(resource => resource.id));
+    const knowledgeContexts = createRegistryKnowledgeContexts({ registry, store, privateKey, scope: space.id, resolveActor: subject => {
+      if (subjectWorkspace(subject) !== space.id) return Promise.resolve(undefined);
+      const template = personas.find(persona => subject.endsWith(`:${persona.id}`));
+      return Promise.resolve(template ? withDemoPluginClaims({ ...structuredClone(template.actor), subject }) : undefined);
+    } });
+    const app = await createApi({ mode: secure ? 'public-demo' : 'test', registry, identity, knowledgeContexts, store, origin: origin.origin, allowedHosts: [origin.hostname], secureCookies: secure, sessionCookieName: sessionName });
     try {
       const response = await forward(app, request);
       if (space.cookie) response.headers.append('set-cookie', space.cookie);

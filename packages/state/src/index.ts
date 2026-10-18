@@ -10,3 +10,5 @@ export {
   type ModelBudgetUsage,
 } from './model-budget.js';
 export type { JsonStore } from './store.js';
+
+export { ASSISTANT_BUDGET_NAMESPACE, ASSISTANT_BUDGET_POLICY } from './assistant-budget.js';

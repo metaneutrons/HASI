@@ -9,6 +9,8 @@ export function withDemoPluginClaims(actor: ActorContext): ActorContext {
   const claims = { ...actor.claims };
   if (actor.customerId !== undefined) claims['anny.customerId'] = actor.customerId;
   if (actor.resourceIds !== undefined) claims['anny.resourceIds'] = [...actor.resourceIds];
+  const audience = ['student', 'employee', 'admin'].find(value => actor.permissions.includes(`knowledge:audience:${value}`));
+  if (audience) claims['knowledge.demoAudience'] = audience;
   return { ...actor, claims };
 }
 

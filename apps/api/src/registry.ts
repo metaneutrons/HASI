@@ -752,8 +752,6 @@ export class PluginRegistry {
     const settingsDigest = plugin.settings?.digest;
     const manifestDigest = digest(plugin.manifest);
     const tokenActor = projectActorContext(actor, plugin.manifest);
-    // The legacy knowledge adapter needs its fixture audience grants, not room claims.
-    if (plugin.manifest.manifestVersion === 1 && plugin.manifest.id === 'de.hsh.hasi.knowledge') tokenActor.permissions = actor.permissions.filter(permission => permission.startsWith('knowledge:'));
     const token = await createInvocationToken({ actor: tokenActor, pluginId: plugin.manifest.id, pluginVersion: version, tool: name, args, ...(plugin.manifest.manifestVersion === 2 || executionId ? { context: { installationId: id, configurationRevision: plugin.settings?.activeRevision ?? 0, configuration: plugin.settings?.configuration ?? {}, ...(executionId ? { executionId } : {}) } } : {}) }, this.privateKey);
     const client = new Client({ name: 'hasi-core', version: '0.1.0' }, { versionNegotiation: { mode: 'auto' } });
     const transport = new StreamableHTTPClientTransport(new URL(plugin.registration.endpoint), { requestInit: { headers: { authorization: `Bearer ${plugin.registration.serviceToken}`, 'x-hasi-invocation': token }, redirect: 'error' }, fetch: plugin.fetch });

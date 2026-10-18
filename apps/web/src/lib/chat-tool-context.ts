@@ -16,8 +16,9 @@ export function modelToolContent(message: Extract<WireMessage, { role: "tool" }>
     const value: unknown = JSON.parse(message.content);
     if (!record(value)) return omitted;
     if (MODEL_PLUGIN_TOOL_NAME.test(message.name)) {
+      const providerValue = Object.fromEntries(Object.entries(value).filter(([key]) => key !== "_hasi"));
       return JSON.stringify({
-        untrustedPluginToolResult: boundedPluginToolResult(value),
+        untrustedPluginToolResult: boundedPluginToolResult(providerValue),
         historyDetailsOmitted: false,
         requiresFreshRead: true,
       });

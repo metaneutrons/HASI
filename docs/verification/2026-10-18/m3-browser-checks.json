@@ -1,0 +1,159 @@
+{
+  "checkedAt": "2026-10-18T18:31:42.025608+00:00",
+  "scope": "Local fictional-data source reader; browser emulation, no native-device qualification",
+  "modelRequests": 0,
+  "checks": [
+    {
+      "browser": "webkit",
+      "theme": "dark",
+      "width": 320,
+      "source": "allowed",
+      "viewport": 320,
+      "pageWidth": 320,
+      "text": true,
+      "citation": "knowledge:service_it:svc-001:1",
+      "originals": 0
+    },
+    {
+      "browser": "webkit",
+      "theme": "dark",
+      "width": 390,
+      "source": "allowed",
+      "viewport": 390,
+      "pageWidth": 390,
+      "text": true,
+      "citation": "knowledge:service_it:svc-001:1",
+      "originals": 0
+    },
+    {
+      "browser": "webkit",
+      "theme": "dark",
+      "width": 768,
+      "source": "allowed",
+      "viewport": 768,
+      "pageWidth": 768,
+      "text": true,
+      "citation": "knowledge:service_it:svc-001:1",
+      "originals": 0
+    },
+    {
+      "browser": "webkit",
+      "theme": "light",
+      "width": 320,
+      "source": "allowed",
+      "viewport": 320,
+      "pageWidth": 320,
+      "text": true,
+      "citation": "knowledge:service_it:svc-001:1",
+      "originals": 0
+    },
+    {
+      "browser": "webkit",
+      "theme": "light",
+      "width": 390,
+      "source": "allowed",
+      "viewport": 390,
+      "pageWidth": 390,
+      "text": true,
+      "citation": "knowledge:service_it:svc-001:1",
+      "originals": 0
+    },
+    {
+      "browser": "webkit",
+      "theme": "light",
+      "width": 768,
+      "source": "allowed",
+      "viewport": 768,
+      "pageWidth": 768,
+      "text": true,
+      "citation": "knowledge:service_it:svc-001:1",
+      "originals": 0
+    },
+    {
+      "browser": "webkit",
+      "focusRevalidation": "hidden-before-response-and-denied"
+    },
+    {
+      "browser": "webkit",
+      "source": "denied",
+      "bodyAbsent": true,
+      "modelRequests": 0
+    },
+    {
+      "browser": "chromium",
+      "theme": "dark",
+      "width": 320,
+      "source": "allowed",
+      "viewport": 320,
+      "pageWidth": 320,
+      "text": true,
+      "citation": "knowledge:service_it:svc-001:1",
+      "originals": 0
+    },
+    {
+      "browser": "chromium",
+      "theme": "dark",
+      "width": 390,
+      "source": "allowed",
+      "viewport": 390,
+      "pageWidth": 390,
+      "text": true,
+      "citation": "knowledge:service_it:svc-001:1",
+      "originals": 0
+    },
+    {
+      "browser": "chromium",
+      "theme": "dark",
+      "width": 768,
+      "source": "allowed",
+      "viewport": 768,
+      "pageWidth": 768,
+      "text": true,
+      "citation": "knowledge:service_it:svc-001:1",
+      "originals": 0
+    },
+    {
+      "browser": "chromium",
+      "theme": "light",
+      "width": 320,
+      "source": "allowed",
+      "viewport": 320,
+      "pageWidth": 320,
+      "text": true,
+      "citation": "knowledge:service_it:svc-001:1",
+      "originals": 0
+    },
+    {
+      "browser": "chromium",
+      "theme": "light",
+      "width": 390,
+      "source": "allowed",
+      "viewport": 390,
+      "pageWidth": 390,
+      "text": true,
+      "citation": "knowledge:service_it:svc-001:1",
+      "originals": 0
+    },
+    {
+      "browser": "chromium",
+      "theme": "light",
+      "width": 768,
+      "source": "allowed",
+      "viewport": 768,
+      "pageWidth": 768,
+      "text": true,
+      "citation": "knowledge:service_it:svc-001:1",
+      "originals": 0
+    },
+    {
+      "browser": "chromium",
+      "focusRevalidation": "hidden-before-response-and-denied"
+    },
+    {
+      "browser": "chromium",
+      "source": "denied",
+      "bodyAbsent": true,
+      "modelRequests": 0
+    }
+  ]
+}
