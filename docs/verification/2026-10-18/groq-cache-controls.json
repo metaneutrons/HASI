@@ -1,0 +1,230 @@
+{
+  "date": "2026-10-18",
+  "environment": "Vercel Preview build; provisioned Preview credential; synthetic data only",
+  "cases": [
+    {
+      "mode": "hasi",
+      "deployment": "dpl_Ax216Pkpeyikz1NkjSjZpbrR5GU6",
+      "model": "openai/gpt-oss-120b",
+      "observations": [
+        {
+          "event": "raw_usage_observation",
+          "call": 1,
+          "status": 200,
+          "promptTokens": {
+            "state": "reported",
+            "value": 2337
+          },
+          "completionTokens": {
+            "state": "reported",
+            "value": 135
+          },
+          "documentedCacheTokens": {
+            "state": "missing"
+          },
+          "alternateCacheTokens": {
+            "state": "missing"
+          }
+        },
+        {
+          "event": "sdk_usage_observation",
+          "outcome": "success",
+          "profileId": "groq-oss-120b",
+          "attempts": 1,
+          "systemChars": 4389,
+          "historyChars": 98,
+          "modelHistoryChars": 98,
+          "inputTokens": 2337,
+          "outputTokens": 135,
+          "rateLimits": {
+            "tokenLimit": 8000,
+            "tokenRemaining": 5266,
+            "requestLimit": 1000,
+            "requestRemaining": 999
+          }
+        },
+        {
+          "event": "probe_result",
+          "probe": 1,
+          "profileId": "groq-oss-120b",
+          "inputTokens": 2337,
+          "outputTokens": 135
+        },
+        {
+          "event": "raw_usage_observation",
+          "call": 2,
+          "status": 200,
+          "promptTokens": {
+            "state": "reported",
+            "value": 2337
+          },
+          "completionTokens": {
+            "state": "reported",
+            "value": 75
+          },
+          "documentedCacheTokens": {
+            "state": "missing"
+          },
+          "alternateCacheTokens": {
+            "state": "missing"
+          }
+        },
+        {
+          "event": "sdk_usage_observation",
+          "outcome": "success",
+          "profileId": "groq-oss-120b",
+          "attempts": 1,
+          "systemChars": 4389,
+          "historyChars": 98,
+          "modelHistoryChars": 98,
+          "inputTokens": 2337,
+          "outputTokens": 75,
+          "rateLimits": {
+            "tokenLimit": 8000,
+            "tokenRemaining": 2923,
+            "requestLimit": 1000,
+            "requestRemaining": 998
+          }
+        },
+        {
+          "event": "probe_result",
+          "probe": 2,
+          "profileId": "groq-oss-120b",
+          "inputTokens": 2337,
+          "outputTokens": 75
+        },
+        {
+          "event": "request_comparison",
+          "calls": 2,
+          "identical": true,
+          "requestBytes": [
+            9118,
+            9118
+          ],
+          "syntheticRequestHashes": [
+            "4c98ff3a2fc1950801b023e4de3dcee6bd7907d0a6ccdab082330d11f62299a6",
+            "4c98ff3a2fc1950801b023e4de3dcee6bd7907d0a6ccdab082330d11f62299a6"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "plain",
+      "deployment": "dpl_FqLJoFrBxsEQazR8hLw7Ph2k7m2r",
+      "model": "openai/gpt-oss-120b",
+      "observations": [
+        {
+          "event": "raw_usage_observation",
+          "call": 1,
+          "status": 200,
+          "promptTokens": {
+            "state": "reported",
+            "value": 3316
+          },
+          "completionTokens": {
+            "state": "reported",
+            "value": 15
+          },
+          "documentedCacheTokens": {
+            "state": "missing"
+          },
+          "alternateCacheTokens": {
+            "state": "missing"
+          }
+        },
+        {
+          "event": "raw_usage_observation",
+          "call": 2,
+          "status": 200,
+          "promptTokens": {
+            "state": "reported",
+            "value": 3316
+          },
+          "completionTokens": {
+            "state": "reported",
+            "value": 15
+          },
+          "documentedCacheTokens": {
+            "state": "missing"
+          },
+          "alternateCacheTokens": {
+            "state": "missing"
+          }
+        },
+        {
+          "event": "request_comparison",
+          "mode": "plain",
+          "calls": 2,
+          "identical": true,
+          "requestBytes": [
+            13474,
+            13474
+          ],
+          "syntheticRequestHashes": [
+            "e8e551a0d66152837818c2c0a92edfe12c59eec25d36e0e6fa821bc9724129f4",
+            "e8e551a0d66152837818c2c0a92edfe12c59eec25d36e0e6fa821bc9724129f4"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "plain-20b",
+      "deployment": "dpl_5jB7AM2Gx1L99tYmFaxEb6ei5Ubx",
+      "model": "openai/gpt-oss-20b",
+      "observations": [
+        {
+          "event": "raw_usage_observation",
+          "call": 1,
+          "status": 200,
+          "promptTokens": {
+            "state": "reported",
+            "value": 3316
+          },
+          "completionTokens": {
+            "state": "reported",
+            "value": 16
+          },
+          "documentedCacheTokens": {
+            "state": "missing"
+          },
+          "alternateCacheTokens": {
+            "state": "missing"
+          }
+        },
+        {
+          "event": "raw_usage_observation",
+          "call": 2,
+          "status": 200,
+          "promptTokens": {
+            "state": "reported",
+            "value": 3316
+          },
+          "completionTokens": {
+            "state": "reported",
+            "value": 17
+          },
+          "documentedCacheTokens": {
+            "state": "missing"
+          },
+          "alternateCacheTokens": {
+            "state": "missing"
+          }
+        },
+        {
+          "event": "request_comparison",
+          "mode": "plain-20b",
+          "calls": 2,
+          "identical": true,
+          "requestBytes": [
+            13473,
+            13473
+          ],
+          "syntheticRequestHashes": [
+            "5af4a815b975762bf963c33286a5a6e57a4434995cf014a0bd7f46ce31936320",
+            "5af4a815b975762bf963c33286a5a6e57a4434995cf014a0bd7f46ce31936320"
+          ]
+        }
+      ]
+    }
+  ]
+}
