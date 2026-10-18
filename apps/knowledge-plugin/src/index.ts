@@ -159,3 +159,7 @@ function normalize(value: string): string {
     .toLocaleLowerCase('de-DE')
     .replace(/ß/g, 'ss');
 }
+
+export * from './content/contracts.js';
+export * from './content/adapters.js';
+export * from './content/acquisition.js';

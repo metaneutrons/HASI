@@ -79,6 +79,24 @@ function parsedJsonBody(init: RequestInit | undefined): unknown {
 }
 
 describe('operator-pinned knowledge embedding client', () => {
+  it('admits bounded document chunks through the same budget and keeps query limits separate', async () => {
+    const reservations: number[] = [];
+    const fetcher = vi.fn<typeof fetch>(() => Promise.resolve(response(embedding())));
+    const client = createKnowledgeEmbeddingClient(defaults({ fetch: fetcher, budget: {
+      reserve: tokens => { reservations.push(tokens); return Promise.resolve({ settle: () => Promise.resolve() }); },
+    } }));
+    try {
+      const text = 'x'.repeat(3500);
+      await expect(client.embedQuery(text)).rejects.toThrow();
+      expect(fetcher).not.toHaveBeenCalled();
+      await expect(client.embedDocument(text)).resolves.toHaveLength(3);
+      expect(reservations).toEqual([Buffer.byteLength(text) + 512]);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      await expect(client.embedDocument('x'.repeat(4001))).rejects.toThrow();
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    } finally { await client.close(); }
+  });
+
   it('reserves before HTTP, sends only the fixed request fields and settles actual usage', async () => {
     const events: string[] = [];
     const settlements: (KnowledgeEmbeddingUsage | undefined)[] = [];

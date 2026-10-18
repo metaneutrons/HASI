@@ -38,6 +38,7 @@ export interface KnowledgeEmbeddingClient {
   readonly dimensions: number;
   readonly allowedDataClasses: readonly KnowledgeEmbeddingDataClass[];
   embedQuery(text: string, signal?: AbortSignal): Promise<number[]>;
+  embedDocument(text: string, signal?: AbortSignal): Promise<number[]>;
   close(): Promise<void>;
 }
 
@@ -166,9 +167,9 @@ async function readBoundedJson(response: Response): Promise<unknown> {
   }
 }
 
-function validateQuery(text: string): { reservedTokens: number; payload: { input: string; encoding_format: 'float' } } {
-  if (typeof text !== 'string' || text.trim().length === 0 || text.length > MAX_QUERY_CHARACTERS * 2
-    || Array.from(text).length > MAX_QUERY_CHARACTERS) throw unavailable();
+function validateInput(text: string, maximum: number): { reservedTokens: number; payload: { input: string; encoding_format: 'float' } } {
+  if (typeof text !== 'string' || text.trim().length === 0 || text.length > maximum * 2
+    || Array.from(text).length > maximum) throw unavailable();
   const reservedTokens = Buffer.byteLength(text, 'utf8') + PROTOCOL_TOKEN_OVERHEAD;
   return { reservedTokens, payload: { input: text, encoding_format: 'float' } };
 }
@@ -217,13 +218,9 @@ export function createKnowledgeEmbeddingClient(options: CreateKnowledgeEmbedding
   let closed = false;
   const isClosed = (): boolean => closed;
 
-  return {
-    modelId: clientModelId,
-    dimensions: clientDimensions,
-    allowedDataClasses: dataClasses,
-    async embedQuery(text, signal) {
+  async function embed(text: string, maximum: number, signal?: AbortSignal): Promise<number[]> {
       if (closed) throw unavailable();
-      const query = validateQuery(text);
+      const query = validateInput(text, maximum);
       let configured: boolean;
       try {
         configured = secretCustody.status(options.slot).configured;
@@ -297,7 +294,13 @@ export function createKnowledgeEmbeddingClient(options: CreateKnowledgeEmbedding
         signal?.removeEventListener('abort', abortFromCaller);
         controllers.delete(controller);
       }
-    },
+    }
+  return {
+    modelId: clientModelId,
+    dimensions: clientDimensions,
+    allowedDataClasses: dataClasses,
+    embedQuery: (text, signal) => embed(text, MAX_QUERY_CHARACTERS, signal),
+    embedDocument: (text, signal) => embed(text, 4000, signal),
     async close() {
       if (closed) return;
       closed = true;

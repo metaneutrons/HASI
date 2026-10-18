@@ -16,6 +16,7 @@ export function knowledgeModelDocuments(documents: readonly Record<string, unkno
     sourceSystem: document.sourceSystem, revision: document.revision, language: document.language,
     text: typeof document.text === "string" ? document.text.slice(0, 900) : "",
     synthetic: document.synthetic, updatedAt: document.updatedAt,
+    ...(document.acquisition ? { acquisition: document.acquisition } : {}),
     ...(document.incident ? { incident: document.incident } : {}),
     images: Array.isArray(document.images) ? document.images.slice(0, 2).map((image: unknown) => {
       const value = image as Record<string, unknown>;

@@ -121,7 +121,7 @@ function DocumentArticle({ document }: { document: KnowledgeDocument }) {
     {synthetic && <p className="knowledge-disclaimer">Dieser Text ist vollständig synthetisch. Er beschreibt keine tatsächlichen HsH-Dienste, Fristen oder Verfahren.</p>}
     <dl className="knowledge-reader__facts knowledge-reader__facts--dates">
       <div>
-        <dt>{english ? "Updated" : "Aktualisiert"}</dt>
+        <dt>{document.acquisition ? (english ? "Indexed" : "Im Index aktualisiert") : (english ? "Updated" : "Aktualisiert")}</dt>
         <dd><time dateTime={document.updatedAt}>{formatKnowledgeDate(document.updatedAt, document.language)}</time></dd>
       </div>
       <div>
@@ -129,6 +129,9 @@ function DocumentArticle({ document }: { document: KnowledgeDocument }) {
         <dd><time dateTime={document.fetchedAt}>{formatKnowledgeDate(document.fetchedAt, document.language)}</time></dd>
       </div>
     </dl>
+    {document.acquisition && <p className="knowledge-disclaimer">{english ? "Source updated: " : "Stand der Quelle: "}{document.acquisition.sourceUpdatedAt
+      ? <time dateTime={document.acquisition.sourceUpdatedAt}>{formatKnowledgeDate(document.acquisition.sourceUpdatedAt, document.language)}</time>
+      : (english ? "not provided by the source" : "von der Quelle nicht angegeben")}</p>}
     {incident && <aside className={`knowledge-reader__incident knowledge-reader__incident--${incident.status}`}>
       <strong>{incident.status === "active"
         ? (english ? "Active incident" : "Aktuelle Störung")

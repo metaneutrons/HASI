@@ -4,10 +4,10 @@ import { KnowledgeIngestionWorker, type KnowledgeSourceRegistration, type Knowle
 
 const serviceExportUrl = 'https://service-export.example/v1/signed-export';
 const intranetExportUrl = 'https://intranet-export.example/v1/signed-export';
-const configuredSources: KnowledgeSourceRegistration[] = [
+const configuredSources = [
   { id: 'service_it', exportUrl: serviceExportUrl },
   { id: 'intranet', exportUrl: intranetExportUrl },
-];
+] satisfies KnowledgeSourceRegistration[];
 
 afterEach(() => {
   vi.useRealTimers();
@@ -293,5 +293,34 @@ describe('permission-aware knowledge export worker', () => {
       sources: [{ id: 'service_it', exportUrl: 'https://127.0.0.1/export' }, configuredSources[1]!],
       repository: { ingest: () => Promise.resolve(undefined) },
     })).toThrow();
+  });
+});
+
+
+describe('local content acquisition worker boundary', () => {
+  it('passes local signed snapshots through the same repository gate, with no HTTP export fetch', async () => {
+    const fetcher = vi.fn<typeof fetch>(() => Promise.reject(new Error('not used')));
+    const ingest = vi.fn((_source: KnowledgeSourceSystem, _value: unknown) => Promise.resolve());
+    const acquired = { snapshot: 'fictional producer output; repository owns validation' };
+    const acquire = vi.fn((_signal: AbortSignal) => Promise.resolve(acquired));
+    const worker = new KnowledgeIngestionWorker({ sources: [{ id: 'service_it', acquire }, { id: 'intranet', acquire }],
+      repository: { ingest }, fetch: fetcher });
+    try {
+      expect((await worker.runOnce()).sources.map(source => source.status)).toEqual(['ingested', 'ingested']);
+      expect(ingest.mock.calls).toEqual([['service_it', acquired], ['intranet', acquired]]);
+      expect(fetcher).not.toHaveBeenCalled();
+      expect(acquire.mock.calls[0]![0]).toBeInstanceOf(AbortSignal);
+    } finally { await worker.close(); }
+  });
+  it('keeps failed acquisition and repository rejection as failures rather than successful empty sources', async () => {
+    const ingest = vi.fn(() => Promise.reject(new Error('invalid signature')));
+    const worker = new KnowledgeIngestionWorker({ sources: [
+      { id: 'service_it', acquire: () => Promise.reject(new Error('expired login')) },
+      { id: 'intranet', acquire: () => Promise.resolve({ invalid: true }) },
+    ], repository: { ingest } });
+    try {
+      expect((await worker.runOnce()).sources.map(source => source.status)).toEqual(['failed', 'failed']);
+      expect(ingest).toHaveBeenCalledTimes(1);
+    } finally { await worker.close(); }
   });
 });

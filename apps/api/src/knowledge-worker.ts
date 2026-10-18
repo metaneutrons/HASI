@@ -3,19 +3,26 @@ import type { PluginSecretCustody } from './plugin-secrets.js';
 
 export type KnowledgeSourceSystem = 'service_it' | 'intranet';
 
-export interface KnowledgeSourceRegistration {
+export type KnowledgeSourceRegistration = {
   id: KnowledgeSourceSystem;
+} & ({
   /** Fixed, operator-configured HTTPS URL for a signed JSON export. */
   exportUrl: string;
-  /** Operator-approved private ranges; loopback and protected ranges remain denied. */
   allowedPrivateCidrs?: readonly string[];
-  /** Optional operator-owned bearer credential binding for this source. */
   credential?: { custody: PluginSecretCustody; slot: string };
-}
+  acquire?: never;
+} | {
+  /** Trusted local adapter producer. Its result still passes repository signature/ACL validation. */
+  acquire: (signal: AbortSignal) => Promise<unknown>;
+  exportUrl?: never;
+});
 
 export interface KnowledgeIngestionRepository {
   /** Must verify the export signature and apply it atomically using shared CAS state. */
   ingest(sourceSystem: KnowledgeSourceSystem, signedExport: unknown): Promise<unknown>;
+  beginSourceRefresh?(sourceSystem: KnowledgeSourceSystem): Promise<{ revision: string | null; epoch: string; snapshotRevision: string | null }>;
+  finishSourceRefresh?(sourceSystem: KnowledgeSourceSystem, fence: { revision: string | null; epoch: string; snapshotRevision: string | null }): Promise<void>;
+  suspendSource?(sourceSystem: KnowledgeSourceSystem): Promise<void>;
 }
 
 export interface KnowledgeIngestionWorkerOptions {
@@ -56,7 +63,7 @@ const MAX_INTERVAL_MS = 24 * 60 * 60 * 1_000;
 const DEFAULT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 const MAX_ALLOWED_RESPONSE_BYTES = 16 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 10_000;
-const MAX_TIMEOUT_MS = 120_000;
+const MAX_TIMEOUT_MS = 3_600_000;
 const DEFAULT_RETRY_AFTER_MS = 1_000;
 const MAX_RETRY_AFTER_MS = 5 * 60 * 1_000;
 
@@ -67,12 +74,12 @@ class InvalidKnowledgeExportError extends Error {
   }
 }
 
-interface ConfiguredSource {
-  id: KnowledgeSourceSystem;
+type ConfiguredSource = { id: KnowledgeSourceSystem } & ({
   url: URL;
   allowedPrivateCidrs?: readonly string[];
   credential?: { custody: PluginSecretCustody; slot: string };
-}
+  acquire?: never;
+} | { acquire: (signal: AbortSignal) => Promise<unknown>; url?: never });
 
 function isSourceSystem(value: unknown): value is KnowledgeSourceSystem {
   return value === 'service_it' || value === 'intranet';
@@ -106,6 +113,12 @@ function validateSources(sources: readonly KnowledgeSourceRegistration[]): Confi
   const validated: ConfiguredSource[] = [];
   for (const source of sources) {
     if (!isSourceSystem(source.id) || seenIds.has(source.id)) throw new TypeError('Both approved knowledge sources must be configured exactly once.');
+    if (source.acquire) {
+      if (typeof source.acquire !== 'function') throw new TypeError('Invalid local source producer.');
+      seenIds.add(source.id);
+      validated.push({ id: source.id, acquire: source.acquire });
+      continue;
+    }
     const url = validateExportUrl(source.exportUrl);
     if (seenUrls.has(url.href)) throw new TypeError('Knowledge export URLs must be unique.');
     if (source.credential && !/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(source.credential.slot)) {
@@ -212,6 +225,9 @@ export class KnowledgeIngestionWorker {
     this.sources = validateSources(options.sources);
     if (typeof options.repository.ingest !== 'function') throw new TypeError('A shared knowledge repository is required.');
     if (options.fetch && process.env.NODE_ENV !== 'test') throw new TypeError('Injected knowledge fetch is restricted to tests.');
+    const lifecycleHooks = ['beginSourceRefresh', 'finishSourceRefresh', 'suspendSource'] as const;
+    if (lifecycleHooks.filter(name => typeof options.repository[name] === 'function').length % 3 !== 0)
+      throw new TypeError('Knowledge source availability hooks must be configured together.');
     this.repository = options.repository;
     this.intervalMs = validateInteger(options.intervalMs, DEFAULT_INTERVAL_MS, MIN_INTERVAL_MS, MAX_INTERVAL_MS, 'poll interval');
     this.maxResponseBytes = validateInteger(options.maxResponseBytes, DEFAULT_MAX_RESPONSE_BYTES, 1, MAX_ALLOWED_RESPONSE_BYTES, 'response size limit');
@@ -222,6 +238,7 @@ export class KnowledgeIngestionWorker {
     if (!this.injectedFetch) {
       try {
         for (const source of this.sources) {
+          if (source.acquire) continue;
           this.sourceFetchers.set(source.id, createPluginFetch({
             origins: [source.url.origin],
             allowLoopback: false,
@@ -229,7 +246,7 @@ export class KnowledgeIngestionWorker {
             maxResponseBytes: this.maxResponseBytes,
             connectTimeoutMs: Math.min(this.timeoutMs, 5_000),
             headersTimeoutMs: Math.min(this.timeoutMs, 5_000),
-            bodyTimeoutMs: this.timeoutMs,
+            bodyTimeoutMs: Math.min(this.timeoutMs, 60_000),
           }));
         }
       } catch {
@@ -304,7 +321,22 @@ export class KnowledgeIngestionWorker {
         continue;
       }
       this.retryNotBefore.delete(source.id);
-      outcomes.push(await this.ingestSource(source));
+      let fence: { revision: string | null; epoch: string; snapshotRevision: string | null } | undefined;
+      try { fence = await this.repository.beginSourceRefresh?.(source.id); }
+      catch {
+        await this.repository.suspendSource?.(source.id).catch(() => undefined);
+        outcomes.push(this.outcome(source.id, 'failed')); continue;
+      }
+      let outcome = await this.ingestSource(source);
+      if (outcome.status === 'ingested') {
+        try { if (fence) await this.repository.finishSourceRefresh?.(source.id, fence); }
+        catch { outcome = this.outcome(source.id, 'failed'); }
+      }
+      if (outcome.status !== 'ingested') {
+        try { await this.repository.suspendSource?.(source.id); }
+        catch { outcome = this.outcome(source.id, 'failed'); }
+      }
+      outcomes.push(outcome);
     }
     return { timestamp, sources: outcomes };
   }
@@ -314,6 +346,12 @@ export class KnowledgeIngestionWorker {
     this.activeControllers.add(controller);
     const timeout = setTimeout(() => { controller.abort(); }, this.timeoutMs);
     try {
+      if (source.acquire) {
+        const signedExport = await source.acquire(controller.signal);
+        if (this.shouldStop(controller)) return this.outcome(source.id, 'aborted');
+        await this.repository.ingest(source.id, signedExport);
+        return this.outcome(source.id, 'ingested');
+      }
       const fetcher = this.injectedFetch ?? this.sourceFetchers.get(source.id);
       if (!fetcher) return this.outcome(source.id, 'closed');
       const headers = new Headers({ accept: 'application/json' });

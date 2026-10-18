@@ -1,4 +1,4 @@
-import { verify, type KeyObject } from 'node:crypto';
+import { verify, randomUUID, type KeyObject } from 'node:crypto';
 import { canonicalJson, digest, parseActorContext, type ActorContext } from '@hasi/plugin-sdk';
 import { z } from 'zod';
 import {
@@ -97,7 +97,11 @@ interface StoredExport {
   readonly signature: string;
 }
 
+export interface KnowledgeSourceRefreshFence { revision: string | null; epoch: string; snapshotRevision: string | null }
+const availabilitySchema = z.strictObject({ blocked: z.boolean(), epoch: z.string().min(1).max(128) });
+
 interface CurrentSource {
+  readonly availabilityEpoch: string;
   readonly config: NormalizedSource;
   readonly stored: StoredExport;
 }
@@ -343,6 +347,7 @@ export class InstitutionalKnowledgeRepository {
   private readonly embedding: InstitutionalKnowledgeEmbedding;
   private readonly allowedDataClasses: ReadonlySet<KnowledgeSourceClassification>;
   private readonly clock: () => number;
+  private readonly locallySuspended = new Set<KnowledgeSourceSystem>();
 
   constructor(options: InstitutionalKnowledgeRepositoryOptions) {
     const storeCandidate: unknown = options.store;
@@ -410,6 +415,43 @@ export class InstitutionalKnowledgeRepository {
     this.embedding = options.embedding;
     this.allowedDataClasses = allowedDataClasses;
     this.clock = options.clock ?? Date.now;
+  }
+
+  /** Trusted worker fencing; never exposed as a model tool or browser capability. */
+  async beginSourceRefresh(sourceSystem: KnowledgeSourceSystem): Promise<KnowledgeSourceRefreshFence> {
+    if (!this.sources.has(sourceSystem)) sourceUnavailable();
+    const current = await this.store.read(this.availabilityKey(sourceSystem));
+    const availability = current ? availabilitySchema.parse(current.value) : undefined;
+    const snapshot = await this.store.read(this.storeKey(sourceSystem));
+    return { revision: current?.revision ?? null, epoch: availability?.epoch ?? 'initial', snapshotRevision: snapshot?.revision ?? null };
+  }
+
+  /** An observed failed refresh immediately denies reads, without deleting signed revision history. */
+  async suspendSource(sourceSystem: KnowledgeSourceSystem): Promise<void> {
+    if (!this.sources.has(sourceSystem)) sourceUnavailable();
+    this.locallySuspended.add(sourceSystem);
+    for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS; attempt += 1) {
+      const current = await this.store.read(this.availabilityKey(sourceSystem));
+      if (await this.store.compareAndSet(this.availabilityKey(sourceSystem), current?.revision ?? null,
+        { blocked: true, epoch: randomUUID() })) return;
+    }
+    throw new InstitutionalKnowledgeError('store_conflict');
+  }
+
+  /** Only a complete refresh begun at the current availability epoch may reopen a source. */
+  async finishSourceRefresh(sourceSystem: KnowledgeSourceSystem, fence: KnowledgeSourceRefreshFence): Promise<void> {
+    if (!this.sources.has(sourceSystem)) sourceUnavailable();
+    const current = await this.store.read(this.availabilityKey(sourceSystem));
+    if ((current?.revision ?? null) !== fence.revision) throw new InstitutionalKnowledgeError('source_changed');
+    const snapshot = await this.store.read(this.storeKey(sourceSystem));
+    if (!snapshot || snapshot.revision === fence.snapshotRevision) throw new InstitutionalKnowledgeError('source_changed');
+    const source = this.sources.get(sourceSystem);
+    if (!source) sourceUnavailable();
+    verifySignedExport(snapshot.value, source, this.embedding, this.currentTime(), true);
+    const epoch = current ? availabilitySchema.parse(current.value).epoch : 'initial';
+    if (epoch !== fence.epoch || !await this.store.compareAndSet(this.availabilityKey(sourceSystem), fence.revision,
+      { blocked: false, epoch })) throw new InstitutionalKnowledgeError('source_changed');
+    this.locallySuspended.delete(sourceSystem);
   }
 
   async ingest(sourceSystem: KnowledgeSourceSystem, signedExport: unknown): Promise<void> {
@@ -508,16 +550,27 @@ export class InstitutionalKnowledgeRepository {
     return 'institutional-knowledge:v1:' + digest({ scope: this.scope, sourceSystem });
   }
 
+  private availabilityKey(sourceSystem: KnowledgeSourceSystem): string {
+    return this.storeKey(sourceSystem) + ':availability';
+  }
+
   private async currentSnapshots(): Promise<Map<KnowledgeSourceSystem, CurrentSource>> {
     const now = this.currentTime();
     const result = new Map<KnowledgeSourceSystem, CurrentSource>();
     for (const sourceSystem of sourceOrder) {
       const config = this.sources.get(sourceSystem);
       if (!config) sourceUnavailable();
+      if (this.locallySuspended.has(sourceSystem)) sourceUnavailable();
+      const before = await this.store.read(this.availabilityKey(sourceSystem));
+      const available = before ? availabilitySchema.parse(before.value) : undefined;
+      if (available?.blocked) sourceUnavailable();
       const stored = await this.store.read(this.storeKey(sourceSystem));
       if (!stored) sourceUnavailable();
       const decoded = verifySignedExport(stored.value, config, this.embedding, now, true);
-      result.set(sourceSystem, { config, stored: decoded });
+      const after = await this.store.read(this.availabilityKey(sourceSystem));
+      const stillAvailable = after ? availabilitySchema.parse(after.value) : undefined;
+      if (this.locallySuspended.has(sourceSystem) || stillAvailable?.blocked || (available?.epoch ?? 'initial') !== (stillAvailable?.epoch ?? 'initial')) sourceUnavailable();
+      result.set(sourceSystem, { config, stored: decoded, availabilityEpoch: available?.epoch ?? 'initial' });
     }
     return result;
   }
@@ -528,6 +581,7 @@ export class InstitutionalKnowledgeRepository {
       if (!source) sourceUnavailable();
       return {
         sourceSystem,
+        availabilityEpoch: source.availabilityEpoch,
         policyRevision: source.stored.snapshot.policyRevision,
         sourceKeyFingerprint: source.config.publicKeyFingerprint,
         // Freshness is checked on every read. Identical signed heartbeat renewals
@@ -566,6 +620,7 @@ export class InstitutionalKnowledgeRepository {
       text: document.text,
       canonicalUrl: document.canonicalUrl,
       updatedAt: document.updatedAt,
+      ...(document.acquisition ? { acquisition: document.acquisition } : {}),
       fetchedAt,
       authorityRevision,
       corpusRevision: digest({ sourceSystem, documents: source.stored.snapshot.documents }),

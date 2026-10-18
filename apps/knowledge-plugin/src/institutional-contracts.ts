@@ -26,6 +26,12 @@ export const knowledgeImageExportSchema = z.strictObject({
   }
 });
 
+export const knowledgeAcquisitionSchema = z.strictObject({
+  adapter: z.string().regex(/^[a-z][a-z0-9_-]{0,63}$/u),
+  sourceRevision: nonEmptyBoundedText(256),
+  sourceUpdatedAt: timestampSchema.optional(),
+});
+
 export const knowledgeDocumentExportSchema = z.strictObject({
   id: documentIdSchema,
   revision: revisionSchema,
@@ -34,6 +40,7 @@ export const knowledgeDocumentExportSchema = z.strictObject({
   canonicalUrl: z.url().max(2_048),
   classification: knowledgeSourceClassificationSchema,
   updatedAt: timestampSchema,
+  acquisition: knowledgeAcquisitionSchema.optional(),
   acl: z.strictObject({
     groups: z.array(nonEmptyBoundedText(128)).max(256),
     subjects: z.array(nonEmptyBoundedText(256)).max(10_000),
@@ -116,6 +123,9 @@ export const knowledgeSourceExportSchema = z.strictObject({
     if (document.vector.length !== snapshot.dimensions) {
       context.addIssue({ code: 'custom', path: ['documents', index, 'vector'], message: 'Document vector dimensions do not match the export.' });
     }
+    if (document.acquisition?.sourceUpdatedAt && Date.parse(document.acquisition.sourceUpdatedAt) > Date.parse(snapshot.issuedAt) + 30_000) {
+      context.addIssue({ code: 'custom', path: ['documents', index, 'acquisition'], message: 'Source update time is after export issuance.' });
+    }
     if (Date.parse(document.updatedAt) > Date.parse(snapshot.issuedAt) + 30_000) {
       context.addIssue({ code: 'custom', path: ['documents', index, 'updatedAt'], message: 'Document update time is after export issuance.' });
     }
@@ -138,6 +148,7 @@ export const knowledgeDocumentV2Schema = z.strictObject({
   text: nonEmptyBoundedText(4_000),
   canonicalUrl: z.url().max(2_048).optional(),
   updatedAt: timestampSchema,
+  acquisition: knowledgeAcquisitionSchema.optional(),
   fetchedAt: timestampSchema,
   authorityRevision: z.string().regex(/^[a-f0-9]{64}$/u),
   corpusRevision: z.string().regex(/^[a-f0-9]{64}$/u),

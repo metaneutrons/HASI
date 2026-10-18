@@ -122,7 +122,7 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
       return { permissions: actor.permissions, customerId: actor.customerId, resourceIds: actor.resourceIds, claims: actor.claims };
     } });
     const account = new PluginAccountService({ mode: 'public-demo', privateKey, store, scope: space.id, installationId, adapter });
-    const registry = new PluginRegistry(privateKey, { accounts: new Map([[installationId, account]]), envelopeResults: true, defaultSourcePolicy: { sourceId: 'synthetic-demo', revision: '1', dataClasses: ['synthetic_demo'] }, store, scope: `${space.id}:knowledge-current`, fetch: internalFetch, reviewedAppDigests: options.enablePluginApps ? [annyAppViewSha256] : [] });
+    const registry = new PluginRegistry(privateKey, { accounts: new Map([[installationId, account]]), envelopeResults: true, defaultSourcePolicy: { sourceId: 'synthetic-demo', revision: '1', dataClasses: ['synthetic_demo'] }, store, scope: `${space.id}:knowledge-content-v2`, fetch: internalFetch, reviewedAppDigests: options.enablePluginApps ? [annyAppViewSha256] : [] });
     await registry.install({ endpoint: `${origin.origin}/mcp`, serviceToken: pluginToken, expectedManifestDigest: digest(options.enablePluginApps ? annyAppManifest : annyManifest), allowLoopback: !secure });
     await registry.install({ endpoint: `${origin.origin}/plugins/knowledge/mcp`, serviceToken: knowledgeToken, expectedManifestDigest: digest(knowledgeManifest), allowLoopback: !secure });
     const identity = new DurableDemoIdentity(store, space.id, options.catalog?.resources.map(resource => resource.id));

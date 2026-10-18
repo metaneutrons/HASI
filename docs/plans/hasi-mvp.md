@@ -34,9 +34,10 @@ M2 qualification is deferred; production source contracts remain external M1
 work. See the [implementation ledger](../verification/2026-10-18/m2-implementation.md).
 
 The current M3 implementation adds signed source-export ingestion, permission-aware
-hybrid retrieval, incident expiry, source revisions and protected retained context;
+hybrid retrieval, incident expiry, source revisions, protected retained context and
+reviewed MediaWiki/BlueSpice or HTML acquisition adapters;
 see the [M3 implementation evidence](../verification/2026-10-18/m3-knowledge-pilot.md).
-Approved HsH export producers, actual content/ACL/incident freshness and source-owner
+Approved website acquisition producers, actual content/ACL/incident freshness and source-owner
 qualification remain open. Real HsH SSO, authoritative anny customer and
 resource mapping, production booking/cancellation writes, and verified
 uncertain-outcome reconciliation remain open. Formal model evaluation and
@@ -139,13 +140,16 @@ silently change room, time or consequences.
 
 - **HsH identity:** Which existing SAML/OIDC integration is supported for hasi?
   Which stable subject and role/affiliation claims will be released?
-- **Service-IT:** Can Wagtail provide a versioned export with authoritative
-  access rules at the appropriate page or block scope? Who owns source quality
-  and change propagation? The current research capture covers one account.
-- **Intranet:** Which platform and approved connector/export are available?
-  How are page, attachment and group-specific rights represented, checked and
-  revoked? Who owns content and the access contract? An SSO login alone does
-  not answer these authorization questions.
+- **Service-IT:** Direct website scraping is the currently available acquisition
+  method. Which page/block access rules, complete inventory, update/deletion and
+  incident freshness rules will be used? Who owns quality and change propagation?
+- **Intranet:** Direct website scraping is the currently available acquisition
+  method; Safari inspection identifies MediaWiki/BlueSpice. How are page,
+  attachment and group-specific rights represented, checked and revoked? Who
+  owns content and the access contract? An SSO login alone does not answer these
+  authorization questions. No CMS export API is required; a HASI-operated
+  acquisition process can produce the internal signed snapshot contract. See
+  the [acquisition decision](../architecture/institutional-knowledge-operations.md#website-acquisition-decision-2026-10-18).
 - **anny:** Confirm the production organization/region and supported customer
   context beyond the authorized catalog snapshot. Does admin booking enforce
   selected-customer restrictions, or is a delegated customer flow needed?

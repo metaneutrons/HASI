@@ -395,3 +395,5 @@ export async function createApi(options: ApiOptions) {
 export function createRegistry(privateKey: KeyObject): PluginRegistry { return new PluginRegistry(privateKey); }
 
 export { personas, type Persona, type IdentityProvider } from './identity.js';
+
+export { createContentHttpClient, type ContentHttpClient, type ContentHttpOptions } from './content-transport.js';

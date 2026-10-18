@@ -44,6 +44,8 @@ const documentSchema = {
   text: { type: 'string', maxLength: 4_000 },
   canonicalUrl: { type: 'string', maxLength: 2_048 },
   updatedAt: timestampSchema,
+  acquisition: objectSchema({ adapter: { type: 'string', maxLength: 64 },
+    sourceRevision: { type: 'string', maxLength: 256 }, sourceUpdatedAt: timestampSchema }, ['adapter', 'sourceRevision']),
   fetchedAt: timestampSchema,
   authorityRevision: { type: 'string', pattern: '^[a-f0-9]{64}$' },
   corpusRevision: { type: 'string', pattern: '^[a-f0-9]{64}$' },
