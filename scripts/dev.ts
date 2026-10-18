@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { generateKeyPairSync, randomBytes } from 'node:crypto';
 import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
-import { annyManifest, annyAppManifest } from '@hasi/anny-plugin';
+import { annyManifest, annyAppManifest, annyAppViewSha256 } from '@hasi/anny-plugin';
 import { knowledgeManifest } from '@hasi/knowledge-plugin';
 import { digest } from '@hasi/plugin-sdk';
 
@@ -52,7 +52,7 @@ try {
   await ready('http://127.0.0.1:4101/health');
   start('knowledge plugin', 'apps/knowledge-plugin/src/server.ts', { HASI_MODE: 'development', HASI_PUBLIC_KEY: publicKey.export({ type: 'spki', format: 'pem' }).toString(), HASI_KNOWLEDGE_TOKEN: knowledgeToken });
   await ready('http://127.0.0.1:4103/health');
-  start('HASI API', 'apps/api/src/server.ts', { HASI_MODE: 'development', HASI_WEB_ORIGIN: webOrigin, HASI_PRIVATE_KEY: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(), HASI_PLUGIN_TOKEN: pluginToken, HASI_PLUGIN_DIGEST: digest(pluginApps ? annyAppManifest : annyManifest), HASI_KNOWLEDGE_TOKEN: knowledgeToken, HASI_KNOWLEDGE_DIGEST: digest(knowledgeManifest), ...(testIdp ? { HASI_TEST_IDP: '1' } : {}), ...(pluginApps ? { HASI_PLUGIN_APPS: '1' } : {}) });
+  start('HASI API', 'apps/api/src/server.ts', { HASI_MODE: 'development', HASI_WEB_ORIGIN: webOrigin, HASI_PRIVATE_KEY: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(), HASI_PLUGIN_TOKEN: pluginToken, HASI_PLUGIN_DIGEST: digest(pluginApps ? annyAppManifest : annyManifest), HASI_KNOWLEDGE_TOKEN: knowledgeToken, HASI_KNOWLEDGE_DIGEST: digest(knowledgeManifest), ...(testIdp ? { HASI_TEST_IDP: '1' } : {}), ...(pluginApps ? { HASI_PLUGIN_APPS: '1', HASI_REVIEWED_APP_DIGEST: annyAppViewSha256 } : {}) });
   await ready('http://127.0.0.1:4100/api/session');
   const web = spawn('pnpm', ['--filter', '@hasi/web', preview ? 'start' : 'dev', '--hostname', '127.0.0.1', '--port', String(webPort)], { stdio: 'inherit', env: { ...baseEnv, NODE_ENV: preview ? 'production' : 'development', ...(pluginApps ? { NEXT_PUBLIC_HASI_PLUGIN_APPS: '1' } : {}) } });
   children.push(web);

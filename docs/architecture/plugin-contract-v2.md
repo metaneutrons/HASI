@@ -143,6 +143,11 @@ only the bundled Anny view. Unreviewed third-party Apps remain denied. The
 public demo does not enable this feasibility flag. P2 go/no-go and actual mobile,
 accessibility, navigation/network-negative and performance gates remain open.
 
+The local launcher supplies the reviewed resource hash as
+`HASI_REVIEWED_APP_DIGEST` to the prototype API. App mode fails closed when that
+operator-owned value is absent or malformed. The generic API package does not
+import the Anny implementation to choose its own UI approval.
+
 Local feasibility stack after building backend declarations:
 
 ```sh

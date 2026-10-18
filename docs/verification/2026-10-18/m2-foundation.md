@@ -87,6 +87,13 @@ This is a partial-delivery ledger, not acceptance of the complete milestone.
   prevent permanent admission exhaustion. Another review fixed seccomp
   admission, cleanup on staged trust revocation and late route-commit races;
   focused positive/negative regressions pass.
+- The first hosted Node 24/26 and Vercel Preview builds failed because the
+  prototype API bootstrap imported the Anny App digest without a workspace
+  dependency. Local retained declaration files had hidden that defect. The
+  bootstrap now accepts an explicit operator-reviewed digest; only the local
+  launcher selects the bundled reviewed view. A clean local build after removing
+  generated `dist` and `.next` directories passes. The follow-up hosted head
+  must qualify independently; the failed head is not claimed as green.
 - See [the separate Docker evidence](m2-container-driver.md): real Engine
   admission/inspection/reconciliation/cleanup was exercised, but the permitted
   base image had no running plugin health endpoint. No healthy application,

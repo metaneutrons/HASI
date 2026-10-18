@@ -1,7 +1,6 @@
 import { createPrivateKey } from 'node:crypto';
 import { MemoryJsonStore } from '@hasi/state';
 import { hshDemoCatalog } from '@hasi/demo-fixtures/catalog';
-import { annyAppViewSha256 } from '@hasi/anny-plugin';
 import { createApi, PluginRegistry, MockIdentityProvider, OidcIdentityProvider, startTestIdp, personas, withDemoPluginClaims } from './index.js';
 
 const mode = process.env.HASI_MODE;
@@ -10,7 +9,13 @@ const key = process.env.HASI_PRIVATE_KEY;
 const token = process.env.HASI_PLUGIN_TOKEN;
 const expectedManifestDigest = process.env.HASI_PLUGIN_DIGEST;
 if (!key || !token || !expectedManifestDigest) throw new Error('Prototype plugin trust configuration is missing.');
-const registry = new PluginRegistry(createPrivateKey(key), { reviewedAppDigests: process.env.HASI_PLUGIN_APPS === '1' ? [annyAppViewSha256] : [] });
+const reviewedAppDigests: string[] = [];
+if (process.env.HASI_PLUGIN_APPS === '1') {
+  const reviewedDigest = process.env.HASI_REVIEWED_APP_DIGEST;
+  if (!reviewedDigest || !/^[a-f0-9]{64}$/.test(reviewedDigest)) throw new Error('Plugin App mode requires an operator-reviewed resource digest.');
+  reviewedAppDigests.push(reviewedDigest);
+}
+const registry = new PluginRegistry(createPrivateKey(key), { reviewedAppDigests });
 await registry.install({ endpoint: process.env.HASI_PLUGIN_URL ?? 'http://127.0.0.1:4101/mcp', serviceToken: token, expectedManifestDigest, allowLoopback: true });
 if (process.env.HASI_KNOWLEDGE_TOKEN && process.env.HASI_KNOWLEDGE_DIGEST) await registry.install({ endpoint: 'http://127.0.0.1:4103/mcp', serviceToken: process.env.HASI_KNOWLEDGE_TOKEN, expectedManifestDigest: process.env.HASI_KNOWLEDGE_DIGEST, allowLoopback: true });
 const store = new MemoryJsonStore('test-oidc');
