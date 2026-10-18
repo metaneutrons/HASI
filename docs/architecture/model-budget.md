@@ -70,7 +70,11 @@ No request may choose a price, budget scope, secret or database namespace.
 
 The explicit live `pnpm probe:groq-cache` command also requires an existing
 PostgreSQL ledger, even in development. Both HASI and plain-control modes reserve
-each actual HTTP request through that shared ledger. The probe validates that
+each actual HTTP request through that shared ledger. HASI mode uses the router's
+per-attempt admission, including repair attempts; plain controls reserve in the
+HTTP transport because they have no router. No request is charged by both layers.
+Production router calls without admission are rejected before provider I/O.
+The probe validates that
 its fixed Groq model matches the operator-approved budget profile; missing,
 invalid or out-of-bound usage retains the full hold. Offline context measurement
 continues to use a synthetic fetch implementation and makes no provider calls.
@@ -113,3 +117,17 @@ the same explicit initializer with Vercel-managed database credentials inside
 the build process. Do not persist the override as a project variable: ordinary
 rebuilds/restarts must not recreate deleted budget state. Builds without the
 override skip initialization and do not query the database.
+
+To qualify a shared Preview/Production binding without downloading credentials,
+add the same fresh UUID as one-off `HASI_MODEL_BUDGET_VERIFY_RUN` alongside the
+initializer override. Build Preview first and a Production deployment with
+domain promotion disabled second. Preview writes a one-hour verification marker;
+Production must observe it in the shared namespace before it can initialize the
+ledger. Both emit the same database destination identifier, derived only from
+host/port/database and excluding credentials and query options. A missing marker
+or different destination fails the operator build. Database routing/search-path
+overrides in URL query parameters are rejected. The generic state table may be
+created during connection initialization; a failed binding check does not create
+or reset the budget ledger record. This verifies the two tested
+deployment bindings, not arbitrary future branches, cloned stores or historical
+deployments that predate budget enforcement. Ordinary builds use neither flag.

@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 import {
   createGroqCacheProbeTransport,
   GROQ_CACHE_PROBE_ENDPOINT,
 } from "../scripts/groq-cache-probe-transport";
+import { runModelStep } from "../src/lib/server/model-router";
 
 function response(body: unknown, status = 200, headers: HeadersInit = {}) {
   return new Response(typeof body === "string" ? body : JSON.stringify(body), {
@@ -48,6 +50,72 @@ describe("operator Groq cache probe transport", () => {
     await expect(probeFetch(transport.fetch, JSON.stringify({ model: 'unapproved', max_tokens: 64 }))).rejects.toThrow('Unapproved');
     expect(reserve).toHaveBeenCalledTimes(1);
     expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("pairs production HASI routing with observational transport and admits each request once", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const admissions: { input: { profileId: string; inputTokens: number; outputTokens: number }; settle: ReturnType<typeof vi.fn> }[] = [];
+      const reserve = vi.fn((input: { profileId: string; inputTokens: number; outputTokens: number }) => {
+        const settle = vi.fn(() => Promise.resolve());
+        admissions.push({ input, settle });
+        return Promise.resolve({ settle });
+      });
+      let upstreamCalls = 0;
+      const upstream = vi.fn<typeof fetch>(() => Promise.resolve(++upstreamCalls === 1
+        ? response({ error: { message: "synthetic malformed tool call", code: "tool_use_failed" } }, 400)
+        : response({
+          id: "chatcmpl-probe-test",
+          object: "chat.completion",
+          created: 1,
+          model: "openai/gpt-oss-120b",
+          choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: "Synthetische Antwort." } }],
+          usage: { prompt_tokens: 12, completion_tokens: 3 },
+        })));
+      const transport = createGroqCacheProbeTransport(upstream, () => undefined);
+
+      await runModelStep({ profileId: "groq-oss-120b", messages: [{ role: "user", content: "Hallo." }] }, {
+        env: { GROQ_API_KEY: "probe-test-key" },
+        context: { dataClasses: ["synthetic_demo"], toolsRequired: true },
+        budgetAdmission: { reserve },
+        fetch: transport.fetch,
+      });
+
+      expect(reserve).toHaveBeenCalledTimes(2);
+      expect(admissions.map(admission => admission.input.profileId)).toEqual(["groq-oss-120b", "groq-oss-120b"]);
+      expect(admissions.every(admission => admission.input.outputTokens === 1_536)).toBe(true);
+      expect(admissions[0]?.settle).toHaveBeenCalledExactlyOnceWith();
+      expect(admissions[1]?.settle).toHaveBeenCalledExactlyOnceWith({ inputTokens: 12, outputTokens: 3 });
+      expect(upstream).toHaveBeenCalledTimes(2);
+      for (const call of upstream.mock.calls) {
+        expect(call).toEqual([GROQ_CACHE_PROBE_ENDPOINT, expect.objectContaining({ redirect: "error" })]);
+      }
+      const reserveOrders = reserve.mock.invocationCallOrder;
+      const upstreamOrders = upstream.mock.invocationCallOrder;
+      expect(reserveOrders[0]).toBeLessThan(upstreamOrders[0] ?? 0);
+      expect(reserveOrders[1]).toBeLessThan(upstreamOrders[1] ?? 0);
+      expect(transport.calls()).toBe(2);
+    } finally { vi.unstubAllEnvs(); }
+  });
+
+  it("denies a production HASI probe before transport or upstream IO when admission fails", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const reserve = vi.fn(() => Promise.reject(Object.assign(new Error("synthetic exhausted"), { code: "exhausted" })));
+      const upstream = vi.fn<typeof fetch>();
+      const transport = createGroqCacheProbeTransport(upstream, () => undefined);
+
+      await expect(runModelStep({ profileId: "groq-oss-120b", messages: [{ role: "user", content: "Hallo." }] }, {
+        env: { GROQ_API_KEY: "probe-test-key" },
+        context: { dataClasses: ["synthetic_demo"], toolsRequired: true },
+        budgetAdmission: { reserve },
+        fetch: transport.fetch,
+      })).rejects.toMatchObject({ code: "budget_exhausted" });
+
+      expect(reserve).toHaveBeenCalledTimes(1);
+      expect(transport.calls()).toBe(0);
+      expect(upstream).not.toHaveBeenCalled();
+    } finally { vi.unstubAllEnvs(); }
   });
 
   it.each([{}, { prompt_tokens: 0, completion_tokens: 0 }, { prompt_tokens: 12, completion_tokens: 65 }])('retains a full hold for unusable successful usage %j', async usage => {

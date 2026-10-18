@@ -39,15 +39,18 @@ async function main() {
     || resolveModelConnection(connection).baseURL !== 'https://api.groq.com/openai/v1') {
     throw new Error('The probe model must match the operator-approved budget profile.');
   }
-  // The transport reserves each actual HTTP attempt, including repair attempts.
-  // Do not also reserve in the router: that would charge the same call twice.
-  transport = createGroqCacheProbeTransport(fetch, event => { console.log(JSON.stringify(event)); }, await getDurableModelBudgetAdmission());
+  const budgetAdmission = await getDurableModelBudgetAdmission();
+  // The HASI router reserves every generate/repair attempt; this transport only
+  // observes those calls. Plain controls have no router, so the transport admits
+  // each direct HTTP request itself.
+  transport = createGroqCacheProbeTransport(fetch, event => { console.log(JSON.stringify(event)); }, mode === "hasi" ? undefined : budgetAdmission);
   if (mode !== "hasi") await plainControl();
   else for (let index = 0; index < MAX_CALLS; index += 1) {
     const reply = await runModelStep(request, {
       // Only the approved bundled Groq profile and synthetic context are enabled.
       env: { GROQ_API_KEY: process.env.GROQ_API_KEY }, now, messageTimes: [now.toISOString()], fetch: observedFetch,
       context: { dataClasses: ['synthetic_demo'], toolsRequired: true },
+      budgetAdmission,
       telemetry: metrics => { console.log(JSON.stringify({ event: "sdk_usage_observation", ...metrics })); },
     });
     console.log(JSON.stringify({ event: "probe_result", probe: index + 1, profileId: reply.profile.id, ...reply.usage }));
