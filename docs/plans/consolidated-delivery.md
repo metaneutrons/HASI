@@ -46,20 +46,26 @@ next action, blockers and evidence. The tables below map work and dependencies;
 they are not live completion tables. A reviewed change must settle conflicts
 before implementation; an issue edit cannot waive an existing requirement.
 
-## Current baseline — 2026-10-18
+## Current baseline — 2026-10-19
 
 The current public demo runs on the Hetzner host under Coolify. HASI, the demo
 wiki and private PostgreSQL 18.6 are managed there; the Vercel project and Neon
-database have been retired. The Coolify service still uses a preloaded image.
-CI-qualified source builds and deployment to this host are open in [#79](https://github.com/metaneutrons/HASI/issues/79). The cutover and database
+database have been retired. [PR #82](https://github.com/metaneutrons/HASI/pull/82)
+merged the private CI-qualified source controller and native Dockerfile app.
+Main `9378a1d` passed CI and was automatically built and handed over with active
+synthetic state and the shared budget preserved. [#79](https://github.com/metaneutrons/HASI/issues/79)
+owns the final documentation-only update, replay and rollback qualification;
+[deployment evidence](../verification/2026-10-18/coolify-main-deployment.md)
+records exact identities. The initial cutover and database
 records are in [self-host verification](../verification/2026-10-18/selfhost-cutover.md)
 and [PostgreSQL cutover verification](../verification/2026-10-18/local-postgres-cutover.md).
 
 M2 and P1–P6 implementation is merged, but final technical acceptance is
-deliberately deferred. [PR #78](https://github.com/metaneutrons/HASI/pull/78) is
-unmerged. Earlier green CI at `1ffd651` is historical; candidate `095f3c5`
-failed the existing cold-store reference-plugin packaging test on both Node
-versions (tracked in #74). M1–M7 now qualify technical behavior against TestIdP, mock/reference
+deliberately deferred. [PR #78](https://github.com/metaneutrons/HASI/pull/78)
+merged as `b815fa4` after exact-head CI `39168453923`; exact-main CI
+`39168714435` also passed, including 740 tests on each supported Node version.
+The cold-store reference-plugin packaging failure is fixed; its earlier failed
+candidates remain historical evidence. M1–M7 now qualify technical behavior against TestIdP, mock/reference
 authorities and synthetic fixtures. Real institutional identity, source rights,
 Anny tenant behavior, protected-data approval and final go/no-go are reserved for
 M8 [#80](https://github.com/metaneutrons/HASI/issues/80); mock evidence does not
@@ -190,9 +196,9 @@ identities and an independent test plugin; they do not require live M3–M5.
    forms. Category landing pages are excluded. These counts describe inventory,
    not deployed content. Keep bounded HTML acquisition separate from real-source
    qualification and verify the exact artifact before reporting deployment.
-2. **Review PR #78 at its exact candidate revision.** The candidate is `1ffd651`
-   with green CI and remains unmerged. Review and merge the adapter work at a
-   qualified head; that code review does not accept M3 or authorize source access.
+2. **PR #78 is merged at its qualified revision.** The adapter and offline
+   packaging work passed exact-head and exact-main CI at `b815fa4`. This code
+   review does not accept M3 or authorize institutional source access.
 3. **Complete technical M1 and M2 qualification, then the current deployment
    path.** Specify and test identity/integration contracts with TestIdP and mock
    authorities. Complete the deferred M2/P1–P6 matrix and BUD-A1/WEB-A1. Implement

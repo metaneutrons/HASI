@@ -18,8 +18,8 @@ already joined by the proxy; the wiki uses the external `coolify` network.
 HASI uses a private PostgreSQL 18.6 container and the `production:v1`
 namespace. All 201 records from Neon, including the shared budget ledger, were
 migrated before the Neon resource was deleted. Fabian approved a new demo
-secret on 2026-10-18; existing signed test sessions will not survive the move.
-The database migration did not rotate that secret or discard test records.
+secret during the initial Vercel cutover on 2026-10-18. Subsequent database and
+source-deployment changes preserve that secret, signed sessions and test records.
 
 ## Images and secrets
 
@@ -39,7 +39,8 @@ secrets:
   and rendered database container hostname. The encrypted exec-only recovery
   copy is `HASI_DATABASE_URL` in fnox. Never print the URL.
 - `HASI_DEMO_SECRET`: the separately provisioned, server-only demo secret.
-  A new value was approved for this move; old signed test sessions are discarded.
+  Preserve the current value during every deployment and rollback. Rotation
+  during the initial Vercel move is historical and must not be repeated.
 - `GROQ_API_KEY` and `GWDG_API_KEY`: existing provider credentials. Empty
   values leave the corresponding provider connection unavailable.
 
