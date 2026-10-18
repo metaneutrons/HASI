@@ -21,14 +21,14 @@ Ask questions, find rooms and prepare a simulated booking in one conversation.</
 
 - **Chat and room workflows:** multiple saved conversations in a collapsible Chats list; discreet per-message copy controls with clipboard feedback, including result content and source links; new chats start with the operator default (Groq GPT-OSS 120B in the demo); server-issued UTC message times displayed in Europe/Berlin, with unknown legacy times preserved; complete room intervals retained across preferences and guarded against automatic model time shifts; room search, compact progressive results, availability, booking and cancellation proposals with separate explicit confirmation inside the conversation; responsive layouts with light, dark and system themes.
 - **Room and workplace catalog:** 61 resources and all 9 services from an authorized, read-only HsH anny snapshot dated 2026-10-16. The demo offers 37 individual workplaces and six meeting rooms; 18 office containers provide context and cannot be booked as a whole. Person capacity is separate from bookable quantity. No lecture halls occur in this snapshot. Availability, access grants, bookings and cancellations remain synthetic. Office filters use the complete parent/desk hierarchy (eight offices with one recorded desk, ten shared offices); six standalone desks have no office classification. See [booking units](docs/architecture/anny-booking-units.md).
-- **Knowledge demo:** 60 entirely fictional documents, split between Service IT and Intranet examples. Search applies synthetic audience access rules before returning content, and the authenticated demo reader checks access again. These documents are not HsH guidance.
+- **Knowledge:** one current MCP contract serves 301 synthetic documents (271 Service-IT and 30 Intranet) and a separate institutional repository. The optional demo HTML path reads approved Service-IT bodies from the restricted portal and fails closed on changed or unavailable content. The institutional implementation verifies signed full exports, applies source ACLs before BM25/vector retrieval, rechecks retained context, withholds stale incidents and unreviewed instructional images, and resolves authorized revision links. Protected OIDC chats use server-side CAS storage. MediaWiki/BlueSpice and HTML acquisition adapters share that contract, with explicit fallback, aggregate-content review, guarded source custody and immediate suspension after failed refreshes. Actual HsH configuration/rights approval and institutional qualification remain open; see [M3 evidence](docs/verification/2026-10-18/m3-knowledge-pilot.md). Demo documents are not HsH guidance.
 - **Model registry:** versioned server configuration supports GroqCloud, GWDG SAIA, native OpenAI Responses/Chat, Anthropic Messages and multiple OpenAI-compatible endpoints. Operators choose the default, explicitly enable/limit user selection and define bounded fallback rules. Fallbacks are off in the bundled demo; eligible configured fallbacks pin the actual model for the tool turn and never replay business actions. Groq has live demo evidence; GWDG remains Experimental. Other adapters are mock-transport tested, not live-qualified. Use synthetic test data only.
 - **Model efficiency:** room cards end model planning without an extra summary. Simple office preferences and booking-list requests use typed tools directly; card selection and confirmation need no extra generation. Provider context uses a shorter stable instruction prefix, user-only calendar anchors and compact recent anny results. Content-free usage/quota diagnostics help distinguish provider limits; Groq cache counters measure reused versus uncached input tokens when the provider reports them. Controlled live repeats currently return no cache counter; a hit is not yet proven. The operator-only `pnpm probe:groq-cache` compares raw versus SDK usage without logging prompts. See the [context measurements](docs/verification/2026-10-18/groq-context-budget.md) and [cache investigation](docs/verification/2026-10-18/groq-prompt-cache.md).
 - **Plugin foundation:** registry-derived tools, v2 contracts, nested/conditional configuration forms, field-level diagnostics and revision-controlled activation. Personal service connections support explicit consent, renewal, disconnect and provider revocation, with current account rights checked before tool calls. Host confirmation previews identify service/account, consequences and costs; an independent status check reads durable execution receipts without replaying writes. Approved plain-MCP adapters, host provenance/pagination envelopes, credential-custody revisions, a shared deployment route/controller and a self-contained reference artifact implement the external-plugin path. Final isolation, recovery and device acceptance remain pending. MCP Apps stays disabled in the public demo; native results are the default. See [contracts](docs/architecture/plugin-contract-v2.md) and [operations](docs/architecture/plugin-operations.md).
 - **Model budgets:** a CAS-backed shared USD 1/day admission ledger covers provider attempts, retries and fallbacks. Missing deployed state fails closed and requires explicit bootstrap. GWDG uses an expressly approved temporary Groq-Qwen price estimate, not a verified invoice tariff. See [budget policy and provisioning](docs/architecture/model-budget.md).
 - **Test identity:** visitors can select student, employee or administrator demo personas in an isolated workspace. They are fixtures, not HsH identities or institutional permissions. The local `--test-idp` launcher additionally exercises real OIDC redirects, PKCE/state/nonce and signed test ID tokens; it is not institutional SSO.
 
-The [public demo](https://hasi.metaneutrons.cc) uses a server-backed runtime and isolated synthetic state. On first use of anny, open **Verbundene Dienste** and explicitly connect the selected test account. Disconnecting removes tool access and invalidates pending confirmations; it does not undo an existing booking or delete chat history. Chat transcripts and profile settings stay in browser storage; the server stores workspace sessions, proposals, integration settings and simulated bookings. There is no live anny tenant, institutional knowledge source or real SSO connection.
+The [public demo](https://hasi.metaneutrons.cc) uses a server-backed runtime and isolated synthetic state. On first use of anny, open **Verbundene Dienste** and explicitly connect the selected test account. Disconnecting removes tool access and invalidates pending confirmations; it does not undo an existing booking or delete chat history. Public-demo chat transcripts and profile settings stay in browser storage; the server stores workspace sessions, proposals, integration settings and simulated bookings. There is no live anny tenant, institutional knowledge source or real SSO connection.
 
 ## Run locally
 
@@ -121,11 +121,14 @@ pnpm build
 pnpm lint
 pnpm typecheck
 pnpm research:anny
+pnpm reference:prepare
 pnpm test
 pnpm test:coverage
 ```
 
 Build first after a clean install: workspace declaration files are emitted to `dist` and are needed by linting, type checks and tests. Integration tests use loopback HTTP and MCP calls. `pnpm research:anny` fetches the third-party anny specifications, verifies their pinned SHA-256 values and materializes them for contract tests; the specifications are not redistributed here.
+
+`pnpm reference:prepare` explicitly prepares the locked reference SDK deployment dependencies online. The subsequent reference artifact packaging stays offline, with lifecycle scripts disabled and the lockfile frozen. Preparation and tests must share the same pnpm store and metadata cache (`XDG_CACHE_HOME` when set); CI prepares a fresh metadata cache for each matrix job.
 
 ## Architecture and boundaries
 
@@ -133,10 +136,13 @@ Build first after a clean install: workspace declaration files are emitted to `d
 | --- | --- |
 | `apps/web` | Next.js chat, room booking and administration UI |
 | `apps/api` | Server-owned identity, authorization, plugin registry and proposal confirmation |
-| `apps/anny-plugin`, `apps/knowledge-plugin` | Room tools and permission-filtered synthetic knowledge tools over MCP |
+| `apps/anny-plugin`, `apps/knowledge-plugin` | Room tools and a common fixture/institutional knowledge MCP contract |
+| `apps/service-it-demo` | Restricted synthetic HTML portal for Service-IT adapter qualification |
 | `packages/plugin-sdk`, `packages/anny-client` | Versioned plugin contract, signed capabilities, and anny HTTP contracts |
 | `packages/demo-runtime`, `packages/state` | Co-located server handlers and memory/PostgreSQL JSON stores |
 | `fixtures` | Curated fictional knowledge corpus and read-only room catalog snapshot |
+
+The separate `pnpm knowledge:serve` composition accepts approved signed exports or operator-configured MediaWiki/BlueSpice and HTML adapters. New document chunks and queries share the existing embedding budget; unchanged chunks reuse embeddings. `pnpm knowledge:inspect` creates a private local review artifact without model/embedding calls; see [institutional knowledge operations](docs/architecture/institutional-knowledge-operations.md). It is not enabled by the public demo.
 
 A separate production API entrypoint and frontend-to-API transport are available; see [production composition](docs/architecture/production-runtime.md). They require real operator configuration and institutional authority provisioning. The public demo does not use this production identity path.
 
@@ -144,15 +150,19 @@ The host owns identity, permissions and state transitions. The model can search 
 
 ## Status
 
-HASI is an incomplete MVP prototype, not an operational Hochschule Hannover service. The M2 account/action/deployment implementation is available for qualification; real HsH SSO/account-adapter provisioning, institutional permission mapping, live availability and booking, real Intranet/Service-IT source adapters, source-specific uncertain-write reconciliation, provider approval and final isolation/native-device qualification remain outstanding. Responsive browser checks do not establish iPhone or Android qualification. The public demo's durable synthetic state does not provide institutional authorization or booking reconciliation.
+HASI is an incomplete MVP prototype, not an operational Hochschule Hannover service. The M2 account/action/deployment implementation is available for qualification; real HsH SSO/account-adapter provisioning, institutional permission mapping, live availability and booking, approved live Intranet/Service-IT acquisition configurations and source-owner qualification, source-specific uncertain-write reconciliation, provider approval and final isolation/native-device qualification remain outstanding. Responsive browser checks do not establish iPhone or Android qualification. The public demo's durable synthetic state does not provide institutional authorization or booking reconciliation.
 
 Versioned GHCR images for `linux/amd64` and `linux/arm64` are built only through Release Please. The workflow and local Compose demo are implemented; no GHCR image has been published, and hosted native qualification is recorded separately in [D3](https://github.com/metaneutrons/HASI/issues/17). See the [container runtime and release boundaries](docs/architecture/container-runtime.md) before building or selecting a release image. Read-only mainline qualification uploads CI artifacts without creating a tag or release.
 
 The roadmap additionally covers [public web search restricted to operator-approved URL scopes](docs/architecture/restricted-web-search.md), Moodle, Stud.IP, HISinOne (including exam registration and student records), SAP leave/time workflows, and a versioned knowledge base of examination regulations for every degree programme, including scanned PDFs, OCR and exact page citations. These integrations are planned, not implemented.
 
-Track institutional work in the [MVP epic #47](https://github.com/metaneutrons/HASI/issues/47),
-later integrations in the [roadmap epic #55](https://github.com/metaneutrons/HASI/issues/55),
-and external plugin milestones P1–P6 under [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
+Technical milestones M1–M7 may qualify with Test-IdP, synthetic content and contract-based mocks. Real HsH identity, effective source rights, actual Anny conformance and protected-data approvals belong to the final [institutional acceptance M8 #80](https://github.com/metaneutrons/HASI/issues/80). Mock qualification cannot authorize those live integrations. The requested DeepInfra addition is tracked in [#81](https://github.com/metaneutrons/HASI/issues/81); the current source does not configure it.
+
+Track delivery in the [unified index #47](https://github.com/metaneutrons/HASI/issues/47),
+later integrations in [roadmap #55](https://github.com/metaneutrons/HASI/issues/55),
+and the six plugin qualification groups P1–P6 in [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
+The approved [v3 plan](docs/plans/consolidated-delivery.md#v3-issue-graph)
+consolidates tracking to 13 open issues while preserving all acceptance criteria and evidence.
 The MCP registry supports approved endpoints, compatible updates, schema-driven
 configuration and registry-driven chat tool discovery. Arbitrary plugin code
 installation is intentionally unsupported. Independent artifact packaging, personal account lifecycle and deployment coordination have implementation paths. Full mobile/production acceptance remains open; final acceptance tests were deferred by Fabian on 2026-10-18.
@@ -175,6 +185,8 @@ See the [MVP plan](docs/plans/hasi-mvp.md) and [server-demo parity criteria](doc
 - [Verified message times](docs/architecture/chat-message-time.md)
 - [GWDG SAIA and custom model connections](docs/architecture/gwdg-saia.md)
 - [Knowledge MCP and authenticated document delivery](docs/architecture/knowledge-mcp.md)
+- [Content adapter contract, MediaWiki/BlueSpice and HTML fallback](docs/architecture/content-adapters.md)
+- [Coolify self-hosting, restricted synthetic MediaWiki and migration status](deploy/coolify/README.md)
 - [Production SSO and anny authorization boundary](docs/architecture/anny-identity-and-authorization.md)
 - [Booking cancellation and confirmation](docs/architecture/anny-cancellation.md)
 - [Room snapshot provenance](docs/evaluation/anny-room-snapshot.md)

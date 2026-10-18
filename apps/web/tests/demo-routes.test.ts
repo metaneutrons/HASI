@@ -21,7 +21,8 @@ vi.mock("@/lib/server/model-router", () => ({
   runModelStep: vi.fn(),
 }));
 vi.mock("@hasi/demo-runtime", () => ({ createDemoRuntime: mocks.createDemoRuntime }));
-vi.mock("@hasi/state", () => ({
+vi.mock("@hasi/state", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@hasi/state")>(),
   PostgresJsonStore: vi.fn().mockImplementation(function PostgresJsonStoreMock() {
     return {
       initialize: mocks.initialize,
@@ -69,6 +70,7 @@ function setPreviewEnv() {
     VERCEL_GIT_COMMIT_SHA: "test-commit",
     HASI_DEMO_MODE: "1",
     HASI_DEMO_ORIGIN: undefined,
+    HASI_DEMO_STATE_NAMESPACE: undefined,
     HASI_DEMO_SECRET: "test-only-secret",
     DATABASE_URL: "postgres://unused:test@localhost/hasi",
     VERCEL_AUTOMATION_BYPASS_SECRET: undefined,

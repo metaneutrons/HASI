@@ -1,0 +1,32 @@
+# Loaded by the existing Coolify Traefik file provider. No forwarded IP trust.
+http:
+  routers:
+    hasi-chat-limited:
+      rule: "Host(`hasi.metaneutrons.cc`) && Path(`/api/chat`) && Method(`POST`)"
+      priority: 200
+      entryPoints: [https]
+      service: hasi@docker
+      middlewares: [hasi-inference-limit]
+      tls:
+        certResolver: hasi-dns
+    hasi-timestamps-limited:
+      rule: "Host(`hasi.metaneutrons.cc`) && Path(`/api/chat/timestamps`) && Method(`POST`)"
+      priority: 200
+      entryPoints: [https]
+      service: hasi@docker
+      middlewares: [hasi-timestamp-limit]
+      tls:
+        certResolver: hasi-dns
+  middlewares:
+    hasi-inference-limit:
+      rateLimit:
+        average: 60
+        period: 10m
+        burst: 10
+        sourceCriterion:
+          requestHost: true
+    hasi-timestamp-limit:
+      rateLimit:
+        average: 60
+        period: 10m
+        burst: 20

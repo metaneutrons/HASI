@@ -114,7 +114,7 @@ export const chatToolSchemas = {
 
 export const chatToolDescriptions: Readonly<Record<ChatToolName, string>> =
   Object.freeze({
-    knowledge_search: "Suche in den freigegebenen synthetischen Service-IT- und Intranet-Dokumenten. Verwende dieses Tool für Hochschul- und IT-Fragen. Ergebnisse sind erfundene Beispiele, keine echten HsH-Anleitungen. Fehlende oder widersprüchliche Belege ausdrücklich nennen.",
+    knowledge_search: "Suche in aktuell freigegebenen Service-IT- und Intranet-Dokumenten. Verwende dieses Tool für Hochschul- und IT-Fragen. synthetic=true kennzeichnet erfundene Beispiele ohne Geltung als HsH-Anleitung. Quellenrevision, Aktualität und geprüfte Bildtranskripte beachten; fehlende oder widersprüchliche Belege ausdrücklich nennen.",
     anny_search_resources:
       "Suche getrennt nach einzelnen Arbeitsplätzen (auch bei Büro-Anfragen), Besprechungsräumen oder Hörsälen. Nutze kind für die Buchungseinheit. Bei workplace bestimmt officeWorkplaceCount den Typ: 1 bedeutet Einzelbüro, mehr als 1 ein geteiltes Büro. Fehlt der Zähler, klassifiziere nur ausdrücklich als Einzelbüro/1er oder geteilt/2er-/3er bezeichnete Büros; sonst bleibt es unbekannt. any bedeutet keine Präferenz. Personenkapazität gehört zu ganzen Räumen. Arbeitsplätze liefern ihr übergeordnetes Büro, das nicht mitgebucht wird. Verfügbarkeit wird separat geprüft.",
     anny_get_availability:
@@ -176,7 +176,15 @@ const userMessageSchema = z.strictObject({
   content: z.string().min(1).max(4000),
 });
 
+export const knowledgeEvidenceSchema = z.strictObject({
+  contextIds: z.array(z.uuid()).max(32),
+  expiresAt: z.iso.datetime(),
+  receipt: z.string().regex(/^[A-Za-z0-9_-]{43}$/u),
+});
+export type KnowledgeEvidence = z.infer<typeof knowledgeEvidenceSchema>;
+
 const assistantMessageSchema = z.strictObject({
+  evidence: knowledgeEvidenceSchema.optional(),
   ...messageMetadataShape,
   role: z.literal("assistant"),
   content: z.string().max(4000),
@@ -333,6 +341,7 @@ function validateMessageSequence(
 export const chatRequestSchema = z
   .strictObject({
     profileId: modelProfileIdSchema,
+    conversationId: z.uuid().optional(),
     routingToken: z.string().min(1).max(2_048).optional(),
     messages: z.array(wireMessageSchema).max(64),
   })
@@ -353,6 +362,7 @@ export type ChatRequest = z.infer<typeof chatRequestSchema>;
 export const modelReplySchema = z
   .strictObject({
     message: assistantMessageSchema,
+    contextNotice: z.string().max(300).optional(),
     profile: z.strictObject({
       id: modelProfileIdSchema,
       label: nonEmptyText(100),

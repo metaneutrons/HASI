@@ -12,7 +12,9 @@
     "tests/**/*.ts",
     "vitest.config.ts",
     "apps/knowledge-plugin/**/*.ts",
-    "fixtures/catalog.ts"
+    "apps/service-it-demo/**/*.ts",
+    "fixtures/catalog.ts",
+    "fixtures/knowledge-catalog.ts"
   ],
   "exclude": [
     "**/dist/**",

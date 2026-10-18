@@ -1,0 +1,94 @@
+services:
+  wiki:
+    image: ${WIKI_IMAGE:-hasi-mediawiki-demo:amd64}
+    pull_policy: never
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      wiki-database:
+        condition: service_healthy
+    expose:
+      - "80"
+    environment:
+      WG_SERVER: "https://wiki.hasi.metaneutrons.cc"
+      WIKI_DB_HOST: "wiki-database"
+      WIKI_DB_NAME: "wiki"
+      WIKI_DB_USER: "wiki"
+      WIKI_DB_PASSWORD_FILE: "/run/secrets/wiki-db-password"
+      WIKI_ADMIN_PASSWORD_FILE: "/run/secrets/wiki-admin-password"
+    secrets:
+      - wiki-db-password
+      - wiki-admin-password
+    networks:
+      - coolify
+      - wiki-backend
+    volumes:
+      - wiki-config:/var/www/config
+      - wiki-images:/var/www/html/images
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.routers.wiki.rule=Host(`wiki.hasi.metaneutrons.cc`)
+      - traefik.http.routers.wiki.entrypoints=https
+      - traefik.http.routers.wiki.tls=true
+      - traefik.http.routers.wiki.tls.certresolver=hasi-dns
+      - traefik.http.routers.wiki.middlewares=wiki-campus-only@docker
+      - traefik.http.middlewares.wiki-campus-only.ipallowlist.sourcerange=141.71.0.0/16,2001:638:614::/48,127.0.0.1/32,::1/128,2.28.199.98/32,2a01:4f8:1c1a:adce::1/128,10.0.1.0/24,fdbc:1a9f:69f8::/64
+      - traefik.http.services.wiki.loadbalancer.server.port=80
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+
+  wiki-database:
+    image: mariadb:lts@sha256:99c125f103f5d081ebbc9ffe064e63daf7f688ac33a5f7f29af2d7260a96debf
+    restart: unless-stopped
+    stop_grace_period: 1m
+    environment:
+      MARIADB_DATABASE: "wiki"
+      MARIADB_USER: "wiki"
+      MARIADB_PASSWORD_FILE: "/run/secrets/wiki-db-password"
+      MARIADB_ROOT_PASSWORD_FILE: "/run/secrets/wiki-db-root-password"
+    secrets:
+      - wiki-db-password
+      - wiki-db-root-password
+    networks:
+      - wiki-backend
+    volumes:
+      - wiki-database-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 15s
+      timeout: 5s
+      start_period: 45s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+
+networks:
+  coolify:
+    name: coolify
+    external: true
+  wiki-backend:
+    internal: true
+
+volumes:
+  wiki-config:
+    name: hasi-demo-wiki-config
+  wiki-images:
+    name: hasi-demo-wiki-images
+  wiki-database-data:
+    name: hasi-demo-wiki-database-data
+
+secrets:
+  wiki-db-password:
+    file: /data/hasi/secrets/wiki-db-password
+  wiki-db-root-password:
+    file: /data/hasi/secrets/wiki-db-root-password
+  wiki-admin-password:
+    file: /data/hasi/secrets/wiki-admin-password

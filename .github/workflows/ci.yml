@@ -53,7 +53,16 @@ jobs:
       # This explicit network step verifies and materializes the pinned public
       # anny schema used by client contract tests. Tests themselves do not fetch.
       - run: pnpm research:anny
+      # A frozen workspace install does not populate metadata required by the
+      # separate deploy lockfile. Prepare with policies enabled in a fresh cache;
+      # the qualification test then packages strictly offline using that cache.
+      - name: Prepare reference SDK deployment metadata
+        run: pnpm reference:prepare
+        env:
+          XDG_CACHE_HOME: ${{ runner.temp }}/hasi-reference-cache
       - run: pnpm test:coverage
+        env:
+          XDG_CACHE_HOME: ${{ runner.temp }}/hasi-reference-cache
 
   security:
     name: Secrets and dependency advisories

@@ -15,6 +15,7 @@ export async function chatAccess(request: Request) {
   try {
     let scope: string;
     let secret: string;
+    let ownerId: string | undefined;
     let production: ReturnType<typeof productionWebConfiguration> | undefined;
     if (process.env.HASI_APP_MODE === "production") {
       production = productionWebConfiguration();
@@ -28,6 +29,7 @@ export async function chatAccess(request: Request) {
       if (!Array.isArray(sourceClasses) || sourceClasses.length === 0 || sourceClasses.length > 4 || sourceClasses.some((value: unknown) => value !== "public" && value !== "internal" && value !== "confidential")) return failure("Die Datenfreigabe ist nicht verfügbar.", 503);
       const approvedClasses = production.dataClasses;
       if (sourceClasses.some((value: unknown) => !approvedClasses.includes(value as "public" | "internal" | "confidential"))) return failure("Die Quellen überschreiten die freigegebene Datenrichtlinie dieser Installation.", 503);
+      ownerId = session.user.id;
       scope = `production:${session.user.id}`;
       secret = production.secret;
     } else if (process.env.HASI_DEMO_MODE === "1") {
@@ -60,7 +62,7 @@ export async function chatAccess(request: Request) {
     // authority. It is never a claim that free text was scanned or that future
     // institutional output is synthetic.
     const modelContext = { dataClasses: production?.dataClasses ?? ["synthetic_demo"], toolsRequired: true };
-    return { request, allowedOrigins, modelContext, timestampScope: createHash("sha256").update(scope).digest("hex"), routingPins: createRoutingPins(secret, `${new URL(request.url).origin}:${scope}`), clock: createMessageClock(secret, `${new URL(request.url).origin}:${scope}`) };
+    return { request, allowedOrigins, modelContext, ...(production && ownerId ? { production: { ownerId, secret, scope } } : {}), timestampScope: createHash("sha256").update(scope).digest("hex"), routingPins: createRoutingPins(secret, `${new URL(request.url).origin}:${scope}`), clock: createMessageClock(secret, `${new URL(request.url).origin}:${scope}`) };
   } catch {
     return failure("Die Sitzung ist vorübergehend nicht verfügbar.", 503);
   }

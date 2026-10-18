@@ -2,6 +2,7 @@ import { createHash, createPublicKey, sign, verify, timingSafeEqual, type KeyObj
 import { actorContextSchema, digest } from '@hasi/plugin-sdk';
 import { MemoryJsonStore, type JsonStore } from '@hasi/state';
 import { z } from 'zod';
+import { createRegistryKnowledgeContexts } from './knowledge-context-runtime.js';
 import { createApi, type ApiOptions } from './index.js';
 import { OidcIdentityProvider, type OidcIdentityProviderOptions } from './oidc.js';
 import { PluginRegistry, type ApprovedPluginSource } from './registry.js';
@@ -99,7 +100,8 @@ export async function createProductionRuntime(options: ProductionRuntimeOptions)
     } : source);
     // Catalogue entries are approvals to connect, not an instruction to reinstall removed sources.
     // createApi restores only durable connected records; a fresh installation is explicit admin work.
-    const app = await createApi({ mode: 'production', registry, identity, store: options.store, origin: origin.origin, allowedHosts: [options.apiHostname], secureCookies: true, sessionCookieName: '__Host-hasi-session', pluginCatalog: plugins, ...(options.actionPolicies ? { actionPolicies: options.actionPolicies } : {}) });
+    const knowledgeContexts = createRegistryKnowledgeContexts({ registry, store: options.store, privateKey: options.privateKey, scope: options.scope, resolveActor: async subject => (await directory.resolve(subject))?.actor });
+    const app = await createApi({ mode: 'production', knowledgeContexts, registry, identity, store: options.store, origin: origin.origin, allowedHosts: [options.apiHostname], secureCookies: true, sessionCookieName: '__Host-hasi-session', pluginCatalog: plugins, ...(options.actionPolicies ? { actionPolicies: options.actionPolicies } : {}) });
     if (gateway) app.addHook('onClose', () => gateway.close());
     app.get('/health', () => ({ status: 'ok' }));
     return { app, registry, directory };

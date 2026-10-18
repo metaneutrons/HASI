@@ -1,0 +1,17 @@
+[Unit]
+Description=Encrypted HASI PostgreSQL backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=root
+Environment=HASI_POSTGRES_CONTAINER=hasi-database-64vadvq4uowpfrr9l0rlrcg1
+ExecStart=/usr/local/sbin/hasi-backup-postgres
+UMask=0077
+TimeoutStartSec=300
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/data/hasi/backups/postgres

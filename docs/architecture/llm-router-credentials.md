@@ -3,12 +3,15 @@
 Date: 2026-10-17. Status: agreed architecture with server-side Groq, GWDG SAIA
 and optional administrator-configured OpenAI-compatible connections.
 
-GroqCloud is the original provider for the HASI prototype. `GROQ_API_KEY` is a
-Vercel Secret for project `hasi`, team `metaneutrons`, in Production and Preview.
-`GWDG_API_KEY` is likewise configured for both environments. Credential
-presence and successful inference are separate states; neither approves a
-provider for protected HsH information. This status does not claim a live
-inference test or institutional approval.
+GroqCloud is the original provider for the HASI prototype. `GROQ_API_KEY` and
+`GWDG_API_KEY` are held in encrypted fnox custody and hidden Coolify runtime
+variables after the 2026-10-18 self-hosted cutover. Vercel and Neon are retired.
+[The cutover record](../verification/2026-10-18/selfhost-cutover.md) records
+bounded successful synthetic inference checks; credential presence and successful
+inference remain separate states. Neither establishes protected-data approval,
+which belongs to [final institutional M8](../plans/hasi-mvp.md#institutional-acceptance-m8).
+The requested DeepInfra connection is tracked in #81 and is not configured by
+this documentation update.
 
 The [version-1 registry configuration](model-provider-configuration.md) now replaces
 the fixed runtime profile array. Standard Groq, GWDG, OpenAI and Anthropic
@@ -98,42 +101,29 @@ would require a separate trust and credential-storage decision.
 5. The administration UI exposes connection/model configuration, readiness,
    credential-reference names and sanitized check results. It never returns an
    existing secret value, suffix or credential-derived fingerprint. For the
-   prototype, operators enter and rotate secrets through Vercel, not HASI forms.
+   prototype, operators enter secrets through fnox hidden input and provision
+   hidden Coolify runtime variables; public mock HASI forms cannot write them.
 6. Model switching changes the selected profile, not the user's authority or
    credential permissions. A missing/revoked key must not trigger an unapproved
    provider fallback. Approved fallbacks recheck context eligibility and budgets.
 
 ## Deployment and rotation
 
-Store Vercel credentials as **Secret** variables scoped to the required
-environments. Provision future providers explicitly; do not discover or enable
-providers merely because a variable happens to be present. Use separate provider
-keys/projects for institutional production and test environments. The initial
-public prototype may use the provisioned demo credential in both scopes.
+Store workstation copies with `fnox set NAME -g -p age` using hidden input,
+then provision only the intended hidden Coolify runtime variables through a
+trusted operator process. Never pass values in arguments, build inputs or chat.
+Use `fnox exec -- <trusted command>` to supply credentials to an authorized
+process without displaying them. `GROQ_API_KEY` and `GWDG_API_KEY` are current;
+`DEEPINFRA_API_KEY` is the requested future credential name and its presence is
+unverified. Do not enable a connection merely because a variable exists.
 
-The established CLI workflow, with interactive secret entry, is:
-
-```sh
-vercel env add GROQ_API_KEY production,preview \
-  --type secret \
-  --project hasi \
-  --scope metaneutrons
-```
-
-Provision GWDG SAIA credentials the same way, using interactive secret entry:
-
-```sh
-vercel env add GWDG_API_KEY production,preview \
-  --type secret \
-  --project hasi \
-  --scope metaneutrons
-```
-
-Keep secret values out of command arguments and shell history. Local development
-uses an ignored environment file in the executing server application's directory
-or an injected process environment; `.env.example` contains placeholders only.
-Do not pull deployment secrets to a workstation merely to check configuration.
-Document each executing service's environment loader when implementing the router.
+Use distinct production and test keys when institutional integrations are
+provisioned. Keep separate provider accounts/projects and data-policy approvals.
+See [the self-hosted Compose runtime](../../deploy/coolify/compose.hasi.yml) and
+[cutover evidence](../verification/2026-10-18/selfhost-cutover.md). Local development
+uses an injected process environment or an ignored environment file;
+`.env.example` contains placeholders only. Do not retrieve values merely to
+inspect configuration. There is no current Vercel credential workflow.
 
 Environment changes apply to new deployments. Routine rotation provisions a new
 provider key, updates the secret, deploys and verifies it, then revokes the old
@@ -141,11 +131,12 @@ key and retires deployments that still depend on it. Revoke a compromised key
 immediately. Rotate `GWDG_API_KEY` at least every six months. Audit records contain connection ID, environment, operation, actor
 and time, never credential values. A rollback must account for revoked keys.
 
-The public prototype enforces shared regional Vercel WAF request limits,
-per-call input/output limits and a bounded client tool loop. The M2 candidate
-adds durable cross-instance reservations for a shared USD 1/day admission
-limit; its deployment bootstrap and runtime qualification remain separate
-gates. Estimated prices and conservative reservations are not provider invoice
+The public self-hosted prototype uses separate Traefik inference and timestamp
+request buckets, per-call input/output limits and a bounded tool loop. Vercel WAF
+is inactive outside Vercel. The durable cross-instance USD 1/day ledger is
+initialized and was preserved through the local PostgreSQL cutover; see
+[the migration record](../verification/2026-10-18/local-postgres-cutover.md).
+Estimated prices and conservative reservations are not provider invoice
 accounting. Provider-side spending quotas remain required for the institutional
 pilot. See [public deployment limits](public-demo.md) and
 [budget provisioning](model-budget.md). Selectable mock personas are not trusted

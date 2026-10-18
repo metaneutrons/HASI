@@ -19,8 +19,8 @@ describe("message clipboard content", () => {
   });
 
   it("includes source citations and navigable document links, not hidden source text", () => {
-    const text = chatMessageCopyText({ ...message, sources: [{ id: "svc-001", title: "WLAN", citationId: "demo:knowledge:service-it:001", sourceSystem: "service_it", language: "de", revision: 1, synthetic: true, text: "Hidden retrieval context" }] }, origin);
-    expect(text).toContain("WLAN\ndemo:knowledge:service-it:001\nhttps://hasi.example/sources/svc-001");
+    const text = chatMessageCopyText({ ...message, sources: [{ updatedAt: "2026-10-16T00:00:00Z", fetchedAt: "2026-10-16T00:00:00Z", authorityRevision: "a".repeat(64), corpusRevision: "b".repeat(64), dataClass: "synthetic_demo", images: [], id: "svc-001", title: "WLAN", citationId: "knowledge:service_it:svc-001:1", sourceSystem: "service_it", language: "de", revision: 1, synthetic: true, text: "Hidden retrieval context" }] }, origin);
+    expect(text).toContain("WLAN\nknowledge:service_it:svc-001:1\nhttps://hasi.example/sources/svc-001?revision=1");
     expect(text).not.toContain("Hidden retrieval context");
   });
 

@@ -1,0 +1,44 @@
+services:
+  service-it:
+    image: ${SERVICE_IT_IMAGE:-hasi-service-it-demo:local}
+    pull_policy: never
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    expose:
+      - "4110"
+    environment:
+      SERVICE_IT_DEMO_HOST: "0.0.0.0"
+      SERVICE_IT_DEMO_PORT: "4110"
+    networks:
+      - coolify
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.routers.service-it.rule=Host(`service-it.hasi.metaneutrons.cc`)
+      - traefik.http.routers.service-it.entrypoints=https
+      - traefik.http.routers.service-it.tls=true
+      - traefik.http.routers.service-it.tls.certresolver=hasi-dns
+      - traefik.http.routers.service-it.middlewares=service-it-campus-only@docker
+      - traefik.http.middlewares.service-it-campus-only.ipallowlist.sourcerange=141.71.0.0/16,2001:638:614::/48,127.0.0.1/32,::1/128,2.28.199.98/32,2a01:4f8:1c1a:adce::1/128,10.0.1.0/24,fdbc:1a9f:69f8::/64
+      - traefik.http.services.service-it.loadbalancer.server.port=4110
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4110/de/services/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 192M
+
+networks:
+  coolify:
+    name: coolify
+    external: true

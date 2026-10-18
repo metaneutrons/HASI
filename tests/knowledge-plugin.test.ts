@@ -14,10 +14,11 @@ afterEach(async () => {
 describe('knowledge plugin', () => {
   it('declares strict, bounded tools and returns full synthetic evidence over signed MCP', async () => {
     expect(knowledgeManifest.id).toBe('de.hsh.hasi.knowledge');
-    expect(knowledgeManifest.version).toBe('0.1.0');
+    expect(knowledgeManifest.version).toBe('0.2.0');
     expect(knowledgeManifest.tools.map((tool) => tool.name)).toEqual([
       'knowledge.search',
       'knowledge.get_document',
+      'knowledge.authority_fence',
     ]);
     for (const tool of knowledgeManifest.tools) {
       expect(tool.requiredPermissions).toEqual(['knowledge:read']);
@@ -32,7 +33,7 @@ describe('knowledge plugin', () => {
       limit: { type: 'integer', minimum: 1, maximum: 5, default: 5 },
     });
     expect(getDocument.inputSchema.properties).toMatchObject({
-      documentId: { type: 'string', pattern: '^(svc|int)-[0-9]{3}$' },
+      documentId: { type: 'string', pattern: '^(svc|int)-[A-Za-z0-9][A-Za-z0-9._~-]{0,127}$' },
     });
     const searchOutput = search.outputSchema.properties as {
       documents: { items: { additionalProperties: boolean } };
@@ -49,7 +50,7 @@ describe('knowledge plugin', () => {
     expect(content.documents).toHaveLength(1);
     expect(content.documents[0]).toMatchObject({
       id: 'svc-001',
-      citationId: 'demo:knowledge:service-it:001',
+      citationId: 'knowledge:service_it:svc-001:1',
       title: 'Demo: WLAN-Verbindung prüfen',
       sourceSystem: 'service_it',
       language: 'de',
@@ -58,7 +59,7 @@ describe('knowledge plugin', () => {
     });
     expect(content.documents[0]?.text).toContain('Morgenstern-Lab');
     expect(Object.keys(content.documents[0] ?? {}).sort()).toEqual([
-      'citationId', 'id', 'language', 'revision', 'sourceSystem', 'synthetic', 'text', 'title',
+      'authorityRevision', 'citationId', 'corpusRevision', 'dataClass', 'fetchedAt', 'id', 'images', 'language', 'revision', 'sourceSystem', 'synthetic', 'text', 'title', 'updatedAt',
     ]);
     expect(JSON.stringify(content)).not.toMatch(/evalQueries|expectedDocumentIds|conflict-group/);
 
@@ -105,6 +106,7 @@ describe('knowledge plugin', () => {
 
 const student: ActorContext = {
   subject: 'demo-student',
+  claims: { 'knowledge.demoAudience': 'student' },
   customerId: 'demo-student-customer',
   resourceIds: [],
   permissions: ['knowledge:read', 'knowledge:audience:student'],
@@ -112,6 +114,7 @@ const student: ActorContext = {
 
 const employee: ActorContext = {
   subject: 'demo-employee',
+  claims: { 'knowledge.demoAudience': 'employee' },
   customerId: 'demo-employee-customer',
   resourceIds: [],
   permissions: ['knowledge:read', 'knowledge:audience:employee'],
@@ -126,6 +129,7 @@ async function callAs(actor: ActorContext, tool: string, args: Record<string, un
     pluginVersion: knowledgeManifest.version,
     tool,
     args,
+    context: { installationId: knowledgeManifest.id, configurationRevision: 0, configuration: {} },
   }, privateKey);
   const response = await plugin.inject({
     method: 'POST',

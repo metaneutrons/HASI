@@ -1,12 +1,15 @@
-# Server-backed public demo on Vercel
+# Server-backed public demo
 
 Date: 2026-10-16. Repository: `metaneutrons/HASI`, public, GPL-3.0-only.
 Configured demonstration domain: `hasi.metaneutrons.cc`.
 
-The server-backed demo runtime is implemented in this branch, but no completed
-Preview or Production deployment qualification is recorded yet. The domain and
-configuration below describe the intended deployment contract; they do not
-confirm live behavior.
+Current runtime, updated 2026-10-18: Hetzner/Coolify with private PostgreSQL 18.6.
+Vercel and Neon are retired. See [hosting cutover](../verification/2026-10-18/selfhost-cutover.md),
+[database cutover](../verification/2026-10-18/local-postgres-cutover.md), and
+[restricted Service-IT HTML integration](../verification/2026-10-18/service-it-portal.md).
+The current service uses a preloaded source-built image; CI-qualified automatic
+main deployment remains open in #79. Technical M1–M7 may qualify with mocks;
+real institutional acceptance is final M8 #80.
 
 ## Runtime and data boundaries
 
@@ -14,9 +17,9 @@ confirm live behavior.
 plugin and synthetic anny HTTP service run as separate processes. Their state is
 in memory and resets when they restart.
 
-The Vercel demo uses the same core API, signed MCP invocation, anny plugin,
-AnnyClient and synthetic HTTP service. Vercel co-locates the Node.js entry
-points in one deployment. Same-origin HTTP requests cross the core API,
+The hosted demo uses the same core API, signed MCP invocation, anny plugin,
+AnnyClient and synthetic HTTP service. The Node.js container co-locates these
+entry points in one deployment. Same-origin HTTP requests cross the core API,
 Streamable HTTP MCP endpoint and synthetic anny API in both modes.
 
 ```mermaid
@@ -25,12 +28,12 @@ flowchart LR
     Core -->|signed MCP over HTTP| Plugin[anny plugin]
     Plugin --> Client[AnnyClient]
     Client -->|HTTP| Mock[Synthetic anny service]
-    Core -. sessions, proposals, registry, replay .-> DB[(Neon Postgres)]
+    Core -. sessions, proposals, registry, replay .-> DB[(Private PostgreSQL)]
     Mock -. bookings and availability .-> DB
 ```
 
 The demo runtime stores sessions, proposals, registry settings, invocation
-replay claims and synthetic anny state in Neon Postgres. Sessions, proposals,
+replay claims and synthetic anny state in private PostgreSQL. Sessions, proposals,
 registry settings and synthetic service state are scoped to a server-issued
 browser workspace; replay claims use single-use invocation IDs. The workspace
 cookie contains a random ID, expiry and server HMAC; it is `HttpOnly`,
@@ -137,26 +140,18 @@ See [prompt-cache measurement](../verification/2026-10-18/groq-prompt-cache.md).
 
 See [context measurement and workflow qualification](../verification/2026-10-18/groq-context-budget.md).
 
-The chat route uses Vercel Firewall rule `hasi-chat`, configured for 60
-inference requests per 600-second fixed window. It uses a server-owned shared
-rate-limit key and pins the WAF callback host to `hasi.metaneutrons.cc`.
-Timestamp batches use the same WAF rule with a separate server-derived
-workspace/account key (`hasi:timestamps:v1:<scope hash>`); they never consume
-the shared inference bucket. The endpoint accepts at most 16 bounded events
-and the same 60,000-byte request limit. It requires the current demo login and
-same-origin JSON requests. These are server receipt times, not proof of the
-truth or execution status of client-carried content.
-Preview's WAF check uses that public project callback. It does not use the
-Vercel automation bypass credential. Missing or failed limiter checks fail
-closed before inference. Local execution has no distributed WAF. The counter
-is regional, not an atomic worldwide token or currency budget. Input, output
-and request caps bound prototype throughput; provider quotas remain separate.
-The M2 candidate additionally reserves each provider attempt against a shared
+The HTTPS proxy enforces separate inference and timestamp request buckets.
+The Vercel WAF adapter is inactive in this self-hosted deployment. Timestamp
+batches accept at most sixteen bounded events and the same 60,000-byte request
+limit, require current demo login and same-origin JSON, and never establish the
+truth or execution status of client-carried content. Request limits are separate
+from atomic token/currency admission and provider quotas.
+The deployed budget service reserves each provider attempt against a shared
 PostgreSQL-backed USD 1/day admission policy, including retries and fallbacks.
 Deployed records require explicit operator bootstrap and missing state fails
 closed. GWDG rates temporarily use an approved Groq-Qwen estimate. These are
 conservative admission charges, not verified provider invoices or a provider-side
-hard cap. Deployment qualification remains open; see
+hard cap. Further technical budget qualification remains tracked in M2; see
 [budget policy and provisioning](model-budget.md).
 
 Diagnostics log only host-owned failure categories, HTTP status, allowlisted
@@ -166,7 +161,15 @@ credentials. Interrupted generations receive a neutral history entry before
 the next user message. Completed tool results remain visible; no action resumes
 automatically.
 
-## Vercel configuration
+## Historical Vercel configuration — retired
+
+The following is retained historical configuration, not an active deployment
+or rollback procedure. The Vercel project was deleted on 2026-10-18. Current
+DNS points to the HASI server and Traefik handles TLS.
+
+<details>
+<summary>Former Vercel deployment contract</summary>
+
 
 - Vercel project `hasi`, team `metaneutrons`, root directory `apps/web`.
 - Node.js 24.x, `fra1`, and version-pinned pnpm 12.11.2 install/build commands
@@ -201,6 +204,10 @@ automatically.
 - The site advertises `noindex` and disallows crawlers because its campus
   information and bookings are synthetic.
 
+</details>
+
+## Current local mode and rollback
+
 For local server-backed demo mode, configure `NEXT_PUBLIC_HASI_PUBLIC_DEMO=1`,
 `HASI_DEMO_MODE=1`, `HASI_DEMO_ORIGIN=http://127.0.0.1:3001`, `DATABASE_URL` and
 `HASI_DEMO_SECRET` in `apps/web/.env.local`, then run
@@ -211,7 +218,8 @@ start the multi-process in-memory reference stack.
 The [server-demo parity criteria](../plans/server-demo-parity.md) are supported
 by the dated verification report. Institutional rollout remains separate work.
 
-Rollback promotes a previously verified deployment. Keep the synthetic store
+Rollback restores a previously verified local image/configuration under Coolify;
+it cannot restore the deleted Vercel or Neon resources. Keep the synthetic store
 and namespace intact; never import browser-supplied booking state. A rollback
 to the former browser simulator cannot display the new server-held bookings.
 No real institutional data or external business action needs migration.

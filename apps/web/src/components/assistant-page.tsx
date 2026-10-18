@@ -9,7 +9,7 @@ import type { Booking, Resource, TimeInterval, User } from "@/lib/types";
 import { useChatWorkspaceStore } from "@/components/chat-sidebar-context";
 import { useSession } from "@/components/session-provider";
 import { availabilityInputForSlot, createAnnyChatTools, type AnnyChatToolResult } from "@/lib/anny-chat-tools";
-import { searchKnowledge, knowledgeDocumentHref, knowledgeSourceLabel } from "@/lib/knowledge";
+import { knowledgeModelDocuments, searchKnowledge, knowledgeDocumentHref, knowledgeSourceLabel } from "@/lib/knowledge";
 import { chatProfileIdSchema, chatToolSchemas, isChatToolName, modelProfilesResponseSchema, modelReplySchema, type ChatToolCallName, type ChatToolName, type MessageTimestamp, type ModelProfile, type ModelProfileId, type WireMessage } from "@/lib/chat-contract";
 import { createChatMessageClock } from "@/lib/chat-message-clock";
 import { appendChatText, trimChatHistory } from "@/lib/chat-history";
@@ -112,7 +112,7 @@ function ChatWorkspace({ user }: { user: User }) {
     <dialog className="chat-history-dialog" ref={drawer} id="chat-conversations-dialog" aria-label="Unterhaltungen" onClick={(event) => { if (event.target === event.currentTarget) drawer.current?.close(); }}><div className="chat-history-dialog-body"><ChatSessionList view={view} store={store} close={() => drawer.current?.close()} /></div></dialog>
     <div className="chat-conversations">
       {view.notice && <div className="chat-storage-notice" role="status"><span>{view.notice}</span><button className="icon-button" type="button" aria-label="Hinweis schließen" onClick={() => { store.dismissNotice(); }}><X size={16} /></button></div>}
-      {!configuration.loading && view.workspace.sessions.map((session) => <Conversation key={session.id} sessionId={session.id} ownerId={user.id} initial={session.snapshot} name={user.displayName.split(/\s|·/)[0] ?? ""} active={session.id === view.workspace.activeId} configuration={configuration} onSnapshot={(id, snapshot, busy) => { store.updateConversation(id, snapshot, busy); }} onDraft={(id, input) => { store.updateDraft(id, input); }} onNewChat={newChat} newChatDisabled={!canStartNewChat(view)} onShowHistory={() => drawer.current?.showModal()} />)}
+      {!configuration.loading && view.workspace.sessions.map((session) => <Conversation key={`${session.id}:${String(view.accessEpoch)}`} sessionId={session.id} ownerId={user.id} initial={session.snapshot} name={user.displayName.split(/\s|·/)[0] ?? ""} active={session.id === view.workspace.activeId} configuration={configuration} onSnapshot={(id, snapshot, busy) => { store.updateConversation(id, snapshot, busy); }} onDraft={(id, input) => { store.updateDraft(id, input); }} onNewChat={newChat} newChatDisabled={!canStartNewChat(view)} onShowHistory={() => drawer.current?.showModal()} />)}
     </div>
   </section>;
 }
@@ -347,7 +347,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         await stampMessages();
         const response = await fetch("/api/chat", {
           method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ profileId, ...(routingToken.current ? { routingToken: routingToken.current } : {}), messages: history.current }), signal: controller.signal,
+          body: JSON.stringify({ profileId, conversationId: sessionId, ...(routingToken.current ? { routingToken: routingToken.current } : {}), messages: history.current }), signal: controller.signal,
         });
         const payload: unknown = await response.json().catch(() => ({ error: "Der Chat-Dienst ist gerade nicht erreichbar. Bitte versuche es später erneut." }));
         if (!response.ok) {
@@ -361,11 +361,13 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         const actualLabel = `${modelProviderName(reply.profile.provider)} · ${reply.profile.label}`;
         setFallbackLabel(reply.profile.id !== profileId ? actualLabel : null);
         if (reply.routingToken) routingToken.current = reply.routingToken;
+        if (reply.contextNotice) add({ role: "assistant", text: reply.contextNotice, tool: "Quellenrechte" });
         history.current.push(reply.message);
         if (reply.message.content.trim()) add({
           role: "assistant",
           text: reply.message.content,
           model: actualLabel,
+          ...(reply.message.evidence ? { evidence: reply.message.evidence } : {}),
           ...(reply.message.timestamp === undefined ? {} : { timestamp: reply.message.timestamp }),
         }, reply.message.id);
         if (!reply.message.toolCalls?.length) return;
@@ -400,15 +402,15 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                 add({ role: "assistant", text: compactPluginToolResult(output), tool: `Plugin · ${pluginDescriptor.title}`, model: actualLabel });
               }
             } else if (call.name === "knowledge_search") {
-              setActivity("Wissensdienst · Demoquellen suchen");
+              setActivity("Wissensdienst · Quellen suchen");
               const args = chatToolSchemas.knowledge_search.parse(call.arguments);
               const result = await searchKnowledge(requestForChat, {
                 query: args.query,
                 ...(args.sourceSystem === undefined ? {} : { sourceSystem: args.sourceSystem }),
               });
-              output = { ...result };
+              output = { ...result, documents: knowledgeModelDocuments(result.documents) };
               successfulTools.push("knowledge_search");
-              add({ role: "assistant", text: result.documents.length ? "Gefundene Demoquellen. Die folgende Antwort wertet diese Beispiele aus." : "Keine passenden, für dein Testkonto freigegebenen Demoquellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents, model: actualLabel });
+              add({ role: "assistant", text: result.documents.length ? result.documents.every(document => document.synthetic) ? "Gefundene Demoquellen. Die folgende Antwort wertet diese Beispiele aus." : "Gefundene freigegebene Quellen. Die Antwort nennt die verwendeten Dokumentfassungen." : "Keine passenden, aktuell freigegebenen Quellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents, ...(result.contextId ? { sourceContextId: result.contextId } : {}), model: actualLabel });
             } else {
               assertRequestedRoomTime(call.name, call.arguments, roomIntent.current);
               const result = await tools().run(call.name, call.arguments);
@@ -570,7 +572,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         setRoomContext(false);
       } else if (intent === "knowledge") {
         setRoomContext(false);
-        setActivity("Wissensdienst · Demoquellen suchen");
+        setActivity("Wissensdienst · Quellen suchen");
         const result = await searchKnowledge(requestForChat, { query: trimmed });
         add({ role: "assistant", text: result.documents.length ? "Diese synthetischen Dokumente passen zu deiner Frage. In der Dialog-Demo kannst du die Quellen lesen; für eine formulierte Antwort wähle ein Sprachmodell." : "Keine passenden, für dein Testkonto freigegebenen Demoquellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents });
       } else if (intent === "rooms") {
@@ -880,7 +882,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                       availabilityChecked: message.rooms.every(room => room.checked),
                     }}
                   />}
-                  {message.sources && message.sources.length > 0 && <div className="chat-source-list" aria-label="Gefundene Demoquellen">{message.sources.map((source) => <Link className="chat-source-card" href={knowledgeDocumentHref(source.id)} target="_blank" rel="noreferrer" key={source.id}><BookOpen size={18} aria-hidden="true" /><span><small>{knowledgeSourceLabel(source.sourceSystem)} · Fassung {source.revision}</small><strong>{source.title}</strong><code>{source.citationId}</code></span><ArrowRight size={16} aria-hidden="true" /></Link>)}</div>}
+                  {message.sources && message.sources.length > 0 && <div className="chat-source-list" aria-label="Gefundene Quellen">{message.sources.map((source) => <Link className="chat-source-card" href={knowledgeDocumentHref(source.id, source.revision)} target="_blank" rel="noreferrer" key={source.id}><BookOpen size={18} aria-hidden="true" /><span><small>{knowledgeSourceLabel(source.sourceSystem, source.synthetic)} · Fassung {source.revision}</small><strong>{source.title}</strong><code>{source.citationId}</code></span><ArrowRight size={16} aria-hidden="true" /></Link>)}</div>}
                   {pluginProposal && pluginProposalView && <div className="chat-tool-card chat-proposal">
                     <span className="chat-proposal-label">PLUGINAKTION PRÜFEN</span>
                     <h2>{pluginProposalView.actionTitle}</h2>

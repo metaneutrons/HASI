@@ -8,7 +8,9 @@ import { MockIdentityProvider, personas, type Persona, type IdentityProvider } f
 import { isAllowedOidcReturnTo, OidcIdentityProvider } from './oidc.js';
 import { PluginSettingsError } from './plugin-settings.js';
 import { actionPreviewSchema, actionResolutionSchema, type ActionPolicy, type ActionPreview, type ActionResolution } from './action-policy.js';
+import type { KnowledgeContextStore } from './knowledge-context.js';
 import { PluginAccountError } from './plugin-accounts.js';
+import { SERVICE_IT_DEMO_ORIGIN } from '@hasi/demo-fixtures/knowledge-catalog';
 
 export { PluginRegistry, compatibleUpdate, RequestError } from './registry.js';
 export { OidcIdentityProvider, OidcAuthenticationError } from './oidc.js';
@@ -17,6 +19,10 @@ export { PluginAccountService, PluginAccountError, type PluginAccountAdapter, ty
 export { createProductionRuntime, ProductionAuthorityDirectory, stableOidcSubject, type ProductionRuntimeOptions } from './production-runtime.js';
 export { EnvironmentPluginSecretCustody, type PluginSecretCustody } from './plugin-secrets.js';
 export { createReviewedPlainMcpAdapter, type ReviewedPlainMcpOptions } from './plain-mcp-adapter.js';
+export { createKnowledgeEmbeddingClient } from './knowledge-embeddings.js';
+export { KnowledgeIngestionWorker } from './knowledge-worker.js';
+export { KnowledgeContextStore } from './knowledge-context.js';
+export { createRegistryKnowledgeContexts } from './knowledge-context-runtime.js';
 export { PluginRouteController } from './plugin-route-controller.js';
 export { PluginDeploymentBinding } from './plugin-deployment-binding.js';
 export { createPluginDeploymentGateway } from './plugin-deployment-proxy.js';
@@ -35,10 +41,15 @@ const publicProposal = (proposal: Proposal) => ({ ...(proposal.preview ? { previ
 export interface ApiOptions {
   mode: 'development' | 'test' | 'public-demo' | 'production'; registry: PluginRegistry; origin?: string;
   identity?: IdentityProvider; store?: JsonStore; pluginCatalog?: readonly ApprovedPluginSource[]; allowedHosts?: readonly string[];
+  knowledgeContexts?: KnowledgeContextStore;
+  knowledgeOriginalOrigins?: Readonly<Record<'service_it' | 'intranet', string>>;
+  knowledgeDemoServiceItOrigin?: string;
   secureCookies?: boolean; sessionCookieName?: string; actionPolicies?: Readonly<Record<string, ActionPolicy>>;
 }
 
 export async function createApi(options: ApiOptions) {
+  if (options.knowledgeDemoServiceItOrigin !== undefined && (options.mode === 'production'
+    || options.knowledgeDemoServiceItOrigin !== SERVICE_IT_DEMO_ORIGIN)) throw new Error('Unapproved synthetic source origin.');
   const app = Fastify({ logger: false, bodyLimit: 65536 });
   options.registry.configureCatalog(options.pluginCatalog ?? []);
   await options.registry.restoreConnections();
@@ -216,14 +227,57 @@ export async function createApi(options: ApiOptions) {
   app.post('/api/admin/plugins/:id/check-update', async request => { await requireAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); return options.registry.checkUpdate(id); });
   app.post('/api/admin/plugins/:id/activate-update', async request => { await requireAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); await options.registry.activateUpdate(id); return { ok: true }; });
   app.get('/api/resources', async request => { const user = await requireUser(request.cookies[cookieName]); return options.registry.invoke(ANNY, 'anny.search_resources', {}, user.actor); });
+  const readKnowledge = async (user: Persona, id: string, revision?: number) => {
+    try {
+      const result = await options.registry.invoke('de.hsh.hasi.knowledge', 'knowledge.get_document', { documentId: id, ...(revision !== undefined ? { revision } : {}) }, user.actor, false, 'app');
+      const document = z.record(z.string(), z.unknown()).parse(result.document);
+      if (revision !== undefined && document.revision !== revision) throw new Error('Changed source revision');
+      return { document };
+    } catch { throw new RequestError(404, 'Dokument nicht verfügbar oder nicht freigegeben.'); }
+  };
+  const documentId = z.string().regex(/^(svc|int)-[A-Za-z0-9][A-Za-z0-9._~-]{0,127}$/);
+  const documentQuery = z.strictObject({ revision: z.coerce.number().int().positive().optional() });
   app.get('/api/knowledge/documents/:id', async request => {
     const user = await requireUser(request.cookies[cookieName]);
-    const { id } = z.strictObject({ id: z.string().regex(/^(svc|int)-[0-9]{3}$/) }).parse(request.params);
-    try { return await options.registry.invoke('de.hsh.hasi.knowledge', 'knowledge.get_document', { documentId: id }, user.actor); }
-    catch (error) {
-      if (error instanceof RequestError && error.status === 409) throw error;
-      throw new RequestError(404, 'Dokument nicht verfügbar oder nicht freigegeben.');
+    const { id } = z.strictObject({ id: documentId }).parse(request.params);
+    const { revision } = documentQuery.parse(request.query);
+    return readKnowledge(user, id, revision);
+  });
+  app.get('/api/knowledge/documents/:id/original', async (request, reply) => {
+    const user = await requireUser(request.cookies[cookieName]);
+    const { id } = z.strictObject({ id: documentId }).parse(request.params);
+    const { revision } = documentQuery.parse(request.query);
+    const { document } = await readKnowledge(user, id, revision);
+    if (document.synthetic !== false || typeof document.canonicalUrl !== 'string' || (document.sourceSystem !== 'service_it' && document.sourceSystem !== 'intranet')) throw new RequestError(404, 'Originalquelle nicht verfügbar.');
+    const origins = options.knowledgeOriginalOrigins ?? { service_it: 'https://service.it.hs-hannover.de', intranet: 'https://intranet.hs-hannover.de' };
+    const canonical = new URL(document.canonicalUrl);
+    if (canonical.protocol !== 'https:' || canonical.username || canonical.password || canonical.search || canonical.origin !== origins[document.sourceSystem]) throw new RequestError(404, 'Originalquelle nicht verfügbar.');
+    return reply.redirect(canonical.href);
+  });
+  app.get('/api/knowledge/documents/:id/demo-source', async (request, reply) => {
+    const user = await requireUser(request.cookies[cookieName]);
+    const { id } = z.strictObject({ id: documentId }).parse(request.params);
+    const { revision } = documentQuery.parse(request.query);
+    if (!options.knowledgeDemoServiceItOrigin) throw new RequestError(404, 'Demoquelle nicht verfügbar.');
+    const { document } = await readKnowledge(user, id, revision);
+    const acquisition = document.acquisition as Record<string, unknown> | undefined;
+    if (document.synthetic !== true || document.sourceSystem !== 'service_it' || acquisition?.adapter !== 'web') {
+      throw new RequestError(404, 'Demoquelle nicht verfügbar.');
     }
+    return reply.redirect(`${options.knowledgeDemoServiceItOrigin}/de/faqs/${encodeURIComponent(id)}/`);
+  });
+  app.post('/api/knowledge/contexts/resolve', async request => {
+    const user = await requireUser(request.cookies[cookieName]);
+    const { contextIds } = z.strictObject({ contextIds: z.array(z.uuid()).max(32).refine(ids => new Set(ids).size === ids.length) }).parse(request.body);
+    const contexts = [];
+    for (const contextId of contextIds) {
+      try {
+        const binding = await options.registry.binding('de.hsh.hasi.knowledge');
+        const result = await options.knowledgeContexts?.resolve(user.actor.subject, contextId, binding);
+        contexts.push({ contextId, ...(result ?? { status: 'unavailable' as const }) });
+      } catch { contexts.push({ contextId, status: 'unavailable' as const }); }
+    }
+    return { contexts };
   });
   app.get('/api/bookings', async request => { const user = await requireUser(request.cookies[cookieName]); return options.registry.invoke(ANNY, 'anny.list_my_bookings', {}, user.actor); });
   app.post('/api/availability', async request => {
@@ -250,7 +304,17 @@ export async function createApi(options: ApiOptions) {
     const tool = options.registry.list().find(plugin => plugin.id === body.pluginId)?.tools.find(candidate => candidate.name === body.name);
     if (body.source === 'app' && tool?.effect !== 'read') throw new RequestError(403, 'Die Ansicht darf nur freigegebene Leseaktionen ausführen.');
     if (tool?.effect === 'prepare') return makeProposal(user, body.pluginId, body.name, body.arguments);
-    return options.registry.invoke(body.pluginId, body.name, body.arguments, user.actor, false, body.source ?? 'model');
+    const result = await options.registry.invoke(body.pluginId, body.name, body.arguments, user.actor, false, body.source ?? 'model');
+    if (body.pluginId === 'de.hsh.hasi.knowledge' && body.name === 'knowledge.search' && options.knowledgeContexts) {
+      const documents = z.array(z.record(z.string(), z.unknown())).max(5).parse(result.documents);
+      const binding = await options.registry.binding(body.pluginId);
+      const { contextId } = await options.knowledgeContexts.issue(user.actor.subject, binding, documents);
+      const verified = await options.knowledgeContexts.resolve(user.actor.subject, contextId, binding);
+      if (verified.status !== 'valid') throw new RequestError(409, 'Die Quellenrechte oder Fassungen wurden geändert. Bitte erneut suchen.');
+      return { documents: verified.documents, contextId };
+    }
+    if (body.pluginId === 'de.hsh.hasi.knowledge') return Object.fromEntries(Object.entries(result).filter(([key]) => key !== '_hasi'));
+    return result;
   });
   app.get('/api/proposals/:id', async request => {
     const user = await requireUser(request.cookies[cookieName]);
@@ -347,3 +411,5 @@ export async function createApi(options: ApiOptions) {
 export function createRegistry(privateKey: KeyObject): PluginRegistry { return new PluginRegistry(privateKey); }
 
 export { personas, type Persona, type IdentityProvider } from './identity.js';
+
+export { createContentHttpClient, type ContentHttpClient, type ContentHttpOptions } from './content-transport.js';

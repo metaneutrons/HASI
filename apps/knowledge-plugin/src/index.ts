@@ -1,11 +1,16 @@
 import type { KeyObject } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { createPluginServer, type ActorContext } from '@hasi/plugin-sdk';
-import knowledgeSeed from '@hasi/demo-fixtures/knowledge-demo-v1.json' with { type: 'json' };
-import { knowledgeManifest } from './manifest.js';
+import { digest, type ActorContext } from '@hasi/plugin-sdk';
+import { createInstitutionalKnowledgePlugin } from './institutional-plugin.js';
+import type { KnowledgeDocumentV2 } from './institutional-contracts.js';
+import { createDemoContentAcquirer, type DemoAcquiredBody, type DemoContentCapability } from './demo-content.js';
+import { knowledgeDocuments, knowledgeCreatedAt } from '@hasi/demo-fixtures/knowledge-catalog';
 
 export { knowledgeManifest } from './manifest.js';
+export { createInstitutionalKnowledgePlugin, institutionalKnowledgeManifest } from './institutional-plugin.js';
+export { InstitutionalKnowledgeRepository } from './institutional-repository.js';
+export * from './institutional-contracts.js';
 
 type SourceSystem = 'service_it' | 'intranet';
 type Audience = 'student' | 'employee' | 'admin';
@@ -23,22 +28,13 @@ interface KnowledgeDocument {
   citationId: string;
 }
 
-interface KnowledgeDocumentResult {
-  id: string;
-  citationId: string;
-  title: string;
-  sourceSystem: SourceSystem;
-  language: 'de' | 'en';
-  revision: number;
-  synthetic: true;
-  text: string;
-}
-
 export interface KnowledgePluginOptions {
   publicKey: KeyObject;
   serviceToken: string;
   allowedHosts?: string[];
   consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>;
+  /** Explicit host-owned transport capability for the synthetic ServiceIT demo only. */
+  demoContent?: DemoContentCapability;
 }
 
 const searchArguments = z.strictObject({
@@ -47,16 +43,13 @@ const searchArguments = z.strictObject({
   limit: z.number().int().min(1).max(5).optional(),
 });
 const getDocumentArguments = z.strictObject({
-  documentId: z.string().regex(/^(svc|int)-[0-9]{3}$/),
+  documentId: z.string().regex(/^(svc|int)-[A-Za-z0-9][A-Za-z0-9._~-]{0,127}$/),
+  revision: z.number().int().positive().optional(),
 });
 
-const documents = (knowledgeSeed as { documents: KnowledgeDocument[] }).documents;
-// These fixture labels only filter synthetic examples; real authorization belongs to the host.
-const audiencePermissions: Record<Audience, string> = {
-  student: 'knowledge:audience:student',
-  employee: 'knowledge:audience:employee',
-  admin: 'knowledge:audience:admin',
-};
+const documents: readonly KnowledgeDocument[] = knowledgeDocuments;
+const corpusRevision = digest(documents);
+const snapshotTime = `${knowledgeCreatedAt}T00:00:00Z`;
 
 const stopWords = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'can', 'for', 'from', 'how', 'in', 'is',
@@ -68,59 +61,71 @@ const stopWords = new Set([
   'synthetisch',
 ]);
 
+/** Demo fixtures use the current MCP contract; only the source adapter differs. */
 export function createKnowledgePlugin(options: KnowledgePluginOptions): FastifyInstance {
-  const manifest = knowledgeManifest;
-  return createPluginServer({
-    manifest,
-    publicKey: options.publicKey,
-    serviceToken: options.serviceToken,
-    ...(options.allowedHosts ? { allowedHosts: options.allowedHosts } : {}),
-    ...(options.consumeInvocation ? { consumeInvocation: options.consumeInvocation } : {}),
-    handlers: {
-      'knowledge.search': (rawArgs, actor) => {
+  const { demoContent: demoContentCapability, ...pluginOptions } = options;
+  const demoContent = demoContentCapability ? createDemoContentAcquirer(demoContentCapability) : undefined;
+  return createInstitutionalKnowledgePlugin({
+    ...pluginOptions,
+    repository: {
+      search: async (actor, rawArgs) => {
         const args = searchArguments.parse(rawArgs);
-        const visible = visibleDocuments(actor).filter((document) =>
-          args.sourceSystem === undefined || document.sourceSystem === args.sourceSystem,
-        );
-        const queryTokens = tokenize(args.query).filter((token) => !stopWords.has(token));
+        const visible = visibleDocuments(actor).filter(document =>
+          args.sourceSystem === undefined || document.sourceSystem === args.sourceSystem);
+        const queryTokens = tokenize(args.query).filter(token => !stopWords.has(token));
         const ranked = visible
           .map((document, index) => ({ document, index, score: scoreDocument(document, queryTokens, args.query) }))
-          .filter((candidate) => candidate.score > 0)
+          .filter(candidate => candidate.score > 0)
           .sort((left, right) => right.score - left.score || left.index - right.index)
           .slice(0, args.limit ?? 5);
-        return Promise.resolve({ documents: ranked.map(({ document }) => toResult(document)) });
+        const acquired = await acquireRankedServiceIt(ranked.map(({ document }) => document), demoContent);
+        return { documents: ranked.map(({ document }) => toResult(document, actor, acquired.get(document.id))) };
       },
-      'knowledge.get_document': (rawArgs, actor) => {
+      getDocument: async (actor, rawArgs) => {
         const args = getDocumentArguments.parse(rawArgs);
-        const document = visibleDocuments(actor).find((candidate) => candidate.id === args.documentId);
-        if (!document) return Promise.reject(new Error('Document not found.'));
-        return Promise.resolve({ document: toResult(document) });
+        const document = visibleDocuments(actor).find(candidate => candidate.id === args.documentId
+          && (args.revision === undefined || candidate.revision === args.revision));
+        if (!document) throw new Error('Document unavailable.');
+        const acquired = document.sourceSystem === 'service_it' && demoContent
+          ? await demoContent.read(document.id) : undefined;
+        return { document: toResult(document, actor, acquired) };
       },
+      authorityFence: actor => Promise.resolve(digest({ corpusRevision, authority: authorityRevision(actor) })),
     },
   });
 }
 
 function visibleDocuments(actor: ActorContext): KnowledgeDocument[] {
-  const permissions = new Set(actor.permissions);
-  const audiences = (Object.keys(audiencePermissions) as Audience[]).filter((audience) =>
-    permissions.has(audiencePermissions[audience]),
-  );
-  return documents.filter((document) =>
-    document.demoAudience.some((audience) => audiences.includes(audience)),
-  );
+  if (!actor.permissions.includes('knowledge:read')) return [];
+  const audience = actor.claims?.['knowledge.demoAudience'];
+  return documents.filter(document => typeof audience === 'string'
+    && document.demoAudience.includes(audience as Audience));
 }
 
-function toResult(document: KnowledgeDocument): KnowledgeDocumentResult {
+async function acquireRankedServiceIt(documents: readonly KnowledgeDocument[], acquirer: ReturnType<typeof createDemoContentAcquirer> | undefined) {
+  const acquired = new Map<string, DemoAcquiredBody>();
+  if (!acquirer) return acquired;
+  const serviceDocuments = documents.filter(document => document.sourceSystem === 'service_it');
+  const bodies = await Promise.all(serviceDocuments.map(async document => [document.id, await acquirer.read(document.id)] as const));
+  for (const [id, body] of bodies) acquired.set(id, body);
+  return acquired;
+}
+
+function authorityRevision(actor: ActorContext) {
+  return digest({ subject: actor.subject, audience: actor.claims?.['knowledge.demoAudience'] ?? null,
+    allowed: actor.permissions.includes('knowledge:read') });
+}
+
+function toResult(document: KnowledgeDocument, actor: ActorContext, acquired?: DemoAcquiredBody): KnowledgeDocumentV2 {
   if (!document.synthetic) throw new Error('Document is not synthetic.');
   return {
-    id: document.id,
-    citationId: document.citationId,
-    title: document.title,
-    sourceSystem: document.sourceSystem,
-    language: document.language,
-    revision: document.revision,
-    synthetic: true,
-    text: document.text,
+    id: document.id, citationId: `knowledge:${document.sourceSystem}:${document.id}:${String(document.revision)}`,
+    title: document.title, sourceSystem: document.sourceSystem, language: document.language,
+    revision: document.revision, synthetic: true, text: acquired?.text ?? document.text,
+    updatedAt: snapshotTime, fetchedAt: acquired?.acquiredAt ?? snapshotTime,
+    ...(acquired ? { acquisition: { adapter: 'web', sourceRevision: acquired.sourceRevision } } : {}),
+    authorityRevision: authorityRevision(actor),
+    corpusRevision, dataClass: 'synthetic_demo', images: [],
   };
 }
 
@@ -158,7 +163,8 @@ function fieldScore(fieldTokens: string[], queryToken: string, exact: number, pr
   let score = 0;
   for (const fieldToken of fieldTokens) {
     if (fieldToken === queryToken) score = Math.max(score, exact);
-    else if (fieldToken.startsWith(queryToken) || queryToken.startsWith(fieldToken)) score = Math.max(score, prefix);
+    else if (queryToken.length >= 3 && fieldToken.length >= 3
+      && (fieldToken.startsWith(queryToken) || queryToken.startsWith(fieldToken))) score = Math.max(score, prefix);
   }
   return score;
 }
@@ -174,3 +180,9 @@ function normalize(value: string): string {
     .toLocaleLowerCase('de-DE')
     .replace(/ß/g, 'ss');
 }
+
+export * from './content/contracts.js';
+export * from './content/adapters.js';
+export * from './content/acquisition.js';
+export { createDemoContentAcquirer, SERVICE_IT_DEMO_ORIGIN } from './demo-content.js';
+export type { DemoAcquiredBody, DemoContentAcquirer, DemoContentCapability } from './demo-content.js';

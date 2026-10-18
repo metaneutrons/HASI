@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { MemoryJsonStore, ModelBudgetLedger, PostgresJsonStore, type JsonStore } from "@hasi/state";
+import { ASSISTANT_BUDGET_NAMESPACE, ASSISTANT_BUDGET_POLICY, MemoryJsonStore, ModelBudgetLedger, PostgresJsonStore, type JsonStore } from "@hasi/state";
 import { z } from "zod";
 import { loadModelConfiguration, resolveModelConnection, type ModelConfiguration } from "./model-config";
 import type { ModelBudgetAdmission } from "./model-router";
@@ -47,11 +47,7 @@ export function modelPrice(profileId: string, configuration: ModelConfiguration,
 /** Fixed shared scope across users, workspaces, deployments, retries and fallbacks. */
 export function createModelBudget(store: JsonStore, prices: readonly ModelPrice[], requireExistingState: boolean, now?: () => number) {
   return new ModelBudgetLedger(store, {
-    scope: "hasi-demo:daily:v1",
-    windowMs: 86_400_000,
-    inputTokenLimit: 1_250_000,
-    outputTokenLimit: 250_000,
-    microUsdLimit: 1_000_000,
+    ...ASSISTANT_BUDGET_POLICY,
     // Admission deliberately charges the highest approved rates. This is a
     // conservative spending bound, not a provider invoice/cost measurement.
     inputMicroUsdPerMillion: Math.max(...prices.map(price => price.inputMicroUsdPerMillion)),
@@ -94,7 +90,7 @@ async function initializeRuntimeBudget(requireDurable = false): Promise<ModelBud
   let postgres: PostgresJsonStore | undefined;
   if (deployed || process.env.DATABASE_URL) {
     if (!process.env.DATABASE_URL?.trim()) throw new Error("Budget database configuration is missing.");
-    postgres = new PostgresJsonStore("model-budgets:shared:v1", { poolConfig: { connectionString: process.env.DATABASE_URL, max: 2, connectionTimeoutMillis: 5000, idleTimeoutMillis: 20000, allowExitOnIdle: true } });
+    postgres = new PostgresJsonStore(ASSISTANT_BUDGET_NAMESPACE, { poolConfig: { connectionString: process.env.DATABASE_URL, max: 2, connectionTimeoutMillis: 5000, idleTimeoutMillis: 20000, allowExitOnIdle: true } });
     try { await postgres.initialize(); } catch { await postgres.close(); throw new Error("Budget database unavailable."); }
     store = postgres;
   } else {

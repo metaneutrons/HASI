@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
           "/*": [
             "../../fixtures/anny-hsh-rooms-v1.json",
             "../../fixtures/knowledge-demo-v1.json",
+            "../../fixtures/service-it-synthetic-v1.json",
           ],
         },
       }

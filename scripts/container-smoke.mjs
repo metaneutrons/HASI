@@ -3,7 +3,7 @@
 const DEFAULT_BASE_URL = "http://127.0.0.1:3000";
 const REQUEST_TIMEOUT_MS = 8_000;
 const MAX_RESPONSE_BYTES = 1_048_576;
-const MAX_REQUESTS = 40;
+const MAX_REQUESTS = 32;
 const KNOWLEDGE_PLUGIN_ID = "de.hsh.hasi.knowledge";
 
 function fail(message) {
@@ -105,6 +105,34 @@ function jsonRequest(label, pathname, body, status = 200, options = {}) {
   return request(label, pathname, { method: "POST", body, status, ...options });
 }
 
+async function consentDemoPluginAccounts(label) {
+  const result = await request(`${label} plugin accounts`, "/api/plugin-accounts");
+  const accounts = result.data?.accounts;
+  assert(Array.isArray(accounts), `${label} plugin accounts: expected an accounts list.`);
+
+  for (const account of accounts.filter((item) => item?.status !== "linked")) {
+    assert(typeof account.installationId === "string" && account.installationId.length > 0, `${label} plugin account: expected an installation ID.`);
+    const path = `/api/plugin-accounts/${encodeURIComponent(account.installationId)}`;
+    const authorization = await jsonRequest(`${label} demo authorization`, `${path}/authorization`, {
+      operation: "consent",
+      returnTo: "/",
+    });
+    assert(typeof authorization.data?.authorizationUrl === "string", `${label} demo authorization: expected an authorization URL.`);
+
+    let authorizationUrl;
+    try {
+      authorizationUrl = new URL(authorization.data.authorizationUrl, baseUrl);
+    } catch {
+      fail(`${label} demo authorization: received an invalid authorization URL.`);
+    }
+    assert(authorizationUrl.origin === baseUrl.origin, `${label} demo authorization: URL must remain same-origin.`);
+    const state = authorizationUrl.searchParams.get("state");
+    assert(typeof state === "string" && /^[A-Za-z0-9_-]{43}$/u.test(state), `${label} demo authorization: expected a valid state.`);
+
+    await jsonRequest(`${label} demo consent`, `${path}/consent`, { state, approved: true });
+  }
+}
+
 async function main() {
   const landing = await request("web server", "/");
   assert(landing.response.headers.get("content-type")?.includes("text/html"), "web server: expected an HTML response.");
@@ -119,7 +147,8 @@ async function main() {
 
   const studentLogin = await jsonRequest("student login", "/api/dev/login", { personaId: "student" });
   assert(studentLogin.data?.user?.role === "student", "student login: expected the student demo identity.");
-  passed("explicit student demo login works");
+  await consentDemoPluginAccounts("student");
+  passed("explicit student demo login and mock plugin consent work");
 
   await jsonRequest("same-origin empty chat request", "/api/chat", { history: [] }, 400);
   await jsonRequest("cross-origin empty chat request", "/api/chat", { history: [] }, 403, {
@@ -188,6 +217,7 @@ async function main() {
 
   const adminLogin = await jsonRequest("admin demo login", "/api/dev/login", { personaId: "admin" });
   assert(adminLogin.data?.user?.role === "admin", "admin login: expected the administrator demo identity.");
+  await consentDemoPluginAccounts("admin");
   const adminPlugins = await request("admin plugin retrieval", "/api/admin/plugins");
   assert(adminPlugins.data?.plugins?.some((plugin) => plugin.id === KNOWLEDGE_PLUGIN_ID), "admin plugin retrieval: expected the installed knowledge plugin.");
   const adminDocument = await request("admin document retrieval", "/api/knowledge/documents/int-013");

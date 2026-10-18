@@ -2,6 +2,12 @@
 
 Date: 2026-10-15. Status clarified: 2026-10-18. This document defines the target
 security/evaluation requirements, not a claim that all controls are implemented.
+Sequencing decision, 2026-10-18: technical M1–M7 may qualify with Test-IdP,
+synthetic content and contract mocks. Actual HsH identity, source rights,
+protected-data/provider approval and institutional go/no-go are final
+[M8 requirements](../plans/hasi-mvp.md#institutional-acceptance-m8). References
+below to real institutional qualification do not block synthetic technical
+milestone closure or grant permission to process real protected information.
 The prototype now enforces typed tools, separate confirmed execution, synthetic
 source access and server-owned model selection/fallback policy; see the
 [accepted registry delivery](https://github.com/metaneutrons/HASI/issues/32).

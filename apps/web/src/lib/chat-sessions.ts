@@ -4,6 +4,8 @@ import {
   CHAT_TOOL_NAMES,
   chatProfileIdSchema,
   messageMetadataShape,
+  knowledgeEvidenceSchema,
+  type KnowledgeEvidence,
   messageTimestampSchema,
   type MessageTimestamp,
   chatRequestSchema,
@@ -51,6 +53,8 @@ export interface ChatMessage {
   tool?: string;
   rooms?: ChatRoomOption[];
   sources?: KnowledgeDocument[];
+  sourceContextId?: string;
+  evidence?: KnowledgeEvidence;
   proposal?: ChatProposal;
   bookings?: Booking[];
   confirmed?: boolean;
@@ -200,6 +204,8 @@ const chatMessageSchema = z.strictObject({
     .max(8)
     .optional(),
   sources: z.array(knowledgeDocumentSchema).max(5).optional(),
+  sourceContextId: z.uuid().optional(),
+  evidence: knowledgeEvidenceSchema.optional(),
   proposal: z.union([proposalSchema, pluginToolProposalSchema]).optional(),
   bookings: z.array(bookingSchema).max(10).optional(),
   confirmed: z.boolean().optional(),
@@ -258,6 +264,7 @@ const incompleteToolCallSchema = z.strictObject({
 });
 
 const incompleteAssistantToolMessageSchema = z.strictObject({
+  evidence: knowledgeEvidenceSchema.optional(),
   ...messageMetadataShape,
   role: z.literal("assistant"),
   content: plainTextSchema(4_000),
@@ -273,6 +280,7 @@ const incompleteToolResultSchema = z.strictObject({
 });
 
 const finalAssistantMessageSchema = z.strictObject({
+  evidence: knowledgeEvidenceSchema.optional(),
   ...messageMetadataShape,
   role: z.literal("assistant"),
   content: plainTextSchema(4_000),
@@ -500,6 +508,8 @@ function normalizeChatMessage(message: z.infer<typeof chatMessageSchema>): ChatM
       })),
     }),
     ...(message.sources === undefined ? {} : { sources: message.sources }),
+    ...(message.sourceContextId === undefined ? {} : { sourceContextId: message.sourceContextId }),
+    ...(message.evidence === undefined ? {} : { evidence: message.evidence }),
     ...(proposal === undefined ? {} : { proposal }),
     ...(message.bookings === undefined ? {} : { bookings: message.bookings }),
     ...(message.confirmed === undefined ? {} : { confirmed: message.confirmed }),
@@ -738,4 +748,13 @@ export function deleteChat(workspace: ChatWorkspace, id: string, now = new Date(
     Date.parse(session.updatedAt) > Date.parse(latest.updatedAt) ? session : latest,
   );
   return { ...workspace, activeId: nextActive.id, sessions };
+}
+
+/** Strict owner-bound parser for the production workspace boundary; never silently resets invalid writes. */
+export function parseChatWorkspace(value: unknown, ownerId: string): ChatWorkspace {
+  const owner = ownerIdSchema.parse(ownerId);
+  if (new TextEncoder().encode(JSON.stringify(value)).byteLength > MAX_CHAT_WORKSPACE_BYTES) throw new Error("Oversized chat workspace");
+  const normalized = normalizeWorkspace(value, owner, new Date());
+  if (!normalized) throw new Error("Invalid chat workspace");
+  return normalized;
 }

@@ -7,8 +7,9 @@ Before changing model adapters, routing, provider configuration or credentials,
 read [LLM router credentials](docs/architecture/llm-router-credentials.md) and
 [security and model evaluation](docs/architecture/security-and-models.md).
 
-- GroqCloud is the first selected model provider. `GROQ_API_KEY` is managed as
-  a Vercel Secret for project `hasi` under team `metaneutrons`.
+- GroqCloud is the first selected model provider. `GROQ_API_KEY` and
+  `GWDG_API_KEY` are held in encrypted fnox custody and hidden Coolify runtime
+  variables. Vercel has been retired; never use it as the current secret store.
 - Keep credentials server-side and separate from model profiles and routing
   configuration. Profiles reference a provider connection; connections reference
   secrets resolved through a HASI-owned abstraction.

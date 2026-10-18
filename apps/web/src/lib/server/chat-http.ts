@@ -9,6 +9,7 @@ const headers = { "cache-control": "private, no-store", "x-content-type-options"
 
 export interface ChatHttpDependencies {
   clock?: ReturnType<typeof createMessageClock>;
+  finalize?: (reply: ModelReply, input: ChatRequest) => Promise<void>;
   run: (input: ChatRequest) => Promise<ModelReply>;
   admit: (request: Request) => Promise<boolean>;
   allowedOrigins: readonly string[];
@@ -71,6 +72,7 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
       reply.message.id = randomUUID();
       reply.message.timestamp = dependencies.clock.stamp(reply.message);
     }
+    await dependencies.finalize?.(reply, input);
     return Response.json(reply, { headers });
   } catch (cause) {
     // Provider/SDK errors can contain request bodies, headers or credentials.
@@ -79,6 +81,9 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
     console.warn("HASI model request failed", JSON.stringify(cause instanceof ModelRouterError
       ? { code: cause.code, providerStatus: cause.providerStatus, ...(cause.diagnostics && Object.keys(cause.diagnostics).length ? { diagnostics: cause.diagnostics } : {}), ...(cause.rateLimits && Object.keys(cause.rateLimits).length ? { rateLimits: cause.rateLimits } : {}) }
       : { code: "unexpected_provider_failure" }));
+    if (cause instanceof ModelRouterError && cause.code === "context_unavailable") {
+      return error("Die Quellenrechte oder Dokumentfassungen haben sich geändert oder können nicht geprüft werden. Bitte suche erneut. Eine Antwort ohne aktuelle Quellenfreigabe wird nicht angezeigt.", 409);
+    }
     if (cause instanceof ModelRouterError && cause.code === "profile_not_approved") {
       return error("Das gewählte Modell oder die Routing-Freigabe ist für diese Anfrage nicht zugelassen. Beginne einen neuen Chat mit dem konfigurierten Standardmodell.", 403);
     }
