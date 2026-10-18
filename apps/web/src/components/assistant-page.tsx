@@ -12,7 +12,7 @@ import { availabilityInputForSlot, createAnnyChatTools, type AnnyChatToolResult 
 import { searchKnowledge, knowledgeDocumentHref, knowledgeSourceLabel } from "@/lib/knowledge";
 import { chatProfileIdSchema, modelProfilesResponseSchema, modelReplySchema, type ModelProfile, type ModelProfileId, type WireMessage } from "@/lib/chat-contract";
 import { createChatMessageClock } from "@/lib/chat-message-clock";
-import { appendChatText } from "@/lib/chat-history";
+import { appendChatText, trimChatHistory } from "@/lib/chat-history";
 import type { ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
 import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError, RoomTimeUnresolvedError } from "@/lib/chat-room-time";
 import { canStartNewChat } from "@/lib/chat-workspace-store";
@@ -283,12 +283,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   }
 
   async function runModel() {
-    // Drop complete oldest turns only; never separate a tool call from its result.
-    while (history.current.length > 36 || JSON.stringify(history.current).length > 22_000) {
-      const nextTurn = history.current.findIndex((message, index) => index > 0 && message.role === "user");
-      if (nextTurn < 0) throw new Error("Dieser einzelne Gesprächsschritt ist für den Modellkontext zu umfangreich. Beginne bitte einen neuen Chat mit einer kürzeren Anfrage; deine vorhandenen Karten bleiben erhalten.");
-      history.current.splice(0, nextTurn);
-    }
+    // Keep complete exchanges, including direct tool actions with no inference.
+    if (!trimChatHistory(history.current)) throw new Error("Dieser einzelne Gesprächsschritt ist für den Modellkontext zu umfangreich. Beginne bitte einen neuen Chat mit einer kürzeren Anfrage; deine vorhandenen Karten bleiben erhalten.");
     const interactionId = id();
     const controller = pendingRequest.current!;
     const latestUserText = history.current.findLast(message => message.role === "user")?.content ?? "";

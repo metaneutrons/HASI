@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appendChatText } from "../src/lib/chat-history";
+import { appendChatText, trimChatHistory } from "../src/lib/chat-history";
 import { chatRequestSchema, type WireMessage } from "../src/lib/chat-contract";
 
 describe("chat history across UI actions and model switches", () => {
@@ -46,4 +46,23 @@ describe("chat history across UI actions and model switches", () => {
     expect(history.slice(-2).map(({ role }) => role)).toEqual(["assistant", "user"]);
     expect(chatRequestSchema.safeParse({ profileId: "groq-oss-120b", messages: history }).success).toBe(true);
   });
+});
+
+
+it("keeps repeated model-free actions within the persisted rolling budget without splitting exchanges", () => {
+  const history: WireMessage[] = [];
+  for (let index = 0; index < 40; index += 1) {
+    appendChatText(history, "user", `Preference ${String(index)}`);
+    history.push({ role: "assistant", content: "", toolCalls: [{ id: `search-${String(index)}`, name: "anny_search_resources", arguments: { kind: "workplace" } }] }, { role: "tool", name: "anny_search_resources", toolCallId: `search-${String(index)}`, content: '{"resources":[]}' });
+  }
+  expect(history.length).toBeLessThan(64);
+  expect(history[0]?.role).toBe("user");
+  expect(chatRequestSchema.safeParse({ profileId: "groq-oss-120b", messages: history }).success).toBe(true);
+});
+
+it("does not empty an oversized single turn or rewrite its receipts", () => {
+  const history: WireMessage[] = [{ role: "user", content: "Request", timestamp: { createdAt: "2026-10-18T00:00:00.000Z", receipt: "A".repeat(43) } }, { role: "assistant", content: "x".repeat(23_000) }];
+  const before = JSON.stringify(history);
+  expect(trimChatHistory(history)).toBe(false);
+  expect(JSON.stringify(history)).toBe(before);
 });

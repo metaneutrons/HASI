@@ -98,7 +98,8 @@ provider, as stated in the UI. Only user messages require verified calendar
 anchors. Provider-only projection retains compact details for the two newest
 anny results; older details require a fresh read. Knowledge evidence, user text,
 UI cards and the submitted signed history are not rewritten by this projection.
-The existing rolling client history budget still drops complete oldest turns.
+The rolling client history budget drops complete oldest turns, including
+between model-free UI/read actions, without splitting tool exchanges.
 Clear tasks advertise only the needed tool schemas; mixed/unclear tasks retain
 the full set. Eligibility and secret resolution precede projection.
 

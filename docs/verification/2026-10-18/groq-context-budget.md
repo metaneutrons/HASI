@@ -76,7 +76,8 @@ specific path). This is not a 70% token/cost guarantee for arbitrary chats.
   results, relevant exact/alternative intervals and explicit fresh-read flags.
   Older result details are omitted; user text and knowledge evidence are not
   summarized. UI cards and submitted timestamp receipts are not rewritten.
-  The pre-existing rolling history limit still removes complete oldest turns;
+  The pre-existing rolling history budget now also bounds model-free actions
+  by removing complete oldest turns;
   an oversized single turn now fails with clarification instead of emptying it.
 - Stable instructions precede dynamic user-only calendar anchors. Verified
   Berlin dates survive across midnight/DST; client timestamp claims remain
