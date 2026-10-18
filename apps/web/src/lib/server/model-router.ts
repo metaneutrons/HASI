@@ -9,7 +9,7 @@ import { createGroq } from "@ai-sdk/groq";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { APICallError, generateText, isStepCount, tool, type ModelMessage, type ToolSet } from "ai";
 import { ModelRouterError } from "./model-router-error";
-import { isMixedKnowledgeRequest } from "../chat-tool-loop";
+import { isAvailabilityFollowUp, isMixedKnowledgeRequest } from "../chat-tool-loop";
 import { classifyIntent } from "../chat-demo";
 import { parseGroqRateLimitDiagnostics, type GroqRateLimitDiagnostics } from "./provider-rate-limits";
 import { modelToolContent, retainedAnnyResultIndices } from "../chat-tool-context";
@@ -74,7 +74,8 @@ function toolsForTurn(messages: WireMessage[]): ToolSet {
   const userIndex = messages.findLastIndex(message => message.role === "user");
   const text = messages[userIndex]?.content ?? "";
   const priorAnny = messages.some(message => message.role === "tool" && message.name !== "knowledge_search");
-  const mixed = isMixedKnowledgeRequest(text, priorAnny);
+  const contextualAvailability = priorAnny && isAvailabilityFollowUp(text);
+  const mixed = isMixedKnowledgeRequest(text, contextualAvailability);
   const turnResults = messages.slice(userIndex + 1).filter(message => message.role === "tool");
   const knowledgeRead = turnResults.some(message => message.name === "knowledge_search");
   const annyRead = turnResults.some(message => message.name !== "knowledge_search");
@@ -85,7 +86,7 @@ function toolsForTurn(messages: WireMessage[]): ToolSet {
     ? ["anny_search_resources", "anny_get_availability", "anny_propose_booking"]
     : intent === "bookings" && !mixedKnowledge
       ? ["anny_list_my_bookings", "anny_propose_cancellation"]
-      : intent === "knowledge" && !priorAnny && !/\b(?:buch\w*|reservier\w*|storni\w*)\b/iu.test(text)
+      : intent === "knowledge" && !contextualAvailability && !/\b(?:buch\w*|reservier\w*|storni\w*)\b/iu.test(text)
         ? ["knowledge_search"] : Object.keys(CHAT_TOOLS) as ChatToolName[];
   const scoped = mixed ? names.filter(name => name === "knowledge_search" ? !knowledgeRead : !annyRead) : names;
   return Object.fromEntries(scoped.map(name => [name, CHAT_TOOLS[name]]));

@@ -1107,3 +1107,16 @@ it.each([true, false])("preserves a sequential mixed task and stops repeated ret
   await runModelStep({ ...request(), messages }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: finalProvider.fetch, now: NOW });
   expect(JSON.parse(String(finalProvider.calls[0]?.init?.body)).tools ?? []).toEqual([]);
 });
+
+
+it("does not carry unrelated Anny schemas into a new clear knowledge question", async () => {
+  const provider = fakeProvider(completion({ content: "Ich suche in der Wissensbasis." }));
+  await runModelStep({ ...request(), messages: [
+    { role: "user", content: "Suche einen Raum" },
+    { role: "assistant", content: "", toolCalls: [{ id: "old-room", name: "anny_search_resources", arguments: {} }] },
+    { role: "tool", toolCallId: "old-room", name: "anny_search_resources", content: '{"resources":[]}' },
+    { role: "user", content: "Wie funktioniert VPN?" },
+  ] }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW });
+  const sent = JSON.parse(String(provider.calls[0]?.init?.body));
+  expect(sent.tools.map((entry: { function: { name: string } }) => entry.function.name)).toEqual(["knowledge_search"]);
+});
