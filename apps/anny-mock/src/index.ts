@@ -608,6 +608,10 @@ function intervalsOverlap(firstStart: string, firstEnd: string, secondStart: str
   return Date.parse(firstStart) < Date.parse(secondEnd) && Date.parse(secondStart) < Date.parse(firstEnd);
 }
 
+function bookingOccupiesAvailability(booking: MockBooking): boolean {
+  return ['reserved', 'requested', 'accepted'].includes(booking.attributes.status);
+}
+
 function availabilityIntervals(
   resourceIds: string[],
   startDate: string,
@@ -632,7 +636,7 @@ function availabilityIntervals(
     if (start.getTime() < requestedStart || start.getTime() < now) return [];
     const availableResourceIds = resourceIds.filter((resourceId) => !bookings.some((booking) => (
       booking.relationships.resource.data.id === resourceId
-      && ['reserved', 'requested', 'accepted'].includes(booking.attributes.status)
+      && bookingOccupiesAvailability(booking)
       && intervalsOverlap(
         startIso,
         endIso,
@@ -967,7 +971,8 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
         && intervalsOverlap(planned.startDate, planned.endDate, other.startDate, other.endDate)
       )));
       const hasExistingConflict = current.bookings.some((existing) => plannedBookings.some((planned) => (
-        existing.relationships.resource.data.id === planned.resourceId
+        bookingOccupiesAvailability(existing)
+        && existing.relationships.resource.data.id === planned.resourceId
         && intervalsOverlap(
           existing.attributes.start_date,
           existing.attributes.end_date,
