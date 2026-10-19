@@ -15,6 +15,10 @@
 .markdown h4 { margin: 0.9em 0 0.35em; font-size: 1rem; }
 .markdown p { margin: 0 0 0.85em; }
 .markdown ul, .markdown ol { margin: 0 0 0.9em; padding-left: 1.5em; }
+.markdown ul { list-style-type: disc; }
+.markdown ol { list-style-type: decimal; }
+.markdown ul ul { list-style-type: circle; }
+.markdown ul ul ul { list-style-type: square; }
 .markdown :global(ul.contains-task-list) { list-style: none; padding-left: 0; }
 .markdown li + li { margin-top: 0.25em; }
 .markdown blockquote { margin: 0 0 0.9em; padding: 0.1em 0 0.1em 1em; border-left: 3px solid var(--accent); color: var(--muted); }
