@@ -1,0 +1,176 @@
+{
+  "qualification": "public-demo-non-model-performance",
+  "status": "failed",
+  "origin": "https://hasi.metaneutrons.cc",
+  "expectedRevision": "c4c55efc9506b8bbfc273101baff80b20c2d3cfb",
+  "startedAtUtc": "2026-10-19T19:42:53.150Z",
+  "finishedAtUtc": "2026-10-19T19:43:47.743Z",
+  "modelCalls": 0,
+  "chatCalls": 0,
+  "generationCalls": 0,
+  "workspaceCount": 5,
+  "workspaceCleanup": "not_attempted",
+  "methodology": {
+    "criterion": "Every route batch must contain 100 successful samples at five concurrent synthetic employee sessions with nearest-rank p95 <= 1000 ms.",
+    "users": 5,
+    "batchesPerRoute": 2,
+    "samplesPerUserPerBatch": 20,
+    "samplesPerBatch": 100,
+    "plannedMeasurements": 1000,
+    "timeoutMs": 10000,
+    "maxJsonBytes": 2000000,
+    "redirects": "error",
+    "retries": 0,
+    "routes": [
+      "anny.resources",
+      "anny.availability",
+      "knowledge.search",
+      "knowledge.document",
+      "plugin-accounts.status"
+    ],
+    "timingScope": "client-observed HTTPS fetch plus bounded JSON parse and strict response validation; not server-only latency.",
+    "coldSessionMeasuredSeparately": true,
+    "expectedSyntheticEmployeeLogins": 5,
+    "expectedSyntheticAnnyConsents": 5,
+    "optionalClientDelayControl": "omitted"
+  },
+  "preflight": {
+    "allFiveSessionsAreDistinctEmployees": true,
+    "resourcesAreFixtureOnlyWithSyntheticProvenance": true,
+    "knowledgeSearchAndLookupAreSynthetic": true,
+    "workplaceAvailabilityIsOneFutureHour": true,
+    "annyAccountIsLinkedAndDemoOnly": true
+  },
+  "routes": [
+    {
+      "route": "anny.resources",
+      "batches": [
+        {
+          "route": "anny.resources",
+          "batch": 1,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "passed": true,
+          "p95Ms": 520.27,
+          "timings": {
+            "sampleCount": 100,
+            "minMs": 226.96,
+            "medianMs": 367.28,
+            "p95Ms": 520.27,
+            "maxMs": 585.3
+          },
+          "timingDigest": "7c9931afa96745cc84f7e61444f90b0b524a44bdc36ade64fcd9d7e21af1ac09"
+        },
+        {
+          "route": "anny.resources",
+          "batch": 2,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "passed": true,
+          "p95Ms": 462.73,
+          "timings": {
+            "sampleCount": 100,
+            "minMs": 222.22,
+            "medianMs": 295.65,
+            "p95Ms": 462.73,
+            "maxMs": 481.02
+          },
+          "timingDigest": "13492171b5ad205f29e6bc2d2130f3000a0cdb1a6ce1c197084ae1310a2df3e6"
+        }
+      ]
+    },
+    {
+      "route": "anny.availability",
+      "batches": [
+        {
+          "route": "anny.availability",
+          "batch": 1,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "passed": true,
+          "p95Ms": 437.6,
+          "timings": {
+            "sampleCount": 100,
+            "minMs": 214.02,
+            "medianMs": 268.93,
+            "p95Ms": 437.6,
+            "maxMs": 487.32
+          },
+          "timingDigest": "af960923ec9676f738d677b3b27a7a1b0df1dcca224a8b9d08bcf7df1197c14c"
+        },
+        {
+          "route": "anny.availability",
+          "batch": 2,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "passed": true,
+          "p95Ms": 401.37,
+          "timings": {
+            "sampleCount": 100,
+            "minMs": 216.6,
+            "medianMs": 259.97,
+            "p95Ms": 401.36,
+            "maxMs": 428
+          },
+          "timingDigest": "3a105c8fc4e448e96f0e71c3a4eb063b542a676e5c043d6e8e78292070a4ff99"
+        }
+      ]
+    },
+    {
+      "route": "knowledge.search",
+      "batches": [
+        {
+          "route": "knowledge.search",
+          "batch": 1,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "passed": false,
+          "p95Ms": 1315.45,
+          "timings": {
+            "sampleCount": 100,
+            "minMs": 836.32,
+            "medianMs": 1122.51,
+            "p95Ms": 1315.45,
+            "maxMs": 1483.89
+          },
+          "timingDigest": "624b59973c735922f04eb556c6323cff3f485b4c41de91bf71be4888f22becff"
+        }
+      ]
+    }
+  ],
+  "totalRequests": 566,
+  "measurementRequests": 500,
+  "lastRoute": "knowledgeSearch",
+  "referenceSourceHashes": {
+    "scripts/qualify-demo-performance.ts": "c4607721a6fe340f647beffdfe22de4d943ef6e447aa822edbd02106b7f3818d",
+    "scripts/demo-performance-qualification.ts": "b8d4afaff9319ce88436cf685ca889c786fc31156d9dab3e4e36b0dc3ffdb28e",
+    "scripts/qualify-demo-knowledge.ts": "ec6a67c444689f84af6c12759b18a409011420407f45b4d048cc44d161071e3d",
+    "apps/knowledge-plugin/src/institutional-contracts.ts": "51397d5101d8eadf6d7629b4c3d088d41da2900cb97a1d4b2ab78f10a9f649ed",
+    "apps/web/src/lib/plugin-accounts.ts": "f9d13090b087c92e784955ea03dce8509c03bd6a2b6bddb33c9aa91779cc9fea",
+    "fixtures/catalog.ts": "9e67dbd49cea942c923b91b42f8084e5c2de8f79493fb5fe8ba511e6f651a7bd",
+    "fixtures/anny-hsh-rooms-v1.json": "4b395851e0c4f3201048d6aa0e7d455996ad4b4dac1fb01edd5d570c8d973705",
+    "packages/demo-runtime/src/index.ts": "d283b9c7fb6bda70a0fc4a18a7590ffb00bb41eac0fbd863b86107a9cfcbde0a",
+    "apps/api/src/index.ts": "2917638af87f5ef9445010fd4a7f597798f52206ce75f4c79aedc16c8de8145e",
+    "apps/web/src/lib/server/demo-runtime.ts": "64a60d39f16c52e06a945a063450b36de110d80c9c2c9733d5406a771de704a2",
+    "apps/web/src/app/api/health/route.ts": "785a0b1e12572b3401207b43e4e1af7d60bb75bac7c05b0820e19cdfec4a0fe9"
+  },
+  "measurementDigest": null,
+  "failure": "measurement_batch_failed",
+  "healthRevisionMatchedBefore": true,
+  "coldSession": {
+    "sampleCount": 5,
+    "minMs": 41.09,
+    "medianMs": 52.44,
+    "p95Ms": 654.42,
+    "maxMs": 654.42
+  },
+  "coldSessionDigest": "c2dff0b1603b91f8bc02c28ce0ff30cdf9921848a5f506e9572260377e7228f3",
+  "failedPhase": "route_measurement",
+  "syntheticEmployeeLogins": 5,
+  "syntheticAnnyConsents": 5,
+  "additionalResourceQueries": 5,
+  "performanceTargetPassed": false,
+  "runnerSha256": "e3f12fa9bcfad5d380103cd933b37675528cd550767652d44cf4ba4dd48b6b6e",
+  "originalResultSha256": "410712ff11e25eacfa4996439e59532c68bc9a3ffa2280bbb909801093d2a643",
+  "publicArtifactNote": "Only the machine-local workspace ownership-file pathname was removed. No measured fields or outcomes were changed."
+}

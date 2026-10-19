@@ -46,8 +46,11 @@ removal. The host was not deliberately filled to exercise the 8 GiB gate.
 
 The updated controller resumed active/enabled. The maintenance timer is
 enabled and waiting, with an initial delay of 15 minutes from activation
-(`OnActiveSec=15min`) and an hourly interval thereafter. Its first scheduled
-execution has not yet been observed in this record. The host records sanitized
+(`OnActiveSec=15min`) and an hourly interval thereafter. Its first scheduled execution started at
+`2026-10-19T19:46:02Z` and completed at `19:46:03Z` with result `success` and
+exit 0. It reported 21,875,728,384 available bytes, zero candidates, builder
+prunes, removed tags and skips. The next monotonic trigger remained scheduled;
+no forced low-disk cleanup was exercised. The host records sanitized
 installation metadata in its root-only operator-event directory.
 
 Readback found the compatible public-demo floor `b53701a`, previous `69c87a5`
@@ -57,9 +60,14 @@ none had expired at this readback. The budget fingerprint remained
 `0f16371ccf718735e0fbc510a17e448ad937e69f4b938e160812d867b7b7f5d3`.
 No model call, budget reset, database replacement or volume deletion occurred.
 
-At that checkpoint the public endpoint still reported ready at `442897d`,
-while the automatic `d0fae9c` deployment was submitted. Its completed exact
-revision/readiness and subsequent timer execution require separate readback;
-this record does not turn a submitted deployment into a completed one.
+At the installation checkpoint the public endpoint still reported ready at
+`442897d`, while the automatic `d0fae9c` deployment was submitted. Subsequent
+readback confirmed deployment `yqlrvriv5vehkjfjlyltzlyi` completed at
+`2026-10-19T19:32:11.136Z` with exact public `d0fae9c` readiness and the same
+345 baseline rows and budget fingerprint. The optimized `c4c55ef` application
+then completed automatic deployment `e1rul8ctqf5i047oo1omhmul` at
+`2026-10-19T19:42:16.977Z`, with its loopback flag verified and no pending
+physical build before the performance probe. The subsequent timer readback above establishes one real scheduled host
+maintenance execution, separately from the earlier build-protection skip.
 See [the runbook](../../operations/demo-storage.md) and current
 [M7 #54](https://github.com/metaneutrons/HASI/issues/54) for operational state.
