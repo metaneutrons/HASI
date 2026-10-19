@@ -61,3 +61,15 @@ complete M7: automatic image/cache retention and disk-headroom enforcement,
 independent monitoring, stable complete delivery, integrated connection-loss
 journeys and the M1–M6 prerequisites remain open. The disposable demo's agreed
 no-backup scope does not waive durable state or budget preservation.
+
+
+## Fresh automatic delivery after recovery
+
+The ordinary next main revision `e2d6b7c` completed exact-main CI and automatic
+Coolify delivery. At 17:18:38 UTC the controller recorded completion with one
+successful exact-revision health check. All 186 rows in the fresh immediately
+pre-deployment checkpoint were unchanged, with no missing/expired row and the
+same budget fingerprint. Approximately 5,103 MiB remained available afterward.
+This separates the interrupted failed job from the successful new deployment;
+no historical result was overwritten. Long-term disk retention/headroom and
+scheduled monitoring remain open operational work.
