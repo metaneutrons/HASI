@@ -59,6 +59,17 @@ async function fixture(
 }
 
 describe('proposal invalidation ledger', () => {
+  it('accepts the registry scope limit and rejects a larger server namespace', async () => {
+    const test = await fixture();
+    const input = {
+      proposalId: test.proposalId, pluginId: test.proposal.pluginId, subject: test.proposal.subject,
+      beforeBindingDigest, afterBindingDigest, reason: 'binding_changed' as const, at,
+    };
+    const longestRegistryScope = 'x'.repeat(256);
+    expect(signProposalInvalidationChange(test.privateKey, longestRegistryScope, input).event.scopeDigest).toBe(digest(longestRegistryScope));
+    expect(() => signProposalInvalidationChange(test.privateKey, 'x'.repeat(257), input)).toThrow('invalid_scope');
+  });
+
   it('atomically materializes pending invalidation with a signed event and preserves the aggregate', async () => {
     const test = await fixture();
     const result = await test.ledger.invalidateProposal<TestProposal>(test.proposalId, {

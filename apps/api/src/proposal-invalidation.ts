@@ -53,7 +53,7 @@ const proposalHeaderSchema = z.looseObject({
   status: z.string().min(1).max(32),
 });
 
-const MAX_SCOPE_LENGTH = 128;
+const MAX_SCOPE_LENGTH = 256;
 const MAX_AGGREGATE_BYTES = 1024 * 1024;
 const MAX_JSON_NODES = 100_000;
 const MAX_JSON_DEPTH = 64;
