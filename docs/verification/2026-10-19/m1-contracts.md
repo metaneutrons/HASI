@@ -35,7 +35,8 @@ Local qualification passed on 2026-10-19: 81 tests across the seven mapped
 OIDC, plugin-contract, source-boundary, institutional-knowledge, account-lifecycle,
 Anny-cancellation and content-adapter suites; full TypeScript typecheck passed.
 The worker separately ran the 39 focused identity/SDK cases. Root repeated the
-complete mapped set after integration on current main. Exact candidate CI and
+complete mapped set after integration on current main. The subsequent full
+PostgreSQL-backed pre-push run passed all 781 tests in 88 files. Exact candidate CI and
 the final acceptance decision remain in #48; local success does not claim them. M1 implementation and contract design are distinct from the larger
 M2 plugin/device/runtime qualification matrices.
 

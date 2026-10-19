@@ -1,29 +1,27 @@
 # HASI consolidated delivery plan
 
-Plan version: 3. Adopted 2026-10-18. This version keeps the accepted v2
-execution order and acceptance requirements, and consolidates their GitHub
-tracking into a 13-open-issue target. The issue graph and requirements originate
-from the baseline adopted against main
-`a03fdf2049c99a287397705e1e34b9761c2b2430`.
+Plan version: 4. Adopted 2026-10-19. V4 retains the V3 issue consolidation
+and explicitly transfers all real-device and institutional participant tests to
+final M8, following Fabian's decision on 2026-10-19. M1–M7 use automated tests,
+Test-IdP, mocks, synthetic data and browser/device simulation. Required CI and
+technical operational exercises remain required. The earlier V3 changed only
+issue granularity and was adopted on 2026-10-18.
 
-Decision state: **v3 changes issue granularity only.** The user approved the
-13-open-issue structure on 2026-10-18. It does not change product scope,
-acceptance authority, implementation state or evidence, and it does not mark
-work accepted. Until each successor issue contains the transferred status,
-next action and evidence, the source issue remains open and authoritative.
-Transferred source issues close with GitHub's `not_planned` reason, never as
-completed work. The original planning baseline was adopted by the user on
-2026-10-18. Third-party MCP Apps remain off by default after the P2 no-go
-decision; contracts and executable-code admission retain their review gates.
-This plan does not
-authorize live writes, new paid resources, a container release or execution of
-third-party code.
+Decision state: **V4 changes qualification sequencing, not product capabilities
+or the required final mobile quality.** Real iPhone/Safari, Android/Chrome,
+VoiceOver/TalkBack and participant acceptance remain mandatory in M8-A7; they
+are not claimed passed by simulation. Other P1–P6 security/runtime criteria,
+M1–M7 technical tests, budgets and operational gates are unchanged. Source
+records transferred under V3 remain `not_planned`, never accepted work.
+Third-party MCP Apps remain off by default after the P2 no-go decision. This
+plan authorizes neither real institutional writes/protected-data tests nor
+new paid resources, a container release or arbitrary third-party execution.
 
 ## Purpose and authority
 
 Keep one executable dependency order without creating another backlog. HASI
 remains a chat-first, mobile-first university assistant. Intranet, Service-IT
-and anny remain mandatory for the institutional MVP. V3 consolidates the open
+and anny remain mandatory for the institutional MVP. The retained V3 structure consolidates
 tracking records as follows: #47 is the unified delivery index, #49 owns M2 and
 the six P1–P6 qualification groups, and #55 retains all eight post-MVP
 proposals. Existing evidence and criteria move with their status; only the
@@ -125,7 +123,7 @@ never as completed work. All 37 issue records and their histories remain.
 | [#51](https://github.com/metaneutrons/HASI/issues/51) | M4 anny read contracts and behavior | M1/M2 technical boundaries; mock identities and reference contracts, not a real tenant |
 | [#52](https://github.com/metaneutrons/HASI/issues/52) | M5 confirmed anny write/cancel/reconcile behavior | Follows M4 against mocks/reference contracts; actual tenant and vendor conformance remain M8 |
 | [#53](https://github.com/metaneutrons/HASI/issues/53) | M6 synthetic/offline model and adversarial evaluation | Formal evaluation before M7; BUD-A1 before paid runs; DI-A1–DI-A4 via #81 before final provider comparison; CACHE-A1 remains separate |
-| [#54](https://github.com/metaneutrons/HASI/issues/54) | M7 synthetic technical pilot and operations | M1–M6 technical gates, real-device UX, restore and off-host monitoring; no institutional data prerequisite |
+| [#54](https://github.com/metaneutrons/HASI/issues/54) | M7 synthetic technical pilot and operations | M1–M6 technical gates, automated/browser/simulator UX, restore and off-host monitoring; no institutional data prerequisite |
 | [#55](https://github.com/metaneutrons/HASI/issues/55) | Post-MVP roadmap and discovery register | Retains eight scoped proposals, source-specific next actions and reactivation gates; no connector is committed or implemented |
 | [#80](https://github.com/metaneutrons/HASI/issues/80) | M8 final institutional acceptance | After M1–M7; real identity, source rights, Anny tenant, protected-data approval and recorded go/no-go |
 | [#17](https://github.com/metaneutrons/HASI/issues/17) | D3 first actual container publication | Separately requested Release Please release; exact-tag amd64/arm64 and real publication evidence |
@@ -227,15 +225,16 @@ identities and an independent test plugin; they do not require live M3–M5.
    #32–#34. Provider contract/model compatibility and credential readiness are
    unverified. Complete BUD-A1 before paid evaluation. CACHE-A1 remains separate;
    missing counters do not establish cache hits or savings.
-7. **Accept M7 as the synthetic technical pilot.** Complete real iPhone/Safari
-   and Android/Chrome UX and accessibility flows, encrypted-backup restore,
+7. **Accept M7 as the synthetic technical pilot.** Complete automated/browser/
+   simulator UX and accessibility checks, encrypted-backup restore,
    off-host monitoring, incident handling and rollback using synthetic data.
    This milestone does not need institutional source approval and does not
    qualify real SSO or writes.
-8. **Complete M8 last** as the institutional go/no-go. Real identity, both
+8. **Complete M8 last** as the real-device/participant and institutional go/no-go. Real identity, both
    sources' access and rights, Anny customer delegation/eligibility and vendor
    conformance, protected-data processing approvals, named owners, reviewed real
-   acceptance cases and recorded institutional go/no-go must be present before
+   cases and the complete actual-device/participant matrix (M8-A7), followed by
+   recorded institutional go/no-go, must be present before
    rollout. Scope-specific authorization precedes any M8 real-write or protected-
    context test. See [M8 in the MVP plan](hasi-mvp.md#institutional-acceptance-m8).
 
@@ -315,6 +314,8 @@ visibility; HASI must implement and qualify host enforcement. See the
   view; test theme changes, keyboard/focus, touch, text enlargement and loss of
   the UI resource. A useful fallback remains available. State the protocol and
   library versions qualified; do not assume future native-app host support.
+  Technical checks use automated browsers/simulators; native hardware and
+  screen-reader acceptance transfers to M8-A7.
   The [host-context contract](https://apps.extensions.modelcontextprotocol.io/api/interfaces/app.McpUiHostContext.html)
   supports environment delivery but does not enforce design consistency.
 - **P2-A4:** Record a go/no-go with security, mobile, accessibility, performance
@@ -371,8 +372,9 @@ authorization before institutional use. Demo administration stays workspace-only
   retained history and data. Personal login/renewal returns to the original task;
   revocation invalidates dependent rights/context. No credentials enter chat forms.
 - **P4-A4:** Qualify complete setup, errors, update review and reconnect on phone
-  width, keyboard and assistive technology. Form generation is not evidence of
-  good UX. Treat Apps as an optional result UI, not a replacement for trusted
+  width, keyboard and automated accessibility-tree checks. Form generation is not evidence of
+  good UX. Use automated browser/simulator checks here; actual-device and
+  participant acceptance is M8-A7. Treat Apps as an optional result UI, not a replacement for trusted
   host installation/configuration and confirmation controls.
 
 ### P5 — External connection and independently updated artifacts
@@ -424,13 +426,14 @@ Dependencies: P1–P5; synthetic TestIdP and mock authorities support technical 
   recovery after mobile reauthentication; denied cross-workspace/account/resource
   calls. Preserve anny and
   knowledge regression evidence and test the actual deployment topology.
-- **P6-A3:** Exercise chat and admin on actual iPhone/Safari and Android/Chrome,
-  including keyboard, safe areas, focus, VoiceOver/TalkBack, 200% text and reload.
-  Apply the existing [mobile acceptance](../architecture/technical-basis.md#mobile-experience-and-acceptance),
-  including 320/375/390/768/1280 px viewport checks. Record platform versions,
-  measured latency and omissions; emulation alone cannot satisfy native gates.
-  This slice qualifies plugin chat/admin flows with synthetic data. M7 qualifies technical
-  pilot operations with synthetic data; M8 owns real SSO and source rights.
+- **P6-A3:** Exercise chat and admin in automated browsers and device simulation,
+  including keyboard/focus, safe-area layout, 200% text, reload and connection
+  recovery. Apply the [mobile requirements](../architecture/technical-basis.md#mobile-experience-and-acceptance)
+  at 320/375/390/768/1280 px and record tested browser/simulator versions and
+  omissions. The original actual iPhone/Safari and Android/Chrome matrix,
+  native keyboard, VoiceOver/TalkBack and participant acceptance transfers intact
+  to M8-A7. Emulation qualifies this technical subset only; it cannot establish
+  native-device or institutional acceptance.
 - **P6-A4:** Publish developer contracts/examples and administrator runbooks for
   setup, account renewal, rotation, disable, update and recovery. Update README
   with demonstrated capabilities and limits. Map each P criterion to exact
@@ -487,8 +490,8 @@ During development, run focused contract, policy and workflow tests. At each
 integration point, qualify the exact candidate with required CI, supported Node
 versions and relevant PostgreSQL/concurrency paths. Use isolated malicious
 fixtures to prove new gates reject bad inputs as well as accept valid ones.
-Reserve native phones, deployment checks and multi-platform container work for
-their stated gates. Refresh/qualify only the next PR in merge order; unrelated
+Reserve actual-device/participant tests for M8-A7. Deployment, backup/restore
+and multi-platform container checks retain their own technical/release gates. Refresh/qualify only the next PR in merge order; unrelated
 documentation edits do not justify repeating expensive runtime qualification.
 
 Use reviewed PRs per milestone; reference its P*-A* criterion IDs in #49 without

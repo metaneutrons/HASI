@@ -49,7 +49,12 @@ frontend features; Next.js is not required for the core architecture.
 
 ## Mobile experience and acceptance
 
-Mobile usability is a release criterion for every pilot capability. Design the
+Mobile usability remains a release criterion for every pilot capability.
+Sequencing decision, 2026-10-19: M1–M7 qualify automated/browser/simulator
+behavior; all actual-device and participant acceptance below belongs to final
+[M8-A7](../plans/hasi-mvp.md#institutional-acceptance-m8). These requirements
+are preserved, not passed by emulation. Required CI and technical operational
+checks remain in their original milestones. Design the
 phone interaction first and adapt it to tablet and desktop. All search,
 booking, cancellation and source-reading functions must be available on a
 phone without switching to a desktop flow.
@@ -78,8 +83,8 @@ phone without switching to a desktop flow.
   and verify on a representative mid-range phone with constrained connectivity.
 - Verify layouts at 320, 375, 390, 768 and 1280 CSS pixels and text enlargement
   up to 200%. Key flows must have no page-wide horizontal overflow or hidden
-  primary actions. Browser emulation is supplemented by real iPhone/Safari and
-  Android/Chrome testing, including SSO redirects, keyboard behavior and
+  primary actions. Final M8-A7 supplements technical browser emulation with
+  real iPhone/Safari and Android/Chrome testing, including SSO redirects, keyboard behavior and
   reconnecting during a booking.
 
 Next.js can support an installable PWA. Installation is an optional convenience;
