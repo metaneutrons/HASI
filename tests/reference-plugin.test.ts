@@ -68,6 +68,10 @@ describe('independent generic v2 reference plugin process', () => {
     try {
       await mkdir(foreignRepo, { recursive: true });
       runGit(['init', '--quiet'], foreignRepo, cleanEnvironment);
+      // This fixture is compared byte-for-byte. A detached Git maintenance
+      // process must not add/remove its own lock after the baseline snapshot.
+      runGit(['config', 'maintenance.auto', 'false'], foreignRepo, cleanEnvironment);
+      runGit(['config', 'gc.auto', '0'], foreignRepo, cleanEnvironment);
       await writeFile(join(foreignRepo, 'keep.txt'), 'foreign repository state\n', 'utf8');
       runGit(['add', 'keep.txt'], foreignRepo, cleanEnvironment);
       runGit(['-c', 'user.name=Foreign fixture', '-c', 'user.email=foreign@example.invalid', 'commit', '--quiet', '-m', 'Foreign fixture'], foreignRepo, cleanEnvironment);
