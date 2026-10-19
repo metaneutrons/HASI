@@ -164,4 +164,25 @@ This deployment introduces no schema migration. Future incompatible migrations
 need their own reviewed compatibility/restore plan; an old app image cannot
 reverse a database migration. A controller outage delays delivery and does not
 stop the serving app or reset its state. The existing encrypted database backup
-timer remains separate; off-host operational qualification remains M7.
+timer remains separate. Under Plan V5 the disposable demo has no backup/restore
+acceptance requirement; production backup, off-host replication/failure monitoring
+and restore qualification belong to M8-A8. Independent readiness monitoring,
+incident handling and rollback remain M7.
+
+## Independent demo readiness checks
+
+The `Demo public health` GitHub Actions workflow (`.github/workflows/demo-health.yml`)
+runs outside the HASI server. It first tests the monitor against offline positive
+and failure fixtures, then probes the fixed public HTTPS readiness endpoint from
+`main`. Its 30-minute schedule is best-effort; it is not an availability SLA.
+Run the same workflow manually when investigating an incident:
+
+```sh
+gh workflow run demo-health.yml --ref main --repo metaneutrons/HASI
+```
+
+A failed run requires operator review in Actions; no separate notification
+channel is configured. The probe checks bounded readiness/revision data and
+exits nonzero on failure. It does not call a model, log in, modify a booking, or
+establish that the reported revision is the latest main commit. Continue to use
+the deployment controller's exact-revision check for delivery admission.
