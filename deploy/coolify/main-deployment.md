@@ -146,6 +146,9 @@ requires the stop-before-start procedure below. No database restart is required.
 The first CI-qualified main revision containing registry `lifecycleRevision`
 and proposal invalidation is the minimum compatible core for this signed state.
 Record that exact merged SHA and built image ID in the deployment evidence.
+The first qualified floor is `b53701abe4b5cd0bb51c3ef1f67ad7ca8a76d4cf`;
+[the live cutover record](../../docs/verification/2026-10-19/live-core-epoch-cutover.md)
+identifies its retained image and state-preservation checks.
 Older images reject the new signed registry field; restoring one is not a safe
 rollback. This is a pre-release maintenance cutover, not a database reset or a
 promise of rolling compatibility with old cores.
