@@ -300,11 +300,41 @@ export class PluginRouteController implements DockerPluginRoutingController {
     });
   }
 
+  /** Withdraws the active deployment only when its exact operator-owned base still matches. */
+  async withdraw(input: {
+    readonly ownerId: string;
+    readonly installationId: string;
+    readonly operationId: string;
+    readonly currentDeploymentId: string;
+    readonly currentReleaseDigest: string;
+    readonly configurationRevision: string;
+  }): Promise<void> {
+    this.assertOwner(input.ownerId);
+    if (!validOpaqueId(input.installationId) || !validOpaqueId(input.operationId)
+      || !validOpaqueId(input.currentDeploymentId) || !SHA256.test(input.currentReleaseDigest)
+      || !validConfigurationRevision(input.configurationRevision)) {
+      throw new PluginRouteControllerError('failed');
+    }
+    const fingerprint = digest({ kind: 'withdraw', ...input });
+    await this.commitOperation({
+      installationId: input.installationId,
+      operationId: input.operationId,
+      fingerprint,
+      apply: state => {
+        if (state.configurationRevision !== input.configurationRevision
+          || state.active?.deploymentId !== input.currentDeploymentId
+          || state.active.releaseDigest !== input.currentReleaseDigest) return undefined;
+        return null;
+      },
+    });
+  }
+
   private async commitOperation(input: {
     readonly installationId: string;
     readonly operationId: string;
     readonly fingerprint: string;
-    readonly apply: (state: RouteState) => RouteTarget | undefined;
+    /** undefined preserves the route and records rejection; null commits a withdrawn route. */
+    readonly apply: (state: RouteState) => RouteTarget | null | undefined;
   }): Promise<void> {
     const key = this.key(input.installationId);
     for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS; attempt += 1) {
@@ -324,8 +354,8 @@ export class PluginRouteController implements DockerPluginRoutingController {
       let outcome: 'committed' | 'not-committed';
       try {
         const target = input.apply(state);
-        active = target ?? state.active;
-        outcome = target ? 'committed' : 'not-committed';
+        active = target === undefined ? state.active : target;
+        outcome = target === undefined ? 'not-committed' : 'committed';
       } catch {
         throw new PluginRouteControllerError('failed');
       }

@@ -18,6 +18,10 @@ if (!serviceToken || !publicKeyPem || !Number.isInteger(port) || port < 1 || por
 const sdk = await import(new URL('../vendor/plugin-sdk/dist/index.js', import.meta.url).href);
 const { createPluginServer, ExecutionJournal } = sdk;
 const manifest = JSON.parse(await readFile(new URL('./manifest.json', import.meta.url), 'utf8'));
+const installationId = process.env.HASI_PLUGIN_INSTALLATION_ID ?? manifest.id;
+if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(installationId)) {
+  throw new Error('The reference plugin installation binding is invalid.');
+}
 let actionCount = 0;
 const journalRecords = new Map();
 const executionStore = {
@@ -35,6 +39,7 @@ const executionStore = {
 const server = createPluginServer({
   executionJournal: new ExecutionJournal(executionStore, 'local-reference-test'),
   manifest,
+  acceptedInstallationIds: [installationId],
   publicKey: createPublicKey(publicKeyPem),
   serviceToken,
   handlers: {
