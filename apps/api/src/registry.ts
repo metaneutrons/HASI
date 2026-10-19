@@ -13,6 +13,8 @@ import { resultEnvelope, sourcePolicySchema, type SourcePolicy, type ResultPagin
 import { PluginAccountError, type PluginAccountService } from './plugin-accounts.js';
 import type { PluginDeploymentBinding } from './plugin-deployment-binding.js';
 import { managedPluginRuntimeContractSchema, type ManagedPluginRuntimeContract } from './managed-plugin-contract.js';
+import { ProposalBindingGuard } from './proposal-binding-guard.js';
+import type { ProposalRetentionUntil } from './proposal-invalidation.js';
 
 export class RequestError extends Error {
   constructor(public readonly status: number, message: string) { super(message); }
@@ -779,6 +781,14 @@ export class PluginRegistry {
     }
   }
   async binding(id: string) { return this.bindingFor(await this.refresh(this.get(id))); }
+  /** Server composition only: keys and scope never enter the HTTP/plugin boundary. */
+  proposalBindingGuard(store: JsonStore, proposalRetentionUntil: ProposalRetentionUntil): ProposalBindingGuard | undefined {
+    if (!this.store) return undefined;
+    return new ProposalBindingGuard({
+      store, privateKey: this.privateKey, scope: this.scope, proposalRetentionUntil,
+      observeActionBinding: id => this.observeActionBinding(id),
+    });
+  }
   async authorityBinding(id: string, actor: ActorContext) {
     const current = await this.actorFor(id, actor);
     return digest({ actor: projectActorContext(current.actor, this.get(id).manifest), accountRevision: current.revision ?? null });

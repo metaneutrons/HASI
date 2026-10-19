@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 const INVALIDATION_REASONS = [
   'plugin_updated',
+  'binding_changed',
   'configuration_activated',
   'plugin_disabled',
   'plugin_removed',

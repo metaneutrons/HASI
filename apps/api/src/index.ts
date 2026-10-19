@@ -40,6 +40,9 @@ const roomRequest = z.strictObject({ resourceId: annyId, serviceId: annyId, star
 const draftSchema = z.strictObject({ executionTool: z.string(), arguments: z.record(z.string(), z.unknown()), resourceName: z.string().max(200) });
 interface Proposal { reconciliationAuthorityDigest?: string; preview?: ActionPreview; actionPolicyRevision?: string; reconciledAt?: number; executionTitle?: string; executionDescription?: string; authorityDigest?: string; bindingDigest?: string; id: string; subject: string; pluginId: string; pluginVersion: string; executionTool: string; args: Record<string, unknown>; resourceName: string; startDate: string; endDate: string; expiresAt: string; status: 'pending' | 'executing' | 'confirmed' | 'failed' | 'outcome_unknown'; result?: Record<string, unknown>; executionId?: string; executionStartedAt?: number }
 const publicUser = (user: Persona) => ({ id: user.id, displayName: user.displayName, role: user.role });
+class InvalidatedProposalError extends Error {
+  constructor() { super('Die Dienstfreigabe wurde geändert. Dieser Vorschlag ist ungültig. Bitte neu vorbereiten.'); }
+}
 const publicProposal = (proposal: Proposal) => ({ ...(proposal.preview ? { preview: proposal.preview } : {}), id: proposal.id, resourceName: proposal.resourceName, startDate: proposal.startDate, endDate: proposal.endDate, expiresAt: proposal.expiresAt, status: proposal.status, arguments: proposal.args, pluginId: proposal.pluginId, executionTool: proposal.executionTool, ...(proposal.pluginId !== ANNY ? { executionTitle: proposal.executionTitle ?? proposal.executionTool, executionDescription: proposal.executionDescription ?? '' } : {}), action: proposal.pluginId === ANNY ? proposal.executionTool === 'anny.execute_cancellation' ? 'cancel_booking' : 'book' : 'execute_tool' });
 
 export interface ApiOptions {
@@ -71,6 +74,11 @@ export async function createApi(options: ApiOptions) {
   const allowedHosts = options.allowedHosts ?? ['127.0.0.1', 'localhost'];
   const proposalKey = (id: string) => `proposal:${id}`;
   const proposalLifetime = () => Date.now() + 86400000;
+  // A fixed server-derived deadline avoids extending invalidated proposal content
+  // every time a client reloads it. Audit projection retention is separate.
+  const proposalBindingGuard = options.registry.proposalBindingGuard(store, proposal =>
+    typeof proposal.expiresAt === 'string' ? Date.parse(proposal.expiresAt) + 86400000 : Number.NaN);
+  if ((options.mode === 'production' || options.mode === 'public-demo') && !proposalBindingGuard) throw new Error('Hosted API requires durable plugin lifecycle authority.');
   const origin = options.origin ?? 'http://127.0.0.1:3000';
   await app.register(cookie);
   app.addHook('onRequest', async (request, reply) => {
@@ -80,6 +88,7 @@ export async function createApi(options: ApiOptions) {
     if (!['GET', 'HEAD'].includes(request.method) && request.headers.origin !== origin) throw new RequestError(403, 'Ungültiger Anfrageursprung.');
   });
   app.setErrorHandler((error, _request, reply) => {
+    if (error instanceof InvalidatedProposalError) return reply.code(409).send({ error: error.message, code: 'proposal_invalidated' });
     if (error instanceof PluginAccountError) return reply.code(error.statusCode).send({ error: error.message, code: error.code });
     if (error instanceof PluginSettingsError && error.errors) return reply.code(error.status).send({ error: error.message, code: 'configuration_invalid', errors: error.errors });
     if (error instanceof RequestError || error instanceof PluginSettingsError) return reply.code(error.status).send({ error: error.message });
@@ -88,6 +97,13 @@ export async function createApi(options: ApiOptions) {
   });
   const requireUser = async (token: string | undefined) => { const user = await identity.resolve(token); if (!user) throw new RequestError(401, oidc ? 'Bitte melde dich an.' : 'Bitte wähle zuerst ein Testkonto.'); return user; };
   const requireAdmin = async (token: string | undefined) => { const user = await requireUser(token); if (user.role !== 'admin' || !user.actor.permissions.includes('plugins:manage')) throw new RequestError(403, 'Diese Funktion ist der Administration vorbehalten.'); return user; };
+  const assertProposalBinding = async (id: string, subject: string) => {
+    if (!proposalBindingGuard) return; // Process-local development retains the existing execution checks.
+    const observed = await proposalBindingGuard.observeOwnedProposal(id, subject);
+    if (observed.status === 'missing') throw new RequestError(404, 'Vorschlag nicht gefunden.');
+    if (observed.status === 'unavailable') throw new RequestError(503, 'Die aktuelle Dienstfreigabe kann gerade nicht geprüft werden. Bitte später erneut versuchen.');
+    if (observed.status === 'invalidated') throw new InvalidatedProposalError();
+  };
   registerManagedPluginAdminRoutes(app, {
     cookieName,
     requireAdmin,
@@ -331,6 +347,7 @@ export async function createApi(options: ApiOptions) {
   app.get('/api/proposals/:id', async request => {
     const user = await requireUser(request.cookies[cookieName]);
     const { id } = z.object({ id: z.uuid() }).parse(request.params);
+    await assertProposalBinding(id, user.actor.subject);
     const record = await store.read(proposalKey(id));
     const proposal = record?.value as Proposal | undefined;
     if (proposal?.subject !== user.actor.subject) throw new RequestError(404, 'Vorschlag nicht gefunden.');
@@ -347,6 +364,7 @@ export async function createApi(options: ApiOptions) {
       const record = await store.read(key);
       const proposal = record?.value as Proposal | undefined;
       if (!record || proposal?.subject !== user.actor.subject) throw new RequestError(404, 'Vorschlag nicht gefunden.');
+      await assertProposalBinding(id, user.actor.subject);
       if (proposal.status === 'confirmed' || proposal.status === 'outcome_unknown') { await assertProposalReadAccess(proposal, user); return { ...(proposal.result ?? {}), proposal: publicProposal(proposal) }; }
       if (proposal.status === 'executing' && proposal.executionStartedAt && Date.now() - proposal.executionStartedAt > 60000) {
         await assertProposalReadAccess(proposal, user);
