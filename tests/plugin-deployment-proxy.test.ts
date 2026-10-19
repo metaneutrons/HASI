@@ -61,6 +61,7 @@ describe('operator plugin deployment proxy', () => {
       endpointResolver: {
         resolveActiveEndpoint: () => Promise.resolve({
           deploymentId: '0123456789abcdef01234567',
+          relayDeploymentId: 'd'.repeat(64),
           releaseDigest: 'a'.repeat(64),
           host: '127.0.0.1',
           port: address.port,

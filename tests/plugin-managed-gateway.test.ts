@@ -57,6 +57,7 @@ describe('production managed plugin gateway composition', () => {
       endpointResolver: {
         resolveActiveEndpoint: () => Promise.resolve({
           deploymentId: 'fixture-deployment-1',
+          relayDeploymentId: 'd'.repeat(64),
           releaseDigest: 'a'.repeat(64),
           host: '127.0.0.1',
           port: address.port,

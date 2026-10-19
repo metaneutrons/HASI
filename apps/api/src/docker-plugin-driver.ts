@@ -2,6 +2,10 @@ import { createHash } from 'node:crypto';
 import { request as httpRequest, type IncomingMessage } from 'node:http';
 import { isAbsolute } from 'node:path';
 import { buildPluginContainerLaunchPolicy, DeploymentDriverError, type DeploymentDriver, type DeploymentObservation, type LogicalSecretAssignment, type PluginContainerLaunchPolicy, type VerifiedPluginRelease } from './plugin-artifacts.js';
+import { DockerPluginDriverError } from './docker-plugin-errors.js';
+import { createDockerPluginRelay, dockerPluginContainerName, DOCKER_PLUGIN_MANAGED_VALUE, isPrivatePluginIPv4, type RelayCandidate } from './docker-plugin-relay.js';
+
+export { DockerPluginDriverError };
 
 const ENGINE_API = '/v1.51';
 const MAX_ENGINE_RESPONSE_BYTES = 4 * 1024 * 1024;
@@ -30,22 +34,15 @@ const NETWORK_LABEL = 'hasi.network';
 const CPU_LABEL = 'hasi.cpu-millicores';
 const MEMORY_LABEL = 'hasi.memory-bytes';
 const PIDS_LABEL = 'hasi.pids-limit';
-const MANAGED_VALUE = 'hasi-docker-plugin-driver-v1';
+const MANAGED_VALUE = DOCKER_PLUGIN_MANAGED_VALUE;
 
 const OPAQUE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
-const CONTAINER_ID = /^[a-f0-9]{12,64}$/;
+const CONTAINER_ID = /^[a-f0-9]{64}$/;
 const RELEASE_DIGEST = /^[a-f0-9]{64}$/;
 const IMAGE_REFERENCE = /^[a-z0-9][a-z0-9._:/-]{0,447}@sha256:[a-f0-9]{64}$/;
 const SECRET_NAME = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 const SECRET_REF = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const SAFE_HEALTH_PATH = /^\/(?:[A-Za-z0-9._~-]+\/)*[A-Za-z0-9._~-]*$/;
-
-export class DockerPluginDriverError extends DeploymentDriverError {
-  constructor(outcome: 'failed' | 'unknown') {
-    super(outcome);
-    this.name = 'DockerPluginDriverError';
-  }
-}
 
 export interface DockerEngineRequest {
   readonly method: 'GET' | 'POST' | 'DELETE';
@@ -106,6 +103,7 @@ export interface DockerPluginRoutingController {
 
 export interface DockerPluginActiveEndpoint {
   readonly deploymentId: string;
+  readonly relayDeploymentId: string;
   readonly releaseDigest: string;
   readonly host: string;
   readonly port: number;
@@ -146,6 +144,8 @@ export interface DockerPluginDriverOptions {
   readonly ownerId: string;
   /** Network names provisioned by the operator; each must inspect as Docker Internal=true. */
   readonly allowedInternalNetworks: readonly string[];
+  /** Operator-provisioned bridge shared only by the trusted fixed target relay. */
+  readonly relayNetwork: string;
   readonly routing: DockerPluginRoutingController;
   readonly resolveSecret: DockerPluginSecretResolver;
   readonly healthPath?: string;
@@ -172,6 +172,7 @@ interface OwnedContainer {
   readonly networkMode: string;
   readonly hostPort: number | null;
   readonly containerPort: number | null;
+  readonly internalAddress: string | null;
   readonly shutdownTimeoutMs: number;
   readonly startupTimeoutMs: number;
 }
@@ -343,7 +344,7 @@ function validateSecretAssignments(value: readonly LogicalSecretAssignment[]): v
 function launchOptions(policy: PluginContainerLaunchPolicy) {
   return {
     network: policy.network.mode === 'none' ? { mode: 'none' as const } : { mode: 'internal' as const, name: policy.network.name },
-    ...(policy.publishedPort ? { hostPort: policy.publishedPort.hostPort, containerPort: policy.publishedPort.containerPort } : {}),
+    ...(policy.ingress ? { hostPort: policy.ingress.hostPort, containerPort: policy.ingress.containerPort } : {}),
     cpuMillicores: policy.cpuMillicores,
     memoryBytes: policy.memoryBytes,
     pidsLimit: policy.pidsLimit,
@@ -389,16 +390,37 @@ function emptyArrayOrMissing(value: unknown): boolean {
   return value === undefined || value === null || (Array.isArray(value) && value.length === 0);
 }
 
+function emptyObjectOrMissing(value: unknown): boolean {
+  return value === undefined || value === null || (isRecord(value) && Object.keys(value).length === 0);
+}
+
 function stringArray(value: unknown): readonly string[] | undefined {
   return Array.isArray(value) && value.every(item => typeof item === 'string') ? value : undefined;
+}
+
+function internalAddress(body: EngineObject, networkName: string, running: boolean): string | null | undefined {
+  const networkSettings = body.NetworkSettings;
+  if (!isRecord(networkSettings)) return undefined;
+  const networks = networkSettings.Networks;
+  if (!isRecord(networks) || Object.keys(networks).length !== 1 || !Object.hasOwn(networks, networkName)) return undefined;
+  const attachment = networks[networkName];
+  if (!isRecord(attachment)) return undefined;
+  const ports = networkSettings.Ports;
+  if (ports !== undefined && ports !== null) {
+    if (!isRecord(ports) || !Object.values(ports).every(value => value === null)) return undefined;
+  }
+  const address = attachment.IPAddress;
+  if (typeof address === 'string' && address.length > 0) return isPrivatePluginIPv4(address) ? address : undefined;
+  if (running) return undefined;
+  return null;
 }
 
 function verifyContainerHardening(body: EngineObject, config: EngineObject, hostConfig: EngineObject, labels: Record<string, string>): boolean {
   const cpuMillicores = safeInteger(Number(labels[CPU_LABEL]), 100, 16_000);
   const memoryBytes = safeInteger(Number(labels[MEMORY_LABEL]), 64 * 1024 * 1024, 16 * 1024 * 1024 * 1024);
   const pidsLimit = safeInteger(Number(labels[PIDS_LABEL]), 1, 4_096);
-  const hostPort = labels[HOST_PORT_LABEL] === 'none' ? null : safeInteger(Number(labels[HOST_PORT_LABEL]), 1, 65_535);
-  const containerPort = labels[CONTAINER_PORT_LABEL] === 'none' ? null : safeInteger(Number(labels[CONTAINER_PORT_LABEL]), 1, 65_535);
+  const hostPort = safeInteger(Number(labels[HOST_PORT_LABEL]), 1, 65_535);
+  const containerPort = safeInteger(Number(labels[CONTAINER_PORT_LABEL]), 1, 65_535);
   const networkName = labels[NETWORK_LABEL];
   if (!cpuMillicores || !memoryBytes || !pidsLimit || !networkName || !hostPort || !containerPort) return false;
 
@@ -408,14 +430,17 @@ function verifyContainerHardening(body: EngineObject, config: EngineObject, host
   const bindings = hostConfig.PortBindings;
   const exposedPorts = config.ExposedPorts;
   const portKey = `${String(containerPort)}/tcp`;
-  const bindingEntries = isRecord(bindings) ? bindings[portKey] : undefined;
-  const binding = Array.isArray(bindingEntries) && bindingEntries.length === 1 && isRecord(bindingEntries[0]) ? bindingEntries[0] : undefined;
-  const boundHostIp = binding?.HostIp;
-  const boundHostPort = binding?.HostPort;
 
   return config.User === '65532:65532'
     && config.Image === labels[IMAGE_LABEL]
     && hostConfig.NetworkMode === networkName
+    && (hostConfig.PidMode === undefined || hostConfig.PidMode === '')
+    && hostConfig.IpcMode === 'private'
+    && (hostConfig.UTSMode === undefined || hostConfig.UTSMode === '')
+    && hostConfig.CgroupnsMode === 'private'
+    && (hostConfig.UsernsMode === undefined || hostConfig.UsernsMode === '')
+    && hostConfig.AutoRemove === false
+    && isRecord(hostConfig.RestartPolicy) && hostConfig.RestartPolicy.Name === 'no' && hostConfig.RestartPolicy.MaximumRetryCount === 0
     && hostConfig.ReadonlyRootfs === true
     && hostConfig.Privileged === false
     && capDrop?.length === 1 && capDrop[0] === 'ALL'
@@ -429,11 +454,25 @@ function verifyContainerHardening(body: EngineObject, config: EngineObject, host
     && emptyArrayOrMissing(hostConfig.Mounts)
     && emptyArrayOrMissing(hostConfig.Devices)
     && emptyArrayOrMissing(hostConfig.DeviceRequests)
+    && emptyArrayOrMissing(hostConfig.VolumesFrom)
+    && emptyArrayOrMissing(hostConfig.Links)
+    && emptyArrayOrMissing(hostConfig.ExtraHosts)
+    && emptyArrayOrMissing(hostConfig.Dns)
+    && emptyArrayOrMissing(hostConfig.DnsOptions)
+    && emptyArrayOrMissing(hostConfig.DnsSearch)
+    && emptyArrayOrMissing(hostConfig.DeviceCgroupRules)
+    && emptyArrayOrMissing(hostConfig.GroupAdd)
+    && emptyObjectOrMissing(hostConfig.Tmpfs)
+    && emptyObjectOrMissing(hostConfig.Sysctls)
+    && emptyObjectOrMissing(hostConfig.StorageOpt)
+    && emptyArrayOrMissing(hostConfig.Ulimits)
+    && (hostConfig.Cgroup === undefined || hostConfig.Cgroup === '')
+    && (hostConfig.CgroupParent === undefined || hostConfig.CgroupParent === '')
     && emptyArrayOrMissing(body.Mounts)
     && (config.Volumes === undefined || config.Volumes === null || (isRecord(config.Volumes) && Object.keys(config.Volumes).length === 0))
     && isRecord(exposedPorts) && Object.keys(exposedPorts).length === 1 && Object.hasOwn(exposedPorts, portKey)
-    && boundHostIp === '127.0.0.1'
-    && boundHostPort === String(hostPort)
+    && hostConfig.PublishAllPorts === false
+    && emptyObjectOrMissing(bindings)
     && labels[NETWORK_LABEL] === networkName;
 }
 
@@ -478,6 +517,11 @@ function validateDriverOptions(options: DockerPluginDriverOptions): void {
   if (!networks.every((name): name is string => typeof name === 'string' && /^[a-z][a-z0-9-]{0,62}$/.test(name)) || new Set(networks).size !== networks.length) {
     throw new TypeError('Operator-approved Docker network names are invalid.');
   }
+  if (typeof options.relayNetwork !== 'string' || !/^[a-z][a-z0-9-]{0,62}$/.test(options.relayNetwork)
+    || ['bridge', 'default', 'host', 'none'].includes(options.relayNetwork)
+    || networks.includes(options.relayNetwork)) {
+    throw new TypeError('The trusted relay network must be a distinct operator-defined Docker network.');
+  }
   if (options.healthPath !== undefined && (!SAFE_HEALTH_PATH.test(options.healthPath) || options.healthPath.includes('..') || options.healthPath.includes('//'))) {
     throw new TypeError('Docker plugin health path is invalid.');
   }
@@ -499,6 +543,11 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
     ...(body !== undefined ? { body } : {}),
     timeoutMs: requestTimeoutMs,
   });
+  const relay = createDockerPluginRelay({
+    ownerId: options.ownerId,
+    networkName: options.relayNetwork,
+    request: (method, path, body) => request(method, path, body),
+  });
 
   async function ownedContainer(id: string, installationId: string): Promise<OwnedContainer | null> {
     if (!isContainerId(id)) throw new DockerPluginDriverError('failed');
@@ -511,6 +560,7 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
     const hostConfig = body.HostConfig;
     const state = body.State;
     if (!isRecord(config) || !isRecord(hostConfig) || !isRecord(state)) throw new DockerPluginDriverError('unknown');
+    if (typeof state.Running !== 'boolean') throw new DockerPluginDriverError('unknown');
     const labels = readLabels(config.Labels);
     if (labels[MANAGED_LABEL] !== MANAGED_VALUE || labels[OWNER_LABEL] !== options.ownerId || labels[INSTALLATION_LABEL] !== installationId) {
       throw new DockerPluginDriverError('failed');
@@ -522,48 +572,55 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
       || labels[ROLE_LABEL] !== 'candidate') {
       throw new DockerPluginDriverError('failed');
     }
+    if (body.Id !== id || body.Name !== `/${dockerPluginContainerName(options.ownerId, installationId, labels[OPERATION_LABEL] ?? '')}`) {
+      throw new DockerPluginDriverError('failed');
+    }
     await assertDaemonSeccomp();
     const hostPortLabel = labels[HOST_PORT_LABEL];
     const containerPortLabel = labels[CONTAINER_PORT_LABEL];
-    const hostPort = hostPortLabel === 'none' ? null : safeInteger(Number(hostPortLabel), 1, 65_535);
-    const containerPort = containerPortLabel === 'none' ? null : safeInteger(Number(containerPortLabel), 1, 65_535);
+    const hostPort = safeInteger(Number(hostPortLabel), 1, 65_535);
+    const containerPort = safeInteger(Number(containerPortLabel), 1, 65_535);
     const shutdownTimeoutMs = safeInteger(Number(labels[SHUTDOWN_MS_LABEL]), 1, 30_000);
     const startupTimeoutMs = safeInteger(Number(labels[STARTUP_MS_LABEL]), 1, 120_000);
-    if ((hostPortLabel !== 'none' && hostPort === undefined) || (containerPortLabel !== 'none' && containerPort === undefined) || !shutdownTimeoutMs || !startupTimeoutMs) {
+    if (hostPort === undefined || containerPort === undefined || String(hostPort) !== hostPortLabel
+      || String(containerPort) !== containerPortLabel || !shutdownTimeoutMs || !startupTimeoutMs) {
       throw new DockerPluginDriverError('unknown');
     }
     const image = typeof config.Image === 'string' ? config.Image : '';
     const networkMode = typeof hostConfig.NetworkMode === 'string' ? hostConfig.NetworkMode : '';
-    if (!options.allowedInternalNetworks.includes(networkMode)) throw new DockerPluginDriverError('failed');
+    if (!options.allowedInternalNetworks.includes(networkMode) || labels[NETWORK_LABEL] !== networkMode) throw new DockerPluginDriverError('failed');
     if (!verifyContainerHardening(body, config, hostConfig, labels)) throw new DockerPluginDriverError('failed');
+    const running = state.Running;
+    const address = internalAddress(body, networkMode, running);
+    if (address === undefined) throw new DockerPluginDriverError('failed');
     return {
       id,
       labels,
-      running: state.Running === true,
+      running,
       image,
       networkMode,
-      hostPort: hostPort ?? null,
-      containerPort: containerPort ?? null,
+      hostPort,
+      containerPort,
+      internalAddress: address,
       shutdownTimeoutMs,
       startupTimeoutMs,
     };
   }
 
-  async function assertSameInstallationNetwork(networkName: string, installationId: string): Promise<void> {
+  async function assertEmptyInternalNetwork(networkName: string): Promise<void> {
     if (!options.allowedInternalNetworks.includes(networkName)) throw new DockerPluginDriverError('failed');
     let response: DockerEngineResponse;
     try { response = await request('GET', `/networks/${encodeURIComponent(networkName)}`); } catch { throw new DockerPluginDriverError('failed'); }
     if (response.statusCode !== 200 || !isRecord(response.body)) readStatusError(response, false);
     const network = response.body;
-    if (network.Name !== networkName || network.Internal !== true || !isRecord(network.Containers)) throw new DockerPluginDriverError('failed');
+    const networkOptions = network.Options;
+    const networkLabels = network.Labels;
+    if (network.Name !== networkName || network.Driver !== 'bridge' || network.Internal !== true || network.EnableIPv6 !== false
+      || !isRecord(networkLabels) || networkLabels[OWNER_LABEL] !== options.ownerId || networkLabels[MANAGED_LABEL] !== MANAGED_VALUE
+      || !isRecord(networkOptions) || networkOptions['com.docker.network.bridge.gateway_mode_ipv4'] !== 'isolated'
+      || !isRecord(network.Containers)) throw new DockerPluginDriverError('failed');
     const members = Object.keys(network.Containers);
-    if (members.length > MAX_NETWORK_MEMBERS) throw new DockerPluginDriverError('failed');
-    for (const id of members) {
-      if (!isContainerId(id)) throw new DockerPluginDriverError('failed');
-      const attached = await ownedContainer(id, installationId);
-      if (!attached) throw new DockerPluginDriverError('failed');
-      if (attached.networkMode !== networkName) throw new DockerPluginDriverError('failed');
-    }
+    if (members.length > MAX_NETWORK_MEMBERS || members.length !== 0) throw new DockerPluginDriverError('failed');
   }
 
   async function inspectLocalImage(release: VerifiedPluginRelease): Promise<void> {
@@ -628,23 +685,19 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
 
   type InternalPluginPolicy = PluginContainerLaunchPolicy & {
     readonly network: Extract<PluginContainerLaunchPolicy['network'], { readonly mode: 'internal' }>;
-    readonly publishedPort: NonNullable<PluginContainerLaunchPolicy['publishedPort']>;
+    readonly ingress: NonNullable<PluginContainerLaunchPolicy['ingress']>;
   };
 
   function verifyLaunchPolicy(release: VerifiedPluginRelease, policy: PluginContainerLaunchPolicy): asserts policy is InternalPluginPolicy {
-    if (!matchesPolicy(release, policy) || policy.network.mode !== 'internal' || !policy.publishedPort) {
+    if (!matchesPolicy(release, policy) || policy.network.mode !== 'internal' || !policy.ingress) {
       throw new DockerPluginDriverError('failed');
     }
     if (!options.allowedInternalNetworks.includes(policy.network.name)) throw new DockerPluginDriverError('failed');
   }
 
-  function dockerContainerName(installationId: string, operationId: string): string {
-    return `hasi-plugin-${sha(options.ownerId).slice(0, 8)}-${sha(installationId).slice(0, 10)}-${sha(operationId).slice(0, 10)}`;
-  }
-
   function createBody(input: Parameters<DeploymentDriver['stage']>[0], env: readonly string[]): EngineObject {
     const policy = input.policy;
-    const port = policy.publishedPort;
+    const port = policy.ingress;
     if (policy.network.mode !== 'internal' || !port) throw new DockerPluginDriverError('failed');
     const portKey = `${String(port.containerPort)}/tcp`;
     const labels: Record<string, string> = {
@@ -680,8 +733,14 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
       StopTimeout: Math.max(1, Math.ceil(policy.shutdownTimeoutMs / 1_000)),
       HostConfig: {
         NetworkMode: policy.network.name,
-        PortBindings: { [portKey]: [{ HostIp: '127.0.0.1', HostPort: String(port.hostPort) }] },
+        PortBindings: {},
         PublishAllPorts: false,
+        PidMode: '',
+        IpcMode: 'private',
+        UTSMode: '',
+        CgroupnsMode: 'private',
+        UsernsMode: '',
+        AutoRemove: false,
         ReadonlyRootfs: true,
         CapAdd: [],
         CapDrop: ['ALL'],
@@ -695,6 +754,14 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
         Mounts: [],
         Devices: [],
         DeviceRequests: [],
+        DeviceCgroupRules: [],
+        GroupAdd: [],
+        Tmpfs: {},
+        Sysctls: {},
+        StorageOpt: {},
+        Ulimits: [],
+        Cgroup: '',
+        CgroupParent: '',
         RestartPolicy: { Name: 'no', MaximumRetryCount: 0 },
       },
     };
@@ -709,20 +776,67 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
     return container;
   }
 
-  async function healthy(container: OwnedContainer, releaseDigest: string, startupTimeoutMs: number): Promise<boolean> {
-    if (container.labels[RELEASE_LABEL] !== releaseDigest || !container.running || container.networkMode === 'none') return false;
-    const hostPort = container.hostPort;
-    const containerPort = container.containerPort;
-    if (!hostPort || !containerPort) return false;
+  function relayCandidate(container: OwnedContainer, installationId: string): RelayCandidate {
+    const pluginId = container.labels[PLUGIN_LABEL];
+    const operationId = container.labels[OPERATION_LABEL];
+    const releaseDigest = container.labels[RELEASE_LABEL];
+    if (typeof pluginId !== 'string' || typeof operationId !== 'string' || typeof releaseDigest !== 'string'
+      || !OPAQUE_ID.test(operationId) || !RELEASE_DIGEST.test(releaseDigest)
+      || !container.hostPort || !container.containerPort) throw new DockerPluginDriverError('unknown');
+    return {
+      id: container.id,
+      installationId,
+      operationId,
+      pluginId,
+      releaseDigest,
+      networkName: container.networkMode,
+      internalAddress: container.internalAddress,
+      running: container.running,
+      hostPort: container.hostPort,
+      containerPort: container.containerPort,
+      shutdownTimeoutMs: container.shutdownTimeoutMs,
+    };
+  }
+
+  async function inspectRelay(container: OwnedContainer, installationId: string): Promise<{ readonly id: string; readonly running: boolean; readonly hostPort: number } | null> {
+    let inspected: Awaited<ReturnType<typeof relay.inspect>>;
+    try {
+      inspected = await relay.inspect(relayCandidate(container, installationId));
+    } catch (error) {
+      if (error instanceof DeploymentDriverError) throw error;
+      throw new DockerPluginDriverError('unknown');
+    }
+    if (inspected === null) return null;
+    if (!isRecord(inspected) || !isContainerId(inspected.id) || typeof inspected.running !== 'boolean') {
+      throw new DockerPluginDriverError('unknown');
+    }
+    const hostPort = safeInteger(inspected.hostPort, 1, 65_535);
+    if (hostPort === undefined || hostPort !== container.hostPort) throw new DockerPluginDriverError('unknown');
+    return { id: inspected.id, running: inspected.running, hostPort };
+  }
+
+  async function healthCheck(container: OwnedContainer, installationId: string, releaseDigest: string, startupTimeoutMs: number): Promise<{
+    readonly healthy: boolean;
+    readonly relayDeploymentId: string | null;
+  }> {
+    if (container.labels[RELEASE_LABEL] !== releaseDigest || !container.running || !container.internalAddress
+      || !isPrivatePluginIPv4(container.internalAddress) || container.networkMode === 'none'
+      || !container.hostPort || !container.containerPort) return { healthy: false, relayDeploymentId: null };
     const deadline = Date.now() + startupTimeoutMs;
+    let pinnedRelayId: string | null = null;
     do {
+      const inspectedRelay = await inspectRelay(container, installationId);
+      if (!inspectedRelay?.running || (pinnedRelayId !== null && inspectedRelay.id !== pinnedRelayId)) {
+        return { healthy: false, relayDeploymentId: inspectedRelay?.id ?? pinnedRelayId };
+      }
+      pinnedRelayId = inspectedRelay.id;
       const remaining = Math.max(1, deadline - Date.now());
-      const responsive = await probe({ host: '127.0.0.1', port: hostPort, path: healthPath, timeoutMs: Math.min(requestTimeoutMs, remaining) }).catch(() => false);
-      if (responsive) return true;
-      if (Date.now() >= deadline) return false;
+      const responsive = await probe({ host: '127.0.0.1', port: inspectedRelay.hostPort, path: healthPath, timeoutMs: Math.min(requestTimeoutMs, remaining) }).catch(() => false);
+      if (responsive) return { healthy: true, relayDeploymentId: pinnedRelayId };
+      if (Date.now() >= deadline) return { healthy: false, relayDeploymentId: pinnedRelayId };
       await delay(Math.min(HEALTH_POLL_INTERVAL_MS, Math.max(1, deadline - Date.now())));
     } while (Date.now() < deadline);
-    return false;
+    return { healthy: false, relayDeploymentId: pinnedRelayId };
   }
 
   async function activeRoute(installationId: string): Promise<string | null> {
@@ -759,6 +873,42 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
       && candidate.releaseDigest === expected.releaseDigest;
   }
 
+  async function assertNoRelayForOperation(installationId: string, operationId: string): Promise<void> {
+    // Labels can be missing or changed. A filtered empty list is not proof that
+    // the operation's reserved names are free, nor authority to remove a collision.
+    const name = dockerPluginContainerName(options.ownerId, installationId, operationId);
+    await assertContainerNameUnused(name);
+    await assertContainerNameUnused(`${name}-relay`);
+    const filters = encodeURIComponent(JSON.stringify({ label: [
+      `${MANAGED_LABEL}=${MANAGED_VALUE}`,
+      `${OWNER_LABEL}=${options.ownerId}`,
+      `${INSTALLATION_LABEL}=${installationId}`,
+      `${OPERATION_LABEL}=${operationId}`,
+    ] }));
+    let response: DockerEngineResponse;
+    try { response = await request('GET', `/containers/json?all=1&filters=${filters}`); } catch { throw new DockerPluginDriverError('unknown'); }
+    if (response.statusCode !== 200 || !Array.isArray(response.body) || response.body.length > MAX_RECONCILE_CONTAINERS) {
+      throw new DockerPluginDriverError('unknown');
+    }
+    if (response.body.length > 0) {
+      for (const item of response.body) {
+        if (!isRecord(item) || !isContainerId(item.Id)) throw new DockerPluginDriverError('unknown');
+        const labels = asStringLabels(item.Labels);
+        if (labels?.[MANAGED_LABEL] !== MANAGED_VALUE || labels[OWNER_LABEL] !== options.ownerId
+          || labels[INSTALLATION_LABEL] !== installationId || labels[OPERATION_LABEL] !== operationId
+          || labels[ROLE_LABEL] !== 'relay') throw new DockerPluginDriverError('unknown');
+      }
+      // The candidate metadata needed for a safe paired deletion is gone.
+      throw new DockerPluginDriverError('unknown');
+    }
+  }
+
+  async function assertContainerNameUnused(name: string): Promise<void> {
+    let response: DockerEngineResponse;
+    try { response = await request('GET', `/containers/${encodeURIComponent(name)}/json`); } catch { throw new DockerPluginDriverError('unknown'); }
+    if (response.statusCode !== 404) throw new DockerPluginDriverError('unknown');
+  }
+
   return {
     async resolveActiveEndpoint(input) {
       if (!OPAQUE_ID.test(input.installationId)) throw new DockerPluginDriverError('failed');
@@ -768,8 +918,13 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
       if (!container.running || container.networkMode === 'none' || !container.hostPort || !container.containerPort) {
         throw new DockerPluginDriverError('failed');
       }
-      if (!await healthy(container, target.releaseDigest, Math.min(container.startupTimeoutMs, requestTimeoutMs))) {
+      const health = await healthCheck(container, input.installationId, target.releaseDigest, Math.min(container.startupTimeoutMs, requestTimeoutMs));
+      if (!health.healthy || !health.relayDeploymentId) {
         throw new DockerPluginDriverError('failed');
+      }
+      const afterRelay = await inspectRelay(container, input.installationId);
+      if (!afterRelay?.running || afterRelay.id !== health.relayDeploymentId || afterRelay.hostPort !== container.hostPort) {
+        throw new DockerPluginDriverError('unknown');
       }
       const after = await activeRouteTarget(input.installationId);
       if (!matchesRouteTarget(after, target)) {
@@ -777,6 +932,7 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
       }
       return Object.freeze({
         deploymentId: target.deploymentId,
+        relayDeploymentId: health.relayDeploymentId,
         releaseDigest: target.releaseDigest,
         host: '127.0.0.1' as const,
         port: container.hostPort,
@@ -786,6 +942,7 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
 
     async assertActiveEndpoint(input) {
       if (!OPAQUE_ID.test(input.installationId) || !isContainerId(input.endpoint.deploymentId)
+        || !isContainerId(input.endpoint.relayDeploymentId)
         || !RELEASE_DIGEST.test(input.endpoint.releaseDigest) || input.endpoint.host !== '127.0.0.1'
         || !safeInteger(input.endpoint.port, 1, 65_535) || !safeInteger(input.endpoint.containerPort, 1, 65_535)) {
         throw new DockerPluginDriverError('failed');
@@ -794,6 +951,10 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
       if (!matchesRouteTarget(before, input.endpoint)) return false;
       const container = await inspectLabelsBeforeRoute(input.endpoint.deploymentId, input.installationId, input.endpoint.releaseDigest);
       if (!container.running || container.hostPort !== input.endpoint.port || container.containerPort !== input.endpoint.containerPort) return false;
+      const beforeRelay = await inspectRelay(container, input.installationId);
+      if (!beforeRelay?.running || beforeRelay.id !== input.endpoint.relayDeploymentId || beforeRelay.hostPort !== input.endpoint.port) return false;
+      const afterRelay = await inspectRelay(container, input.installationId);
+      if (!afterRelay?.running || afterRelay.id !== input.endpoint.relayDeploymentId || afterRelay.hostPort !== input.endpoint.port) return false;
       const after = await activeRouteTarget(input.installationId);
       return matchesRouteTarget(after, input.endpoint);
     },
@@ -809,12 +970,15 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
       }
 
       // All read-only preflight checks complete before Docker can create anything.
+      await relay.preflight();
+      const name = dockerPluginContainerName(options.ownerId, input.installationId, input.operationId);
+      await assertContainerNameUnused(name);
+      await assertContainerNameUnused(`${name}-relay`);
       await inspectLocalImage(input.release);
-      await assertSameInstallationNetwork(input.policy.network.name, input.installationId);
+      await assertEmptyInternalNetwork(input.policy.network.name);
       await assertDaemonSeccomp();
       const env = await secretEnvironment({ installationId: input.installationId, release: input.release, assignments: input.secretAssignments });
       const body = createBody(input, env);
-      const name = dockerContainerName(input.installationId, input.operationId);
 
       let created: DockerEngineResponse;
       try {
@@ -823,6 +987,7 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
         // A transport failure may arrive after Docker accepted the create request.
         throw new DockerPluginDriverError('unknown');
       }
+      if (created.statusCode === 409) throw new DockerPluginDriverError('unknown');
       if (created.statusCode !== 201) readStatusError(created, true);
       if (!isRecord(created.body) || typeof created.body.Id !== 'string' || !isContainerId(created.body.Id)) {
         throw new DockerPluginDriverError('unknown');
@@ -832,8 +997,14 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
       try {
         const started = await request('POST', `/containers/${encodeURIComponent(id)}/start`);
         if (started.statusCode !== 204) throw new DockerPluginDriverError('unknown');
+        const container = await ownedContainer(id, input.installationId);
+        if (container?.labels[OPERATION_LABEL] !== input.operationId) throw new DockerPluginDriverError('unknown');
+        if (!container.running) return { deploymentId: id };
+        if (!container.internalAddress || !isPrivatePluginIPv4(container.internalAddress)) throw new DockerPluginDriverError('unknown');
+        await relay.stage(relayCandidate(container, input.installationId));
       } catch {
-        // The container exists; reconciliation must inspect its operation label before any retry.
+        // A candidate may exist, and the relay may also have been partially staged.
+        // Reconciliation must identify the pair before any retry or cleanup.
         throw new DockerPluginDriverError('unknown');
       }
       return { deploymentId: id };
@@ -845,19 +1016,29 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
       try { container = await ownedContainer(input.deploymentId, input.installationId); } catch { throw new DockerPluginDriverError('unknown'); }
       if (!container) return false;
       if (container.labels[ROLE_LABEL] !== 'candidate') throw new DockerPluginDriverError('failed');
-      return healthy(container, input.releaseDigest, container.startupTimeoutMs);
+      const result = await healthCheck(container, input.installationId, input.releaseDigest, container.startupTimeoutMs);
+      return result.healthy;
     },
 
     async discard(input) {
       if (!OPAQUE_ID.test(input.installationId) || !OPAQUE_ID.test(input.operationId) || !isContainerId(input.deploymentId)) {
         throw new DockerPluginDriverError('failed');
       }
+      if (await activeRoute(input.installationId) === input.deploymentId) throw new DockerPluginDriverError('failed');
       const container = await ownedContainer(input.deploymentId, input.installationId);
-      if (!container) return; // Repeated deletion after an earlier successful cleanup is benign.
+      if (!container) {
+        await assertNoRelayForOperation(input.installationId, input.operationId);
+        return; // Repeated deletion after an earlier successful cleanup is benign.
+      }
       if (container.labels[OPERATION_LABEL] !== input.operationId || container.labels[ROLE_LABEL] !== 'candidate') {
         throw new DockerPluginDriverError('failed');
       }
-      if (await activeRoute(input.installationId) === input.deploymentId) throw new DockerPluginDriverError('failed');
+      try {
+        await relay.discard(relayCandidate(container, input.installationId));
+      } catch (error) {
+        if (error instanceof DeploymentDriverError) throw error;
+        throw new DockerPluginDriverError('unknown');
+      }
       let stopped: DockerEngineResponse;
       try {
         stopped = await request('POST', `/containers/${encodeURIComponent(input.deploymentId)}/stop?t=${String(Math.ceil(container.shutdownTimeoutMs / 1_000))}`);
@@ -886,7 +1067,7 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
         const previous = await inspectLabelsBeforeRoute(input.previousDeploymentId, input.installationId, input.baseCurrentDigest ?? undefined);
         if (previous.labels[ROLE_LABEL] !== 'candidate') throw new DockerPluginDriverError('failed');
       }
-      if (!await healthy(candidate, candidateReleaseDigest, 1_000)) throw new DockerPluginDriverError('failed');
+      if (!(await healthCheck(candidate, input.installationId, candidateReleaseDigest, 1_000)).healthy) throw new DockerPluginDriverError('failed');
       try {
         await bounded(() => options.routing.activate({
           ownerId: options.ownerId,
@@ -912,7 +1093,8 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
       const previous = await inspectLabelsBeforeRoute(input.previousDeploymentId, input.installationId);
       if (current.labels[ROLE_LABEL] !== 'candidate' || previous.labels[ROLE_LABEL] !== 'candidate') throw new DockerPluginDriverError('failed');
       const previousReleaseDigest = previous.labels[RELEASE_LABEL];
-      if (!isReleaseDigest(previousReleaseDigest) || !await healthy(previous, previousReleaseDigest, 1_000)) throw new DockerPluginDriverError('failed');
+      if (!isReleaseDigest(previousReleaseDigest)
+        || !(await healthCheck(previous, input.installationId, previousReleaseDigest, 1_000)).healthy) throw new DockerPluginDriverError('failed');
       try {
         await bounded(() => options.routing.rollback({
           ownerId: options.ownerId,
@@ -937,21 +1119,70 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
       let response: DockerEngineResponse;
       try { response = await request('GET', `/containers/json?all=1&filters=${filters}`); } catch { throw new DockerPluginDriverError('unknown'); }
       if (response.statusCode !== 200 || !Array.isArray(response.body)) readStatusError(response, false);
-      const summaries: ContainerSummary[] = [];
       if (response.body.length > MAX_RECONCILE_CONTAINERS) throw new DockerPluginDriverError('unknown');
+      const candidates = new Map<string, OwnedContainer>();
+      const relaySummaries = new Map<string, ContainerSummary>();
+      const listedIds = new Set<string>();
       for (const item of response.body) {
-        if (!isRecord(item) || !isContainerId(item.Id)) throw new DockerPluginDriverError('unknown');
-        const listedLabels = readLabels(item.Labels);
+        if (!isRecord(item) || !isContainerId(item.Id) || listedIds.has(item.Id)) throw new DockerPluginDriverError('unknown');
+        listedIds.add(item.Id);
+        const listedLabels = asStringLabels(item.Labels);
+        if (!listedLabels) throw new DockerPluginDriverError('unknown');
         if (listedLabels[MANAGED_LABEL] !== MANAGED_VALUE || listedLabels[OWNER_LABEL] !== options.ownerId || listedLabels[INSTALLATION_LABEL] !== input.installationId) {
           throw new DockerPluginDriverError('unknown');
         }
-        const inspected = await ownedContainer(item.Id, input.installationId);
-        if (!inspected) continue;
-        if (digestSafe(inspected.labels) !== digestSafe(listedLabels)) throw new DockerPluginDriverError('unknown');
-        summaries.push({ id: item.Id, labels: inspected.labels, state: inspected.running ? 'running' : 'exited' });
+        const role = listedLabels[ROLE_LABEL];
+        const operationId = listedLabels[OPERATION_LABEL];
+        if (typeof operationId !== 'string' || !OPAQUE_ID.test(operationId)) throw new DockerPluginDriverError('unknown');
+        const summary = { id: item.Id, labels: listedLabels, state: typeof item.State === 'string' ? item.State : '' };
+        if (role === 'candidate') {
+          if (candidates.has(operationId)) throw new DockerPluginDriverError('unknown');
+          let inspected: OwnedContainer | null;
+          try { inspected = await ownedContainer(item.Id, input.installationId); } catch { throw new DockerPluginDriverError('unknown'); }
+          if (!inspected || digestSafe(inspected.labels) !== digestSafe(listedLabels)) throw new DockerPluginDriverError('unknown');
+          candidates.set(operationId, inspected);
+        } else if (role === 'relay') {
+          if (relaySummaries.has(operationId) || !isContainerId(listedLabels['hasi.candidate'] ?? '')
+            || listedLabels['hasi.relay-network'] !== options.relayNetwork
+            || !options.allowedInternalNetworks.includes(listedLabels[NETWORK_LABEL] ?? '')
+            || !isReleaseDigest(listedLabels[RELEASE_LABEL])
+            || !/^[a-z0-9](?:[a-z0-9._-]{0,126}[a-z0-9])?$/.test(listedLabels[PLUGIN_LABEL] ?? '')) {
+            throw new DockerPluginDriverError('unknown');
+          }
+          relaySummaries.set(operationId, summary);
+        } else {
+          throw new DockerPluginDriverError('unknown');
+        }
       }
       const activeDeploymentId = await activeRoute(input.installationId);
-      if (activeDeploymentId && !summaries.some(item => item.id === activeDeploymentId)) throw new DockerPluginDriverError('unknown');
+      if (!candidates.has(input.operationId)) await assertNoRelayForOperation(input.installationId, input.operationId);
+      if (activeDeploymentId && ![...candidates.values()].some(item => item.id === activeDeploymentId)) throw new DockerPluginDriverError('unknown');
+      for (const [operationId, relaySummary] of relaySummaries) {
+        const matching = candidates.get(operationId);
+        if (!matching) throw new DockerPluginDriverError('unknown');
+        if (relaySummary.labels['hasi.candidate'] !== matching.id
+          || relaySummary.labels[PLUGIN_LABEL] !== matching.labels[PLUGIN_LABEL]
+          || relaySummary.labels[RELEASE_LABEL] !== matching.labels[RELEASE_LABEL]
+          || relaySummary.labels[NETWORK_LABEL] !== matching.networkMode
+          || relaySummary.labels[HOST_PORT_LABEL] !== String(matching.hostPort)
+          || relaySummary.labels[CONTAINER_PORT_LABEL] !== String(matching.containerPort)) {
+          throw new DockerPluginDriverError('unknown');
+        }
+        let inspectedRelay: { readonly id: string; readonly running: boolean; readonly hostPort: number } | null;
+        try { inspectedRelay = await inspectRelay(matching, input.installationId); } catch { throw new DockerPluginDriverError('unknown'); }
+        if (inspectedRelay?.id !== relaySummary.id) throw new DockerPluginDriverError('unknown');
+      }
+      for (const [operationId, candidate] of candidates) {
+        let inspectedRelay: { readonly id: string; readonly running: boolean; readonly hostPort: number } | null;
+        try { inspectedRelay = await inspectRelay(candidate, input.installationId); } catch { throw new DockerPluginDriverError('unknown'); }
+        if (inspectedRelay) {
+          const listed = relaySummaries.get(operationId);
+          if (listed?.id !== inspectedRelay.id) throw new DockerPluginDriverError('unknown');
+          if (candidate.id === activeDeploymentId && (!candidate.running || !inspectedRelay.running)) throw new DockerPluginDriverError('unknown');
+        } else if (operationId !== input.operationId || candidate.id === activeDeploymentId) {
+          throw new DockerPluginDriverError('unknown');
+        }
+      }
       let routeOperationOutcome: DeploymentObservation['routeOperationOutcome'] = 'unknown';
       try {
         routeOperationOutcome = await bounded(() => options.routing.readOperationStatus({
@@ -963,9 +1194,8 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
         routeOperationOutcome = 'unknown';
       }
       if (!['committed', 'not-committed', 'pending', 'unknown'].includes(routeOperationOutcome)) routeOperationOutcome = 'unknown';
-      const staged = summaries.filter(item => item.labels[OPERATION_LABEL] === input.operationId && item.labels[ROLE_LABEL] === 'candidate');
-      if (staged.length > 1) throw new DockerPluginDriverError('unknown');
-      return { activeDeploymentId, stagedDeploymentId: staged[0]?.id ?? null, routeOperationOutcome };
+      const staged = candidates.get(input.operationId);
+      return { activeDeploymentId, stagedDeploymentId: staged?.id ?? null, routeOperationOutcome };
     },
   };
 }
