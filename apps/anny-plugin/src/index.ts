@@ -1,16 +1,18 @@
 import type { KeyObject } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { createPluginServer, type ActorContext, type ExecutionJournal } from '@hasi/plugin-sdk';
+import { createPluginServer, digest, type ActorContext, type ExecutionBinding, type ExecutionJournal, type InvocationContext } from '@hasi/plugin-sdk';
 import { AnnyClient } from '@hasi/anny-client';
 import { annyAppManifest, annyAppResourceUri, annyManifest } from './manifest.js';
 import { loadAnnyAppView } from './app-view.js';
+import { createAnnySourceReconciler, type AnnyExecutionEvidenceReader } from './source-reconciliation.js';
 
 export { annyAppManifest, annyAppPresentationId, annyAppResourceUri, annyManifest, demoPresentation } from './manifest.js';
 export { annyAppViewSha256, loadAnnyAppView } from './app-view.js';
+export type { AnnyExecutionEvidenceReader } from './source-reconciliation.js';
 export type ResourceKind = 'workplace' | 'meeting_room' | 'lecture_hall' | 'room';
 export interface Presentation { capacity: number | null; location: string; features: string[]; serviceId: string; kind?: ResourceKind; parentId?: string | null; parentName?: string | null; officeWorkplaceCount?: number | null }
-export interface AnnyPluginOptions { executionJournal?: ExecutionJournal; client: AnnyClient | ((actor: ActorContext) => AnnyClient); allowedHosts?: string[]; consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>; publicKey: KeyObject; serviceToken: string; presentation: Record<string, Presentation>; version?: string; enableAppView?: boolean }
+export interface AnnyPluginOptions { executionJournal?: ExecutionJournal; readExecutionEvidence?: AnnyExecutionEvidenceReader; client: AnnyClient | ((actor: ActorContext, execution?: Readonly<ExecutionBinding>) => AnnyClient); allowedHosts?: string[]; consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>; publicKey: KeyObject; serviceToken: string; presentation: Record<string, Presentation>; version?: string; enableAppView?: boolean }
 const annyId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/);
 const interval = z.strictObject({ resourceId: annyId, serviceId: annyId, startDate: z.iso.datetime({ offset: true }), endDate: z.iso.datetime({ offset: true }) });
 const cancellation = interval.omit({ serviceId: true }).extend({ bookingId: annyId });
@@ -42,7 +44,10 @@ export function createAnnyPlugin(options: AnnyPluginOptions): FastifyInstance {
     if (!customerId) throw new Error('No authorized anny account is linked.');
     return customerId;
   };
-  const client = (actor: ActorContext) => typeof options.client === 'function' ? options.client(pluginActor(actor)) : options.client;
+  const client = (actor: ActorContext, execution?: Readonly<ExecutionBinding>) => typeof options.client === 'function' ? options.client(pluginActor(actor), execution) : options.client;
+  const executionBinding = (actor: ActorContext, context: InvocationContext | undefined, tool: string, args: Record<string, unknown>): Readonly<ExecutionBinding> | undefined => context?.executionId
+    ? Object.freeze({ subject: actor.subject, installationId: context.installationId, executionId: context.executionId, tool,
+      argsHash: digest(args), configurationRevision: context.configurationRevision }) : undefined;
   const selectedManifest = enableAppView ? annyAppManifest : annyManifest;
   const manifest = { ...selectedManifest, version: options.version ?? selectedManifest.version };
   const authorized = (resourceId: string, serviceId: string, actor: ActorContext) => {
@@ -74,6 +79,13 @@ export function createAnnyPlugin(options: AnnyPluginOptions): FastifyInstance {
     if (!['accepted', 'confirmed', 'requested'].includes(booking.status ?? '') || Date.parse(booking.startDate) <= Date.now()) throw new Error('Only active future bookings can be cancelled.');
   };
   return createPluginServer({
+    ...(options.readExecutionEvidence ? { reconcileExecution: createAnnySourceReconciler({
+      readEvidence: options.readExecutionEvidence, customerId: customerForActor, ownedBooking,
+      authorizeResource: (resourceId, serviceId, actor) => {
+        if (serviceId !== undefined) authorized(resourceId, serviceId, actor);
+        else if (!(pluginActor(actor).resourceIds ?? []).includes(resourceId)) throw new Error('Resource access denied.');
+      },
+    }) } : {}),
     ...(options.executionJournal ? { executionJournal: options.executionJournal } : {}), manifest, publicKey: options.publicKey, serviceToken: options.serviceToken, ...(enableAppView ? { appResources: { [annyAppResourceUri]: loadAnnyAppView() } } : {}), ...(options.allowedHosts ? { allowedHosts: options.allowedHosts } : {}), ...(options.consumeInvocation ? { consumeInvocation: options.consumeInvocation } : {}),
     handlers: {
       'anny.search_resources': async (_args, actor) => ({ resources: (await client(actor).listResources()).flatMap(resource => {
@@ -124,10 +136,10 @@ export function createAnnyPlugin(options: AnnyPluginOptions): FastifyInstance {
         const roomNames = await names(actor);
         return { draft: { executionTool: 'anny.execute_booking', arguments: parsed, resourceName: roomNames.get(parsed.resourceId) ?? 'Raum' } };
       },
-      'anny.execute_booking': async (args, actor) => {
+      'anny.execute_booking': async (args, actor, context) => {
         const parsed = interval.parse(args);
         await assertAvailable(parsed, actor);
-        const booking = await client(actor).createBooking({ ...parsed, customerId: customerForActor(actor) });
+        const booking = await client(actor, executionBinding(actor, context, 'anny.execute_booking', parsed)).createBooking({ ...parsed, customerId: customerForActor(actor) });
         return { bookingId: booking.bookingId };
       },
       'anny.propose_cancellation': async (args, actor) => {
@@ -137,14 +149,14 @@ export function createAnnyPlugin(options: AnnyPluginOptions): FastifyInstance {
         const roomNames = await names(actor);
         return { draft: { executionTool: 'anny.execute_cancellation', arguments: { bookingId, resourceId: booking.resourceId, startDate: booking.startDate, endDate: booking.endDate }, resourceName: roomNames.get(booking.resourceId) ?? 'Raum' } };
       },
-      'anny.execute_cancellation': async (args, actor) => {
+      'anny.execute_cancellation': async (args, actor, context) => {
         const parsed = cancellation.parse(args);
         const booking = await ownedBooking(parsed.bookingId, actor);
         if (booking.resourceId !== parsed.resourceId || Date.parse(booking.startDate) !== Date.parse(parsed.startDate) || Date.parse(booking.endDate) !== Date.parse(parsed.endDate)) throw new Error('Booking changed; prepare a new cancellation.');
         // A previous confirmed cancellation needs no second vendor mutation.
         if (['canceled', 'cancelled'].includes(booking.status ?? '')) return { bookingId: parsed.bookingId, status: 'cancelled' };
         cancellable(booking);
-        await client(actor).cancelBooking(parsed.bookingId);
+        await client(actor, executionBinding(actor, context, 'anny.execute_cancellation', parsed)).cancelBooking(parsed.bookingId);
         const updated = await ownedBooking(parsed.bookingId, actor);
         if (!['canceled', 'cancelled'].includes(updated.status ?? '')) throw new Error('Cancellation outcome is not established; reconcile before retrying.');
         return { bookingId: parsed.bookingId, status: 'cancelled' };

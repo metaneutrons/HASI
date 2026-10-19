@@ -12,6 +12,7 @@ import { DurableDemoIdentity } from './identity.js';
 import { DemoPluginAccountAdapter } from './plugin-account-adapter.js';
 import { knowledgeDocuments, SERVICE_IT_DEMO_ORIGIN } from '@hasi/demo-fixtures/knowledge-catalog';
 import { createContentHttpClient } from '@hasi/api';
+import { createDemoAnnyTransport, readDemoAnnyExecutionEvidence } from './anny-execution-evidence.js';
 export { DemoPluginAccountAdapter } from './plugin-account-adapter.js';
 
 const workspaceCookie = '__Host-hasi-demo-workspace';
@@ -84,15 +85,13 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
     executionJournal: new ExecutionJournal(options.store, 'demo-anny'),
     publicKey, serviceToken: pluginToken, presentation: options.catalog ? Object.fromEntries(options.catalog.resources.map(({ id, capacity, location, features, serviceId, kind, parentId, parentName, officeWorkplaceCount }) => [id, { capacity, location, features, serviceId, ...(kind ? { kind } : {}), ...(parentId !== undefined ? { parentId } : {}), ...(parentName !== undefined ? { parentName } : {}), ...(officeWorkplaceCount !== undefined ? { officeWorkplaceCount } : {}) }])) : demoPresentation, allowedHosts: [origin.hostname],
     consumeInvocation: (jti, expiresAt) => options.store.compareAndSet(`invocation:${jti}`, null, { consumed: true }, expiresAt * 1000),
-    client: actor => {
+    readExecutionEvidence: (binding, actor) => readDemoAnnyExecutionEvidence({
+      origin: origin.origin, workspaceId: subjectWorkspace(actor.subject), serviceToken: mockToken, fetch: internalFetch,
+    }, binding),
+    client: (actor, execution) => {
       const workspaceId = subjectWorkspace(actor.subject);
-      const scopedFetch: typeof fetch = (input, init) => {
-        const headers = new Headers(init?.headers);
-        headers.set('x-hasi-demo-workspace', workspaceId);
-        // Anonymous vendor routes are private inside this isolated mock service.
-        if (!headers.has('authorization')) headers.set('authorization', `Bearer ${mockToken}`);
-        return internalFetch(input, { ...init, headers });
-      };
+      const scopedFetch = createDemoAnnyTransport({ origin: origin.origin, workspaceId, serviceToken: mockToken, fetch: internalFetch,
+        ...(execution ? { execution } : {}) });
       return new AnnyClient({ baseUrl: origin.origin, organizationId: MOCK_IDS.organization, token: mockToken, allowLoopback: !secure, allowWrites: true, fetchImpl: scopedFetch });
     },
   });
@@ -160,7 +159,8 @@ export function createDemoRuntime(options: DemoRuntimeOptions) {
     if (!equal(request.headers.get('authorization') ?? '', `Bearer ${mockToken}`)) return failure(401);
     const scope = uuid.safeParse(request.headers.get('x-hasi-demo-workspace'));
     if (!scope.success) return failure(403);
-    const app = createAnnyMock({ token: mockToken, store: workspaceStore(scope.data), scope: 'anny', ...(options.catalog ? { catalog: options.catalog } : {}) });
+    const app = createAnnyMock({ token: mockToken, store: workspaceStore(scope.data), scope: 'anny', workspaceId: scope.data,
+      ...(options.catalog ? { catalog: options.catalog } : {}) });
     try { return await forward(app, request); } finally { await app.close(); }
   }
 

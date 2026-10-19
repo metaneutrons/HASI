@@ -73,6 +73,14 @@ Public readiness returned that exact revision. A later disk-full incident
 interrupted PostgreSQL and the control plane; this job ultimately failed rather
 than receiving an invented success or journal reset. See
 [the disk recovery record](demo-disk-recovery.md). Public HASI recovered on
-`31fbf29`. The next ordinary main revision, PR #118's `e2d6b7c`, is the pending
-fresh complete automatic-delivery proof. This observed submission does not by
-itself establish completed delivery or M7 acceptance.
+`31fbf29`. The next ordinary main revision, PR #118's
+`e2d6b7cb3e5e4dd45f361327aa696d1ad2cb4573`, passed exact-main CI
+`39291678250` and was automatically deployed as Coolify
+`pzjledtkvfkpwgx048qvpwkz`. Coolify finished at 17:16:54 UTC; the controller
+recorded `completed` with one exact-revision health check at 17:18:38 UTC.
+Public HTTPS readiness matched that commit. All 186 immediately pre-deployment
+active baseline rows remained identical, with zero missing/changed/expired rows,
+the same database/volume and the same one-row shared budget fingerprint
+`0f16371ccf718735e0fbc510a17e448ad937e69f4b938e160812d867b7b7f5d3`.
+The controller is running/enabled. This proves the restored complete automatic
+delivery path; full M7 remains unaccepted.
