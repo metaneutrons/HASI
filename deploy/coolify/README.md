@@ -150,7 +150,17 @@ use restart policies, persistent named volumes and graceful stop periods.
 
 ## PostgreSQL backups and recovery
 
-Install `age` on the host. Copy [`backup-postgres.sh`](./backup-postgres.sh) to
+Under [Plan V5](../../docs/plans/consolidated-delivery.md#demo-continuity-decision--2026-10-19),
+the disposable demo has no backup acceptance requirement. The installed mechanism
+and historical evidence below do not imply a recovery guarantee. Production
+encrypted-artifact restore and ongoing off-host replication/failure monitoring
+remain [M8-A8](../../docs/plans/hasi-mvp.md#institutional-acceptance-m8) gates.
+After total state loss, keep model admission disabled until the current budget
+window has safely elapsed or authoritative accounting has been recovered; never
+interpret an empty database as evidence of zero spending.
+
+For production backup setup, or an optional demo backup, install `age` on the
+host. Copy [`backup-postgres.sh`](./backup-postgres.sh) to
 `/usr/local/sbin/hasi-backup-postgres` (root `0700`) and the adjacent systemd
 service/timer files to `/etc/systemd/system/`. Write the public age recipients
 from the operator's fnox configuration to `/etc/hasi/backup-recipients.txt`.

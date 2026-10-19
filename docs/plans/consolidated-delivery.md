@@ -1,17 +1,23 @@
 # HASI consolidated delivery plan
 
-Plan version: 4. Adopted 2026-10-19. V4 retains the V3 issue consolidation
+Plan version: 5. Scope decision: 2026-10-19. V5 records Fabian's decision to
+operate the disposable demo without a backup requirement. Production encrypted
+backup, off-host replication/failure monitoring and restore qualification move
+intact to final M8-A8. Independent service-health monitoring, incident handling,
+rollback and durable database/session/budget behavior remain M7 requirements.
+The previously adopted V4 retains the V3 issue consolidation
 and explicitly transfers all real-device and institutional participant tests to
 final M8, following Fabian's decision on 2026-10-19. M1–M7 use automated tests,
 Test-IdP, mocks, synthetic data and browser/device simulation. Required CI and
 technical operational exercises remain required. The earlier V3 changed only
 issue granularity and was adopted on 2026-10-18.
 
-Decision state: **V4 changes qualification sequencing, not product capabilities
-or the required final mobile quality.** Real iPhone/Safari, Android/Chrome,
+Decision state: **V5 changes the demo backup acceptance scope; V4 retains its
+qualification sequencing and final mobile-quality requirements.** Real iPhone/Safari, Android/Chrome,
 VoiceOver/TalkBack and participant acceptance remain mandatory in M8-A7; they
 are not claimed passed by simulation. Other P1–P6 security/runtime criteria,
-M1–M7 technical tests, budgets and operational gates are unchanged. Source
+M1–M7 technical tests and budgets remain required; the demo backup/restore
+exception is limited to the explicit M8-A8 transfer. Source
 records transferred under V3 remain `not_planned`, never accepted work.
 Third-party MCP Apps remain off by default after the P2 no-go decision. This
 plan authorizes neither real institutional writes/protected-data tests nor
@@ -130,7 +136,7 @@ never as completed work. All 37 issue records and their histories remain.
 | [#51](https://github.com/metaneutrons/HASI/issues/51) | M4 anny read contracts and behavior | M1/M2 technical boundaries; mock identities and reference contracts, not a real tenant |
 | [#52](https://github.com/metaneutrons/HASI/issues/52) | M5 confirmed anny write/cancel/reconcile behavior | Follows M4 against mocks/reference contracts; actual tenant and vendor conformance remain M8 |
 | [#53](https://github.com/metaneutrons/HASI/issues/53) | M6 synthetic/offline model and adversarial evaluation | Formal evaluation before M7; BUD-A1 before paid runs; DI-A1–DI-A4 via #81 before final provider comparison; CACHE-A1 remains separate |
-| [#54](https://github.com/metaneutrons/HASI/issues/54) | M7 synthetic technical pilot and operations | M1–M6 technical gates, automated/browser/simulator UX, restore and off-host monitoring; no institutional data prerequisite |
+| [#54](https://github.com/metaneutrons/HASI/issues/54) | M7 synthetic technical pilot and operations | M1–M6 technical gates, automated/browser/simulator UX, independent service-health monitoring and incident/rollback exercises; demo backup/restore is M8-A8 |
 | [#55](https://github.com/metaneutrons/HASI/issues/55) | Post-MVP roadmap and discovery register | Retains eight scoped proposals, source-specific next actions and reactivation gates; no connector is committed or implemented |
 | [#80](https://github.com/metaneutrons/HASI/issues/80) | M8 final institutional acceptance | After M1–M7; real identity, source rights, Anny tenant, protected-data approval and recorded go/no-go |
 | [#17](https://github.com/metaneutrons/HASI/issues/17) | D3 first actual container publication | Separately requested Release Please release; exact-tag amd64/arm64 and real publication evidence |
@@ -233,8 +239,9 @@ identities and an independent test plugin; they do not require live M3–M5.
    unverified. Complete BUD-A1 before paid evaluation. CACHE-A1 remains separate;
    missing counters do not establish cache hits or savings.
 7. **Accept M7 as the synthetic technical pilot.** Complete automated/browser/
-   simulator UX and accessibility checks, encrypted-backup restore,
-   off-host monitoring, incident handling and rollback using synthetic data.
+   simulator UX and accessibility checks, independent service-health monitoring,
+   incident handling and rollback using synthetic data. The disposable demo has
+   no backup/restore acceptance gate; production backup and recovery remain M8-A8.
    This milestone does not need institutional source approval and does not
    qualify real SSO or writes.
 8. **Complete M8 last** as the real-device/participant and institutional go/no-go. Real identity, both
@@ -497,8 +504,10 @@ During development, run focused contract, policy and workflow tests. At each
 integration point, qualify the exact candidate with required CI, supported Node
 versions and relevant PostgreSQL/concurrency paths. Use isolated malicious
 fixtures to prove new gates reject bad inputs as well as accept valid ones.
-Reserve actual-device/participant tests for M8-A7. Deployment, backup/restore
-and multi-platform container checks retain their own technical/release gates. Refresh/qualify only the next PR in merge order; unrelated
+Reserve actual-device/participant tests for M8-A7 and production encrypted-backup/
+restore/off-host replication qualification for M8-A8. Deployment, independent
+service-health monitoring, incident handling and multi-platform container checks
+retain their own technical/release gates. Refresh/qualify only the next PR in merge order; unrelated
 documentation edits do not justify repeating expensive runtime qualification.
 
 Use reviewed PRs per milestone; reference its P*-A* criterion IDs in #49 without
@@ -518,6 +527,23 @@ synthetic rights as institutional acceptance, and promising rollback across an
 irreversible migration. P1/P2 bound the design; P3/P4 prove existing workflows;
 P5/P6 qualify external execution. If a required boundary fails, record the blocker
 and revise the plan through review rather than silently narrowing acceptance.
+
+## Demo continuity decision — 2026-10-19
+
+Fabian explicitly selected a demo server without backup. M7 therefore qualifies
+a disposable synthetic demo without requiring encrypted-artifact restore,
+off-host backup replication or backup-failure alerting. These original production
+continuity requirements are preserved in M8-A8, before institutional rollout;
+they are not reported as passed. Existing backup artifacts and historical
+verification remain evidence only, and this scope decision does not request
+their deletion. Independent service-health monitoring stays in M7.
+
+This exception does not waive database/session persistence during deployment,
+action idempotency/unknown-outcome recovery, or the shared USD 1/day budget.
+After a total state loss, model admission must remain disabled until the current
+budget window is safely past or its accounting is authoritatively restored;
+an empty replacement database cannot establish that nothing was spent. M7's
+incident procedure must exercise this conservative recovery with synthetic data.
 
 ## Plan review and completion
 
