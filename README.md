@@ -157,6 +157,13 @@ The separate `pnpm knowledge:serve` composition accepts approved signed exports 
 
 A separate production API entrypoint and frontend-to-API transport are available; see [production composition](docs/architecture/production-runtime.md). They require real operator configuration and institutional authority provisioning. The public demo does not use this production identity path.
 
+The [synthetic topology qualifier](docs/architecture/production-runtime.md#isolated-identitytopology-qualification)
+runs the actual Next.js handler, two separate API processes, trusted local TLS,
+Test-IdP and disposable PostgreSQL. It checks session/revocation/restart boundaries
+without a model call. Production request events expose only a server correlation
+ID, static route, method, status and duration. Worker isolation, full model-budget
+and browser workflow qualification remain separate M2 gates.
+
 The host owns identity, permissions and state transitions. The model can search and prepare a proposal; only the user can confirm the exact proposal, and the current booking path writes to the synthetic service. Production third-party plugin isolation, source integrations and institutional authorization remain open work.
 
 ## Status
@@ -173,7 +180,7 @@ Track delivery in the [unified index #47](https://github.com/metaneutrons/HASI/i
 later integrations in [roadmap #55](https://github.com/metaneutrons/HASI/issues/55),
 and the six plugin qualification groups P1–P6 in [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
 The approved [v4 plan](docs/plans/consolidated-delivery.md#v3-issue-graph)
-consolidates tracking to 13 open issues while preserving all acceptance criteria and evidence.
+consolidates the initiative into 13 primary tracking records while preserving all acceptance criteria and evidence; completed records close with their evidence in the issue index.
 The MCP registry supports approved endpoints, compatible updates, schema-driven
 configuration and registry-driven chat tool discovery. Arbitrary plugin code
 installation is intentionally unsupported. Independent artifact packaging, personal account lifecycle and deployment coordination have implementation paths. Full mobile/production acceptance remains open; final acceptance tests were deferred by Fabian on 2026-10-18.

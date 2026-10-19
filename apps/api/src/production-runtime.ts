@@ -11,6 +11,7 @@ import type { PluginAccountService } from './plugin-accounts.js';
 import type { PluginDeploymentBinding } from './plugin-deployment-binding.js';
 import { createPluginDeploymentGateway } from './plugin-deployment-proxy.js';
 import type { DockerPluginActiveEndpointResolver } from './docker-plugin-driver.js';
+import { createConsoleOperationalEventSink, type OperationalEventSink } from './operational-events.js';
 
 /** Same stable key as the verified OIDC provider; e-mail is never an account authority. */
 export function stableOidcSubject(issuer: string, subject: string) {
@@ -55,13 +56,14 @@ export interface ProductionRuntimeOptions {
   plugins: readonly ApprovedPluginSource[];
   identity: Omit<OidcIdentityProviderOptions, 'mode' | 'store' | 'mapIdentity' | 'resolveAuthority' | 'redirectUri'>;
   actionPolicies?: ApiOptions['actionPolicies'];
+  operationalEventSink?: OperationalEventSink;
   accounts?: ReadonlyMap<string, PluginAccountService>;
   deploymentBindings?: ReadonlyMap<string, PluginDeploymentBinding>;
   /** Embedded operator compositions only; prefer a separate worker process in institutional hosting. */
   managedGateway?: { endpointResolver: DockerPluginActiveEndpointResolver; port: number; installationIds: readonly string[] };
 }
 
-/** Separate long-lived API/worker topology; the public Vercel fixture stack is not used. */
+/** Separate long-lived API/worker topology; the public Coolify fixture stack is not used. */
 export async function createProductionRuntime(options: ProductionRuntimeOptions) {
   const origin = new URL(options.webOrigin);
   if (origin.origin !== options.webOrigin || origin.protocol !== 'https:' || origin.username || origin.password || options.store instanceof MemoryJsonStore || !options.apiHostname || !options.scope) throw new TypeError('Production requires HTTPS and durable operator-owned state');
@@ -101,7 +103,7 @@ export async function createProductionRuntime(options: ProductionRuntimeOptions)
     // Catalogue entries are approvals to connect, not an instruction to reinstall removed sources.
     // createApi restores only durable connected records; a fresh installation is explicit admin work.
     const knowledgeContexts = createRegistryKnowledgeContexts({ registry, store: options.store, privateKey: options.privateKey, scope: options.scope, resolveActor: async subject => (await directory.resolve(subject))?.actor });
-    const app = await createApi({ mode: 'production', knowledgeContexts, registry, identity, store: options.store, origin: origin.origin, allowedHosts: [options.apiHostname], secureCookies: true, sessionCookieName: '__Host-hasi-session', pluginCatalog: plugins, ...(options.actionPolicies ? { actionPolicies: options.actionPolicies } : {}) });
+    const app = await createApi({ mode: 'production', knowledgeContexts, registry, identity, store: options.store, origin: origin.origin, allowedHosts: [options.apiHostname], secureCookies: true, sessionCookieName: '__Host-hasi-session', pluginCatalog: plugins, operationalEventSink: options.operationalEventSink ?? createConsoleOperationalEventSink(), ...(options.actionPolicies ? { actionPolicies: options.actionPolicies } : {}) });
     if (gateway) app.addHook('onClose', () => gateway.close());
     app.get('/health', () => ({ status: 'ok' }));
     return { app, registry, directory };

@@ -52,6 +52,8 @@ export async function productionApiResponse(request: Request) {
     const response = await productionCoreRequest(`${url.pathname}${url.search}`, request);
     const headers = new Headers({ "cache-control": "private, no-store" });
     for (const name of ["content-type", "location"] as const) { const value = response.headers.get(name); if (value) headers.set(name, value); }
+    const requestId = response.headers.get("x-request-id");
+    if (requestId && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu.test(requestId)) headers.set("x-request-id", requestId);
     for (const cookie of response.headers.getSetCookie()) headers.append("set-cookie", cookie);
     // OIDC redirects are intentional. The fixed API performs return-path and IdP-origin checks.
     return new Response(response.body, { status: response.status, headers });
