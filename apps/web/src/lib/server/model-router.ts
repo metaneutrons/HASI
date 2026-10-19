@@ -576,6 +576,12 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
     }
   }
 
+  // A provider's forced-tool setting is a request, not evidence that it obeyed.
+  // Do not surface an unverified room answer or ask users for internal IDs.
+  if (needsInitialSearch && (toolCalls.length !== 1 || toolCalls[0]?.name !== "anny_search_resources")) {
+    throw invalidModelResponse();
+  }
+
   if (
     (result.text.trim().length === 0 && toolCalls.length === 0) ||
     result.text.length > 4000
@@ -592,7 +598,9 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
   const reply = {
     message: {
       role: "assistant",
-      content: result.text,
+      // Search activity and native result cards provide the first-turn feedback.
+      // Prose generated before the read cannot establish room availability.
+      content: needsInitialSearch ? "" : result.text,
       ...(toolCalls.length > 0 ? { toolCalls } : {}),
     },
     profile: {
