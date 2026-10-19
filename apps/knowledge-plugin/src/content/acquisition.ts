@@ -65,9 +65,11 @@ export function signContentSnapshot(snapshot: KnowledgeSourceExport, privateKey:
 /** Digest printed by an operator's private review workflow; no image bytes are fetched. */
 export function contentReviewDigest(content: AcquiredContent,
   page: Pick<ContentAcquisitionPolicy['pages'][number], 'id' | 'url' | 'acl' | 'classification' | 'language'>,
-  policyRevision: string): string {
+  policyRevision: string,
+  reviewedImages: KnowledgeDocumentExport['images'] = []): string {
   return digest({ adapter: content.adapter, canonicalUrl: content.canonicalUrl, revision: content.sourceRevision,
     title: content.title, text: content.text, images: content.images, sourceUpdatedAt: content.sourceUpdatedAt ?? null,
+    ...(reviewedImages.length > 0 ? { reviewedImages } : {}),
     policyRevision, page: { id: page.id, url: page.url, acl: page.acl, classification: page.classification, language: page.language } });
 }
 
@@ -137,7 +139,7 @@ export class ContentSnapshotProducer {
       if (acquired.canonicalUrl !== page.url || !acquired.sourceRevision || acquired.title.length > 200
         || (acquired.language && acquired.language !== page.language)) throw new ContentAcquisitionError('invalid_content');
       const review = page.reviews?.[acquired.adapter];
-      const reviewDigest = contentReviewDigest(acquired, page, this.options.policyRevision);
+      const reviewDigest = contentReviewDigest(acquired, page, this.options.policyRevision, review?.images ?? []);
       if (acquired.requiresContentReview && review?.digest !== reviewDigest)
         throw new ContentAcquisitionError('review_required');
       const acquiredAt = new Date(acquired.acquiredAt);

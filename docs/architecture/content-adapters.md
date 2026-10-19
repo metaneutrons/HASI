@@ -78,8 +78,11 @@ structural extraction, not a claim to reproduce all browser visibility rules.
 
 Image URLs remain private untrusted review metadata and are never fetched. Any
 image in the content area needs an explicit image review bound to the extracted
-revision/text/image digest before embedding or publication. The reviewed image
-transcripts obey the existing knowledge document bounds. Descriptor digests do not
+revision/text/image digest before embedding or publication. That approval also
+includes the exact ordered reviewed image records; changing a transcript, ID,
+alt text or review/instructional flag invalidates the old approval before any
+new embedding or snapshot publication. The reviewed image transcripts obey the
+existing knowledge document bounds. Descriptor digests do not
 hash image bytes or establish asset freshness; independently versioned asset
 review/OCR remains required for institutional image qualification. PDFs, OCR and binary
 attachments need separate adapters/extractors and are not handled as HTML.

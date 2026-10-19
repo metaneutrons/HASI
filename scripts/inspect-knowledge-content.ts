@@ -39,7 +39,10 @@ try {
     for (const page of input.policy.pages) {
       if (controller.signal.aborted) throw new Error('Review interrupted.');
       const content = await adapter.read({ url: page.url, ...(page.title ? { title: page.title } : {}) }, controller.signal);
-      const record = { id: page.id, contentReviewDigest: contentReviewDigest(content, page, source.policyRevision), content };
+      const reviewedImages = page.reviews?.[content.adapter]?.images ?? [];
+      const record = { id: page.id,
+        contentReviewDigest: contentReviewDigest(content, page, source.policyRevision, reviewedImages),
+        content, reviewedImages };
       bytes += Buffer.byteLength(JSON.stringify(record));
       if (bytes > 16 * 1024 * 1024) throw new Error('Review exceeds the output bound.');
       pages.push(record);
