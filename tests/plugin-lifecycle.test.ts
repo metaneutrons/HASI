@@ -147,6 +147,45 @@ describe('plugin installation lifecycle bindings', () => {
     expect(events).toEqual(['prepare:private-original-target']);
   });
 
+  it('does not recreate invalidated state or execute after its storage retention ends', async () => {
+    let storageNow = Date.now();
+    const events: string[] = [];
+    const store = new MemoryJsonStore('plugin-lifecycle-expired-invalidation', { clock: () => storageNow });
+    const fixture = await startPlugin(events);
+    const registry = new PluginRegistry(privateKey, { store });
+    await registry.install(fixture.registration);
+    const runtime = await startApi({ registry, store, identity: new MockIdentityProvider('test') });
+    await setTarget(runtime.api, runtime.adminCookie, 'expired-private-target', 0);
+    const prepared = await runtime.api.inject({ method: 'POST', url: '/api/tools/call',
+      headers: { ...headers, cookie: runtime.studentCookie },
+      payload: { pluginId, name: 'lifecycle.prepare', arguments: {} } });
+    expect(prepared.statusCode, prepared.body).toBe(200);
+    const proposal = prepared.json<{ proposal: { id: string; expiresAt: string } }>().proposal;
+    await registry.setEnabled(pluginId, false);
+    const invalidated = await runtime.api.inject({ url: `/api/proposals/${proposal.id}`,
+      headers: { ...headers, cookie: runtime.studentCookie } });
+    expect(invalidated.statusCode, invalidated.body).toBe(409);
+    expect(invalidated.json()).toMatchObject({ code: 'proposal_invalidated' });
+    expect(await store.read(`proposal:${proposal.id}`)).toBeDefined();
+
+    // Advance only the storage clock. The mock login remains valid, so a 404
+    // proves proposal retention expiry rather than an authentication failure.
+    storageNow = Date.parse(proposal.expiresAt) + 86_400_001;
+    const writer = vi.spyOn(store, 'compareAndSet');
+    const observer = vi.spyOn(registry, 'observeActionBinding');
+    for (const method of ['GET', 'POST'] as const) {
+      const response = await runtime.api.inject({ method,
+        url: `/api/proposals/${proposal.id}${method === 'POST' ? '/confirm' : ''}`,
+        headers: { ...headers, cookie: runtime.studentCookie }, ...(method === 'POST' ? { payload: {} } : {}) });
+      expect(response.statusCode, response.body).toBe(404);
+      expect(response.body).not.toContain('expired-private-target');
+    }
+    expect(await store.read(`proposal:${proposal.id}`)).toBeUndefined();
+    expect(writer).not.toHaveBeenCalled();
+    expect(observer).not.toHaveBeenCalled();
+    expect(events).toEqual(['prepare:expired-private-target']);
+  });
+
   it('preserves a pending proposal during unavailable authority and executes it once after recovery', async () => {
     const events: string[] = [];
     const store = new MemoryJsonStore('plugin-lifecycle-observation-outage');

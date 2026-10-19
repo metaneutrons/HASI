@@ -137,8 +137,59 @@ reviewed archival with replay history retained, never silent truncation.
 An initial cutover needs one operator handoff: leave the old web container
 serving while the new application builds and passes its internal Node readiness
 command; verify state and credentials, then switch the public router and stop
-the old web container. Subsequent admitted main revisions use native rolling
-deployments on this same application. No database restart is required.
+the old web container. Subsequent admitted main revisions normally use native rolling
+deployments on this same application. An incompatible signed-state reader change
+requires the stop-before-start procedure below. No database restart is required.
+
+## One-time core epoch cutover
+
+The first CI-qualified main revision containing registry `lifecycleRevision`
+and proposal invalidation is the minimum compatible core for this signed state.
+Record that exact merged SHA and built image ID in the deployment evidence.
+Older images reject the new signed registry field; restoring one is not a safe
+rollback. This is a pre-release maintenance cutover, not a database reset or a
+promise of rolling compatibility with old cores.
+
+1. Persistently pause controller admission with
+   `systemctl disable --now hasi-deploy-controller.service` before merging the
+   state-writing change. Verify `is-enabled` reports disabled and `is-active`
+   reports inactive; a simple stop would allow startup after a host reboot.
+   Preserve its journal. Wait for any
+   already submitted deployment to settle; do not race its build or activation.
+2. Obtain the exact new main SHA's successful required CI and pin it as the
+   source candidate. Before new code can serve or touch the database, take the
+   public application out of service, set restart policy `no` on each verified old application/API container
+   (`docker update --restart=no <verified-old-app-container>`), gracefully stop
+   it and verify no old writer process remains. Preventing automatic restart
+   also keeps old writers stopped across a host reboot. The retired bootstrap
+   web container must also stay stopped. Let in-flight requests settle; retain
+   uncertain business outcomes for reconciliation, never replay them.
+3. Resume the controller with
+   `systemctl enable --now hasi-deploy-controller.service` so its existing
+   exact-main CI admission builds and deploys the new candidate. The maintenance interval may include build time.
+   Keep the database service/volume, all namespaces, secrets and budget counters
+   intact. Do not run bootstrap or remove state. A failed build leaves service
+   unavailable pending a compatible forward fix; it does not authorize starting
+   an old writer.
+4. Verify the new running image, the public exact revision/readiness, existing
+   test session/proposal state and unchanged shared budget accounting. Record
+   the completed controller job and compatible image identity. Subsequent
+   ordinary rolling deployments may overlap only cores that understand and
+   preserve these signed epochs and terminal invalidations.
+
+After the new core has started, recover with that qualified floor image or a
+later reviewed compatible image. Private Coolify operators must not select a
+pre-floor retained image, even if the UI offers it. An image built from the floor
+commit may be rebuilt for forward recovery; the old image cannot undo the
+signed-state transition. Controller admission has no automated schema rollback
+and its journal must remain intact. This operator restriction is explicit;
+there is no claim that an old binary understands a new database marker.
+
+The managed plugin installer, plugin artifacts and active/previous route
+revisions are separate. Do not reinstall workers or restore old configuration,
+credentials or grants as part of this core cutover. The disposable PostgreSQL
+process rehearsal is supporting evidence; actual Coolify stop/start, preserved
+application state and exact-image readback remain a separate delivery step.
 
 ## Failure and rollback
 
@@ -150,7 +201,8 @@ missing budget, image/revision mismatches and failed builds remain failures.
 
 Coolify keeps the previously healthy container during a failed Dockerfile
 rolling update. For a completed deployment that needs reversal, use the
-application's retained immutable image through Coolify's Rollback operation.
+application's retained immutable image through Coolify's Rollback operation,
+subject to the minimum compatible core floor above.
 Coolify 4.4.6 may report a null `current`/false `is_current` in its rollback-image
 API when containers have timestamped names. Use the running container's actual
 image ID and public revision to identify the current version; do not infer it
