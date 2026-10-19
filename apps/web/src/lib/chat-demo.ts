@@ -384,6 +384,7 @@ function parseLocation(text: string): { found: boolean; value?: string } {
 function parseQuery(text: string): string | undefined {
   let residual = text;
   const patterns = [
+    /\b(?:neue|andere)\s+(?:raum)?suche\b/giu,
     new RegExp(OFFICE_TYPE_QUERY_PATTERN.source, OFFICE_TYPE_QUERY_PATTERN.flags),
     /\b(?:\d+|ein(?:e|en|em|er)?|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s+(?:arbeitsplätz(?:e|en)|arbeitsplaetz(?:e|en)|schreibtisch(?:e|en)|desks?)\b/giu,
     /\b(?:arbeitsplätz(?:e|en)?|arbeitsplatz|schreibtisch(?:e|en)?|büros?|bueros?|büroraum|büroräume|bueroraum|bueroraeume|flex[-\s]?büros?|flex[-\s]?bueros?|desks?|besprechungsräum(?:e|en)|besprechungsraum|meetingräum(?:e|en)|meetingraum|hörsäle|hörsaal|hoersaele|hoersaal)\b/giu,
