@@ -34,7 +34,14 @@ and zero model calls, then failed fast after its first knowledge batch. Repeat
 the external benchmark against a deployment before claiming a public latency
 improvement. The run retained no raw JSON artifact or measurement digest.
 
-Focused checks ran on Node 26.11.1; the runtime image is based on Node 24.
+The 10 focused transport checks pass on Node 26.11.1 and Node 24.21.0.
+Bodyless responses drain before returning their socket to the keep-alive pool.
+A real HTTP regression verifies socket reuse for 204/205/304 and an empty HEAD
+response. A deliberately truncated 205 response originally hung through the
+500 ms caller abort and failed the 15-second test deadline; completion now
+uses the stream's error-aware `finished` contract and rejects that same fixture
+with `aborted`. A separate check aborts an ordinary response midstream. These
+are loopback transport tests, not a public performance result.
 
 Focused checks:
 

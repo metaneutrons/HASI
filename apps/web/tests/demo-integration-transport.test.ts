@@ -36,6 +36,13 @@ async function startLoopbackServer() {
       });
       const requestUrl = new URL(request.url ?? '/', 'http://demo.example.test');
       const bodyless = requestUrl.searchParams.get('bodyless');
+      if (bodyless === '205' && requestUrl.searchParams.has('truncate')) {
+        response.writeHead(205, { 'content-length': '2' });
+        response.write('x');
+        const timer = setTimeout(() => response.socket?.destroy(), 20);
+        response.once('close', () => { clearTimeout(timer); });
+        return;
+      }
       if (bodyless) {
         const status = bodyless === 'head' ? 200 : Number(bodyless);
         response.writeHead(status).end();
@@ -177,6 +184,14 @@ describe('demo integration loopback transport', () => {
     } finally {
       globalAgent.off('free', onFree);
     }
+  });
+
+  it('rejects an interrupted bodyless response instead of waiting for the caller timeout', async () => {
+    const loopback = await startLoopbackServer();
+    const fetcher = createDemoIntegrationTransport({ publicOrigin: 'https://demo.example.test', port: loopback.port });
+    await expect(fetcher('https://demo.example.test/mcp?bodyless=205&truncate=1', {
+      signal: AbortSignal.timeout(500),
+    })).rejects.toThrow(/^aborted$/u);
   });
 
   it('returns HEAD responses without exposing a body', async () => {

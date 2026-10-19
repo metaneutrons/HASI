@@ -2,7 +2,7 @@ import 'server-only';
 
 import { request as httpRequest } from 'node:http';
 import { Readable } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
+import { finished, pipeline } from 'node:stream/promises';
 
 interface DemoIntegrationTransportOptions {
   publicOrigin: string;
@@ -124,7 +124,7 @@ export function createDemoIntegrationTransport(options: DemoIntegrationTransport
           if (bodyless) {
             // Drain Node's incoming message so keep-alive responses can return
             // their socket to the Agent pool even though Fetch has no body.
-            incoming.once('end', () => { resolve(response); });
+            void finished(incoming, { cleanup: true }).then(() => { resolve(response); }, reject);
             incoming.resume();
           } else resolve(response);
         } catch (error) {
