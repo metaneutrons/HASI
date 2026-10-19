@@ -24,7 +24,7 @@ const opaquePluginIdSchema = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za
 const signatureSchema = z.string().regex(/^[A-Za-z0-9_-]{86}$/u);
 const timestampSchema = z.iso.datetime({ offset: true });
 
-const signedChangeSchema = z.strictObject({
+const changePayloadShape = {
   schemaVersion: z.literal(1),
   scopeDigest: sha256Schema,
   eventId: sha256Schema,
@@ -35,13 +35,34 @@ const signedChangeSchema = z.strictObject({
   afterBindingDigest: sha256Schema,
   reason: reasonSchema,
   at: timestampSchema,
+} as const;
+
+const changePayloadSchema = z.strictObject(changePayloadShape).refine(value => value.beforeBindingDigest !== value.afterBindingDigest, {
+  message: 'A binding change must have distinct before and after digests.',
+  path: ['afterBindingDigest'],
+});
+
+const retentionDeadlineSchema = z.number().refine(value => Number.isSafeInteger(value)
+  && value >= 0
+  && Number.isFinite(new Date(value).getTime()), {
+  message: 'Retention deadline must be an absolute safe-integer timestamp.',
+});
+
+const signedEventPayloadSchema = z.strictObject({
+  ...changePayloadShape,
+  retainUntil: retentionDeadlineSchema,
 }).refine(value => value.beforeBindingDigest !== value.afterBindingDigest, {
   message: 'A binding change must have distinct before and after digests.',
   path: ['afterBindingDigest'],
 });
 
+const signedChangeEnvelopeSchema = z.strictObject({
+  event: changePayloadSchema,
+  signature: signatureSchema,
+});
+
 const signedEventSchema = z.strictObject({
-  event: signedChangeSchema,
+  event: signedEventPayloadSchema,
   signature: signatureSchema,
 });
 
@@ -93,7 +114,7 @@ export function signProposalInvalidationChange(
   }
 
   const proposalId = digest(parsed.proposalId);
-  const event = signedChangeSchema.parse({
+  const event = changePayloadSchema.parse({
     schemaVersion: 1,
     scopeDigest,
     eventId: eventIdFor(scopeDigest, proposalId),
@@ -108,28 +129,22 @@ export function signProposalInvalidationChange(
   return signEnvelope(privateKey, CHANGE_DOMAIN, event);
 }
 
+type ChangePayload = z.infer<typeof changePayloadSchema>;
+type SignedEventPayload = z.infer<typeof signedEventPayloadSchema>;
+
 export interface ProposalInvalidationEventPayload {
-  readonly event: {
-    readonly schemaVersion: 1;
-    readonly scopeDigest: string;
-    readonly eventId: string;
-    /** Digest of the proposal UUID; raw proposal identifiers are not copied into audit data. */
-    readonly proposalId: string;
-    /** Digest of the plugin ID; audit data does not copy source identifiers. */
-    readonly pluginId: string;
-    readonly subjectDigest: string;
-    readonly beforeBindingDigest: string;
-    readonly afterBindingDigest: string;
-    readonly reason: ProposalInvalidationReason;
-    readonly at: string;
-  };
+  readonly event: SignedEventPayload;
+}
+
+export interface ProposalInvalidationChangePayload {
+  readonly event: ChangePayload;
 }
 
 export interface SignedProposalInvalidationEvent extends ProposalInvalidationEventPayload {
   readonly signature: string;
 }
 
-export interface SignedProposalInvalidationChange extends ProposalInvalidationEventPayload {
+export interface SignedProposalInvalidationChange extends ProposalInvalidationChangePayload {
   readonly signature: string;
 }
 
@@ -222,7 +237,7 @@ export class ProposalInvalidationLedger {
     validateProposalId(proposalId);
     const observationResult = z.discriminatedUnion('status', [
       z.strictObject({ status: z.literal('unavailable') }),
-      z.strictObject({ status: z.literal('changed'), descriptor: signedEventSchema }),
+      z.strictObject({ status: z.literal('changed'), descriptor: signedChangeEnvelopeSchema }),
     ]).safeParse(observation);
     if (!observationResult.success) throw new ProposalInvalidationError('invalid_descriptor');
     const checkedObservation = observationResult.data;
@@ -251,14 +266,14 @@ export class ProposalInvalidationLedger {
         return { status: 'stale-observation', proposal };
       }
 
-      const event = signEvent(this.privateKey, descriptor.event);
+      const expiresAt = this.proposalExpiry(proposal);
+      const event = signEvent(this.privateKey, descriptor.event, expiresAt);
       const next = {
         ...proposal,
         status: 'invalidated',
         invalidation: event,
       } as T;
       const storedNext = parseProposalAggregate(next, proposalId) as T;
-      const expiresAt = this.proposalExpiry(proposal);
       if (await this.store.compareAndSet(key, record.revision, storedNext, expiresAt)) {
         const auditProjection = await this.project(event);
         return { status: 'invalidated', proposal: storedNext, event, auditProjection };
@@ -277,7 +292,7 @@ export class ProposalInvalidationLedger {
       throw new ProposalInvalidationError('invalid_retention');
     }
     if (!Number.isFinite(now)
-      || !Number.isFinite(expiresAt)
+      || !Number.isSafeInteger(expiresAt)
       || !Number.isFinite(new Date(expiresAt).getTime())
       || expiresAt <= now) {
       throw new ProposalInvalidationError('invalid_retention');
@@ -304,7 +319,7 @@ export class ProposalInvalidationLedger {
   }
 
   private assertDescriptorIdentity(
-    event: SignedProposalInvalidationEvent,
+    event: { readonly event: Pick<ChangePayload, 'scopeDigest' | 'eventId' | 'proposalId' | 'pluginId' | 'subjectDigest'> },
     proposal: ProposalInvalidationAggregate,
   ): void {
     if (event.event.scopeDigest !== this.scopeDigest
@@ -317,7 +332,7 @@ export class ProposalInvalidationLedger {
   }
 
   private verifyChange(raw: unknown): SignedProposalInvalidationChange {
-    const parsed = signedEventSchema.safeParse(raw);
+    const parsed = signedChangeEnvelopeSchema.safeParse(raw);
     if (!parsed.success) throw new ProposalInvalidationError('invalid_signature');
     const envelope = parsed.data;
     this.assertSignedPayload(envelope, CHANGE_DOMAIN);
@@ -332,7 +347,10 @@ export class ProposalInvalidationLedger {
     return envelope;
   }
 
-  private assertSignedPayload(envelope: SignedProposalInvalidationChange, domain: string): void {
+  private assertSignedPayload(
+    envelope: { readonly event: { readonly scopeDigest: string; readonly eventId: string; readonly proposalId: string }; readonly signature: string },
+    domain: string,
+  ): void {
     if (envelope.event.scopeDigest !== this.scopeDigest
       || envelope.event.eventId !== eventIdFor(this.scopeDigest, envelope.event.proposalId)) {
       throw new ProposalInvalidationError('invalid_signature');
@@ -349,9 +367,12 @@ export class ProposalInvalidationLedger {
 
   private async project(event: SignedProposalInvalidationEvent): Promise<Exclude<AuditProjectionStatus, 'not-needed'>> {
     const key = this.auditKey(event.event.eventId);
-    // This digest-only projection is currently retained without expiry; that policy boundary still needs acceptance.
+    const expiresAt = event.event.retainUntil;
+    // The projection shares the canonical row's fixed deadline. If it elapsed
+    // since the owner read, do not recreate a historical projection.
+    if (expiresAt <= Date.now()) return 'pending';
     try {
-      if (await this.store.compareAndSet(key, null, event)) return 'persisted';
+      if (await this.store.compareAndSet(key, null, event, expiresAt)) return 'persisted';
       const existing = await this.store.read(key);
       if (!existing) return 'pending';
       const verified = this.verifyEvent(existing.value);
@@ -375,14 +396,16 @@ export class ProposalInvalidationLedger {
 function signEnvelope(
   privateKey: KeyObject,
   domain: string,
-  event: ProposalInvalidationEventPayload['event'],
+  event: ChangePayload,
 ): SignedProposalInvalidationChange {
   const signature = sign(null, signaturePayload(domain, event.scopeDigest, event), privateKey).toString('base64url');
   return { event, signature };
 }
 
-function signEvent(privateKey: KeyObject, event: ProposalInvalidationEventPayload['event']): SignedProposalInvalidationEvent {
-  return signEnvelope(privateKey, EVENT_DOMAIN, event);
+function signEvent(privateKey: KeyObject, event: ChangePayload, retainUntil: number): SignedProposalInvalidationEvent {
+  const signedEvent = signedEventPayloadSchema.parse({ ...event, retainUntil });
+  const signature = sign(null, signaturePayload(EVENT_DOMAIN, signedEvent.scopeDigest, signedEvent), privateKey).toString('base64url');
+  return { event: signedEvent, signature };
 }
 
 function signaturePayload(domain: string, scopeDigest: string, payload: unknown): Buffer {

@@ -1,4 +1,4 @@
-import { generateKeyPairSync, randomUUID } from 'node:crypto';
+import { generateKeyPairSync, randomUUID, sign } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { digest } from '@hasi/plugin-sdk';
 import { MemoryJsonStore, type JsonStore } from '@hasi/state';
@@ -95,6 +95,9 @@ describe('proposal invalidation ledger', () => {
       reason: 'plugin_updated',
       at,
     });
+    expect(Number.isSafeInteger(result.event.event.retainUntil)).toBe(true);
+    expect(result.event.event.retainUntil).toBeGreaterThan(Date.now());
+    expect(test.descriptor.event).not.toHaveProperty('retainUntil');
     expect(JSON.stringify(result.event)).not.toContain(test.proposal.subject);
     expect(JSON.stringify(result.event)).not.toContain(test.proposal.pluginId);
     expect(JSON.stringify(result.event)).not.toContain('private-target-value');
@@ -105,32 +108,54 @@ describe('proposal invalidation ledger', () => {
     expect(projected?.value).toEqual(result.event);
   });
 
-  it('expires invalidated proposal data under the explicit retention policy while retaining only the audit projection', async () => {
+  it('uses one fixed retention deadline for the canonical outbox and audit projection', async () => {
     let currentTime = Date.now();
     let retentionDeadline = 0;
+    const writes: { key: string; expiresAt: number | undefined }[] = [];
+    const retentionUntil: ProposalRetentionUntil = (_proposal, now) => {
+      retentionDeadline = now + 60_000;
+      return retentionDeadline;
+    };
     const test = await fixture('pending', {
       clock: () => currentTime,
-      retentionUntil: (_proposal, now) => {
-        retentionDeadline = now + 1_000;
-        return retentionDeadline;
-      },
+      retentionUntil,
     });
-    const result = await test.ledger.invalidateProposal(test.proposalId, {
+    const recordingStore: JsonStore = {
+      read: key => test.store.read(key),
+      compareAndSet: async (key, revision, value, expiresAt) => {
+        writes.push({ key, expiresAt });
+        return test.store.compareAndSet(key, revision, value, expiresAt);
+      },
+      delete: key => test.store.delete(key),
+    };
+    const ledger = new ProposalInvalidationLedger(recordingStore, test.privateKey, scope, retentionUntil);
+    const result = await ledger.invalidateProposal(test.proposalId, {
       status: 'changed',
       descriptor: test.descriptor,
     });
     if (result.status !== 'invalidated') throw new Error('Expected invalidation');
-    expect(retentionDeadline).toBeGreaterThan(Date.now());
+    expect(result.event.event.retainUntil).toBe(retentionDeadline);
+    const auditKey = 'proposal-invalidation-audit:v1:' + digest(scope) + ':' + result.event.event.eventId;
+    expect(writes).toEqual([
+      { key: test.key, expiresAt: retentionDeadline },
+      { key: auditKey, expiresAt: retentionDeadline },
+    ]);
 
     currentTime = retentionDeadline + 1;
     expect(await test.store.read(test.key)).toBeUndefined();
-    const auditKey = 'proposal-invalidation-audit:v1:' + digest(scope) + ':' + result.event.event.eventId;
-    expect((await test.store.read(auditKey))?.value).toEqual(result.event);
+    expect(await test.store.read(auditKey)).toBeUndefined();
+    expect(await ledger.readProposal(test.proposalId)).toBeUndefined();
+    expect(await ledger.invalidateProposal(test.proposalId, {
+      status: 'changed',
+      descriptor: test.descriptor,
+    })).toEqual({ status: 'missing' });
+    expect(writes).toHaveLength(2);
     expect(JSON.stringify(result.event)).not.toContain(test.proposal.subject);
   });
 
   it.each([
     ['non-finite', (_proposal: ProposalInvalidationAggregate, _now: number) => Number.NaN],
+    ['fractional', (_proposal: ProposalInvalidationAggregate, now: number) => now + 1_000.5],
     ['elapsed', (_proposal: ProposalInvalidationAggregate, now: number) => now],
     ['out-of-range', (_proposal: ProposalInvalidationAggregate, _now: number) => Number.MAX_VALUE],
   ])('rejects %s proposal retention deadlines without mutation', async (_label, invalidPolicy) => {
@@ -255,12 +280,22 @@ describe('proposal invalidation ledger', () => {
     expect((await test.store.read(test.key))?.value).not.toHaveProperty('invalidation');
   });
 
-  it('retains the same-key outbox when projection fails and retries it on a verified read', async () => {
-    const test = await fixture();
+  it('retries a failed projection before the fixed deadline without sliding retention', async () => {
+    let currentTime = Date.now();
+    let retentionDeadline = 0;
+    let retentionCalls = 0;
+    const writes: { key: string; expiresAt: number | undefined }[] = [];
+    const retentionUntil: ProposalRetentionUntil = (_proposal, now) => {
+      retentionCalls += 1;
+      retentionDeadline = now + DAY_MS;
+      return retentionDeadline;
+    };
+    const test = await fixture('pending', { clock: () => currentTime, retentionUntil });
     let failProjection = true;
     const wrapped: JsonStore = {
       read: key => test.store.read(key),
       compareAndSet: async (key, revision, value, expiresAt) => {
+        writes.push({ key, expiresAt });
         if (key.startsWith('proposal-invalidation-audit:v1:') && failProjection) {
           throw new Error('Synthetic audit store outage');
         }
@@ -268,7 +303,7 @@ describe('proposal invalidation ledger', () => {
       },
       delete: key => test.store.delete(key),
     };
-    const ledger = new ProposalInvalidationLedger(wrapped, test.privateKey, scope, (_proposal, now) => now + DAY_MS);
+    const ledger = new ProposalInvalidationLedger(wrapped, test.privateKey, scope, retentionUntil);
     const result = await ledger.invalidateProposal(test.proposalId, {
       status: 'changed',
       descriptor: test.descriptor,
@@ -277,16 +312,40 @@ describe('proposal invalidation ledger', () => {
     expect(result.auditProjection).toBe('pending');
 
     const stored = await test.store.read(test.key);
-    expect((stored?.value as Record<string, unknown>).status).toBe('invalidated');
+    expect(stored?.value).toMatchObject({
+      status: 'invalidated',
+      invalidation: result.event,
+    });
+    expect(stored?.value).not.toHaveProperty('invalidationRetainUntil');
+    expect(result.event.event.retainUntil).toBe(retentionDeadline);
     const auditKey = 'proposal-invalidation-audit:v1:' + digest(scope) + ':' + result.event.event.eventId;
     expect(await test.store.read(auditKey)).toBeUndefined();
+    expect(writes.map(({ expiresAt }) => expiresAt)).toEqual([retentionDeadline, retentionDeadline]);
 
     failProjection = false;
+    currentTime = retentionDeadline - 1_000;
     const read = await ledger.readProposal<TestProposal>(test.proposalId);
     expect(read?.proposal.status).toBe('invalidated');
     expect(read?.event).toEqual(result.event);
     expect(read?.auditProjection).toBe('persisted');
     expect((await test.store.read(auditKey))?.value).toEqual(result.event);
+
+    const repeated = await ledger.readProposal<TestProposal>(test.proposalId);
+    expect(repeated?.event).toEqual(result.event);
+    expect(repeated?.auditProjection).toBe('persisted');
+    expect(retentionCalls).toBe(1);
+    expect(writes.map(({ expiresAt }) => expiresAt)).toEqual([
+      retentionDeadline,
+      retentionDeadline,
+      retentionDeadline,
+      retentionDeadline,
+    ]);
+
+    currentTime = retentionDeadline + 1;
+    expect(await test.store.read(test.key)).toBeUndefined();
+    expect(await test.store.read(auditKey)).toBeUndefined();
+    expect(await ledger.readProposal(test.proposalId)).toBeUndefined();
+    expect(writes).toHaveLength(4);
   });
 
   it('rejects a tampered embedded event instead of trusting or projecting it', async () => {
@@ -313,6 +372,81 @@ describe('proposal invalidation ledger', () => {
     });
   });
 
+  it('authenticates the retention deadline before any projection attempt', async () => {
+    const test = await fixture();
+    const result = await test.ledger.invalidateProposal(test.proposalId, {
+      status: 'changed',
+      descriptor: test.descriptor,
+    });
+    if (result.status !== 'invalidated') throw new Error('Expected invalidation');
+
+    const auditKey = 'proposal-invalidation-audit:v1:' + digest(scope) + ':' + result.event.event.eventId;
+    expect(await test.store.read(auditKey)).toBeDefined();
+    const record = await test.store.read(test.key);
+    if (!record) throw new Error('Canonical proposal missing');
+    const stored = record.value as Record<string, unknown>;
+    const invalidation = stored.invalidation as Record<string, unknown>;
+    const signedEvent = invalidation.event as Record<string, unknown>;
+    const tampered = {
+      ...stored,
+      invalidation: {
+        ...invalidation,
+        event: { ...signedEvent, retainUntil: result.event.event.retainUntil + 60_000 },
+      },
+    };
+    expect(await test.store.compareAndSet(test.key, record.revision, tampered)).toBe(true);
+    expect(await test.store.read(test.key)).toBeDefined();
+
+    let projectionWrites = 0;
+    const observedStore: JsonStore = {
+      read: key => test.store.read(key),
+      compareAndSet: async (key, revision, value, expiresAt) => {
+        if (key.startsWith('proposal-invalidation-audit:v1:')) projectionWrites += 1;
+        return test.store.compareAndSet(key, revision, value, expiresAt);
+      },
+      delete: key => test.store.delete(key),
+    };
+    const ledger = new ProposalInvalidationLedger(observedStore, test.privateKey, scope, (_proposal, now) => now + DAY_MS);
+
+    await expect(ledger.readProposal(test.proposalId)).rejects.toMatchObject({ code: 'invalid_signature' });
+    expect(projectionWrites).toBe(0);
+  });
+
+  it.each([
+    ['fractional', 1_900_000_000_000.5],
+    ['negative', -1],
+    ['out-of-range', Number.MAX_SAFE_INTEGER],
+  ])('rejects a %s signed-event retention deadline', async (_label, retainUntil) => {
+    const test = await fixture();
+    const result = await test.ledger.invalidateProposal(test.proposalId, {
+      status: 'changed',
+      descriptor: test.descriptor,
+    });
+    if (result.status !== 'invalidated') throw new Error('Expected invalidation');
+    const record = await test.store.read(test.key);
+    if (!record) throw new Error('Proposal missing');
+    const stored = record.value as Record<string, unknown>;
+    const invalidation = stored.invalidation as Record<string, unknown>;
+    const signedEvent = invalidation.event as Record<string, unknown>;
+    const invalidEvent = { ...signedEvent, retainUntil };
+    const signature = sign(
+      null,
+      Buffer.from(['hasi:proposal-invalidation-event:v1', String(invalidEvent.scopeDigest), digest(invalidEvent)].join(':'), 'utf8'),
+      test.privateKey,
+    ).toString('base64url');
+    const malformed = {
+      ...stored,
+      invalidation: {
+        ...invalidation,
+        event: invalidEvent,
+        signature,
+      },
+    };
+    expect(await test.store.compareAndSet(test.key, record.revision, malformed)).toBe(true);
+
+    await expect(test.ledger.readProposal(test.proposalId)).rejects.toMatchObject({ code: 'invalid_signature' });
+  });
+
   it('rejects descriptors signed by another key and rejects undeclared descriptor fields', async () => {
     const test = await fixture();
     const other = generateKeyPairSync('ed25519');
@@ -334,6 +468,15 @@ describe('proposal invalidation ledger', () => {
     await expect(test.ledger.invalidateProposal(test.proposalId, {
       status: 'changed',
       descriptor: extendedDescriptor,
+    })).rejects.toMatchObject({ code: 'invalid_descriptor' });
+
+    const deadlineOnDescriptor = {
+      ...test.descriptor,
+      event: { ...test.descriptor.event, retainUntil: Date.now() + DAY_MS },
+    };
+    await expect(test.ledger.invalidateProposal(test.proposalId, {
+      status: 'changed',
+      descriptor: deadlineOnDescriptor,
     })).rejects.toMatchObject({ code: 'invalid_descriptor' });
 
     expect(() => signProposalInvalidationChange(test.privateKey, scope, {

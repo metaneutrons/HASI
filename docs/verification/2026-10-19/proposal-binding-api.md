@@ -23,11 +23,13 @@ retain their execution identities and existing reconciliation requirements.
 The existing execution-time authority and CAS checks remain in force.
 
 Invalidated proposal-content retention is an absolute server-derived deadline:
-the proposal expiry plus 24 hours. Reads do not extend it. The separate digest-only
-audit projection still has the provisional no-expiry policy documented in
-`proposal-invalidation-ledger.md`; production retention and a background drain
-remain unresolved. Projection retry occurs only on a subsequent exact owned read,
-not by a newly claimed background worker.
+the proposal expiry plus 24 hours. Reads do not extend it. The digest-only event authenticates this same absolute deadline inside its
+signature. The optional insert-only projection uses it unchanged. This technical
+policy also applies to production runtime code; institutional retention approval
+remains M8-A4. Projection retry occurs only on a subsequent exact owned read
+before expiry, not by a background worker. The same-row event is the canonical
+audit record; no separate delivery SLA is claimed. Logical expiry does not prove
+physical erasure. See `proposal-invalidation-ledger.md`.
 
 Root verification on Node 24.21.0:
 
@@ -46,6 +48,7 @@ Scoped root TypeScript and ESLint passed. Independent API review found no blocke
 
 The compatible-core floor, old-writer drain and compatible forward-recovery
 exercise remain required before shipping the new signed registry field. Frontend
-invalidated/retry states are a separate concurrent implementation. No live
+invalidated/retry states and bounded browser evidence are recorded separately in
+`proposal-invalidation-ui.md`. No live
 provider, institutional business write, state reset or milestone acceptance was
 performed by this qualification.
