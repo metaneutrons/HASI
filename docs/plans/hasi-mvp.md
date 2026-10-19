@@ -4,7 +4,7 @@ Created: 2026-10-09. Updated: 2026-10-19. Scope, mobile usability, TypeScript,
 mock identity for the prototype and independently updateable plugins are agreed
 requirements. The deployed synthetic-data prototype is an initial slice of the MVP.
 
-Tracking under V6 performance targets, V5 demo scope and adopted V4 qualification sequencing: [unified delivery index #47](https://github.com/metaneutrons/HASI/issues/47),
+Tracking under V7 deferred API acceptance, V6 UI targets, V5 demo scope and adopted V4 qualification sequencing: [unified delivery index #47](https://github.com/metaneutrons/HASI/issues/47),
 [M2 with P1–P6 #49](https://github.com/metaneutrons/HASI/issues/49),
 [post-MVP roadmap #55](https://github.com/metaneutrons/HASI/issues/55),
 [D3 #17](https://github.com/metaneutrons/HASI/issues/17),
@@ -21,7 +21,11 @@ encrypted-backup/restore and off-host replication/failure monitoring are retaine
 in M8-A8. Independent service-health monitoring and durable state/budget controls
 remain technical gates. V6 records Fabian's agreed M2/M7
 [demo performance targets](../architecture/technical-basis.md#demo-performance-targets),
-with model latency and rate limits measured separately. The earlier V3 preserved
+with model latency and rate limits measured separately. V7 records Fabian's
+subsequent decision to defer only the non-model API p95 ≤ 1,000 ms acceptance
+to M8-A9; it no longer blocks M2/M7. The target, measurement method and failed
+results remain intact. Local UI feedback ≤ 200 ms remains in M2/M7. The earlier
+V3 preserved
 all criteria, evidence and status. It consolidates #14 into #47, #69–#74 into
 P1–P6 groups under #49, and #56–#63 into the source-specific entries under #55.
 Each source issue stays open until its successor carries its status, next action
@@ -154,13 +158,13 @@ comparison; do not reopen accepted [#32–#34](https://github.com/metaneutrons/H
 | Milestone | Technical work and qualification boundary | Technical evidence | Tracking |
 | --- | --- | --- | --- |
 | M1. Identity and integration contracts | Define interfaces, claims mapping, source/reference contracts and lifecycle states; exercise with TestIdP and mock authorities. Real institutional claims and grants transfer to M8. | Contract tests cover stable mock subjects, missing/duplicate/changed claims, denial and revocation signals. No transient identifier is treated as authority. | [#48](https://github.com/metaneutrons/HASI/issues/48) |
-| M2. Application foundation | Web, API, worker and shared contracts in TypeScript; TestIdP session; trusted capability registry; constrained network/output handling; model-profile registry; logging; mobile-first UI shell. Cross-runtime, API/worker, performance and isolation qualification remains required; real-device and participant tests belong to M8-A7; automated/simulator checks remain required. | Authenticated TestIdP flow; forged identities and unauthorized capabilities rejected; separate API/frontend deployment; API/worker and multi-instance behavior, performance, isolation and recovery qualify; model selection checked against full context and capability requirements; [agreed demo performance targets](../architecture/technical-basis.md#demo-performance-targets) measured. | [#49](https://github.com/metaneutrons/HASI/issues/49) |
+| M2. Application foundation | Web, API, worker and shared contracts in TypeScript; TestIdP session; trusted capability registry; constrained network/output handling; model-profile registry; logging; mobile-first UI shell. Cross-runtime, API/worker, performance and isolation qualification remains required; real-device and participant tests belong to M8-A7; automated/simulator checks remain required. | Authenticated TestIdP flow; forged identities and unauthorized capabilities rejected; separate API/frontend deployment; API/worker and multi-instance behavior, performance, isolation and recovery qualify; model selection checked against full context and capability requirements; [local UI feedback target](../architecture/technical-basis.md#demo-performance-targets) ≤ 200 ms qualified; API p95 ≤ 1,000 ms acceptance deferred to M8-A9. | [#49](https://github.com/metaneutrons/HASI/issues/49) |
 | M3. Permission-aware knowledge qualification | Ingest/retrieve signed Intranet fixtures and reviewed synthetic HTML/web content; test language handling, source references, permission-aware context/caches and fixture incident freshness. No real source acquisition is required. | Curated German/English synthetic cases; two-user allow/deny and mocked rights revocation; no unauthorized fixture metadata/snippets reach models or users; citations, freshness fields and instructional-image extraction tested. | [#50](https://github.com/metaneutrons/HASI/issues/50) |
 | M4. anny read contracts and behavior | Qualify account-link/read behavior against TestIdP and mock/reference anny contracts. | Different mock users see only permitted resources/bookings; conflicting, missing and duplicate mappings fail closed. No real customer rights are inferred. | [#51](https://github.com/metaneutrons/HASI/issues/51) |
 | M5. anny write/cancel/reconcile behavior | Qualify server-bound proposals and action state against mock/reference contracts; do not issue live writes. | Customer eligibility rules represented in fixtures; stale/tampered confirmations rejected; retries are idempotent; cancellation and unknown-outcome reconciliation tested. | [#52](https://github.com/metaneutrons/HASI/issues/52) |
 | M6. Synthetic model and adversarial evaluation | Formal offline evaluation with synthetic fixed evidence/workflows, injected sources/tool output, rendering, network and model-switch tests. | Security cases pass per profile; quality, citations, tool arguments, latency and measured cost compared; no protected context or production writes. Complete before M7; qualify BUD-A1 before paid runs. | [#53](https://github.com/metaneutrons/HASI/issues/53) |
-| M7. Technical pilot and operations | Deliver all three technical mock integrations, qualify automated/browser/simulator journeys and agreed technical thresholds, and exercise operations. Institutional data approval is not a prerequisite. | Key flows in automated browsers and device simulation; connection-loss recovery, automated accessibility checks, independent service-health monitoring, incident procedures and rollback exercised; [agreed demo performance targets](../architecture/technical-basis.md#demo-performance-targets) measured. The disposable demo requires no backup/restore acceptance; production continuity is M8-A8. Real-device and participant acceptance is M8-A7. | [#54](https://github.com/metaneutrons/HASI/issues/54) |
-| M8. Final institutional acceptance | Qualify real institutional identity, source permissions, Anny behavior, protected-data processing and accountable ownership after M1–M7 technical work. | All M8-A1–A8 evidence below and a recorded institutional go/no-go. No real writes or protected context before scoped authorization. | [#80](https://github.com/metaneutrons/HASI/issues/80) |
+| M7. Technical pilot and operations | Deliver all three technical mock integrations, qualify automated/browser/simulator journeys and agreed technical thresholds, and exercise operations. Institutional data approval is not a prerequisite. | Key flows in automated browsers and device simulation; connection-loss recovery, automated accessibility checks, independent service-health monitoring, incident procedures and rollback exercised; [local UI feedback target](../architecture/technical-basis.md#demo-performance-targets) ≤ 200 ms qualified; API p95 ≤ 1,000 ms acceptance deferred to M8-A9. The disposable demo requires no backup/restore acceptance; production continuity is M8-A8. Real-device and participant acceptance is M8-A7. | [#54](https://github.com/metaneutrons/HASI/issues/54) |
+| M8. Final institutional acceptance | Qualify real institutional identity, source permissions, Anny behavior, protected-data processing and accountable ownership after M1–M7 technical work. | All M8-A1–A9 evidence below and a recorded institutional go/no-go. No real writes or protected context before scoped authorization. | [#80](https://github.com/metaneutrons/HASI/issues/80) |
 
 M1 contract design and offline M6 dataset/harness work can proceed in parallel.
 Technical M3 and M4 require M1/M2 technical boundaries and may use #79's
@@ -171,7 +175,9 @@ comparison. M7 uses synthetic data, automated/browser/simulator tests and
 preserves independent service-health monitoring and incident/rollback exercises.
 Production encrypted backup, off-host replication/failure monitoring and restore
 qualification are retained in M8-A8; the disposable demo has no such backup gate. All
-real-device and participant acceptance tests are transferred intact to M8-A7. M8 is the final institutional barrier; it does not
+real-device and participant acceptance tests are transferred intact to M8-A7.
+V7 additionally transfers the 1-second API acceptance to M8-A9; the local UI
+target stays in M2/M7. M8 is the final institutional barrier; it does not
 retroactively block technical milestones.
 
 ### Institutional acceptance (M8)
@@ -195,7 +201,8 @@ the final recorded acceptance follows the evidence. The exact criteria are:
   owners review real source cases and approve any controlled participant test.
 - **M8-A6 — Final authorization:** Evidence maps to the institutional contracts;
   denial, revocation and incident tests pass, including M8-A7 real-device
-  acceptance and M8-A8 production continuity; accountable owners record the
+  acceptance, M8-A8 production continuity and M8-A9 API performance; accountable
+  owners record the
   institutional go/no-go. Scope-specific operator and institutional
   authorization must precede each real write or protected-context test; final
   acceptance and rollout follow the evidence.
@@ -220,6 +227,17 @@ the final recorded acceptance follows the evidence. The exact criteria are:
   2026-10-19 decision to run the disposable demo without backup. Historical
   plaintext restore or manual file copies do not pass this gate.
 
+- **M8-A9 — Deferred API performance:** Qualify non-model API p95 ≤ 1,000 ms
+  with five concurrent synthetic users using the unchanged
+  [performance contract](../architecture/technical-basis.md#demo-performance-targets):
+  named routes, at least 20 completed queries per user per route, two batches,
+  nearest-rank p95, errors/timeouts failing a batch and separate cold-start
+  reporting. Preserve passing controls and delayed-countercase evidence.
+  Record exact source/deployment identities and all omissions. This is the
+  1-second acceptance transferred from M2/M7 by Fabian's 2026-10-19 V7 decision;
+  previous failures are not passes. Local UI feedback ≤ 200 ms remains an
+  M2/M7 requirement; model latency/rate limits remain separately reported.
+
 #### Transfer of the original M1–M7 institutional requirements
 
 This transfer preserves the original acceptance scope. TestIdP, mocks and
@@ -229,12 +247,12 @@ institutional qualification.
 | Original requirement | Technical milestone retained | Institutional qualification transferred to M8 |
 | --- | --- | --- |
 | M1: HsH IdP protocol, stable subject and lifecycle; source-specific contracts, effective rights/revocation; Anny organization, scopes, customer linking and eligibility | M1 contract schemas, TestIdP claim/lifecycle tests and mock source/Anny authorities | M8-A1 real identity; M8-A2 real source rights; M8-A3 actual Anny delegation and eligibility; M8-A5 named owners |
-| M2: production SSO, approved provider profiles, security and data-processing boundaries | M2 technical session/capability/model-profile enforcement, budgets, logging and required CI qualification | M8-A1 real HsH claims; M8-A4 provider/embedding, retention and protected-data approvals |
+| M2: production SSO, approved provider profiles, security, data-processing boundaries and API-performance target | M2 technical session/capability/model-profile enforcement, budgets, logging and required CI qualification | M8-A1 real HsH claims; M8-A4 provider/embedding, retention and protected-data approvals; M8-A9 deferred 1-second API acceptance |
 | M3: approved real-source ingestion, source-user authorization, content/ACL freshness, owner review and real incident updates | M3 signed synthetic exports, reviewed HTML fixtures, retrieval/citations, mock allow/deny/revocation/freshness cases | M8-A2 real Intranet and Service-IT access/rights/freshness; M8-A5 source-reviewed real cases; M8-A6 denial/revocation/incident evidence |
 | M4: real verified HsH-to-Anny account mapping and permitted customer reads | M4 TestIdP identities, mock mappings, permitted-resource and own-booking behaviors | M8-A1 real identity mapping; M8-A3 actual tenant delegation, eligibility and reads |
 | M5: authorized real tenant writes, cancellation, idempotency and reconciliation | M5 proposal binding, confirmation, mock create/cancel/idempotency/unknown-outcome tests | M8-A3 actual create/cancel and vendor reconciliation in the authorized tenant; M8-A6 incident/denial evidence |
 | M6: institutionally approved profiles/data classes and source-approved real evaluation cases | M6 formal synthetic/offline adversarial evaluation and measured provider comparison | M8-A4 protected-data/provider/embedding/retention approval; M8-A5 real reviewed cases; M8-A6 evidence-to-contract mapping |
-| M7: all three integrations delivered; agreed acceptance thresholds met; controlled institutional participants, real integration owners and operational acceptance | M7 technical integrations against mocks, automated/browser/simulator UX, independent service-health monitoring and incident/rollback exercises; demo backup/restore omitted under V5 | M8-A1–A4 real integration and data approvals; M8-A5 named owners and real cases; M8-A6 recorded institutional go/no-go; M8-A7 complete real-device/participant acceptance; M8-A8 production backup/restore and off-host replication/failure monitoring |
+| M7: all three integrations delivered; agreed acceptance thresholds met; controlled institutional participants, real integration owners and operational acceptance | M7 technical integrations against mocks, automated/browser/simulator UX, independent service-health monitoring and incident/rollback exercises; demo backup/restore omitted under V5; ≤ 200 ms local UI qualification retained | M8-A1–A4 real integration and data approvals; M8-A5 named owners and real cases; M8-A6 recorded institutional go/no-go; M8-A7 complete real-device/participant acceptance; M8-A8 production backup/restore and off-host replication/failure monitoring; M8-A9 deferred 1-second API acceptance |
 
 V4 sequencing decision (2026-10-19): real-device and participant portions of
 P2/P4/P6 are M8-A7 requirements. Their automated/browser/simulator counterparts

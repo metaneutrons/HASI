@@ -5,7 +5,10 @@ This is a dated evidence reconciliation, not an acceptance decision. GitHub
 [M2 #49](https://github.com/metaneutrons/HASI/issues/49) remains the live
 execution ledger and the
 [consolidated plan](../../plans/consolidated-delivery.md) remains the acceptance
-authority. No criterion is waived here.
+authority. No criterion is waived by this evidence review. Fabian's later Plan V7
+decision
+separately transfers only the 1-second API acceptance to M8-A9; local UI ≤ 200 ms
+and all other M2 gates remain.
 
 ## Snapshot and scope
 
@@ -157,7 +160,11 @@ These gaps are not erased by the partial implementation or the local checks:
   availability results 509/454 ms; those batches passed. The separate [local
   loopback query report](demo-query-performance.md)
   measured synthetic knowledge p95 of 446.55/542.57 ms; that local result does
-  not supersede the public failure. Fix and repeat the public measurement.
+  not supersede the public failure. The subsequent loopback repeat reached
+  p95 1,315.45 ms and still failed; [public evidence](demo-public-performance.md)
+  preserves both results. Plan V7 transfers acceptance to M8-A9, so this unmet
+  API threshold no longer blocks M2/M7. A qualifying repeat remains required
+  before M8 acceptance.
 
 Plan V6 permits technical qualification with TestIdP, mocks and synthetic
 fixtures. Physical iPhone/Android and assistive-technology acceptance remain

@@ -4,7 +4,9 @@ Date: 2026-10-19. Requirements authority: [Plan V6](../../plans/consolidated-del
 and the [MVP technical rows](../../plans/hasi-mvp.md#delivery-sequence-and-exit-criteria)
 at `11148d29cc1bb024c8c6110317c78ad65086da7f`.
 This review maps existing qualified evidence; it introduces no new requirements
-or waiver. The corresponding issues record the final acceptance/closure state.
+or waiver. The subsequent Plan V7 API-performance transfer does not change any
+M3–M5 criterion or authority boundary assessed here. The corresponding issues
+record the final acceptance/closure state.
 
 ## Applicable dependencies
 

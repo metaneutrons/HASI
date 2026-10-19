@@ -1,7 +1,10 @@
 # Public five-user API performance
 
 Date: 2026-10-19. Status: **the knowledge-search 1,000 ms p95 target still
-fails**. These are synthetic, non-model public HTTPS measurements. They do not
+fails**. Fabian's subsequent Plan V7 decision transfers acceptance of that
+API threshold to M8-A9; it no longer blocks M2/M7. The local ≤ 200 ms UI gate
+remains. The failed measurements below are preserved unchanged. These are
+synthetic, non-model public HTTPS measurements. They do not
 establish UI response time, full M2/M7, institutional rights or model quality.
 
 ## Method and identities
@@ -59,7 +62,12 @@ Its original private copy is retained with mode 0600. Because the measurement
 failed fast, the runner did not perform its final revision check; separate
 operational readback is not mislabeled as that unrun check.
 
-Loopback reduced the observed knowledge p95 but did not meet the target. The
-next candidate reuses existing content-keyed compiled output validators; it
-requires its own qualified deployment and repeat. Neither run changes source
+Loopback reduced the observed knowledge p95 but did not meet the target.
+PR #126 subsequently merged the content-keyed compiled output-validator reuse
+as `84818822ecbbbdcad12d8b805c3dd62d7800dc5c`, with successful head
+CI39314172508 and main CI39314872469. Public readiness reached that exact
+revision, but this report contains no post-#126 measurement. A prepared repeat
+was not launched after Fabian deferred the API acceptance target; no result is
+inferred for the new candidate. Future M8-A9 qualification must identify its
+then-current source and deployment. Neither run changes source
 rights or proves a provider prompt-cache hit or billing savings.
