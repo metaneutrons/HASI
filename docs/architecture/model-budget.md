@@ -87,7 +87,7 @@ input/output micro-USD rates per million tokens and a `published` or
 ## Deployment bootstrap
 
 Budget data uses the non-expiring database namespace
-`model-budgets:shared:v1`, independent of Vercel commit and workspace namespaces.
+`model-budgets:shared:v1`, independent of source commit and workspace namespaces.
 Every deployment using credentials covered by the approved USD 1 ceiling must
 point at the same physical budget store, including Preview and Production if
 they share the provider account. Matching namespace names in separate database
@@ -110,6 +110,13 @@ Local development without a database uses a process-local ledger and does not
 qualify durable budget enforcement. Price/policy changes deliberately conflict
 with existing state until an audited migration preserves that day's charges.
 
+### Historical Vercel bootstrap (retired)
+
+Vercel and Neon have been retired. Current credentials are in fnox custody and
+hidden Coolify runtime variables; persistent PostgreSQL and its budget state
+remain on the HASI server. The following records the earlier deployment-only
+procedure and is not an instruction to provision or use Vercel today.
+
 For a deployment-only bootstrap without downloading managed credentials, an
 operator may supply `HASI_INITIALIZE_MODEL_BUDGET=1` as a **one-off build
 environment override** to a reviewed Vercel deployment. The build then runs
@@ -131,3 +138,29 @@ created during connection initialization; a failed binding check does not create
 or reset the budget ledger record. This verifies the two tested
 deployment bindings, not arbitrary future branches, cloned stores or historical
 deployments that predate budget enforcement. Ordinary builds use neither flag.
+
+## Isolated cross-instance runtime qualification
+
+Use a clean checkout with no web `.env*` files except `.env.example`, installed
+locked dependencies, Unix Docker access, OpenSSL and the script's exact pinned
+PostgreSQL image already cached. The script does not pull images or use the
+operator's `DATABASE_URL`. Build the production frontend with no development
+API rewrite, then run the explicitly enabled fixture:
+
+```sh
+env -i PATH="$PATH" HOME="$HOME" pnpm build:backend
+env -i PATH="$PATH" HOME="$HOME" HASI_APP_MODE=production pnpm --filter @hasi/web build
+env -i PATH="$PATH" HOME="$HOME" HASI_BUDGET_QUALIFY=1 \
+  pnpm exec tsx scripts/qualify-model-budget-topology.ts
+```
+
+Only pass an explicit local Unix `DOCKER_HOST` if needed for a non-default
+context; remote Docker endpoints are rejected. The runner starts its own
+labelled, loopback-only database, two API and two Next.js processes, TestIdP
+and a local HTTPS fake provider. It checks missing-state denial, concurrent
+exhaustion and persistence after replacing a Next.js process under the unchanged
+USD 1 policy. Conservative synthetic holds fill only its disposable ledger;
+they are not real provider spend. No model or business action is sent externally.
+Cleanup must succeed before the safe report is emitted. See the
+[dated scope, identities and results](../verification/2026-10-19/m2-model-budget-topology.md).
+This is not a production load, billing, browser or institutional acceptance test.
