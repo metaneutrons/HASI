@@ -7,6 +7,7 @@ export type ModelRouterErrorCode =
   | "profile_not_approved"
   | "missing_credentials"
   | "tools_unavailable"
+  | "required_tools_unavailable"
   | "context_unavailable"
   | "budget_exhausted"
   | "budget_unavailable"

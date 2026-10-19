@@ -17,10 +17,12 @@ import type { AnnyChatProposal, ChatMessage as Message, ChatProposal as Proposal
 import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError, RoomTimeUnresolvedError } from "@/lib/chat-room-time";
 import { canStartNewChat } from "@/lib/chat-workspace-store";
 import { ChatSessionList } from "@/components/chat-session-list";
-import { MAX_MODEL_STEPS, toolNeedsModelFollowUp, toolBatchNeedsModelFollowUp, isAvailabilityFollowUp, isMixedKnowledgeRequest, officePreferenceSearch, isOwnBookingsRequest } from "@/lib/chat-tool-loop";
+import { MAX_MODEL_STEPS, annyWorkflow, toolNeedsModelFollowUp, toolBatchNeedsModelFollowUp, isAvailabilityFollowUp, isMixedKnowledgeRequest, officePreferenceSearch, isOwnBookingsRequest } from "@/lib/chat-tool-loop";
 import { ActionPreviewDetails, ActionStatusControl } from "@/components/action-status";
 import { sameActionPreview } from "@/lib/action-preview";
 import { PersonalConnectionNotice } from "@/components/personal-connection-notice";
+import { ChatServiceConnection } from "@/components/chat-service-connection";
+import { parsePluginAccountList } from "@/lib/plugin-accounts";
 import { ChatMessageCopy } from "@/components/chat-message-copy";
 import { bookingStatusLabel } from "@/lib/chat-message-copy";
 import { ChatRoomResults } from "@/components/chat-room-results";
@@ -228,6 +230,33 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     return parsed;
   }
 
+  async function checkAnnyAccess(workflow: "rooms" | "bookings" | null, available: readonly PluginToolDescriptor[]): Promise<boolean> {
+    if (!workflow) return true;
+    const required = workflow === "rooms" ? "anny.search_resources" : "anny.list_my_bookings";
+    if (available.some(tool => tool.pluginId === "de.hsh.hasi.anny" && tool.name === required)) return true;
+    const accounts = parsePluginAccountList(await requestForChat<unknown>("/api/plugin-accounts"));
+    const account = accounts.find(item => item.installationId === "de.hsh.hasi.anny");
+    const requestId = history.current.findLast(message => message.role === "user")?.id;
+    const needsConnection = account && account.status !== "linked" && requestId;
+    add({
+      role: "assistant",
+      tool: "anny · Dienstverbindung",
+      text: needsConnection
+        ? "Dein anny-Konto ist noch nicht verbunden oder der Zugriff muss erneuert werden. Verbinde es hier, dann kann ich mit deiner Anfrage fortfahren. Du brauchst keine Raum- oder Arbeitsplatz-ID; Gebäude und Zeitraum bleiben erhalten."
+        : "Die anny-Funktion ist für dein Konto derzeit nicht freigegeben. Bitte prüfe die Dienstverbindung oder wende dich an die Administration. Eine interne Ressourcen-ID würde diese Freigabe nicht ersetzen.",
+      ...(needsConnection ? { serviceConnection: { installationId: account.installationId, label: account.label, requestId } } : {}),
+    });
+    // This host-owned prerequisite is local UI state, not a fabricated model reply.
+    return false;
+  }
+
+  async function resumeConnectedRequest(requestId: string) {
+    if (history.current.findLast(message => message.role === "user")?.id !== requestId || history.current.at(-1)?.role === "assistant" || !start("Dienstverbindung wird geprüft …")) return;
+    try { await runModel(); }
+    catch (cause) { add({ role: "assistant", text: cause instanceof Error ? cause.message : "Die Anfrage konnte nicht fortgesetzt werden." }); }
+    finally { await finish(); }
+  }
+
   function remember<T extends WireMessage>(message: T): T {
     return getMessageClock().track(message);
   }
@@ -337,6 +366,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
     const stepLimit = mixedRequest ? 3 : MAX_MODEL_STEPS;
     try {
       const authorizedTools = await loadModelTools();
+      if (!await checkAnnyAccess(annyWorkflow(history.current), authorizedTools)) return;
       const pluginToolsByModelName = new Map(authorizedTools.map(descriptor => [descriptor.modelName, descriptor]));
       for (let step = 0; step < stepLimit; step += 1) {
         setActivity(`${resolvedProfile.current ? modelProviderName(resolvedProfile.current) : providerLabel ?? "Das Modell"} antwortet …`);
@@ -347,6 +377,9 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         });
         const payload: unknown = await response.json().catch(() => ({ error: "Der Chat-Dienst ist gerade nicht erreichbar. Bitte versuche es später erneut." }));
         if (!response.ok) {
+          if (response.status === 409 && payload && typeof payload === "object" && "code" in payload && payload.code === "required_tools_unavailable") {
+            if (!await checkAnnyAccess(annyWorkflow(history.current), await loadModelTools())) return;
+          }
           const error = payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string" ? payload.error : "Der ausgewählte Modellanbieter ist gerade nicht verfügbar.";
           throw new Error(error);
         }
@@ -530,6 +563,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
             updateRequest(next);
             setRoomContext(true);
             if (preference) {
+              if (!await checkAnnyAccess("rooms", await loadModelTools())) return;
               setChosenRoom(null);
               const args = Object.fromEntries(["kind", "officeType", "capacity", "features", "location", "query"].flatMap(key => {
                 const value = next[key as keyof RoomRequest];
@@ -543,6 +577,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
           }
         }
         if (isOwnBookingsRequest(trimmed)) {
+          if (!await checkAnnyAccess("bookings", await loadModelTools())) return;
           const result = await tools().run("anny_list_my_bookings", {});
           recordTool("anny_list_my_bookings", {}, result.output);
           showToolResult(result, id(), "");
@@ -855,6 +890,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
             {renderedMessages.map((message) => {
               const pluginProposal = message.proposal?.action === "execute_tool" ? message.proposal : null;
               const pluginProposalView = pluginProposal ? pluginToolProposalPresentation(pluginProposal) : null;
+              const serviceConnection = message.serviceConnection;
               return (
               <article key={message.id} className={`chat-message chat-message--${message.role}`} aria-label={message.role === "user" ? "Du" : "HASI"}>
                 <span className="chat-speaker">{message.role === "user" ? "Du" : <><Sparkles size={14} aria-hidden="true" /> HASI {message.model && <small>{message.model}</small>}</>}</span>
@@ -862,6 +898,13 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                 <div className="chat-message-body">
                   {message.tool && <span className="chat-tool-label"><Check size={13} aria-hidden="true" /> {message.tool}</span>}
                   <p>{message.text}</p>
+                  {serviceConnection && <ChatServiceConnection
+                    key={`${serviceConnection.installationId}:${serviceConnection.requestId}`}
+                    installationId={serviceConnection.installationId}
+                    label={serviceConnection.label}
+                    disabled={busy || messages.findLast(item => item.role === "user")?.id !== serviceConnection.requestId || messages.at(-1)?.id !== message.id}
+                    onReady={() => resumeConnectedRequest(serviceConnection.requestId)}
+                  />}
                   {message.rooms && <ChatRoomResults
                     rooms={message.rooms}
                     disabled={busy || (activeResult !== message.id && activeResult !== message.interactionId)}

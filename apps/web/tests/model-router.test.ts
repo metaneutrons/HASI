@@ -1530,6 +1530,51 @@ describe("bounded provider context and usage", () => {
 });
 
 
+it("never sends a blocked office task or its short continuation to a model without the resource search tool", async () => {
+  const messages: ChatRequest["messages"] = [{ role: "user", content: "ch brauche einen Büro für heute in 1J; von 10 - 16 Uhr" }];
+  for (const continuation of [undefined, "mir egal", "dann prüpf"]) {
+    if (continuation) messages.push({ role: "assistant", content: "Bitte eine ID angeben." }, { role: "user", content: continuation });
+    const provider = fakeProvider(completion({ content: "must not run" }));
+    const reserve = vi.fn();
+    await expectRouterError(runModelStep({ ...request(), messages }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW, authorizedTools: [], budgetAdmission: { reserve } }), "required_tools_unavailable");
+    expect(provider.calls).toHaveLength(0);
+    expect(reserve).not.toHaveBeenCalled();
+  }
+});
+
+it("requests an initial native resource search for a fully specified office task once authorized", async () => {
+  const pluginId = "de.hsh.hasi.anny";
+  const name = "anny.search_resources";
+  const modelName = `hasi_${createHash("sha256").update(`${pluginId}\0${name}`).digest("hex").slice(0, 24)}`;
+  const provider = fakeProvider(completion({ toolCalls: [{ id: "office-search", name: "anny_search_resources", arguments: '{"kind":"workplace","location":"1J"}' }] }));
+  const reply = await runModelStep({ ...request(), messages: [{ role: "user", content: "ch brauche einen Büro für heute in 1J; von 10 - 16 Uhr" }] }, {
+    env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW,
+    authorizedTools: [{ pluginId, name, modelName, title: "Ressourcen", description: "Search", effect: "read", requiredPermissions: ["rooms:read"], inputSchema: { type: "object", properties: {} }, outputSchema: { type: "object" } }],
+  });
+  const sent = providerRequest(provider.calls[0]?.init);
+  expect(sent.tool_choice).toEqual({ type: "function", function: { name: "anny_search_resources" } });
+  expect(providerToolNames(sent)).toEqual(["anny_search_resources"]);
+  expect(reply.message.toolCalls?.[0]?.arguments).toEqual({ kind: "workplace", location: "1J" });
+});
+
+it.each([true, false])("does not let historical Anny results suppress a new search or replace a known-resource availability check (new search: %s)", async newSearch => {
+  const pluginId = "de.hsh.hasi.anny";
+  const authorizedTools = ["anny.search_resources", "anny.get_availability"].map(name => ({
+    pluginId, name, modelName: `hasi_${createHash("sha256").update(`${pluginId}\0${name}`).digest("hex").slice(0, 24)}`,
+    title: "Read", description: "Read", effect: "read" as const, requiredPermissions: ["rooms:read"], inputSchema: { type: "object", properties: {} }, outputSchema: { type: "object" },
+  }));
+  const name = newSearch ? "anny_search_resources" : "anny_get_availability";
+  const arguments_ = newSearch ? '{"kind":"workplace","location":"1J"}' : '{"resourceId":"r1","date":"2026-10-20","time":"10:00","durationMinutes":360}';
+  const provider = fakeProvider(completion({ toolCalls: [{ id: "fresh-read", name, arguments: arguments_ }] }));
+  await runModelStep({ ...request(), messages: [
+    { role: "user", content: "Suche einen Arbeitsplatz in 1J" },
+    { role: "assistant", content: "", toolCalls: [{ id: "old-search", name: "anny_search_resources", arguments: { kind: "workplace", location: "1J" } }] },
+    { role: "tool", toolCallId: "old-search", name: "anny_search_resources", content: '{"resources":[{"id":"r1"}]}' },
+    { role: "user", content: newSearch ? "Ich brauche heute ein Büro in 1J von 10–16 Uhr" : "Ist es morgen von 10–16 Uhr frei?" },
+  ] }, { env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW, authorizedTools });
+  expect(providerRequest(provider.calls[0]?.init).tool_choice).toEqual(newSearch ? { type: "function", function: { name: "anny_search_resources" } } : "auto");
+});
+
 it.each([
   ["Ich suche einen Arbeitsplatz in Gebäude 1J.", ["anny_search_resources", "anny_get_availability", "anny_propose_booking"]],
   ["Zeige mir meine Buchungen", ["anny_list_my_bookings", "anny_propose_cancellation"]],

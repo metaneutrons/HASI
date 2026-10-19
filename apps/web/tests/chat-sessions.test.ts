@@ -62,6 +62,23 @@ function withSession(workspace: ChatWorkspace, session = createChatSession()): C
 }
 
 describe("chat session persistence", () => {
+  it("retains a blocked service request and its calendar anchor across connection navigation", () => {
+    const initial = createChatWorkspace("user-1");
+    const session = required(initial.sessions[0]);
+    const requestId = "ae93bd5b-49b1-40a9-8250-370d6c355fa7";
+    const serviceConnection = { installationId: "de.hsh.hasi.anny", label: "anny", requestId };
+    const snapshot = makeSnapshot({
+      request: { kind: "workplace", location: "1J", date: "2026-10-19", time: "10:00", durationMinutes: 360 }, roomContext: true,
+      messages: [textMessage(requestId, "user", "Heute in 1J von 10–16 Uhr"), { ...textMessage("connect", "assistant", "Verbinde anny"), tool: "anny · Dienstverbindung", serviceConnection }],
+      history: [{ id: requestId, role: "user", content: "Heute in 1J von 10–16 Uhr" }],
+    });
+    const storage = new MemoryStorage();
+    expect(saveChatWorkspace(updateChatSnapshot(initial, session.id, snapshot), storage)).toBe(true);
+    const restored = required(loadChatWorkspace("user-1", storage).workspace.sessions[0]).snapshot;
+    expect(restored.messages[1]?.serviceConnection).toEqual(serviceConnection);
+    expect(restored.request).toEqual(snapshot.request);
+    expect(restored.history).toEqual(snapshot.history);
+  });
   it("preserves syntax-valid dynamic profile IDs and rejects invalid profile IDs", () => {
     const dynamicProfileId = "openai-uni_model-2";
     expect(modelProfileIdSchema.safeParse("groq-qwen-3.8-27b").success).toBe(true);

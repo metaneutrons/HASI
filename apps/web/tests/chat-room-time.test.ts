@@ -7,6 +7,20 @@ const preference = mergeRoomRequest("Ein Einzelbüro bitte.", original, new Date
 const args = { resourceId: "190449", date: "2026-10-19", time: "08:00", durationMinutes: 480 };
 
 describe("requested room time binding", () => {
+  it("keeps today's bare building identifier and exact interval through an indifferent preference", () => {
+    const now = new Date("2026-10-19T07:22:00.000Z");
+    const request = mergeRoomRequest("ch brauche einen Büro für heute in 1J; von 10 - 16 Uhr", {}, now);
+    const next = mergeRoomRequest("mir egal", request, now);
+    expect(request).toMatchObject({ kind: "workplace", location: "1J", date: "2026-10-19", time: "10:00", durationMinutes: 360 });
+    expect(next).toMatchObject({ ...request, officeType: "any" });
+    expect(requestedRoomInterval(next)).toEqual({ startDate: "2026-10-19T08:00:00.000Z", endDate: "2026-10-19T14:00:00.000Z" });
+    expect(mergeRoomRequest("in 1J und in 2A", request, now).location).toBe("__invalid__");
+    expect(mergeRoomRequest("nicht in 1J", request, now).location).toBe("__invalid__");
+    expect(mergeRoomRequest("um 10 Uhr", {}, now).location).toBeUndefined();
+    expect(mergeRoomRequest("morgen in 1h einen Arbeitsplatz", {}, now).location).toBeUndefined();
+    expect(mergeRoomRequest("ein Büro in 1H", {}, now).location).toBe("1H");
+    expect(mergeRoomRequest("ein Büro in 1j", {}, now).location).toBe("1J");
+  });
   it("retains the server-anchored Monday interval across an office preference", () => {
     expect(preference).toMatchObject({ date: "2026-10-19", time: "08:00", durationMinutes: 480, location: "1J", officeType: "single" });
     expect(requestedRoomInterval(preference)).toEqual({ startDate: "2026-10-19T06:00:00.000Z", endDate: "2026-10-19T14:00:00.000Z" });
