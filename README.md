@@ -161,8 +161,14 @@ The [synthetic topology qualifier](docs/architecture/production-runtime.md#isola
 runs the actual Next.js handler, two separate API processes, trusted local TLS,
 Test-IdP and disposable PostgreSQL. It checks session/revocation/restart boundaries
 without a model call. Production request events expose only a server correlation
-ID, static route, method, status and duration. Worker isolation, full model-budget
-and browser workflow qualification remain separate M2 gates.
+ID, static route, method, status and duration. The separate
+[budget qualifier](docs/architecture/model-budget.md#isolated-cross-instance-runtime-qualification)
+checks missing-state denial, concurrent exhaustion and restart persistence across
+two real Next.js processes using a disposable database and local fake provider.
+[Anny reference tests](docs/verification/2026-10-19/m4-reference-rights.md) exercise
+distinct stable subjects and current resource grants through signed MCP and a
+contract HTTP mock. Worker isolation, full model evaluation and browser workflows
+remain separate gates; these synthetic checks do not authorize real HsH access.
 
 The host owns identity, permissions and state transitions. The model can search and prepare a proposal; only the user can confirm the exact proposal, and the current booking path writes to the synthetic service. Production third-party plugin isolation, source integrations and institutional authorization remain open work.
 
