@@ -125,6 +125,9 @@ describe("chat route profile switching policy", () => {
           modelContext: { dataClasses: ["public", "confidential"] },
         }));
       }
+      if (url.origin === apiOrigin && url.pathname === "/api/history/authority") {
+        return Promise.resolve(Response.json({ authorityDigest: "a".repeat(64) }));
+      }
       if (url.origin === apiOrigin && url.pathname === "/api/tools") {
         toolFetches.push(url.href);
         const snapshot = toolSnapshots[toolFetches.length - 1];
@@ -194,5 +197,30 @@ describe("chat route profile switching policy", () => {
     expect(providerToolNames(providerRequests[1] ?? {})).toEqual([toolSnapshots[1]?.[0]?.modelName]);
     expect(providerToolNames(providerRequests[1] ?? {})).not.toContain(toolSnapshots[0]?.[0]?.modelName);
     expect(reservedProfiles).toEqual(["groq-oss-120b", "groq-oss-20b"]);
+    expect(JSON.stringify(providerRequests)).not.toContain("authorityDigest");
+    expect(JSON.stringify(providerRequests)).not.toContain("receipt");
+  });
+  it("stops before provider I/O when current authority changes after history admission", async () => {
+    let authorityReads = 0;
+    let providerCalls = 0;
+    budgetMock.getAdmission.mockImplementation(() => Promise.resolve({
+      reserve: () => Promise.resolve({ settle: () => Promise.resolve(undefined) }),
+    }));
+    vi.stubGlobal("fetch", ((input: RequestInfo | URL) => {
+      const url = new URL(urlOf(input));
+      if (url.origin === apiOrigin && url.pathname === "/api/session") return Promise.resolve(Response.json({
+        user: { id: "test-account" }, mode: "oidc", modelContext: { dataClasses: ["public", "confidential"] },
+      }));
+      if (url.origin === apiOrigin && url.pathname === "/api/history/authority") return Promise.resolve(Response.json({
+        authorityDigest: (++authorityReads === 1 ? "a" : "b").repeat(64),
+      }));
+      if (url.origin === apiOrigin && url.pathname === "/api/tools") return Promise.resolve(Response.json({ tools: [tool("example.status", "status.read")] }));
+      if (url.origin === "https://api.groq.com") { providerCalls += 1; throw new Error("Provider must not be reached"); }
+      throw new Error("Unexpected test fetch");
+    }) satisfies typeof fetch);
+    const response = await postChat({ conversationId, profileId: "groq-oss-120b", messages: [{ role: "user", content: "Read status" }] });
+    expect(response.status).toBe(409);
+    expect(providerCalls).toBe(0);
+    expect(authorityReads).toBeGreaterThanOrEqual(2);
   });
 });
