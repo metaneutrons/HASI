@@ -266,6 +266,65 @@ describe('content snapshot acquisition', () => {
     expect(expiredFixture.embedding.embedDocument).not.toHaveBeenCalled();
   });
 
+  it('binds reviewed image guidance to source descriptors and requires explicit re-review when either changes', async () => {
+    const fixture = producerFixture();
+    fixture.setContent({
+      requiresContentReview: true,
+      images: [{ alt: 'VPN setup dialog', sourceUrl: 'https://assets.example.edu/vpn-dialog.png' }],
+    });
+    const page = fixture.policy.pages[0];
+    if (!page) throw new Error('Fixture page missing.');
+    const signal = new AbortController().signal;
+    const reviewPolicy = async (
+      reviewedImages: { id: string; alt: string; transcript: string; reviewed: boolean; instructional: boolean }[],
+      digestImages: typeof reviewedImages = reviewedImages,
+    ): Promise<ContentAcquisitionPolicy> => {
+      const content = await fixture.adapter.read({ url: page.url }, signal);
+      return {
+        ...fixture.policy,
+        pages: fixture.policy.pages.map(candidate => ({ ...candidate, reviews: { fixture: {
+          digest: contentReviewDigest(content, candidate, 'fixture-policy-v1', digestImages),
+          images: reviewedImages,
+        } } })),
+      };
+    };
+    const originalImages = [{ id: 'vpn-dialog', alt: 'VPN setup dialog',
+      transcript: 'Choose the employee profile.', reviewed: true, instructional: true }];
+    const originalPolicy = await reviewPolicy(originalImages);
+    const originalContent = await fixture.adapter.read({ url: page.url }, signal);
+    const noImageContent = { ...originalContent, images: [] };
+    expect(contentReviewDigest(noImageContent, page, 'fixture-policy-v1'))
+      .toBe(contentReviewDigest(noImageContent, page, 'fixture-policy-v1', []));
+
+    const first = await fixture.createProducer(originalPolicy).acquire(signal);
+    expect(first.snapshot.documents[0]?.images).toEqual(originalImages);
+    expect(fixture.embeddingCalls).toHaveLength(1);
+    const producerKey = `content-producer:${fixture.scope}:${fixture.sourceSystem}`;
+    const storedAfterFirst = await fixture.store.read(producerKey);
+
+    const changedTranscript = [{ ...originalImages[0]!, transcript: 'Choose the student profile.' }];
+    const staleApproval = await reviewPolicy(changedTranscript, originalImages);
+    await expect(fixture.createProducer(staleApproval).acquire(signal))
+      .rejects.toMatchObject({ code: 'review_required' });
+    expect(await fixture.store.read(producerKey)).toEqual(storedAfterFirst);
+    expect(fixture.embeddingCalls).toHaveLength(1);
+
+    const renewedApproval = await reviewPolicy(changedTranscript);
+    const updated = await fixture.createProducer(renewedApproval).acquire(signal);
+    expect(updated.snapshot.sequence).toBe(2);
+    expect(updated.snapshot.documents[0]).toMatchObject({ revision: 2, images: changedTranscript });
+    expect(fixture.embeddingCalls).toHaveLength(1);
+
+    fixture.setContent({ images: [{
+      alt: 'Updated VPN setup dialog', sourceUrl: 'https://assets.example.edu/vpn-dialog-v2.png',
+    }] });
+    const storedAfterReapproval = await fixture.store.read(producerKey);
+    await expect(fixture.createProducer(renewedApproval).acquire(signal))
+      .rejects.toMatchObject({ code: 'review_required' });
+    expect(await fixture.store.read(producerKey)).toEqual(storedAfterReapproval);
+    expect(fixture.embeddingCalls).toHaveLength(1);
+  });
+
   it('quarantines changed or unreviewed aggregate rendering before embeddings, including wiki transclusions', async () => {
     const fixture = producerFixture();
     const acquired: AcquiredContent = { adapter: 'mediawiki', canonicalUrl: fixture.page.url, title: 'Rendered guide',
