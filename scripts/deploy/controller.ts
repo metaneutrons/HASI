@@ -421,27 +421,44 @@ export function selectTrustedRun(payload: unknown, sha: string): RunSelection {
   return { kind: 'success', run };
 }
 
-export function verifySuccessfulJobs(payload: unknown, attempt: number): boolean {
-  if (!isObject(payload) || !Array.isArray(payload.jobs) || payload.jobs.length > 100) return false;
-  if (payload.total_count !== undefined && payload.total_count !== payload.jobs.length) return false;
+type JobVerification = 'success' | 'pending' | 'invalid';
+
+function verifyAttemptJobs(payload: unknown, attempt: number): JobVerification {
+  if (!isObject(payload) || !Array.isArray(payload.jobs) || payload.jobs.length > 100) return 'invalid';
+  if (payload.total_count !== undefined && payload.total_count !== payload.jobs.length) return 'invalid';
   const seen = new Set<string>();
   const foundRequired = new Set<string>();
+  let pending = false;
   for (const item of payload.jobs) {
     if (!isObject(item) || typeof item.name !== 'string' || seen.has(item.name)
-        || item.run_attempt !== attempt || item.status !== 'completed') return false;
+        || item.run_attempt !== attempt) return 'invalid';
     seen.add(item.name);
+
+    if (item.status === 'queued' || item.status === 'in_progress') {
+      if (item.conclusion !== null) return 'invalid';
+      pending = true;
+      if (REQUIRED_JOBS.has(item.name)) foundRequired.add(item.name);
+      continue;
+    }
+
+    if (item.status !== 'completed') return 'invalid';
     if (REQUIRED_JOBS.has(item.name)) {
-      if (item.conclusion !== 'success') return false;
+      if (item.conclusion !== 'success') return 'invalid';
       foundRequired.add(item.name);
       continue;
     }
     if (item.name === 'Commit hygiene') {
-      if (item.conclusion !== 'success' && item.conclusion !== 'skipped') return false;
+      if (item.conclusion !== 'success' && item.conclusion !== 'skipped') return 'invalid';
       continue;
     }
-    if (item.conclusion !== 'success' && item.conclusion !== 'skipped') return false;
+    if (item.conclusion !== 'success' && item.conclusion !== 'skipped') return 'invalid';
   }
-  return foundRequired.size === REQUIRED_JOBS.size;
+  if (foundRequired.size !== REQUIRED_JOBS.size) return 'invalid';
+  return pending ? 'pending' : 'success';
+}
+
+export function verifySuccessfulJobs(payload: unknown, attempt: number): boolean {
+  return verifyAttemptJobs(payload, attempt) === 'success';
 }
 
 async function coolifyRequest(
@@ -809,7 +826,9 @@ export async function controllerStep(
   }
 
   const jobs = await getGithubJson(io, workflowJobsPath(selection.run));
-  if (!verifySuccessfulJobs(jobs, selection.run.attempt)) {
+  const jobsState = verifyAttemptJobs(jobs, selection.run.attempt);
+  if (jobsState === 'pending') return { kind: 'waiting', reason: 'ci_jobs_pending' };
+  if (jobsState === 'invalid') {
     await addRecord(journal, { ...record, phase: 'rejected', failure: 'ci_jobs_invalid' }, io);
     return { kind: 'rejected', reason: 'ci_jobs_invalid' };
   }

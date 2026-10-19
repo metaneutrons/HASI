@@ -65,6 +65,18 @@ function jobs(attempt = 1) {
   };
 }
 
+function pendingJobs() {
+  const payload = jobs();
+  return {
+    ...payload,
+    jobs: payload.jobs.map((job, index) => {
+      if (index === 0) return { ...job, status: 'in_progress', conclusion: null };
+      if (index === 1) return { ...job, status: 'queued', conclusion: null };
+      return job;
+    }),
+  };
+}
+
 function jsonResponse(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } });
 }
@@ -166,12 +178,87 @@ describe('Coolify deployment controller gates', () => {
 
   it('requires unique successful required jobs and permits skipped commit hygiene', () => {
     expect(verifySuccessfulJobs(jobs(), 1)).toBe(true);
+    expect(verifySuccessfulJobs(pendingJobs(), 1)).toBe(false);
     expect(verifySuccessfulJobs({ ...jobs(), jobs: [...jobs().jobs, jobs().jobs[0]] }, 1)).toBe(false);
     expect(verifySuccessfulJobs({ ...jobs(), jobs: jobs().jobs.map((job, i) => i === 1 ? { ...job, conclusion: 'failure' } : job) }, 1)).toBe(false);
     expect(verifySuccessfulJobs({ ...jobs(), jobs: jobs().jobs.map((job, i) => i === 0 ? { ...job, status: 'in_progress' } : job) }, 1)).toBe(false);
     expect(verifySuccessfulJobs(jobs(2), 1)).toBe(false);
     expect(verifySuccessfulJobs({ ...jobs(), jobs: jobs().jobs.filter((job) => job.name !== 'Quality (Node 26)') }, 1)).toBe(false);
     expect(verifySuccessfulJobs({ ...jobs(), jobs: [...jobs().jobs, { name: 'Unexpected', run_attempt: 1, status: 'completed', conclusion: 'cancelled' }] }, 1)).toBe(false);
+  });
+
+  it('waits for pending attempt jobs without journaling or contacting Coolify, then deploys once on success', async () => {
+    let currentJobs: unknown = pendingJobs();
+    const test = harness((call) => {
+      if (call.url.startsWith('https://github.com/metaneutrons/HASI.git/info/refs?')) return new Response(gitAdvertisement(), { status: 200 });
+      if (call.url.includes('/actions/workflows/386428207/runs?')) return jsonResponse({ workflow_runs: [run()] });
+      if (call.url.includes('/actions/runs/12345/attempts/1/jobs?')) return jsonResponse(currentJobs);
+      if (call.url === `http://127.0.0.1:8000/api/v1/applications/${APP_UUID}`) {
+        return call.method === 'PATCH'
+          ? jsonResponse({ ok: true })
+          : jsonResponse({ git_repository: 'metaneutrons/HASI', git_branch: 'main', git_commit_sha: SHA, settings: { is_auto_deploy_enabled: false } });
+      }
+      if (call.url === 'http://127.0.0.1:8000/api/v1/deploy') return jsonResponse({ deployments: [{ resource_uuid: APP_UUID, deployment_uuid: DEPLOYMENT_UUID }] });
+      return new Response('', { status: 404 });
+    });
+
+    expect(await controllerStep({ applicationUuid: APP_UUID }, TOKEN, test.io)).toEqual({ kind: 'waiting', reason: 'ci_jobs_pending' });
+    expect(test.getJournal().records).toEqual([]);
+    expect(test.writes).toEqual([]);
+    expect(test.calls.every((call) => !call.url.startsWith('http://127.0.0.1:8000') && call.authorization === undefined)).toBe(true);
+
+    currentJobs = jobs();
+    expect(await controllerStep({ applicationUuid: APP_UUID }, TOKEN, test.io)).toEqual({ kind: 'submitted', reason: 'coolify_accepted' });
+    expect(test.getJournal().records).toHaveLength(1);
+    expect(test.getJournal().records[0]).toMatchObject({ runId: 12345, attempt: 1, sha: SHA, phase: 'submitted' });
+    expect(test.writes.map((write) => write.records[0]?.phase)).toEqual(['authorized', 'pinned', 'submitting', 'submitted']);
+    expect(test.calls.filter((call) => call.url === 'http://127.0.0.1:8000/api/v1/deploy')).toHaveLength(1);
+  });
+
+  it('rejects invalid job data even when another job is pending', async () => {
+    const withPending = pendingJobs();
+    const invalidViews = [
+      {
+        ...withPending,
+        jobs: withPending.jobs.map((job, index) => index === 1 ? { ...job, conclusion: 'failure' } : job),
+      },
+      {
+        ...withPending,
+        jobs: withPending.jobs.map((job, index) => index === 1
+          ? { ...job, status: 'completed', conclusion: 'failure' }
+          : job),
+      },
+      {
+        ...withPending,
+        jobs: [...withPending.jobs, withPending.jobs[1]],
+        total_count: withPending.total_count + 1,
+      },
+      {
+        ...withPending,
+        jobs: withPending.jobs.map((job, index) => index === 1 ? { ...job, run_attempt: 2 } : job),
+      },
+      {
+        ...withPending,
+        jobs: withPending.jobs.filter((job) => job.name !== 'Quality (Node 26)'),
+        total_count: withPending.total_count - 1,
+      },
+      {
+        ...withPending,
+        jobs: withPending.jobs.map((job, index) => index === 0 ? { ...job, conclusion: 'success' } : job),
+      },
+    ];
+
+    for (const jobsView of invalidViews) {
+      const test = harness((call) => {
+        if (call.url.startsWith('https://github.com/metaneutrons/HASI.git/info/refs?')) return new Response(gitAdvertisement(), { status: 200 });
+        if (call.url.includes('/actions/workflows/386428207/runs?')) return jsonResponse({ workflow_runs: [run()] });
+        if (call.url.includes('/actions/runs/12345/attempts/1/jobs?')) return jsonResponse(jobsView);
+        return new Response('', { status: 404 });
+      });
+      expect(await controllerStep({ applicationUuid: APP_UUID }, TOKEN, test.io)).toEqual({ kind: 'rejected', reason: 'ci_jobs_invalid' });
+      expect(test.getJournal().records[0]).toMatchObject({ phase: 'rejected', failure: 'ci_jobs_invalid' });
+      expect(test.calls.every((call) => !call.url.startsWith('http://127.0.0.1:8000') && call.authorization === undefined)).toBe(true);
+    }
   });
 
   it('performs a pinned, journaled deployment and completes only after exact-revision health', async () => {
