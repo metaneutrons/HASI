@@ -374,9 +374,10 @@
   .panel { gap: 14px; padding: 15px; }
   .panelHeader { gap: 10px; }
   .panelHeader p { font-size: 12px; }
-  .cardHeader { align-items: flex-start; flex-wrap: wrap; }
-  .installationName { padding-top: 2px; }
-  .status { margin-left: 50px; }
+  .cardHeader { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: start; }
+  .installationIcon { grid-column: 1; grid-row: 1; }
+  .installationName { grid-column: 2; grid-row: 1; padding-top: 2px; }
+  .status { grid-column: 2; grid-row: 2; justify-self: start; margin: 0; }
   .installation { padding: 13px; }
   .configuration,
   .releaseDetails { grid-template-columns: minmax(0, 1fr); }
