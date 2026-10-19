@@ -4,7 +4,7 @@ import { z } from "zod";
 import { bookingSchema, proposalSchema, resourceSchema, normalizeResource, type ChatProposal, type ChatWorkspace } from "../chat-sessions";
 import { parsePluginProposalSnapshot } from "../plugin-tools";
 import type { Booking, Resource } from "../types";
-import { productionCoreRequest } from "./core-api";
+import { protectedCoreRequest } from "./core-api";
 
 export interface NativeHistoryAccess {
   readonly resources: readonly Resource[];
@@ -25,7 +25,7 @@ export function productionNativeHistoryResolver(request: Request): NativeHistory
       resources: [], bookings: [], proposals: new Map(),
     };
     async function read(path: string): Promise<unknown> {
-      const response = await productionCoreRequest(path, request, "GET");
+      const response = await protectedCoreRequest(path, request, "GET");
       if (!response.ok) { await response.body?.cancel(); throw new Error("History access unavailable"); }
       const reader = response.body?.getReader();
       if (!reader) throw new Error("History access unavailable");

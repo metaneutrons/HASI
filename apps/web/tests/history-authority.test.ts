@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-vi.mock("../src/lib/server/core-api", () => ({ productionCoreRequest: vi.fn() }));
-import { productionCoreRequest } from "../src/lib/server/core-api";
+vi.mock("../src/lib/server/core-api", () => ({ protectedCoreRequest: vi.fn() }));
+import { protectedCoreRequest } from "../src/lib/server/core-api";
 import { productionHistoryAuthority } from "../src/lib/server/history-authority";
 
-const coreRequest = vi.mocked(productionCoreRequest);
+const coreRequest = vi.mocked(protectedCoreRequest);
 const authorityDigest = "a".repeat(64);
 const request = () => new Request("https://hasi.example.edu/api/chat", { headers: { cookie: "hasi-session=synthetic-session" } });
 

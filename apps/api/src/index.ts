@@ -186,7 +186,12 @@ export async function createApi(options: ApiOptions) {
     if (!await store.compareAndSet(proposalKey(proposal.id), null, proposal, proposalLifetime())) throw new RequestError(503, 'Der Vorschlag konnte nicht gespeichert werden.');
     return { proposal: publicProposal(proposal) };
   };
-  app.get('/api/session', async request => { const user = await identity.resolve(request.cookies[cookieName]); return { mode: sessionMode, user: user ? publicUser(user) : null, ...(options.mode === 'production' && user ? { modelContext: { dataClasses: ['public', 'internal', 'confidential'] } } : {}) }; });
+  app.get('/api/session', async request => {
+    const user = await identity.resolve(request.cookies[cookieName]);
+    const modelContext = options.mode === 'production' ? { dataClasses: ['public', 'internal', 'confidential'] }
+      : options.mode === 'development' && oidc ? { dataClasses: ['synthetic_demo'] } : undefined;
+    return { mode: sessionMode, user: user ? publicUser(user) : null, ...(user && modelContext ? { modelContext } : {}) };
+  });
   app.get('/api/history/authority', async request => {
     const user = await requireUser(request.cookies[cookieName]);
     await options.registry.refreshAll();

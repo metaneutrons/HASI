@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MAX_CHAT_WORKSPACE_BYTES, parseChatWorkspace } from "@/lib/chat-sessions";
 import { chatAccess } from "@/lib/server/chat-access";
-import { productionWebConfiguration } from "@/lib/server/core-api";
+import { protectedWebConfiguration } from "@/lib/server/core-api";
 import { productionKnowledgeResolver } from "@/lib/server/knowledge-context";
 import { ProtectedWorkspaceConflict, ProtectedWorkspaceStore } from "@/lib/server/protected-workspaces";
 import { productionNativeHistoryResolver } from "@/lib/server/native-history";
@@ -35,10 +35,10 @@ function notFound() {
 }
 
 async function authorize(request: Request): Promise<Response | { access: ProductionChatAccess }> {
-  if (process.env.HASI_APP_MODE !== "production" || process.env.HASI_DEMO_MODE === "1") return notFound();
-  let configuration: ReturnType<typeof productionWebConfiguration>;
+  if ((process.env.HASI_APP_MODE !== "production" && process.env.HASI_LOCAL_TEST_IDP !== "1") || process.env.HASI_DEMO_MODE === "1") return notFound();
+  let configuration: ReturnType<typeof protectedWebConfiguration>;
   try {
-    configuration = productionWebConfiguration();
+    configuration = protectedWebConfiguration();
   } catch {
     return unavailable();
   }

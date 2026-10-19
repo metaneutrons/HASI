@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { generateKeyPairSync, randomBytes } from 'node:crypto';
+import { generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
 import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { annyManifest, annyAppManifest, annyAppViewSha256 } from '@hasi/anny-plugin';
@@ -41,6 +41,16 @@ async function ready(url: string) {
 }
 
 try {
+  let testDatabase: string | undefined;
+  if (testIdp) {
+    if (!process.env.TEST_DATABASE_URL) throw new Error('Set TEST_DATABASE_URL to the isolated loopback hasi_topology_test database before starting TestIdP.');
+    const database = new URL(process.env.TEST_DATABASE_URL);
+    if (!['postgres:', 'postgresql:'].includes(database.protocol) || database.hostname !== '127.0.0.1' || !database.port
+      || database.pathname !== '/hasi_topology_test' || database.search || database.hash || ![3001, 3002].includes(webPort)) {
+      throw new Error('TestIdP requires TEST_DATABASE_URL for the isolated loopback hasi_topology_test database and web port 3001 or 3002.');
+    }
+    testDatabase = database.href;
+  }
   for (const port of [webPort, 4100, 4101, 4102, 4103]) await portFree(port);
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
   const pluginToken = randomBytes(32).toString('base64url');
@@ -54,7 +64,7 @@ try {
   await ready('http://127.0.0.1:4103/health');
   start('HASI API', 'apps/api/src/server.ts', { HASI_MODE: 'development', HASI_WEB_ORIGIN: webOrigin, HASI_PRIVATE_KEY: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(), HASI_PLUGIN_TOKEN: pluginToken, HASI_PLUGIN_DIGEST: digest(pluginApps ? annyAppManifest : annyManifest), HASI_KNOWLEDGE_TOKEN: knowledgeToken, HASI_KNOWLEDGE_DIGEST: digest(knowledgeManifest), ...(testIdp ? { HASI_TEST_IDP: '1' } : {}), ...(pluginApps ? { HASI_PLUGIN_APPS: '1', HASI_REVIEWED_APP_DIGEST: annyAppViewSha256 } : {}) });
   await ready('http://127.0.0.1:4100/api/session');
-  const web = spawn('pnpm', ['--filter', '@hasi/web', preview ? 'start' : 'dev', '--hostname', '127.0.0.1', '--port', String(webPort)], { stdio: 'inherit', env: { ...baseEnv, NODE_ENV: preview ? 'production' : 'development', ...(pluginApps ? { NEXT_PUBLIC_HASI_PLUGIN_APPS: '1' } : {}) } });
+  const web = spawn('pnpm', ['--filter', '@hasi/web', preview ? 'start' : 'dev', '--hostname', '127.0.0.1', '--port', String(webPort)], { stdio: 'inherit', env: { ...baseEnv, NODE_ENV: preview ? 'production' : 'development', ...(testDatabase ? { HASI_LOCAL_TEST_IDP: '1', HASI_LOCAL_TEST_IDP_SCOPE: randomUUID(), HASI_CHAT_SIGNING_SECRET: randomBytes(32).toString('base64url'), HASI_WEB_ORIGIN: webOrigin, DATABASE_URL: testDatabase } : {}), ...(pluginApps ? { NEXT_PUBLIC_HASI_PLUGIN_APPS: '1' } : {}) } });
   children.push(web);
   web.on('exit', () => { if (!stopping) { process.exitCode = 1; stop(); } });
   web.on('error', () => { console.error('Web UI could not start.'); process.exitCode = 1; stop(); });

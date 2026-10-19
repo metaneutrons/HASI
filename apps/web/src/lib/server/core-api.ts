@@ -17,8 +17,24 @@ export function productionWebConfiguration() {
   return { origin: origin.origin, apiOrigin: api.origin, secret, dataClasses: classes };
 }
 
-export async function productionCoreRequest(path: string, request: Request, method = request.method): Promise<Response> {
-  const configuration = productionWebConfiguration();
+/** Explicit synthetic local IdP composition; never a production TLS fallback. */
+export function protectedWebConfiguration() {
+  if (process.env.HASI_APP_MODE === "production") return { ...productionWebConfiguration(), kind: "production" as const };
+  if (process.env.HASI_LOCAL_TEST_IDP !== "1" || process.env.VERCEL || process.env.HASI_DEMO_MODE === "1" || process.env.HASI_APP_MODE) throw new Error("Protected local test mode is not configured");
+  const origin = new URL(process.env.HASI_WEB_ORIGIN ?? "");
+  if (origin.protocol !== "http:" || origin.hostname !== "127.0.0.1" || !["3001", "3002"].includes(origin.port)
+    || origin.origin !== process.env.HASI_WEB_ORIGIN) throw new Error("Local TestIdP requires the approved loopback web origin");
+  const database = new URL(process.env.DATABASE_URL ?? "");
+  if (!["postgres:", "postgresql:"].includes(database.protocol) || database.hostname !== "127.0.0.1" || !database.port
+    || database.pathname !== "/hasi_topology_test" || database.search || database.hash) throw new Error("Local TestIdP requires the isolated loopback test database");
+  const secret = process.env.HASI_CHAT_SIGNING_SECRET;
+  if (!secret || !/^[A-Za-z0-9_-]{43,128}$/u.test(secret)) throw new Error("Protected local signing configuration unavailable");
+  const localScope = z.uuid().parse(process.env.HASI_LOCAL_TEST_IDP_SCOPE);
+  return { kind: "local-test-idp" as const, origin: origin.origin, apiOrigin: "http://127.0.0.1:4100", secret,
+    dataClasses: ["synthetic_demo" as const], localScope };
+}
+
+async function fixedCoreRequest(path: string, request: Request, method: string, configuration: { apiOrigin: string }): Promise<Response> {
   if (!path.startsWith("/api/") || path.includes("\\") || path.includes("#")) throw new Error("Invalid API path");
   const target = new URL(path, configuration.apiOrigin);
   if (target.origin !== configuration.apiOrigin) throw new Error("Invalid API destination");
@@ -41,6 +57,14 @@ export async function productionCoreRequest(path: string, request: Request, meth
     }
   }
   return fetch(target, { method, headers, ...(body ? { body: Buffer.from(body) } : {}), cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(45000) });
+}
+
+export async function productionCoreRequest(path: string, request: Request, method = request.method): Promise<Response> {
+  return fixedCoreRequest(path, request, method, productionWebConfiguration());
+}
+
+export async function protectedCoreRequest(path: string, request: Request, method = request.method): Promise<Response> {
+  return fixedCoreRequest(path, request, method, protectedWebConfiguration());
 }
 
 export async function productionApiResponse(request: Request) {

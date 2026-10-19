@@ -124,12 +124,12 @@ export function ChatSessionList({ view, store, close, onOpenChat, variant = "dra
     <dialog ref={dialog} className="chat-session-dialog" aria-labelledby={`${idPrefix}-editor-title`} aria-describedby={`${idPrefix}-editor-description`} onClose={() => { setEditor(null); restoreFocus(); }} onClick={event => { const bounds = event.currentTarget.getBoundingClientRect(); if (event.target === event.currentTarget && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) event.currentTarget.close(); }}>
       <div className={`chat-dialog-symbol${editor?.mode === "delete" ? " is-destructive" : ""}`} aria-hidden="true">{editor?.mode === "delete" ? <Trash2 size={22} /> : <Pencil size={22} />}</div>
       <h2 id={`${idPrefix}-editor-title`}>{editor?.mode === "delete" ? "Chat löschen?" : "Chat umbenennen"}</h2>
-      <p id={`${idPrefix}-editor-description`}>{editor?.mode === "delete" ? <>„{editedSession?.title}“ und der Verlauf werden aus diesem Browser entfernt. Buchungen bleiben erhalten.</> : "Wähle einen kurzen, passenden Namen für diese Unterhaltung."}</p>
+      <p id={`${idPrefix}-editor-description`}>{editor?.mode === "delete" ? <>Die Unterhaltung „{editedSession?.title}“ wird aus deinem Chatverlauf entfernt. Buchungen bleiben erhalten.</> : "Wähle einen kurzen, passenden Namen für diese Unterhaltung."}</p>
       {editor?.mode === "rename" ? <form onSubmit={rename}>
         <label className="sr-only" htmlFor={`${idPrefix}-rename`}>Chatname</label><input ref={titleInput} id={`${idPrefix}-rename`} aria-label="Chatname" maxLength={64} value={title} onChange={event => { setTitle(event.target.value); }} />
         <div className="chat-dialog-buttons"><button type="button" onClick={() => dialog.current?.close()}>Abbrechen</button><button type="submit" className="is-primary" disabled={!title.trim()}>Speichern</button></div>
       </form> : <div className="chat-dialog-buttons"><button ref={cancelDelete} type="button" onClick={() => dialog.current?.close()}>Abbrechen</button><button type="button" className="is-destructive" disabled={!editedSession || Boolean(view.busy[editedSession.id])} onClick={() => { if (!editor || view.busy[editor.id]) return; store.remove(editor.id); dialog.current?.close(); }}>Chat löschen</button></div>}
     </dialog>
-    <p className="chat-list-footnote">Verläufe bleiben in diesem Browser und sind nach Testkonto getrennt.{sessions.length >= MAX_CHAT_SESSIONS && <span> Maximal {MAX_CHAT_SESSIONS} Chats. Lösche einen Verlauf für einen neuen Chat.</span>}</p>
+    <p className="chat-list-footnote">{view.protectedPersistence ? "Verläufe werden geschützt auf dem Server gespeichert und sind nach Konto getrennt." : "Verläufe bleiben in diesem Browser und sind nach Testkonto getrennt."}{sessions.length >= MAX_CHAT_SESSIONS && <span> Maximal {MAX_CHAT_SESSIONS} Chats. Lösche einen Verlauf für einen neuen Chat.</span>}</p>
   </div>;
 }
