@@ -4,6 +4,7 @@ import { createDemoRuntime } from '@hasi/demo-runtime';
 import { hshDemoCatalog } from '@hasi/demo-fixtures/catalog';
 import { PostgresJsonStore } from '@hasi/state';
 import { resolveDemoStateNamespace } from './demo-runtime-namespace';
+import { createDemoIntegrationTransport } from './demo-integration-transport';
 
 let pending: Promise<ReturnType<typeof createDemoRuntime>> | undefined;
 
@@ -27,6 +28,11 @@ async function initialize() {
   if (process.env.HASI_DEMO_MODE !== '1') throw new Error('Explicit server demo mode is required.');
   const preview = process.env.VERCEL_ENV === 'preview';
   const origin = configuredOrigin();
+  const loopbackTransportEnabled = process.env.HASI_DEMO_LOOPBACK_TRANSPORT === '1' && !process.env.VERCEL;
+  if (loopbackTransportEnabled && !process.env.HASI_DEMO_ORIGIN?.trim()) throw new Error('Invalid demo integration transport configuration.');
+  const integrationTransport = loopbackTransportEnabled
+    ? createDemoIntegrationTransport({ publicOrigin: origin, port: process.env.PORT })
+    : fetch;
   const namespace = resolveDemoStateNamespace(process.env);
   const store = new PostgresJsonStore(namespace, { poolConfig: { connectionString: requiredSecret('DATABASE_URL'), max: 3, connectionTimeoutMillis: 5000, idleTimeoutMillis: 20000, allowExitOnIdle: true } });
   try { await store.initialize(); await store.deleteExpired(); } catch { await store.close(); throw new Error('Demo state unavailable.'); }
@@ -35,7 +41,7 @@ async function initialize() {
     new Headers(init?.headers).forEach((value, key) => { headers.set(key, value); });
     // This credential is sent only by the origin-pinned integration transport.
     if (preview && process.env.VERCEL_AUTOMATION_BYPASS_SECRET) headers.set('x-vercel-protection-bypass', process.env.VERCEL_AUTOMATION_BYPASS_SECRET);
-    return fetch(input, { ...init, headers, redirect: 'error' });
+    return integrationTransport(input, { ...init, headers, redirect: 'error' });
   };
   return createDemoRuntime({ origin, store, secret: requiredSecret('HASI_DEMO_SECRET'), fetch: internalFetch, catalog: hshDemoCatalog,
     ...(process.env.HASI_DEMO_SERVICE_IT_ORIGIN !== undefined ? { serviceItContentOrigin: process.env.HASI_DEMO_SERVICE_IT_ORIGIN } : {}) });
