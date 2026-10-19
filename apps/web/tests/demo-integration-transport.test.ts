@@ -1,4 +1,5 @@
-import { createServer, type Server } from 'node:http';
+import { createServer, globalAgent, type Server } from 'node:http';
+import type { Socket } from 'node:net';
 import { gzipSync } from 'node:zlib';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -18,7 +19,7 @@ afterEach(async () => {
 });
 
 async function startLoopbackServer() {
-  const received: { host: string | undefined; method: string | undefined; url: string | undefined; headers: Record<string, string | string[] | undefined>; body: string }[] = [];
+  const received: { host: string | undefined; method: string | undefined; url: string | undefined; remotePort: number | undefined; headers: Record<string, string | string[] | undefined>; body: string }[] = [];
   const server = createServer((request, response) => {
     const chunks: Buffer[] = [];
     request.on('data', (chunk: Buffer) => {
@@ -29,15 +30,30 @@ async function startLoopbackServer() {
         host: request.headers.host,
         method: request.method,
         url: request.url,
+        remotePort: request.socket.remotePort,
         headers: request.headers,
         body: Buffer.concat(chunks).toString('utf8'),
       });
+      const requestUrl = new URL(request.url ?? '/', 'http://demo.example.test');
+      const bodyless = requestUrl.searchParams.get('bodyless');
+      if (bodyless) {
+        const status = bodyless === 'head' ? 200 : Number(bodyless);
+        response.writeHead(status).end();
+        return;
+      }
       if (request.url?.includes('redirect=1')) {
         response.writeHead(302, { location: '/mcp' }).end();
         return;
       }
       if (request.url?.includes('compressed=1')) {
         response.writeHead(200, { 'content-type': 'application/json', 'content-encoding': 'gzip' }).end(gzipSync('{}'));
+        return;
+      }
+      if (request.url?.includes('slow=1')) {
+        response.writeHead(200, { 'content-type': 'text/plain' }).flushHeaders();
+        response.write('first chunk');
+        const timer = setTimeout(() => response.end('later chunk'), 1_000);
+        response.once('close', () => { clearTimeout(timer); });
         return;
       }
       response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(received.at(-1)));
@@ -132,6 +148,53 @@ describe('demo integration loopback transport', () => {
     expect(received.headers.authorization).toBeUndefined();
     expect(received.headers.cookie).toBeUndefined();
     expect(received.headers['x-request-override']).toBe('replacement');
+  });
+
+  it('drains bodyless status responses so the keep-alive socket is reusable', async () => {
+    const loopback = await startLoopbackServer();
+    const fetcher = createDemoIntegrationTransport({ publicOrigin: 'https://demo.example.test', port: loopback.port });
+    const freedPorts: number[] = [];
+    const onFree = (socket: Socket) => {
+      if (socket.localPort) freedPorts.push(socket.localPort);
+    };
+    globalAgent.on('free', onFree);
+
+    try {
+      for (const bodyless of ['204', '205', '304']) {
+        const response = await fetcher(`https://demo.example.test/mcp?bodyless=${bodyless}`);
+        expect(response.status).toBe(Number(bodyless));
+        expect(response.body).toBeNull();
+
+        const first = loopback.received.at(-1);
+        expect(first?.remotePort).toBeDefined();
+        await vi.waitFor(() => { expect(freedPorts).toContain(first?.remotePort); });
+
+        const followup = await fetcher('https://demo.example.test/mcp?after-bodyless=1');
+        expect(followup.status).toBe(200);
+        const second = loopback.received.at(-1);
+        expect(second?.remotePort, `socket reuse after ${bodyless}`).toBe(first?.remotePort);
+      }
+    } finally {
+      globalAgent.off('free', onFree);
+    }
+  });
+
+  it('returns HEAD responses without exposing a body', async () => {
+    const loopback = await startLoopbackServer();
+    const fetcher = createDemoIntegrationTransport({ publicOrigin: 'https://demo.example.test', port: loopback.port });
+    const response = await fetcher('https://demo.example.test/mcp?bodyless=head', { method: 'HEAD' });
+    expect(response.status).toBe(200);
+    expect(response.body).toBeNull();
+  });
+
+  it('propagates a midstream abort to the response body', async () => {
+    const loopback = await startLoopbackServer();
+    const fetcher = createDemoIntegrationTransport({ publicOrigin: 'https://demo.example.test', port: loopback.port });
+    const controller = new AbortController();
+    const response = await fetcher('https://demo.example.test/mcp?slow=1', { signal: controller.signal });
+    const body = response.text();
+    controller.abort();
+    await expect(body).rejects.toThrow();
   });
 
   it('rejects foreign origins, credentials, fragments and unapproved paths before fetch', async () => {

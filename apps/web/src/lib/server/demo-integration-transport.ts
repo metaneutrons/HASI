@@ -114,14 +114,19 @@ export function createDemoIntegrationTransport(options: DemoIntegrationTransport
             });
             else if (typeof value === 'string') responseHeaders.append(name, value);
           }
-          const body = [204, 205, 304].includes(status) || request.method === 'HEAD'
-            ? null
-            : Readable.toWeb(incoming) as ReadableStream<Uint8Array>;
-          resolve(new Response(body, {
+          const bodyless = [204, 205, 304].includes(status) || request.method === 'HEAD';
+          const body = bodyless ? null : Readable.toWeb(incoming) as ReadableStream<Uint8Array>;
+          const response = new Response(body, {
             status,
             ...(incoming.statusMessage ? { statusText: incoming.statusMessage } : {}),
             headers: responseHeaders,
-          }));
+          });
+          if (bodyless) {
+            // Drain Node's incoming message so keep-alive responses can return
+            // their socket to the Agent pool even though Fetch has no body.
+            incoming.once('end', () => { resolve(response); });
+            incoming.resume();
+          } else resolve(response);
         } catch (error) {
           incoming.destroy();
           outgoing.destroy();
