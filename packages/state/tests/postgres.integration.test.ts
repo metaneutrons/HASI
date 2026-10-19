@@ -4,6 +4,9 @@ import { Pool } from 'pg';
 import { PostgresJsonStore } from '../src/index.js';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+// Node and PostgreSQL can run on different hosts/VMs. Expiry tests must not
+// assume their wall clocks agree within one millisecond.
+const alreadyExpiredAt = Date.parse('2000-01-01T00:00:00.000Z');
 
 if (testDatabaseUrl === undefined) {
   describe.skip('PostgresJsonStore integration (requires TEST_DATABASE_URL)', () => {
@@ -74,7 +77,7 @@ if (testDatabaseUrl === undefined) {
       expect(await activeStore.compareAndSet('expires', null, { value: 'old' })).toBe(true);
       const original = await activeStore.read('expires');
       expect(original).toBeDefined();
-      expect(await activeStore.compareAndSet('expires', original!.revision, { value: 'expired' }, Date.now() - 1)).toBe(true);
+      expect(await activeStore.compareAndSet('expires', original!.revision, { value: 'expired' }, alreadyExpiredAt)).toBe(true);
       expect(await activeStore.read('expires')).toBeUndefined();
       expect(await activeStore.compareAndSet('expires', null, { value: 'replacement' })).toBe(true);
       const replacement = await activeStore.read('expires');
@@ -90,10 +93,10 @@ if (testDatabaseUrl === undefined) {
       await Promise.all([store!.initialize(), sameNamespaceStore!.initialize(), otherNamespaceStore!.initialize()]);
       const activeStore = store!;
       const isolatedStore = otherNamespaceStore!;
-      expect(await activeStore.compareAndSet('expired-a', null, { value: 1 }, Date.now() - 1)).toBe(true);
-      expect(await activeStore.compareAndSet('expired-b', null, { value: 2 }, Date.now() - 1)).toBe(true);
+      expect(await activeStore.compareAndSet('expired-a', null, { value: 1 }, alreadyExpiredAt)).toBe(true);
+      expect(await activeStore.compareAndSet('expired-b', null, { value: 2 }, alreadyExpiredAt)).toBe(true);
       expect(await activeStore.compareAndSet('active', null, { value: 3 })).toBe(true);
-      expect(await isolatedStore.compareAndSet('expired-other', null, { value: 4 }, Date.now() - 1)).toBe(true);
+      expect(await isolatedStore.compareAndSet('expired-other', null, { value: 4 }, alreadyExpiredAt)).toBe(true);
 
       expect(await activeStore.deleteExpired(1)).toBe(1);
       expect(await activeStore.deleteExpired()).toBe(1);
