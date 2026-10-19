@@ -15,6 +15,10 @@ import { PluginRouteController } from '../apps/api/src/plugin-route-controller.j
 import { PluginDeploymentBinding } from '../apps/api/src/plugin-deployment-binding.js';
 import { qualificationFixtures as f, qualificationFailureCategory } from './healthy-plugin-qualification.js';
 import { assertNoPostgresEnvironment, qualificationDatabase } from './plugin-gateway-qualification-config.js';
+import {
+  createVerifiedArtifactSnapshot, ExternalPluginArtifactInputError, loadExternalPluginArtifactPair,
+  type ExternalPluginArtifact, type ExternalPluginArtifactPair,
+} from './plugin-gateway-qualification-artifacts.js';
 
 const assert: (condition: unknown, category: string) => asserts condition = f.assert;
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -98,7 +102,8 @@ async function main(): Promise<Record<string, unknown>> {
   const databaseUrl = process.env.TEST_DATABASE_URL;
   const database = qualificationDatabase(databaseUrl);
   const sourceFileSha256 = Object.fromEntries<string>(await Promise.all([
-    'scripts/qualify-plugin-gateway.ts', 'scripts/plugin-gateway-qualification-worker.ts',
+    'scripts/qualify-plugin-gateway.ts', 'scripts/plugin-gateway-qualification-artifacts.ts',
+    'scripts/plugin-gateway-qualification-worker.ts',
     'scripts/plugin-gateway-qualification-config.ts', 'scripts/healthy-plugin-qualification.ts',
     'scripts/package-reference-plugin.ts', 'apps/api/src/plugin-artifacts.ts',
     'apps/api/src/plugin-route-controller.ts', 'apps/api/src/plugin-deployment-binding.ts',
@@ -106,6 +111,17 @@ async function main(): Promise<Record<string, unknown>> {
     'apps/api/src/docker-plugin-relay.ts', 'apps/api/src/plugin-relay-program.ts',
     'examples/reference-plugin/src/server.js', 'pnpm-lock.yaml',
   ].map(async (path): Promise<[string, string]> => [path, f.sha256(await readFile(join(ROOT, path), 'utf8'))])));
+  let externalArtifacts: ExternalPluginArtifactPair<Artifact> | undefined;
+  try {
+    externalArtifacts = await loadExternalPluginArtifactPair({
+      env: process.env,
+      workspaceRoot: ROOT,
+      readArtifactManifest: f.readArtifactManifest,
+    });
+  } catch (error) {
+    if (error instanceof ExternalPluginArtifactInputError) f.fail(error.category);
+    throw error;
+  }
   const socketPath = f.dockerSocketPath(); f.assertLocalNodeImage();
   const nonce = randomUUID().replaceAll('-', '').slice(0, 12);
   const ownerId = `gateway-qualifier-${nonce}`;
@@ -189,10 +205,14 @@ async function main(): Promise<Record<string, unknown>> {
       || (ref.name === 'PUBLIC_KEY' && [ `key-${nonce}`, `missing-${nonce}` ].includes(ref.secretRef))),
     authorizeReview: () => false, getConfigurationRevision: revision,
   });
-  const build = async (letter: string, source?: string) => {
+  const build = async (letter: string, external?: ExternalPluginArtifact<Artifact>, sourceDirectory?: string) => {
     const directory = join(root, `artifact-${letter}`);
-    const evidence = f.packageReferencePluginWithAllowlistedEnvironment(directory, source);
-    const artifact = await f.readArtifactManifest(directory, evidence);
+    const evidence = external?.evidence
+      ?? f.packageReferencePluginWithAllowlistedEnvironment(directory, sourceDirectory);
+    const artifact = external
+      ? (await createVerifiedArtifactSnapshot({ sourceDirectory: external.directory, destinationDirectory: directory,
+        evidence, inventory: external.artifact.payloadFiles, readArtifactManifest: f.readArtifactManifest })).artifact
+      : await f.readArtifactManifest(directory, evidence);
     const dockerfile = join(root, `Dockerfile-${letter}`); await writeFile(dockerfile, f.pluginLauncherDockerfile(), { flag: 'wx' });
     const tag = `${REPOSITORY}:${nonce}-${letter}`;
     assert(f.runDocker(['image', 'ls', '--quiet', tag], 'image_collision_check_failed') === '', 'image_tag_collision');
@@ -204,7 +224,7 @@ async function main(): Promise<Record<string, unknown>> {
       version: artifact.pluginVersion, manifestDigest: artifact.manifestDigest, image: identity.repoDigest, configSchemaVersion: 1, stateMigration: 'none' };
     const envelope: PluginReleaseEnvelope = { ...unsigned, signature: sign(null, pluginReleaseSigningBytes(unsigned), publisherKeys.privateKey).toString('base64url') };
     const verified = verifyPluginRelease(envelope, resolvePublisher); allowed.add(verified.releaseDigest);
-    return { envelope, verified, artifact, evidence };
+    return { envelope, verified, artifact, evidence, ...(external ? { source: external.source } : {}) };
   };
   const workerConfig = { databaseUrl, namespace, ownerId, installationId, socketPath, internalNetworks: networks, relayNetwork, serviceToken: token };
   const read = async (worker: GatewayWorker, artifact: Artifact, configurationRevision = 1) => {
@@ -229,9 +249,16 @@ async function main(): Promise<Record<string, unknown>> {
     routes = newRoutes(); await routes.initializeInstallation({ installationId, configurationRevision: '1' }); driver = newDriver(routes);
     for (const name of [...networks, relayNetwork]) { attemptedNetworks.push(name); f.createQualificationNetwork(name, ownerId, name !== relayNetwork); }
     phase = 'building-artifacts';
-    const a = await build('a'); const b = await build('b', await versionedSource(root));
-    assert(a.artifact.pluginVersion === '1.0.0' && b.artifact.pluginVersion === '1.1.0'
+    const a = await build('a', externalArtifacts?.a);
+    const b = externalArtifacts
+      ? await build('b', externalArtifacts.b)
+      : await build('b', undefined, await versionedSource(root));
+    assert(a.artifact.pluginId === 'hasi.reference' && b.artifact.pluginId === 'hasi.reference'
+      && a.artifact.pluginVersion !== b.artifact.pluginVersion
       && a.verified.releaseDigest !== b.verified.releaseDigest, 'distinct_versions_not_built');
+    if (!externalArtifacts) {
+      assert(a.artifact.pluginVersion === '1.0.0' && b.artifact.pluginVersion === '1.1.0', 'fixture_versions_invalid');
+    }
     let control = coordinator(); await control.initialize({ installationId, pluginId: 'hasi.reference', configurationSchemaVersion: 1 });
     phase = 'activating-a';
     const first = await stage(control, a.envelope, 0); assert(first.outcome === 'candidate-ready', 'first_stage_failed');
@@ -290,9 +317,18 @@ async function main(): Promise<Record<string, unknown>> {
       { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(5000) });
     await inactive.body?.cancel(); assert(inactive.status === 503, 'withdrawn_route_still_serves'); checks.withdrawalStopsGatewayTraffic = true;
     report = { qualification: 'postgres-paired-plugin-gateway-lifecycle', qualified: true, fullP5P6Acceptance: false,
-      independentDistributionAcceptance: false, nativeReads, activationCommits, checks,
+      independentDistributionAcceptance: false, artifactInputMode: externalArtifacts ? 'external-prebuilt-pair' : 'workspace-reference-fixture',
+      ...(externalArtifacts ? {
+        qualificationScope: 'local-independent-source-artifacts',
+        sourceIdentityAssurance: 'operator-declared-metadata-only-not-cryptographic-provenance',
+        filesystemAssurance: 'preflight-plus-private-snapshot-inventory-not-general-hostile-filesystem-proof',
+        publisherTrust: 'ephemeral-synthetic-qualification-key-only',
+      } : {}),
+      nativeReads, activationCommits, checks,
       artifacts: [a, b].map(value => ({ version: value.artifact.pluginVersion, artifactSha256: value.evidence.artifactSha256,
-        manifestDigest: value.artifact.manifestDigest, image: value.verified.image, releaseDigest: value.verified.releaseDigest })),
+        artifactManifestSha256: value.evidence.artifactManifestSha256, manifestDigest: value.artifact.manifestDigest,
+        image: value.verified.image, releaseDigest: value.verified.releaseDigest,
+        ...(value.source ? { source: value.source } : {}) })),
       ownerId, installationId, namespace, cleanupVerified: true };
   } catch (error) {
     blocker = qualificationFailureCategory(error);
