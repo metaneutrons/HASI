@@ -77,3 +77,21 @@ timeouts, cancellation and fallback policy. This bounded runtime exercise uses
 one local custom profile with no fallback; it does not test provider invoice
 accuracy, real rate limits, full model evaluation, browser behavior, actual
 plugins or final M8. GWDG's approved temporary Groq estimate remains unchanged.
+
+## Timeout followed by exhausted fallback admission
+
+The router regression `keeps a timed-out provider hold when fallback admission
+is exhausted` composes the real `ModelBudgetLedger`, `MemoryJsonStore` and
+`createModelBudgetAdmission`. A synthetic Groq request is admitted, then its
+provider transport rejects with `TimeoutError`. Its 1,536-token output
+reservation remains held with unknown usage. The explicitly allowed GWDG
+fallback requests its own reservation, which the exhausted shared output limit
+rejects before any GWDG provider request. The caller receives the sanitized
+`budget_exhausted` error, without the private synthetic timeout detail.
+
+Assertions cover reservation order, exactly one provider request, one retained
+unresolved/unknown reservation, and unchanged output usage at 1,536 tokens.
+The focused router suite passed 119 cases locally before integration. This is
+a deterministic router/ledger regression, not a second multi-process topology
+run, live provider timeout or provider billing measurement. No production policy,
+tariff, counter or credential changes are involved.
