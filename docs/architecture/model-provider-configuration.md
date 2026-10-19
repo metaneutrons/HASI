@@ -67,8 +67,11 @@ No provider-specific reasoning parameter is inferred from other DeepSeek
 versions: the model card describes integer effort, whereas the generic API
 reasoning guide describes string effort. Reasoning tokens count as output; a
 response without usable content/tool arguments fails closed. Native tool/usage
-behavior and deployed workflow evidence must be qualified separately from these
-configuration and mock transport tests; see #81.
+behavior was qualified separately from configuration and mock tests on the
+2026-10-19 deployed synthetic greeting/workplace journey; see the
+[exact-revision evidence](../verification/2026-10-19/deepinfra.md#deployed-qualification--2026-10-19).
+This is bounded technical compatibility evidence, not formal M6 model evaluation
+or M8 processing approval.
 
 Prices reviewed on 2026-10-19: standard uncached input USD 0.20 and output USD 0.60
 per million tokens. Temporary promotional/cache discounts are not used for
