@@ -77,7 +77,63 @@ Tested source SHA-256 identities:
 
 Sixteen focused admission/snapshot tests, backend build and root/web typechecks
 passed. Independent read-only review found no blocker within the stated local
-filesystem assumptions. This result does not qualify the corresponding Linux
-gateway run, public repository installation, complete admin/chat journeys,
-hostile third-party execution or institutional acceptance. Hosted CI, merge
-and delivery are separate observations.
+filesystem assumptions. The Mac result alone does not qualify a Linux operator;
+the separate Linux observation follows below. Public repository installation,
+complete admin/chat journeys, hostile third-party execution and institutional
+acceptance remain unqualified. Hosted CI, merge and delivery are separate
+observations.
+
+## Linux operator observation
+
+The same two independently packaged artifacts also completed the actual gateway
+lifecycle on Linux/amd64, using Node v24.22.0 and a separate disposable PostgreSQL
+container exposed only on host loopback. The operator did not receive production
+database credentials, model keys or application secrets. The running HASI
+application stayed ready at `bd59928`.
+
+The full result is preserved in
+[`external-artifact-gateway-linux.json`](external-artifact-gateway-linux.json).
+Root checked all fifteen reported source hashes against this branch and against
+the transferred bundle. Its 20,198 inventory entries were verified locally and
+again after transfer. The inventory verifier also accepted a known-good fixture
+and rejected an isolated corrupted copy. Extraction's enclosing directory mode
+was restored to the admitted `0700` before the successful complete verification;
+artifact payload files were not repaired or changed.
+
+The operator uses an esbuild bundle because the host has no project Node
+toolchain. The only source launcher change selects the bundled worker instead
+of `tsx`; original, transformed and bundled source hashes are retained. A
+`createRequire` banner supports bundled CommonJS dependencies. Optional
+`pg-native` fails closed. Verified host Docker CLI and Buildx executables are
+mounted read-only. An owner-scoped shared temporary directory preserves the
+host paths needed for Docker bind mounts. This qualifies that explicit Linux
+operator arrangement, not a bare TypeScript checkout on the host.
+
+The run completed ten native MCP reads, two activation commits and all eleven
+reported checks: paired processes on A, foreign/unauthenticated denial, staged B
+preserving A, lost activation reply reconciliation without replay, a replacement
+process restoring B from PostgreSQL, failed preflight preserving B, configuration
+convergence/cancel, actual rollback to A, revoked rollback denial and withdrawal.
+The source qualification reported `qualified: true` and `cleanupVerified: true`.
+Its process exited zero, independently verified from the unique owned-container
+Docker exit event.
+
+An earlier coordinator attempt stopped during disposable-database setup before
+starting the gateway; its database/network were removed and the controller
+resumed. The successful run's coordinator initially expected single-line JSON,
+although the qualifier writes pretty-printed JSON. The complete result was
+retained from that same owned container's log stream and its zero exit verified;
+the capture format was corrected without changing or repeating the successful
+qualification. Both observations are bounded operator-harness issues.
+
+Qualification containers, networks, images and nonce-scoped database entries
+were removed. The outer operator and temporary database/network were also
+removed; the non-controller container baseline was restored. The deployment
+controller was resumed and remains enabled. The original application database
+and budget were not used by the qualification.
+
+`fullP5P6Acceptance` and `independentDistributionAcceptance` remain false.
+Source identity is operator-declared local repository metadata, and publisher
+trust uses an ephemeral synthetic key. This is not public distribution or
+cryptographic source provenance. Remaining M2 admin/chat, installation and
+distribution gates are unchanged.
