@@ -14,6 +14,12 @@
       "credentialRef": "env:GWDG_API_KEY"
     },
     {
+      "id": "deepinfra-demo",
+      "label": "DeepInfra demo",
+      "provider": "deepinfra",
+      "credentialRef": "env:DEEPINFRA_API_KEY"
+    },
+    {
       "id": "openai-example",
       "label": "OpenAI example",
       "provider": "openai",
@@ -91,6 +97,15 @@
       }
     },
     {
+      "id": "deepinfra-deepseek-v4.1-flash",
+      "label": "DeepInfra · DeepSeek V4.1 Flash · Experimental",
+      "connectionId": "deepinfra-demo",
+      "modelId": "deepseek-ai/DeepSeek-V4.1-Flash",
+      "capabilities": { "tools": true },
+      "allowedDataClasses": ["synthetic_demo"],
+      "parameters": { "temperature": 1, "maxOutputTokens": 1536, "timeoutMs": 45000 }
+    },
+    {
       "id": "openai-example-profile",
       "label": "OpenAI example model",
       "connectionId": "openai-example",
@@ -127,6 +142,7 @@
         "groq-oss-20b",
         "groq-qwen-3.8-27b",
         "gwdg-qwen3-30b",
+        "deepinfra-deepseek-v4.1-flash",
         "openai-example-profile",
         "anthropic-example-profile",
         "custom-example-profile"

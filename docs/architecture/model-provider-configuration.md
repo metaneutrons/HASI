@@ -1,6 +1,6 @@
 # Model provider configuration
 
-Date: 2026-10-17. Version 1. See the [delivery plan](../plans/model-provider-routing.md).
+Date: 2026-10-19. Version 1. See the [delivery plan](../plans/model-provider-routing.md).
 
 HASI separates connections, model profiles, routing policy and credential values.
 Configure an operator-owned JSON document using the
@@ -16,7 +16,7 @@ pnpm config:models config/model-providers.example.json
 ```
 
 Set `HASI_LLM_CONFIG` on the web server to the document's JSON contents. For
-Vercel, add that server-side variable in the project settings, then deploy.
+Coolify, add that server-side runtime variable to the HASI application, then deploy.
 It contains configuration and secret references, never secret values. Do not
 prefix it with `NEXT_PUBLIC_`. A supplied invalid/empty document fails closed;
 it does not fall back to bundled settings. Keep the reviewed document in your
@@ -25,17 +25,17 @@ There is no global configuration-write API for the public mock administrator.
 
 ## Connections and profiles
 
-Connections select `groq`, `gwdg`, `openai`, `anthropic` or `custom`.
+Connections select `groq`, `gwdg`, `deepinfra`, `openai`, `anthropic` or `custom`.
 Standard providers use fixed vendor HTTPS endpoints. OpenAI defaults to the
 Responses API; `api: "chat-completions"` explicitly selects its other protocol.
-Anthropic uses its native Messages adapter. GWDG and custom connections use
+Anthropic uses its native Messages adapter. GWDG, DeepInfra and custom connections use
 OpenAI-compatible Chat Completions. A custom connection requires an HTTPS
 `endpoint` without user information, query or fragment. Requests are pinned
 to that origin/base path, with redirects refused. No endpoint or credentials
 can be supplied in a chat request. Multiple connections can use the same
 provider type with separate accounts/secrets.
 
-`credentialRef` accepts `env:GROQ_API_KEY`, `env:GWDG_API_KEY`,
+`credentialRef` accepts `env:GROQ_API_KEY`, `env:GWDG_API_KEY`, `env:DEEPINFRA_API_KEY`,
 `env:OPENAI_API_KEY`, `env:ANTHROPIC_API_KEY`, `env:CUSTOM_API_KEY` and
 `env:HASI_LLM_SECRET_<NAME>`. Values stay in the deployment secret store.
 Missing values disable readiness; the presence of a value proves neither
@@ -48,10 +48,38 @@ the operator configures and qualifies them. No automatic model discovery
 enables models, and no additional provider keys are provisioned by this feature.
 
 Without `HASI_LLM_CONFIG`, the bundled prototype policy explicitly enables
-manual selection of the existing Groq/GWDG profiles and defaults to Groq
+manual selection of the Groq/GWDG/DeepInfra profiles and defaults to Groq
 GPT-OSS 120B. Valid legacy `CUSTOM_ENDPOINT`/`CUSTOM_MODEL_ID` settings append
 `custom-default`; `CUSTOM_API_KEY` independently determines readiness. Explicit
 JSON replaces that compatibility configuration instead of merging it silently.
+
+## DeepInfra qualification
+
+The bundled `deepinfra-deepseek-v4.1-flash` profile uses the exact requested
+`deepseek-ai/DeepSeek-V4.1-Flash` alias at the fixed
+`https://api.deepinfra.com/v1/openai` endpoint. It is Experimental and restricted
+to synthetic demo context. Missing `DEEPINFRA_API_KEY` disables readiness;
+provision it as a hidden runtime-only Coolify variable from fnox. No credential
+is a build argument. Groq remains the fresh-chat default and no fallback is added.
+
+The profile sends temperature 1, a 1,536-token output cap and a 45-second timeout.
+No provider-specific reasoning parameter is inferred from other DeepSeek
+versions: the model card describes integer effort, whereas the generic API
+reasoning guide describes string effort. Reasoning tokens count as output; a
+response without usable content/tool arguments fails closed. Native tool/usage
+behavior and deployed workflow evidence must be qualified separately from these
+configuration and mock transport tests; see #81.
+
+Prices reviewed on 2026-10-19: standard uncached input USD 0.20 and output USD 0.60
+per million tokens. Temporary promotional/cache discounts are not used for
+budget admission. The shared ledger still charges the highest approved rates
+across providers (USD 0.80/4.00), preserving its existing policy, reservations
+and consumption. This is a conservative bound, not invoice accounting.
+
+Sources: [exact model card and tariff](https://deepinfra.com/deepseek-ai/DeepSeek-V4.1-Flash),
+[chat API](https://deepinfra.com/deepseek-ai/DeepSeek-V4.1-Flash/api),
+[native tool calls](https://docs.deepinfra.com/chat/tool-calling),
+[reasoning billing](https://docs.deepinfra.com/chat/reasoning).
 
 ## User choice and fallbacks
 

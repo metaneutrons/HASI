@@ -34,6 +34,7 @@
                     "enum": [
                       "env:GROQ_API_KEY",
                       "env:GWDG_API_KEY",
+                      "env:DEEPINFRA_API_KEY",
                       "env:OPENAI_API_KEY",
                       "env:ANTHROPIC_API_KEY",
                       "env:CUSTOM_API_KEY"
@@ -80,6 +81,7 @@
                     "enum": [
                       "env:GROQ_API_KEY",
                       "env:GWDG_API_KEY",
+                      "env:DEEPINFRA_API_KEY",
                       "env:OPENAI_API_KEY",
                       "env:ANTHROPIC_API_KEY",
                       "env:CUSTOM_API_KEY"
@@ -126,6 +128,54 @@
                     "enum": [
                       "env:GROQ_API_KEY",
                       "env:GWDG_API_KEY",
+                      "env:DEEPINFRA_API_KEY",
+                      "env:OPENAI_API_KEY",
+                      "env:ANTHROPIC_API_KEY",
+                      "env:CUSTOM_API_KEY"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^env:HASI_LLM_SECRET_[A-Z0-9_]{1,64}$"
+                  }
+                ]
+              },
+              "provider": {
+                "type": "string",
+                "const": "deepinfra"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "credentialRef",
+              "provider"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "credentialRef": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "env:GROQ_API_KEY",
+                      "env:GWDG_API_KEY",
+                      "env:DEEPINFRA_API_KEY",
                       "env:OPENAI_API_KEY",
                       "env:ANTHROPIC_API_KEY",
                       "env:CUSTOM_API_KEY"
@@ -179,6 +229,7 @@
                     "enum": [
                       "env:GROQ_API_KEY",
                       "env:GWDG_API_KEY",
+                      "env:DEEPINFRA_API_KEY",
                       "env:OPENAI_API_KEY",
                       "env:ANTHROPIC_API_KEY",
                       "env:CUSTOM_API_KEY"
@@ -225,6 +276,7 @@
                     "enum": [
                       "env:GROQ_API_KEY",
                       "env:GWDG_API_KEY",
+                      "env:DEEPINFRA_API_KEY",
                       "env:OPENAI_API_KEY",
                       "env:ANTHROPIC_API_KEY",
                       "env:CUSTOM_API_KEY"

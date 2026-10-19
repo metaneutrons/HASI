@@ -54,7 +54,7 @@ function withPolicy(config: ReturnType<typeof jsonConfig>, policyOverrides: Reco
 }
 
 describe("server model configuration", () => {
-  it("keeps the shipped Groq and GWDG profile IDs, labels, models, and policy", () => {
+  it("keeps the shipped provider profile IDs, labels, models, and policy", () => {
     const config = defaultConfig();
     expect(config.profiles.map(({ id, label, modelId }) => ({ id, label, modelId }))).toEqual([
       { id: "groq-oss-120b", label: "Groq GPT-OSS 120B", modelId: "openai/gpt-oss-120b" },
@@ -65,18 +65,20 @@ describe("server model configuration", () => {
         label: "GWDG SAIA · Qwen3 30B A3B Instruct 2507 · Experimental",
         modelId: "qwen3-30b-a3b-instruct-2507",
       },
+      { id: "deepinfra-deepseek-v4.1-flash", label: "DeepInfra · DeepSeek V4.1 Flash · Experimental", modelId: "deepseek-ai/DeepSeek-V4.1-Flash" },
     ]);
     expect(config.profiles.map(({ parameters }) => parameters)).toEqual([
       { temperature: 0.2, maxOutputTokens: 1536, timeoutMs: 20_000, reasoningEffort: "low" },
       { temperature: 0.2, maxOutputTokens: 1536, timeoutMs: 20_000, reasoningEffort: "low" },
       { temperature: 0.2, maxOutputTokens: 1536, timeoutMs: 20_000, reasoningEffort: "none" },
       { temperature: 0.2, maxOutputTokens: 1536, timeoutMs: 45_000 },
+      { temperature: 1, maxOutputTokens: 1536, timeoutMs: 45_000 },
     ]);
     expect(config.policy).toEqual({
       defaultProfileId: "groq-oss-120b",
       userChoice: {
         enabled: true,
-        profileIds: ["groq-oss-120b", "groq-oss-20b", "groq-qwen-3.8-27b", "gwdg-qwen3-30b"],
+        profileIds: ["groq-oss-120b", "groq-oss-20b", "groq-qwen-3.8-27b", "gwdg-qwen3-30b", "deepinfra-deepseek-v4.1-flash"],
       },
       fallbacks: [],
       maxAttempts: 2,
@@ -97,6 +99,16 @@ describe("server model configuration", () => {
       baseURL: "https://chat-ai.academiccloud.de/v1",
       api: "chat-completions",
     });
+
+    expect(resolveModelConnection(required(config.connections[2]))).toEqual({
+      adapter: "openai-compatible",
+      baseURL: "https://api.deepinfra.com/v1/openai",
+      api: "chat-completions",
+    });
+    const deepinfra = required(config.connections[2]);
+    for (const override of [{ endpoint: "https://attacker.example/v1" }, { credentialRef: "env:UNKNOWN_KEY" }]) {
+      expect(modelConfigurationSchema.safeParse({ ...config, connections: [...config.connections.slice(0, 2), { ...deepinfra, ...override }] }).success).toBe(false);
+    }
 
     const openai = required(jsonConfig().connections[1]);
     expect(resolveModelConnection(required(modelConfigurationSchema.parse({

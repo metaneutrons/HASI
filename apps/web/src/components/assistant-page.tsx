@@ -37,7 +37,7 @@ const suggestions = [
 
 function id() { return crypto.randomUUID(); }
 function modelProviderName(provider: ModelProfile["provider"]) {
-  return ({ groq: "GroqCloud", gwdg: "GWDG SAIA", openai: "OpenAI", anthropic: "Anthropic", custom: "Custom endpoint" })[provider];
+  return ({ groq: "GroqCloud", gwdg: "GWDG SAIA", deepinfra: "DeepInfra", openai: "OpenAI", anthropic: "Anthropic", custom: "Custom endpoint" })[provider];
 }
 function formatMessageTime(value: string) {
   return new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
@@ -152,11 +152,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   const selectedProfile = profiles.find((profile) => profile.id === profileId);
   const defaultProfile = profiles.find((profile) => profile.id === configuration.defaultProfileId);
   const isDefaultProfile = profileId === configuration.defaultProfileId;
-  const providerLabel = selectedProfile?.provider === "gwdg" ? "GWDG SAIA"
-    : selectedProfile?.provider === "groq" ? "GroqCloud"
-      : selectedProfile?.provider === "custom" ? "Custom endpoint"
-        : selectedProfile?.provider === "openai" ? "OpenAI"
-          : selectedProfile?.provider === "anthropic" ? "Anthropic" : null;
+  const providerLabel = selectedProfile ? modelProviderName(selectedProfile.provider) : null;
   const modelError = modelLoading ? null
     : offline
       ? configuration.userChoiceEnabled ? null : "Die Dialog-Demo ist für diesen Chat nicht freigegeben. Beginne einen neuen Chat mit dem konfigurierten Standardmodell."
