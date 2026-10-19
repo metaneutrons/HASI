@@ -36,7 +36,16 @@ export async function apiRequest<T>(
     const diagnostics = typeof payload === "object" && payload !== null && "code" in payload && payload.code === "configuration_invalid" && "errors" in payload && Array.isArray(payload.errors)
       ? payload.errors.slice(0, 32).flatMap((issue: unknown) => typeof issue === "object" && issue !== null && "path" in issue && typeof issue.path === "string" && "message" in issue && typeof issue.message === "string" ? [{ path: issue.path.slice(0, 512), message: issue.message.slice(0, 256) }] : [])
       : undefined;
-    throw Object.assign(new Error(message), { status: response.status, ...(diagnostics ? { code: "configuration_invalid", errors: diagnostics } : {}) }) as ApiError;
+    const invalidatedProposal = response.status === 409
+      && typeof payload === "object"
+      && payload !== null
+      && "code" in payload
+      && payload.code === "proposal_invalidated";
+    throw Object.assign(new Error(message), {
+      status: response.status,
+      ...(diagnostics ? { code: "configuration_invalid", errors: diagnostics } : {}),
+      ...(invalidatedProposal ? { code: "proposal_invalidated" } : {}),
+    }) as ApiError;
   }
   return payload as T;
 }

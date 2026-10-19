@@ -15,7 +15,7 @@ export function ActionPreviewDetails({ preview }: { preview?: ActionPreview | un
 }
 
 /** Explicit read/reconciliation. Rendering an old transcript never executes a tool. */
-export function ActionStatusControl({ proposalId, disabled }: { proposalId: string; disabled: boolean }) {
+export function ActionStatusControl({ proposalId, status, disabled }: { proposalId: string; status: "pending" | "confirmed" | "outcome_unknown" | "failed" | "invalidated"; disabled: boolean }) {
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState("");
   async function check() {
@@ -29,6 +29,7 @@ export function ActionStatusControl({ proposalId, disabled }: { proposalId: stri
       setMessage(error instanceof Error ? error.message : "Der Status konnte nicht geprüft werden.");
     } finally { setChecking(false); }
   }
+  if (status === "invalidated") return null;
   return <div className="action-status-control">
     <button className="chat-card-action" type="button" disabled={disabled || checking} onClick={() => { void check(); }}>{checking ? "Status wird geprüft …" : "Aktionsstatus prüfen"}</button>
     {message && <p role="status">{message}</p>}
