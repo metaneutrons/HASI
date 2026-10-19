@@ -62,6 +62,25 @@ afterEach(async () => {
 });
 
 describe('standalone plugin TCP relay program', () => {
+  it('allocates against the wildcard address rather than a target-owned private port on Linux', async context => {
+    if (process.platform !== 'linux' || !privateTargetAddress) return context.skip();
+    const target = net.createServer();
+    const loopbackProbe = net.createServer();
+    const wildcardProbe = net.createServer();
+    servers.push(target, loopbackProbe, wildcardProbe);
+    const targetPort = await listen(target, privateTargetAddress);
+    await new Promise<void>((resolve, reject) => {
+      loopbackProbe.once('error', reject);
+      loopbackProbe.listen({ host: '127.0.0.1', port: targetPort }, resolve);
+    });
+    await closeServer(loopbackProbe);
+    await expect(new Promise<void>((resolve, reject) => {
+      wildcardProbe.once('error', reject);
+      wildcardProbe.listen({ host: '0.0.0.0', port: targetPort }, resolve);
+    })).rejects.toMatchObject({ code: 'EADDRINUSE' });
+    expect(await freeRelayPort()).not.toBe(targetPort);
+  });
+
   it.each([
     ['loopback', '127.0.0.1'],
     ['public IPv4', '8.8.8.8'],
@@ -75,7 +94,7 @@ describe('standalone plugin TCP relay program', () => {
   });
 
   it('closes the listener when SIGTERM arrives before the listening event', async () => {
-    const relayPort = await freeLoopbackPort();
+    const relayPort = await freeRelayPort();
     const relay = startRelay('10.0.0.1', 1234, relayPort, signalBeforeListeningPreload);
     await expect(waitForExit(relay)).resolves.toBe(0);
     await expect(connect(relayPort)).rejects.toThrow();
@@ -87,7 +106,7 @@ describe('standalone plugin TCP relay program', () => {
     const target = createEchoTarget(targetSockets);
     servers.push(target);
     const targetPort = await listen(target, privateTargetAddress);
-    const relayPort = await freeLoopbackPort();
+    const relayPort = await freeRelayPort();
     const relay = startRelay(privateTargetAddress, targetPort, relayPort, holdFirstTargetConnectPreload(privateTargetAddress, targetPort));
 
     const pendingClient = await connectWhenAvailable(relay, relayPort);
@@ -131,7 +150,7 @@ describe('standalone plugin TCP relay program', () => {
     });
     servers.push(target);
     const targetPort = await listen(target, privateTargetAddress);
-    const relayPort = await freeLoopbackPort();
+    const relayPort = await freeRelayPort();
     const relay = startRelay(privateTargetAddress, targetPort, relayPort);
     await waitForRelay(relay, relayPort);
 
@@ -150,7 +169,7 @@ describe('standalone plugin TCP relay program', () => {
     });
     servers.push(target);
     const targetPort = await listen(target, privateTargetAddress);
-    const relayPort = await freeLoopbackPort();
+    const relayPort = await freeRelayPort();
     const relay = startRelay(privateTargetAddress, targetPort, relayPort);
     await waitForRelay(relay, relayPort);
 
@@ -172,7 +191,7 @@ describe('standalone plugin TCP relay program', () => {
     });
     servers.push(target);
     const targetPort = await listen(target, privateTargetAddress);
-    const relayPort = await freeLoopbackPort();
+    const relayPort = await freeRelayPort();
     const relay = startRelay(privateTargetAddress, targetPort, relayPort);
     await waitForRelay(relay, relayPort);
     await waitUntil(() => targetSockets.length > 0);
@@ -193,7 +212,7 @@ describe('standalone plugin TCP relay program', () => {
     const target = createEchoTarget(targetSockets);
     servers.push(target);
     const targetPort = await listen(target, privateTargetAddress);
-    const relayPort = await freeLoopbackPort();
+    const relayPort = await freeRelayPort();
     const relay = startRelay(privateTargetAddress, targetPort, relayPort);
     await waitForRelay(relay, relayPort);
     await waitUntil(() => targetSockets.length > 0);
@@ -235,7 +254,7 @@ describe('standalone plugin TCP relay program', () => {
     const target = createEchoTarget(targetSockets, chunk => { targetBytes += chunk.length; });
     servers.push(target);
     const targetPort = await listen(target, privateTargetAddress);
-    const relayPort = await freeLoopbackPort();
+    const relayPort = await freeRelayPort();
     const relay = startRelay(privateTargetAddress, targetPort, relayPort);
     await waitForRelay(relay, relayPort);
     await waitUntil(() => targetSockets.length > 0);
@@ -268,7 +287,7 @@ describe('standalone plugin TCP relay program', () => {
     const target = net.createServer(socket => sockets.push(socket));
     servers.push(target);
     const targetPort = await listen(target, privateTargetAddress);
-    const relayPort = await freeLoopbackPort();
+    const relayPort = await freeRelayPort();
     const relay = startRelay(privateTargetAddress, targetPort, relayPort);
     await waitForRelay(relay, relayPort);
 
@@ -302,7 +321,7 @@ function compareIPv4(left: string, right: string): number {
 }
 
 async function runInvalidConfig(address: string, targetPort = '1234', listenPort?: string): Promise<{ code: number | null | undefined; stdout: string; stderr: string }> {
-  const fallbackListenPort = await freeLoopbackPort();
+  const fallbackListenPort = await freeRelayPort();
   const child = spawn(process.execPath, ['--input-type=module', '-e', PLUGIN_RELAY_PROGRAM], {
     env: { HASI_RELAY_TARGET_ADDRESS: address, HASI_RELAY_TARGET_PORT: targetPort, HASI_RELAY_LISTEN_PORT: listenPort ?? String(fallbackListenPort) },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -348,11 +367,13 @@ async function listen(server: Server, host: string): Promise<number> {
   return address.port;
 }
 
-async function freeLoopbackPort(): Promise<number> {
+async function freeRelayPort(): Promise<number> {
   const server = net.createServer();
-  await listen(server, '127.0.0.1');
+  // Match the relay's wildcard bind: a loopback-only probe can select a
+  // port already occupied by the target on another interface on Linux.
+  await listen(server, '0.0.0.0');
   const address = server.address();
-  if (!address || typeof address === 'string') throw new Error('Loopback fixture did not bind to TCP.');
+  if (!address || typeof address === 'string') throw new Error('Relay port fixture did not bind to TCP.');
   await closeServer(server);
   return address.port;
 }
