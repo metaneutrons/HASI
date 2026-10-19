@@ -5,11 +5,11 @@ Implementation: [PR #12](https://github.com/metaneutrons/HASI/pull/12).
 [Qualification and publication evidence](../verification/2026-10-16/verification.md)
 records the exact verified revisions and deployment; criteria remain below.
 
-**Runtime update (2026-10-18):** The Vercel/Neon deployment described in the
+**Runtime update (2026-10-19):** The Vercel/Neon deployment described in the
 original design has been retired. The public demo now runs on Hetzner under
-Coolify with private PostgreSQL 18.6. The current service still uses a preloaded
-image; CI-qualified source builds, exact-revision deployment and rollback are
-open in [#79](https://github.com/metaneutrons/HASI/issues/79). Earlier Vercel
+Coolify with private PostgreSQL 18.6. CI-qualified source builds, exact-revision
+deployment, retained state and rollback are accepted in
+[#79](https://github.com/metaneutrons/HASI/issues/79). Earlier Vercel
 checks remain historical evidence for their exact revisions, not current-host
 qualification. See the [self-host cutover](../verification/2026-10-18/selfhost-cutover.md)
 and [database cutover](../verification/2026-10-18/local-postgres-cutover.md).
@@ -44,9 +44,9 @@ This isolation is a demo identity/tenant configuration, never institutional SSO.
   workspace, commits UUID booking/order records and serves current availability.
 - The current public demo runs under Coolify on the Hetzner host. HASI and the
   demo wiki use separate Compose resources; PostgreSQL 18.6 is on a private
-  container network. The Vercel deployment composition is historical. #79 must
-  qualify source-built main updates at their exact SHA, preserve durable state
-  and budget records, and prove rollback before automatic deployment is accepted.
+  container network. The Vercel deployment composition is historical. #79
+  records source-built main updates at their exact SHA, preserved durable state
+  and budget records, and rollback qualification for automatic deployment.
   External plugin hosting remains operator-controlled; a rebuilt HASI image is
   not independent plugin distribution.
 - The Neon database and Vercel project have been deleted. The self-hosted
@@ -87,5 +87,6 @@ criteria. The current synthetic Service-IT portal/catalog in progress is demo
 content, not an HsH source inventory or M3 institutional acceptance. Technical
 M3/M7 may qualify with reviewed synthetic fixtures; actual identity, source
 rights, Anny tenant conformance and protected-data approvals are reserved for
-final M8 #80. M7 retains real-device UX and backup/restore/off-host operations
-qualification.
+final M8 #80. Under Plan V4, M7 retains automated/browser/simulator UX and
+backup/restore/off-host operations qualification. Actual-device, native assistive
+technology and participant acceptance are M8-A7.

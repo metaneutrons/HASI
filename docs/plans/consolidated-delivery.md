@@ -59,8 +59,11 @@ records exact identities. The initial cutover and database
 records are in [self-host verification](../verification/2026-10-18/selfhost-cutover.md)
 and [PostgreSQL cutover verification](../verification/2026-10-18/local-postgres-cutover.md).
 
-M2 and P1–P6 implementation is merged, but final technical acceptance is
-deliberately deferred. [PR #78](https://github.com/metaneutrons/HASI/pull/78)
+M2 and P1–P6 implementation is merged, but technical qualification remains
+required under Plan V4. The separate Next.js/two-API identity topology has
+[synthetic process evidence](../verification/2026-10-19/m2-runtime.md); this does
+not qualify worker isolation or the remaining plugin/budget/browser matrices.
+[PR #78](https://github.com/metaneutrons/HASI/pull/78)
 merged as `b815fa4` after exact-head CI `39168453923`; exact-main CI
 `39168714435` also passed, including 740 tests on each supported Node version.
 The cold-store reference-plugin packaging failure is fixed; its earlier failed
@@ -93,20 +96,24 @@ The accepted model registry/routing work in #32–#34 is reused. DeepInfra with
 DeepSeek-V4.1-Flash is the requested next provider after the synthetic
 Service-IT demo. [PR #85](https://github.com/metaneutrons/HASI/pull/85) adds the
 exact-model registry, secret reference, UI/wire schema and pricing; credential
-custody and read-only model discovery are verified. Deployed inference and tool
-qualification remain separate from configuration and mock transport tests. Track this bounded additive work in [#81](https://github.com/metaneutrons/HASI/issues/81) against
+custody and bounded deployed synthetic inference/tool qualification are
+[recorded separately](../verification/2026-10-19/deepinfra.md) from configuration
+and mock transport tests. [#81](https://github.com/metaneutrons/HASI/issues/81) maps
+that bounded additive work against
 [DI-A1–DI-A4](model-provider-routing.md#deepinfra-follow-up), before final M6
 comparison, without reopening accepted #32–#34. Real SSO, source ACLs, delegated
 anny rights, live writes and institutional model approval remain M8 criteria.
 
 ## V3 issue graph
 
-The target contains 13 open issues: #17, #47–#55, and #79–#81. #47 indexes the
+The adopted V3 graph contains 13 primary tracking records: #17, #47–#55, and
+#79–#81. Their live open/accepted state belongs to the issues. #47 indexes the
 technical M1–M7 milestones, final institutional M8, and the related D1–D3,
 Coolify and provider tracks. #49 owns M2 plus the six separately evidenced P1–P6
 qualification groups. #55 retains all eight future integration proposals and
 their source-specific discovery gates. P1–P6, M1–M8, D3, #79, #81 and the future
-roadmap remain unaccepted until their own gates pass.
+roadmap require their own evidence before acceptance; the graph itself is not
+a completion decision.
 
 GitHub remains the live status authority during the transfer. Do not close a
 source issue until its successor body links the original issue and preserves
@@ -140,7 +147,7 @@ never as completed work. All 37 issue records and their histories remain.
 | [#71](https://github.com/metaneutrons/HASI/issues/71) | #49 · P3 | Preserve P3-A1–A4, merged implementation and adversarial/model-switch/Apps-off/removal/history/deployed-topology next action with PR/CI evidence. Qualification remains open. |
 | [#72](https://github.com/metaneutrons/HASI/issues/72) | #49 · P4 | Preserve P4-A1–A4, merged implementation and actual-device, assistive-technology, reconnect, update and personal-account next action with PR/CI evidence. Qualification remains open. |
 | [#73](https://github.com/metaneutrons/HASI/issues/73) | #49 · P5 | Preserve P5-A1–A5, merged implementation and immutable-image isolation/egress, multi-replica, migration, UI preflight and recovery next action with PR/CI evidence. Qualification remains open. |
-| [#74](https://github.com/metaneutrons/HASI/issues/74) | #49 · P6 | Preserve P6-A1–A4, merged implementation and full mobile, accessibility, hostile-result, cold-cache and lost-connection/recovery matrix. Carry the active PR #78 offline-packaging repair and CI 39166943626 failure as a separate open blocker; passing that packaging repair alone does not qualify P6. |
+| [#74](https://github.com/metaneutrons/HASI/issues/74) | #49 · P6 | Preserve P6-A1–A4, merged implementation and full mobile, accessibility, hostile-result, cold-cache and lost-connection/recovery matrix. Retain the historical CI 39166943626 failure and merged PR #78 repair; the packaging repair alone does not qualify P6. |
 | [#56–#63](https://github.com/metaneutrons/HASI/issues/56) | #55 | Preserve all eight capabilities, discovery actions, capability boundaries and reactivation conditions inline in the corresponding MVP roadmap sections. No separate child issue is reopened until work is selected. |
 
 The 15 source issues (#14, #56–#63 and #69–#74) close as `not_planned` only
