@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { productionCoreRequest } from "./core-api";
+import { protectedCoreRequest } from "./core-api";
 import { ModelRouterError } from "./model-router-error";
 
 const authorityResponseSchema = z.strictObject({ authorityDigest: z.string().regex(/^[a-f0-9]{64}$/u) });
@@ -12,7 +12,7 @@ export async function productionHistoryAuthority(request: Request): Promise<stri
   try {
     const headers = new Headers(request.headers);
     headers.set("origin", new URL(request.url).origin);
-    const response = await productionCoreRequest("/api/history/authority", new Request(request.url, { method: "GET", headers }), "GET");
+    const response = await protectedCoreRequest("/api/history/authority", new Request(request.url, { method: "GET", headers }), "GET");
     if (response.status !== 200 || response.redirected || response.headers.has("location")) throw new Error("History authority unavailable");
     const reader = response.body?.getReader();
     if (!reader) throw new Error("History authority body missing");

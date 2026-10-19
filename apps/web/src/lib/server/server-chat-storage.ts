@@ -5,7 +5,7 @@ import { PostgresJsonStore, type JsonStore } from "@hasi/state";
 const WORKSPACE_NAMESPACE = "protected-chat-workspaces:v1";
 let pending: Promise<PostgresJsonStore> | undefined;
 
-/** Open the durable store only when a protected production request needs it. */
+/** Open the durable store only for authenticated protected production/local-TestIdP requests. */
 export function getServerChatStorage(): Promise<JsonStore> {
   pending ??= initialize().catch((error: unknown) => {
     pending = undefined;

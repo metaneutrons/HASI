@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { knowledgeDocumentSchema } from "../knowledge";
-import { productionCoreRequest } from "./core-api";
+import { protectedCoreRequest } from "./core-api";
 import { ModelRouterError } from "./model-router-error";
 import type { KnowledgeContextResolver } from "./knowledge-evidence";
 
@@ -18,7 +18,7 @@ export function productionKnowledgeResolver(request: Request): KnowledgeContextR
     // Workspace GETs have no browser Origin header. This server POST uses the
     // canonical, authenticated web origin, never a caller-selected destination.
     headers.set("origin", new URL(request.url).origin);
-    const response = await productionCoreRequest("/api/knowledge/contexts/resolve", new Request(request.url, {
+    const response = await protectedCoreRequest("/api/knowledge/contexts/resolve", new Request(request.url, {
       method: "POST", headers, body: JSON.stringify({ contextIds }),
     }));
     if (!response.ok) throw new ModelRouterError("context_unavailable", "Source context validation failed");
