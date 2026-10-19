@@ -50,8 +50,10 @@ is part of these tests.
 
 The first local full build passed, including the production Next.js build. The
 initial full regression/coverage run passed 947 tests in 102 files; later repair
-tests and mandatory pre-push/CI results are tracked at the candidate revision in
-#49. The first full lint run found one unnecessary test assertion, which was
+tests brought the mandatory PostgreSQL-backed pre-push run to 957 tests in 103
+files at `a16437a9538698b9f1119853e5a95c6aaaebcbc7`, with backend build,
+root/web typechecks and secret checks passing. CI results are tracked at the
+candidate revision in #49. The first full lint run found one unnecessary test assertion, which was
 removed; the subsequent full lint passed. These observations do not qualify
 unexecuted browser or container cases.
 

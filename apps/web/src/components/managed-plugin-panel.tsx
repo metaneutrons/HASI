@@ -19,6 +19,7 @@ import type {
   ManagedPluginCommandResult,
   ManagedPluginView,
 } from '@hasi/plugin-sdk/deployment-admin';
+import { managedPluginCatalogSchema, managedPluginCommandResultSchema } from '@hasi/plugin-sdk/deployment-admin';
 import { apiRequest, postJson } from '@/lib/api';
 import { PluginConfigPanel } from '@/components/plugin-config-panel';
 import styles from './managed-plugin-panel.module.css';
@@ -141,7 +142,7 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
     else setRefreshing(true);
     setLoadError(null);
     try {
-      const result = await apiRequest<{ installations: ManagedPluginView[] }>('/api/admin/managed-plugins');
+      const result = managedPluginCatalogSchema.parse(await apiRequest<unknown>('/api/admin/managed-plugins'));
       adoptInstallations(result.installations);
     } catch (cause) {
       setLoadError(getErrorMessage(cause, 'Die verwalteten Installationen konnten nicht geladen werden.'));
@@ -222,8 +223,8 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
     // Keep this exact command ID if the response is lost. Status checks reuse it.
     setAttempt(id, { command, operationLabel: label, status: 'running' });
     try {
-      const result = await postJson<ManagedPluginCommandResult>(`${endpoint(id)}/commands`, command);
-      if (result.commandId !== command.commandId) throw new Error('Die Befehlskennung stimmt nicht überein.');
+      const result = managedPluginCommandResultSchema.parse(await postJson<unknown>(`${endpoint(id)}/commands`, command));
+      if (result.commandId !== command.commandId || result.view.id !== id) throw new Error('Die Befehlskennung stimmt nicht überein.');
       await completeResult(id, result, label, command);
     } catch (cause) {
       setAttempt(id, { command, operationLabel: label, status: 'check-required' });
@@ -245,10 +246,10 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
     setBusyFor(id, 'status');
     setFeedback((current) => ({ ...current, [id]: undefined }));
     try {
-      const result = await apiRequest<ManagedPluginCommandResult>(
+      const result = managedPluginCommandResultSchema.parse(await apiRequest<unknown>(
         `${endpoint(id)}/commands/${encodeURIComponent(attempt.command.commandId)}`,
-      );
-      if (result.commandId !== attempt.command.commandId) throw new Error('Die Befehlskennung stimmt nicht überein.');
+      ));
+      if (result.commandId !== attempt.command.commandId || result.view.id !== id) throw new Error('Die Befehlskennung stimmt nicht überein.');
       await completeResult(id, result, attempt.operationLabel, attempt.command);
     } catch (cause) {
       setAttempt(id, { ...attempt, status: 'check-required' });
