@@ -149,6 +149,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   const pendingRequest = useRef<AbortController | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
+  const proposalCards = useRef(new Map<string, HTMLDivElement>());
+  const pendingProposalFocus = useRef<{ id: string; confirmation: boolean } | null>(null);
   const inputId = useId();
   const messageClock = useRef<ReturnType<typeof createChatMessageClock> | null>(null);
   messageClock.current ??= createChatMessageClock(events => postForChat("/api/chat/timestamps", { messages: events }));
@@ -210,6 +212,20 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   useEffect(() => {
     onSnapshot(sessionId, { messages, input, history: history.current, profileId, request, roomContext, chosenRoom, activeResult, activeProposal, interrupted: interrupted || busy, messagesTruncated }, busy);
   }, [messages, input, profileId, request, roomContext, chosenRoom, activeResult, activeProposal, interrupted, busy, messagesTruncated, sessionId, onSnapshot]);
+
+  useEffect(() => {
+    if (busy || !pendingProposalFocus.current) return;
+    const requested = pendingProposalFocus.current;
+    pendingProposalFocus.current = null;
+    const card = proposalCards.current.get(requested.id);
+    // Disabled/removed confirmation buttons lose focus. Restore it after the
+    // final render without interrupting a task switch or a user's newer focus.
+    if (!active || !card?.isConnected || !card.getClientRects().length || card.ownerDocument.activeElement !== card.ownerDocument.body) return;
+    const buttons = card.querySelectorAll<HTMLButtonElement>('button[data-proposal-confirm]');
+    const confirmation = buttons.length === 1 ? buttons.item(0) : null;
+    const target = requested.confirmation && confirmation && !confirmation.disabled ? confirmation : card;
+    target.focus({ preventScroll: true });
+  }, [active, busy, messages]);
 
   useEffect(() => {
     const element = scroller.current;
@@ -776,9 +792,11 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
       const detail = cause instanceof Error ? cause.message : "Der Dienst hat nicht geantwortet.";
       const disposition = classifyProposalFailure(cause, executionAttempted);
       if (disposition === "invalidated") {
+        pendingProposalFocus.current = { id: proposal.id, confirmation: false };
         setActiveProposal(null);
         updateProposalStatus(proposal.id, "invalidated");
       } else if (disposition === "retry_preflight") {
+        pendingProposalFocus.current = { id: proposal.id, confirmation: true };
         setActiveProposal(proposal.id);
       } else {
         setActiveProposal(null);
@@ -861,9 +879,11 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
       const detail = cause instanceof Error ? cause.message : "Der Dienst hat nicht geantwortet.";
       const disposition = classifyProposalFailure(cause, executionAttempted);
       if (disposition === "invalidated") {
+        pendingProposalFocus.current = { id: proposal.id, confirmation: false };
         setActiveProposal(null);
         updateProposalStatus(proposal.id, "invalidated");
       } else if (disposition === "retry_preflight") {
+        pendingProposalFocus.current = { id: proposal.id, confirmation: true };
         setActiveProposal(proposal.id);
       } else {
         setActiveProposal(null);
@@ -960,7 +980,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                     }}
                   />}
                   {message.sources && message.sources.length > 0 && <div className="chat-source-list" aria-label="Gefundene Quellen">{message.sources.map((source) => <Link className="chat-source-card" href={knowledgeDocumentHref(source.id, source.revision)} target="_blank" rel="noreferrer" key={source.id}><BookOpen size={18} aria-hidden="true" /><span><small>{knowledgeSourceLabel(source.sourceSystem, source.synthetic)} · Fassung {source.revision}</small><strong>{source.title}</strong><code>{source.citationId}</code></span><ArrowRight size={16} aria-hidden="true" /></Link>)}</div>}
-                  {pluginProposal && pluginProposalView && <div className="chat-tool-card chat-proposal">
+                  {pluginProposal && pluginProposalView && <div className="chat-tool-card chat-proposal" role="group" tabIndex={-1} aria-label={pluginProposal.status === "invalidated" ? "Vorschlag ungültig" : "Pluginaktionsvorschlag"} ref={node => { if (node) proposalCards.current.set(pluginProposal.id, node); else proposalCards.current.delete(pluginProposal.id); }}>
                     <span className="chat-proposal-label">{pluginProposal.status === "invalidated" ? "Vorschlag ungültig" : pluginProposal.status === "outcome_unknown" ? "Ausgang unklar" : "PLUGINAKTION PRÜFEN"}</span>
                     <h2>{pluginProposalView.actionTitle}</h2>
                     {pluginProposalView.executionDescription && <p>{pluginProposalView.executionDescription}</p>}
@@ -969,19 +989,19 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                     {pluginProposal.resourceName && <p>{pluginProposal.resourceName}</p>}
                     <p>{compactPluginToolResult(pluginProposal.arguments, 800)}</p>
                     <small>Vorbereitet durch: {pluginProposalView.preparationTitle} · Gültig bis {formatTime(pluginProposal.expiresAt)} Uhr</small>
-                    {pluginProposal.status !== "invalidated" && pluginProposal.status !== "outcome_unknown" && <button className="button button--primary button--wide" type="button" disabled={busy || activeProposal !== pluginProposal.id} onClick={() => { void confirm(pluginProposal); }}>
+                    {pluginProposal.status !== "invalidated" && pluginProposal.status !== "outcome_unknown" && <button className="button button--primary button--wide" data-proposal-confirm type="button" disabled={busy || activeProposal !== pluginProposal.id} onClick={() => { void confirm(pluginProposal); }}>
                       {activeProposal === pluginProposal.id ? pluginProposalView.confirmLabel : "Vorschlag abgeschlossen oder ersetzt"}
                       <Check size={16} aria-hidden="true" />
                     </button>}
                   </div>}
-                  {message.proposal && message.proposal.action !== "execute_tool" && <div className="chat-tool-card chat-proposal">
+                  {message.proposal && message.proposal.action !== "execute_tool" && <div className="chat-tool-card chat-proposal" role="group" tabIndex={-1} aria-label={message.proposal.status === "invalidated" ? "Vorschlag ungültig" : message.proposal.action === "cancel_booking" ? "Stornierungsvorschlag" : "Buchungsvorschlag"} ref={node => { const proposalId = message.proposal?.id; if (!proposalId) return; if (node) proposalCards.current.set(proposalId, node); else proposalCards.current.delete(proposalId); }}>
                     <span className="chat-proposal-label">{message.proposal.status === "invalidated" ? "Vorschlag ungültig" : message.proposal.status === "outcome_unknown" ? "Ausgang unklar" : message.proposal.action === "cancel_booking" ? "STORNIERUNG PRÜFEN" : "BITTE PRÜFEN UND BESTÄTIGEN"}</span>
                     <h2>{message.proposal.resourceName}</h2>
                     <ActionPreviewDetails preview={message.proposal.preview} />
                     <p>{formatDateTime(message.proposal.startDate)} bis {formatTime(message.proposal.endDate)} Uhr</p>
                     {message.proposal.action === "cancel_booking" && <p>Diese bestehende Buchung wird erst nach deiner Bestätigung storniert.</p>}
                     <small>Gültig bis {formatTime(message.proposal.expiresAt)} Uhr · Testumgebung</small>
-                    {message.proposal.status !== "invalidated" && message.proposal.status !== "outcome_unknown" && <button className="button button--primary button--wide" type="button" disabled={busy || activeProposal !== message.proposal.id} onClick={() => { if (message.proposal) void confirm(message.proposal); }}>
+                    {message.proposal.status !== "invalidated" && message.proposal.status !== "outcome_unknown" && <button className="button button--primary button--wide" data-proposal-confirm type="button" disabled={busy || activeProposal !== message.proposal.id} onClick={() => { if (message.proposal) void confirm(message.proposal); }}>
                       {activeProposal === message.proposal.id ? message.proposal.action === "cancel_booking" ? "Stornierung bestätigen" : "Buchung bestätigen" : message.proposal.action === "cancel_booking" ? "Stornierungsvorschlag abgeschlossen oder ersetzt" : "Vorschlag abgeschlossen oder ersetzt"}
                       <Check size={16} aria-hidden="true" />
                     </button>}
