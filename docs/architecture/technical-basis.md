@@ -95,11 +95,15 @@ integration after verifying the app's authentication and navigation constraints.
 
 ## Demo performance targets
 
-Fabian approved these technical M2/M7 targets on 2026-10-19 (Plan V6):
+Fabian approved these targets on 2026-10-19 (Plan V6). His subsequent V7
+decision defers only the API threshold's acceptance to M8-A9:
 
 - Non-generative API queries: **p95 at most 1,000 ms with five concurrent
-  synthetic test users**.
+  synthetic test users**. The target is retained but is not an M2/M7 blocker;
+  qualify it under M8-A9 before institutional acceptance. Existing failed
+  measurements remain failed, not waived or relabeled as passing.
 - Local UI reactions: **at most 200 ms** for the named, measured interactions.
+  This remains an M2/M7 acceptance gate.
 - Model generation latency, provider rate limits and retry delays are measured
   and reported separately; they are not silently included or hidden in these
   two results.
@@ -128,8 +132,10 @@ Each measurement instrument needs a passing control and an intentionally delayed
 countercase that exceeds its relevant target and fails the same gate. Use only
 synthetic read data and local test delays; do not slow the public demo, call a
 paid model, execute real business actions or reset the shared budget. These are
-bounded technical acceptance targets for a small demo, not a production
-availability SLA or actual-device/institutional M8-A7 acceptance. The result
+bounded targets for a small demo, not a production availability SLA. V7 moves
+the API threshold's acceptance to M8-A9 while leaving the UI threshold in
+M2/M7. Neither measurement replaces actual-device/participant M8-A7 acceptance.
+The result
 reports and milestone issues own measured execution state.
 
 ## Application boundaries

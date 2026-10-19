@@ -74,24 +74,40 @@ stable release or GHCR image is claimed by this architecture document.
 
 ## Known Doctor findings (2026-10-16)
 
-The read-only GitHub audit passed 17 API checks with no failures. The web
-TypeScript configuration does not yet inherit all shared strict options, and
-its Next.js ESLint configuration is not type-aware strict ESLint. Coverage
-thresholds apply to the selected backend/services, not the entire frontend.
+The read-only GitHub audit passed 17 API checks with no failures. At that audit,
+the web TypeScript configuration did not yet inherit all shared strict options,
+and its Next.js ESLint configuration was not type-aware strict ESLint. Coverage
+thresholds applied to the selected backend/services, not the entire frontend.
 At the 2026-10-16 audit, the older MVP plan lacked epic/milestone tracking.
 That tracking gap is addressed by the [MVP epic #47](https://github.com/metaneutrons/HASI/issues/47)
 and [roadmap epic #55](https://github.com/metaneutrons/HASI/issues/55) on 2026-10-18.
-The web strictness/coverage findings remain open as WEB-A1 in [M2 #49](https://github.com/metaneutrons/HASI/issues/49)
-(transferred from superseded #67);
-this tracking update does not change compiler/lint settings or coverage gates.
+The TypeScript and ESLint statements above describe the 2026-10-16 audit state;
+they were superseded by the later configuration migration below.
 
+## WEB-A1 configuration reconciliation (2026-10-19)
 
-## WEB-A1 implementation candidate (2026-10-18)
+At main `442897d`, [`apps/web/tsconfig.json`](../../apps/web/tsconfig.json)
+extends [`tsconfig.base.json`](../../tsconfig.base.json) and keeps the shared
+strict compiler options while overriding Next-compatible target, library,
+module and bundler settings. The old finding that the web project did not inherit
+the shared strict options is stale.
 
-The web tsconfig now extends the shared strict base with explicit Next-compatible
-emit/bundler overrides. ESLint combines Next rules with type-aware strict and
-stylistic TypeScript rules. Existing web types/tests were adjusted without
-disabling these checks. Unit/integration web tests run with the workspace suite;
-coverage thresholds still apply to the existing backend/service scope. There is
-no claim of blanket frontend coverage or native-device acceptance. Node 24/26 CI
-at the final implementation head remains the delivery gate.
+[`apps/web/eslint.config.mjs`](../../apps/web/eslint.config.mjs) combines Next
+Core Web Vitals and TypeScript rules with `strictTypeChecked` and
+`stylisticTypeChecked` rules for TypeScript files. It supplies the web tsconfig
+as the type-aware ESLint project. The old finding that web lint was not
+type-aware strict ESLint is also stale.
+
+The coverage boundary is unchanged. [`vitest.config.ts`](../../vitest.config.ts)
+discovers tests under `apps/**`, including web tests, but coverage thresholds
+include shared packages, the API, the Anny plugin and the knowledge plugin; web
+source is outside that threshold set. This records the actual gate and does not
+set a blanket frontend-coverage target.
+
+WEB-A1 is tracked in [M2 #49](https://github.com/metaneutrons/HASI/issues/49),
+transferred from superseded #67. Its web compiler/lint configuration gap is
+implemented. The plan still requires Node 24/26 CI and meaningful affected
+workflow qualification; green configuration checks do not establish the full
+admin/chat journey, native-device acceptance or M2 acceptance. The current
+evidence and remaining qualifications are reconciled in the
+[dated WEB-A1/BUD-A1/P2-A4 record](../verification/2026-10-19/m2-evidence-reconciliation.md).

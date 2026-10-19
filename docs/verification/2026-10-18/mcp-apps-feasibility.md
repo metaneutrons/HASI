@@ -56,3 +56,39 @@ The tested dependency versions are MCP client/core 2.3.1 and the official
 repinned on byte changes. Actual iPhone/Safari, Android/Chrome, VoiceOver,
 TalkBack, virtual keyboards, 200% text, focus recovery, hostile navigation and
 the complete cross-chat/instance negative matrix remain open qualification work.
+
+
+## P2-A4 adoption disposition — 2026-10-19
+
+The reviewed implementation approach for the technical MVP is **native host
+results by default; no-go for automatic admission of unreviewed third-party
+executable Apps**. The public Apps flag remains off and its reviewed-code
+allowlist remains empty. The bundled, immutable Anny view remains a local
+opt-in feasibility experiment. Connecting a plugin or approving its tool
+contract cannot enable executable browser code. This formalizes the scoped
+engineering recommendation above; it does not accept all P2 criteria.
+
+| Dimension | Finding and decision consequence |
+| --- | --- |
+| Security | The source-bound bridge, typed read permissions, code hash and sandbox/CSP constrain the reviewed experiment. They do not generally prohibit hostile scripted self-navigation. That unresolved boundary is sufficient for the no-go; unreviewed Apps are not admitted while awaiting more tests. |
+| Mobile | Five simulated widths and theme propagation were observed for the reviewed view. This is partial feasibility evidence, with text enlargement and complete interaction/recovery cases unrun. No real-device acceptance is claimed. |
+| Accessibility | Complete keyboard, focus and automated accessibility checks were not qualified by the feasibility run. This provides no basis for general adoption; native host interaction remains the product path and keeps its separate P4/P6 requirements. |
+| Performance | The named filter/page observations made one typed tool call each and zero additional model calls. They do not establish an initial-result latency distribution or provider token/cache/billing savings. The missing bounded P2-A1 initial-journey measurements remain open; a paid model is not required by that technical criterion. |
+| Compatibility | The experiment used MCP client/core 2.3.1 and ext-apps 2.0.3 with an immutable packaged resource. Future SDK, mobile-app host and external-view compatibility is unqualified. |
+
+The revised implementation uses host-owned native text, compact structured
+results and authorized source references. Identity, current source/account
+access and exact confirmation stay in server/host controls. The
+[current native-history boundary](../2026-10-19/current-native-history.md)
+rebuilds retained cards from current authorized records and fails closed after
+revocation or unavailable authority. Historical rendering does not execute old
+actions. Full native configuration/chat/reconnect/update/removal/history
+journeys remain P3/P4/P6 work; this decision does not mark them passed.
+
+Unrun or unsuccessful rejected-App cases stay documented for any later
+reconsideration, rather than becoming an obligation to finish an unsafe
+adoption path before retaining the no-go. Broader Apps admission requires a
+separately reviewed isolation approach and the relevant security, mobile,
+accessibility, performance and compatibility evidence. Real-device and native
+assistive-technology acceptance remains M8-A7. This disposition changes neither
+the plan criteria nor the approved data or write scope.

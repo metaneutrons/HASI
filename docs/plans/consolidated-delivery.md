@@ -1,9 +1,13 @@
 # HASI consolidated delivery plan
 
-Plan version: 6. Performance decision: 2026-10-19. V6 records Fabian's
-agreed demo response-time targets for M2/M7 in the
-[performance contract](../architecture/technical-basis.md#demo-performance-targets).
-It does not claim that the targets have passed measurement. V5 records Fabian's decision to
+Plan version: 7. API-performance sequencing decision: 2026-10-19. Fabian
+explicitly deferred acceptance of the non-model API p95 ≤ 1,000 ms target at
+five concurrent users from M2/M7 to final **M8-A9**. The target and measurement
+method in the [performance contract](../architecture/technical-basis.md#demo-performance-targets)
+remain unchanged; existing failures remain recorded, not accepted. Local UI
+feedback ≤ 200 ms remains a technical M2/M7 gate. V6 originally introduced both
+response-time targets; V7 changes only the API target's acceptance milestone.
+V5 records Fabian's decision to
 operate the disposable demo without a backup requirement. Production encrypted
 backup, off-host replication/failure monitoring and restore qualification move
 intact to final M8-A8. Independent service-health monitoring, incident handling,
@@ -15,13 +19,15 @@ Test-IdP, mocks, synthetic data and browser/device simulation. Required CI and
 technical operational exercises remain required. The earlier V3 changed only
 issue granularity and was adopted on 2026-10-18.
 
-Decision state: **V6 adds agreed technical demo performance targets; V5 retains
+Decision state: **V7 transfers only the 1-second API acceptance to M8-A9;
+V6's local UI target remains in M2/M7; V5 retains
 the demo backup acceptance scope; V4 retains its
 qualification sequencing and final mobile-quality requirements.** Real iPhone/Safari, Android/Chrome,
 VoiceOver/TalkBack and participant acceptance remain mandatory in M8-A7; they
 are not claimed passed by simulation. Other P1–P6 security/runtime criteria,
-M1–M7 technical tests and budgets remain required; the demo backup/restore
-exception is limited to the explicit M8-A8 transfer. Source
+M1–M7 technical tests and budgets remain required. Acceptance transfers
+are limited to the explicit M8-A8 continuity and M8-A9 API-performance
+transfers. API measurements are not a passed M2/M7 prerequisite under V7. Source
 records transferred under V3 remain `not_planned`, never accepted work.
 Third-party MCP Apps remain off by default after the P2 no-go decision. This
 plan authorizes neither real institutional writes/protected-data tests nor
@@ -247,11 +253,14 @@ identities and an independent test plugin; they do not require live M3–M5.
    incident handling and rollback using synthetic data. The disposable demo has
    no backup/restore acceptance gate; production backup and recovery remain M8-A8.
    This milestone does not need institutional source approval and does not
-   qualify real SSO or writes.
+   qualify real SSO or writes. API p95 ≤ 1,000 ms is recorded but is no longer
+   an M2/M7 acceptance blocker; its retained gate is M8-A9. Local UI feedback
+   ≤ 200 ms and the remaining technical journeys still require evidence.
 8. **Complete M8 last** as the real-device/participant and institutional go/no-go. Real identity, both
    sources' access and rights, Anny customer delegation/eligibility and vendor
    conformance, protected-data processing approvals, named owners, reviewed real
-   cases and the complete actual-device/participant matrix (M8-A7), followed by
+   cases, the complete actual-device/participant matrix (M8-A7), production
+   continuity (M8-A8) and deferred API performance (M8-A9), followed by
    recorded institutional go/no-go, must be present before
    rollout. Scope-specific authorization precedes any M8 real-write or protected-
    context test. See [M8 in the MVP plan](hasi-mvp.md#institutional-acceptance-m8).
@@ -548,6 +557,19 @@ After a total state loss, model admission must remain disabled until the current
 budget window is safely past or its accounting is authoritatively restored;
 an empty replacement database cannot establish that nothing was spent. M7's
 incident procedure must exercise this conservative recovery with synthetic data.
+
+## API-performance sequencing decision — 2026-10-19
+
+Fabian explicitly deferred the 1-second API goal. V7 transfers its acceptance
+from M2/M7 to **M8-A9**, retaining p95 ≤ 1,000 ms at five concurrent synthetic
+users, the named route/batch method and delayed countercase. Existing public
+knowledge-search failures remain evidence of an unmet target, without blocking
+technical M2/M7 acceptance. No passing result is inferred from the transfer.
+The ≤ 200 ms local UI requirement, correctness, authorization, budget limits,
+error/timeout handling and other technical gates remain in M2/M7. Further API
+optimization is optional earlier work; a successful repeat is mandatory before
+M8 acceptance. CACHE-A1 remains M6 work; this decision does not transfer the
+unproven Groq cache-hit requirement.
 
 ## Plan review and completion
 
