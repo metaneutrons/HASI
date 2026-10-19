@@ -38,8 +38,10 @@ submission, replay and exact-revision readiness checks are unchanged.
 The focused controller suite passes 18 tests, including a pending-to-success
 transition with no pending-state side effects and one subsequent submission,
 and mixed invalid/pending views. Controller compilation, `node --check`, scoped
-lint and whitespace checks pass. Full workspace/hosted CI, merge and daemon
-installation are separate pending gates.
+lint and whitespace checks pass. Full PostgreSQL pre-push passed 1,071 tests with one platform skip across
+114 files, backend build, root/web types and secret checks. All five exact-head
+checks passed in CI `39288085139`. PR #119 merged as `31fbf29`; exact-main
+CI `39289119670` passed. The head and merge have identical trees.
 
 Historical rejected journal records are not deleted or automatically reopened.
 The live old attempt remains rejected until an explicitly justified operational
@@ -53,3 +55,24 @@ that M7 is accepted.
 | --- | --- |
 | `scripts/deploy/controller.ts` | `ccaddf0f7b077353893a43231b2a509dca08825b013f0a5d8ebbb107af03d5e2` |
 | `tests/deploy-controller.test.ts` | `a0f73fc5d952b1ad915d984f9e64e7854caaa1839df8ce2a21124d48539856ca` |
+
+
+## Live daemon and deployment observation
+
+The old controller was stopped before the reviewed merge, to avoid recording
+another permanent rejection from a temporarily inconsistent job view. The
+compiled controller passed the pinned Linux Node syntax check and was installed
+atomically. Its SHA-256 is
+`44ffce5e3cf7b7946429f6aa1570c9fe6b244aaa432a2fe31bb919a1e052b74e`;
+the running read-only mounted file matched. The systemd service was resumed
+and remains enabled. Historical rejected records were retained.
+
+After complete exact-main CI, the controller automatically submitted Coolify
+`vojaxrkvluldntcurh6iq5oq` for `31fbf29c83ba587bc2028f3adafe321a0bb5aaae`.
+Public readiness returned that exact revision. A later disk-full incident
+interrupted PostgreSQL and the control plane; this job ultimately failed rather
+than receiving an invented success or journal reset. See
+[the disk recovery record](demo-disk-recovery.md). Public HASI recovered on
+`31fbf29`. The next ordinary main revision, PR #118's `e2d6b7c`, is the pending
+fresh complete automatic-delivery proof. This observed submission does not by
+itself establish completed delivery or M7 acceptance.
