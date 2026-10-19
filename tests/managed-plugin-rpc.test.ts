@@ -7,8 +7,9 @@ import { digest } from '@hasi/plugin-sdk';
 import type { ManagedPluginCommand, ManagedPluginView } from '@hasi/plugin-sdk/deployment-admin';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ManagedPluginInstaller } from '../apps/api/src/managed-plugin-installer.js';
-import { createManagedPluginRpcClient, createManagedPluginRpcServer } from '../apps/api/src/managed-plugin-rpc.js';
+import { createManagedPluginContractClient, createManagedPluginRpcClient, createManagedPluginRpcServer } from '../apps/api/src/managed-plugin-rpc.js';
 import type { ManagedPluginAdmin } from '../apps/api/src/managed-plugin-admin.js';
+import type { ManagedPluginRuntimeContract } from '../apps/api/src/managed-plugin-contract.js';
 
 const issuer = 'hasi-managed-plugin-api-v1';
 const audience = 'hasi-managed-plugin-installer-v1';
@@ -27,6 +28,12 @@ const view: ManagedPluginView = {
 
 const command: ManagedPluginCommand = {
   commandId, expectedState: stateToken, operation: 'stage', releaseId: 'calendar-1.0.0',
+};
+const contractManifest = { manifestVersion: 2 as const, id: 'de.example.calendar', version: '1.0.0', name: 'Synthetic calendar', description: 'Read-only contract', apiVersion: '2.0.0' as const, mcpVersion: '2026-07-28' as const, secrets: [{ name: 'calendarApi', required: true }], tools: [] };
+const runtimeContract: ManagedPluginRuntimeContract = {
+  installationId: view.id, manifest: contractManifest, manifestDigest: digest(contractManifest), configurationRevision: 3,
+  deploymentRevision: 'a'.repeat(64), transportCredentialRevision: 'transport-2',
+  secretStatuses: [{ name: 'calendarApi', configured: true, revision: 'calendar-4' }], enabled: true,
 };
 
 const servers: Awaited<ReturnType<typeof createManagedPluginRpcServer>>[] = [];
@@ -48,8 +55,8 @@ async function startRpc(service: ManagedPluginAdmin = {
   list: () => Promise.resolve({ installations: [view] }),
   command: (_id, requested, _subject) => Promise.resolve({ commandId: requested.commandId, status: 'completed', view }),
   commandStatus: (_id, requestedId) => Promise.resolve({ commandId: requestedId, status: 'uncertain', view }),
-}) {
-  const server = await createManagedPluginRpcServer({ service, publicKey: keys.publicKey, privateKey: keys.privateKey, scope: 'synthetic-scope', port: 0 });
+}, readRuntimeContract?: (installationId: string) => Promise<ManagedPluginRuntimeContract | null>) {
+  const server = await createManagedPluginRpcServer({ service, ...(readRuntimeContract ? { runtimeContract: readRuntimeContract } : {}), publicKey: keys.publicKey, privateKey: keys.privateKey, scope: 'synthetic-scope', port: 0 });
   servers.push(server);
   return server;
 }
@@ -98,6 +105,58 @@ it('rejects a loopback impersonator replaying a signed response from another req
   });
   const client = createManagedPluginRpcClient({ origin: fakeOrigin, privateKey: keys.privateKey, scope: 'synthetic-scope' });
   await expect(client.list(subject)).rejects.toThrow('Installer response authentication failed');
+});
+
+it('reads the active runtime contract over a separate fixed-subject RPC without invoking administrator service methods', async () => {
+  const list = vi.fn(() => Promise.reject(new Error('admin list must not run')));
+  const commandCall = vi.fn(() => Promise.reject(new Error('admin command must not run')));
+  const commandStatus = vi.fn(() => Promise.reject(new Error('admin status must not run')));
+  const service: ManagedPluginAdmin = {
+    list,
+    command: commandCall,
+    commandStatus,
+  };
+  const read = vi.fn((_installationId: string) => Promise.resolve(runtimeContract));
+  const server = await startRpc(service, read);
+  const client = createManagedPluginContractClient({ origin: server.origin, privateKey: keys.privateKey, scope: 'synthetic-scope' });
+
+  await expect(client.read(view.id)).resolves.toEqual(runtimeContract);
+  expect(read).toHaveBeenCalledWith(view.id);
+  expect(list).not.toHaveBeenCalled();
+  expect(commandCall).not.toHaveBeenCalled();
+  expect(commandStatus).not.toHaveBeenCalled();
+});
+
+it('returns authenticated null for inactive state and fails closed for a missing or mismatched runtime reader', async () => {
+  const inactive = await startRpc(undefined, () => Promise.resolve(null));
+  const client = createManagedPluginContractClient({ origin: inactive.origin, privateKey: keys.privateKey, scope: 'synthetic-scope' });
+  await expect(client.read(view.id)).resolves.toBeNull();
+
+  const missingReader = await startRpc();
+  const unavailableClient = createManagedPluginContractClient({ origin: missingReader.origin, privateKey: keys.privateKey, scope: 'synthetic-scope' });
+  await expect(unavailableClient.read(view.id)).rejects.toThrow('Installer request unavailable');
+
+  const wrongInstallation = await startRpc(undefined, () => Promise.resolve({ ...runtimeContract, installationId: 'other-installation' }));
+  const wrongClient = createManagedPluginContractClient({ origin: wrongInstallation.origin, privateKey: keys.privateKey, scope: 'synthetic-scope' });
+  await expect(wrongClient.read(view.id)).rejects.toThrow('Installer request unavailable');
+});
+
+it('keeps runtime-contract requests out of admin authority and pins their host subject', async () => {
+  const read = vi.fn(() => Promise.resolve(runtimeContract));
+  const list = vi.fn(() => Promise.resolve({ installations: [view] }));
+  const service = { list } as unknown as ManagedPluginAdmin;
+  const server = await startRpc(service, read);
+  const wrongSubject = { method: 'runtimeContract', subject, installationId: view.id };
+  const wrongSubjectResponse = await postRaw(server.origin, wrongSubject, await signedToken(wrongSubject));
+  expect(wrongSubjectResponse.status).toBe(401);
+  await wrongSubjectResponse.body?.cancel();
+
+  const adminWithHostSubject = { method: 'list', subject: 'hasi:runtime-contract' };
+  const hostAdminResponse = await postRaw(server.origin, adminWithHostSubject, await signedToken(adminWithHostSubject, { tokenSubject: 'hasi:runtime-contract' }));
+  expect(hostAdminResponse.status).toBe(403);
+  await hostAdminResponse.body?.cancel();
+  expect(read).not.toHaveBeenCalled();
+  expect(list).not.toHaveBeenCalled();
 });
 
 it('roundtrips a permitted multi-installation catalogue larger than the former response cap', async () => {

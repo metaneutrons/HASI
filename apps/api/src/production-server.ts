@@ -7,7 +7,7 @@ import { EnvironmentPluginSecretCustody } from './plugin-secrets.js';
 import type { ActionPolicy } from './action-policy.js';
 import { sourcePolicySchema } from './result-envelope.js';
 import { digest, manifestSchema } from '@hasi/plugin-sdk';
-import { createManagedPluginRpcClient } from './managed-plugin-rpc.js';
+import { createManagedPluginRpcClient, createManagedPluginContractClient } from './managed-plugin-rpc.js';
 import { PluginRouteController } from './plugin-route-controller.js';
 import { PluginDeploymentBinding } from './plugin-deployment-binding.js';
 import { PluginSettingsStore } from './plugin-settings.js';
@@ -48,7 +48,8 @@ async function main() {
     const plugins = await Promise.all(configuration.plugins.map(async plugin => {
       const transport = new EnvironmentPluginSecretCustody({ service: plugin.credential }, process.env);
       const serviceToken = await transport.use('service', value => Promise.resolve(value));
-      return { id: plugin.id, label: plugin.label, registration: { instanceId: plugin.id, endpoint: plugin.endpoint, expectedManifestDigest: plugin.manifestDigest, allowLoopback: false, credentialRevision: plugin.credential.revision, serviceToken, sourcePolicy: plugin.sourcePolicy, secretCustody: new EnvironmentPluginSecretCustody(plugin.secrets, process.env), ...(plugin.allowedPrivateCidrs ? { allowedPrivateCidrs: plugin.allowedPrivateCidrs } : {}) } };
+      const managed = configuration.installer?.installationIds.includes(plugin.id);
+      return { id: plugin.id, label: plugin.label, registration: { instanceId: plugin.id, endpoint: plugin.endpoint, expectedManifestDigest: plugin.manifestDigest, allowLoopback: false, credentialRevision: plugin.credential.revision, serviceToken, sourcePolicy: plugin.sourcePolicy, ...(!managed ? { secretCustody: new EnvironmentPluginSecretCustody(plugin.secrets, process.env) } : {}), ...(plugin.allowedPrivateCidrs ? { allowedPrivateCidrs: plugin.allowedPrivateCidrs } : {}) } };
     }));
     const policies: Record<string, ActionPolicy> = {};
     // These public consequences are reviewed deployment policy; live source-specific quotes/terms
@@ -68,6 +69,7 @@ async function main() {
     const managedOptions = installer ? (() => {
       if (new Set(installer.installationIds).size !== installer.installationIds.length) throw new Error('Duplicate managed installation');
       const settings = new PluginSettingsStore(privateKey, store, configuration.scope);
+      const contracts = createManagedPluginContractClient({ origin: installer.origin, privateKey, scope: configuration.scope });
       const routes = new PluginRouteController({ store, scope: configuration.scope, ownerId: installer.ownerId });
       const bindings = new Map(installer.installationIds.map(id => {
         const plugin = configuration.plugins.find(item => item.id === id);
@@ -75,7 +77,12 @@ async function main() {
         const manifest = plugin.manifest;
         return [id, new PluginDeploymentBinding({ routes, ownerId: installer.ownerId, readAuthoritativeRevision: async installationId => (await settings.read(installationId, manifest)).activeRevision })] as const;
       }));
-      return { deploymentBindings: bindings, externalManagedGateway: { origin: installer.gatewayOrigin, installationIds: installer.installationIds }, managedPlugins: createManagedPluginRpcClient({ origin: installer.origin, privateKey, scope: configuration.scope }) };
+      const managedContracts = new Map(installer.installationIds.map(id => {
+        const plugin = configuration.plugins.find(item => item.id === id);
+        if (!plugin?.manifest) throw new Error('Managed installation requires an approved baseline');
+        return [id, { initialManifest: plugin.manifest, read: () => contracts.read(id) }] as const;
+      }));
+      return { deploymentBindings: bindings, managedContracts, externalManagedGateway: { origin: installer.gatewayOrigin, installationIds: installer.installationIds }, managedPlugins: createManagedPluginRpcClient({ origin: installer.origin, privateKey, scope: configuration.scope }) };
     })() : {};
     const runtime = await createProductionRuntime({ privateKey, store, scope: configuration.scope, webOrigin: configuration.webOrigin, apiHostname: configuration.apiHostname, plugins, identity: { ...configuration.oidc, ...(process.env.HASI_OIDC_CLIENT_SECRET ? { clientSecret: process.env.HASI_OIDC_CLIENT_SECRET } : {}) }, actionPolicies: policies, ...managedOptions });
     runtime.app.addHook('onClose', async () => { await store.close(); });

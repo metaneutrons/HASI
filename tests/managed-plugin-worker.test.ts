@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { PostgresJsonStore } from '@hasi/state';
 import { digest, type PluginManifest } from '@hasi/plugin-sdk';
 import { startManagedPluginWorker } from '../apps/api/src/managed-plugin-worker.js';
-import { createManagedPluginRpcClient } from '../apps/api/src/managed-plugin-rpc.js';
+import { createManagedPluginContractClient, createManagedPluginRpcClient } from '../apps/api/src/managed-plugin-rpc.js';
 import { ProductionAuthorityDirectory } from '../apps/api/src/production-runtime.js';
 import { pluginReleaseSigningBytes, type UnsignedPluginRelease } from '../apps/api/src/plugin-artifacts.js';
 
@@ -53,6 +53,8 @@ describe('separate managed installer composition', () => {
     try {
       worker = await startManagedPluginWorker(environment);
       const client = createManagedPluginRpcClient({ origin: `http://127.0.0.1:${String(rpcPort)}`, privateKey: privateKeys.privateKey, scope });
+      const contractClient = createManagedPluginContractClient({ origin: `http://127.0.0.1:${String(rpcPort)}`, privateKey: privateKeys.privateKey, scope });
+      await expect(contractClient.read('installation')).resolves.toBeNull();
       const catalog = await client.list(subject);
       expect(catalog.installations[0]?.status).toBe('empty');
       expect(JSON.stringify(catalog)).not.toMatch(/HASI_PLUGIN_SECRET|synthetic-service-only|socketPath|secretRef/u);

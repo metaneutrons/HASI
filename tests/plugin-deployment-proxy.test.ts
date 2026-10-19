@@ -114,4 +114,30 @@ describe('operator plugin deployment proxy', () => {
     expect(denied.status).toBe(401);
     await denied.body?.cancel();
   });
+
+  it('requires the exact private lifecycle fence and strips it before plugin I/O', async () => {
+    let calls = 0; let receivedFence: unknown = 'not-called';
+    const server = createServer((request, response) => {
+      calls++; receivedFence = request.headers['x-hasi-deployment-revision'];
+      response.writeHead(200, { 'content-type': 'application/json' }); response.end('{"ok":true}');
+    });
+    await new Promise<void>(resolve => { server.listen(0, '127.0.0.1', resolve); });
+    closeServer = () => new Promise<void>(resolve => { server.close(() => { resolve(); }); });
+    const address = server.address(); if (!address || typeof address === 'string') throw new Error('Missing test port');
+    let revision = 'a'.repeat(64);
+    const app = Fastify({ logger: false }); closeApp = () => app.close();
+    registerPluginDeploymentProxyRoutes(app, { authorize: () => true, endpointResolver: {
+      resolveActiveEndpoint: () => Promise.resolve({ deploymentId: 'b'.repeat(64), relayDeploymentId: 'c'.repeat(64), releaseDigest: 'd'.repeat(64), host: '127.0.0.1', port: address.port, containerPort: 3000, deploymentRevision: revision }),
+      assertActiveEndpoint: () => Promise.resolve(true),
+    } });
+    const url = '/api/plugin-deployments/installation/health';
+    expect((await app.inject({ url })).statusCode).toBe(409);
+    expect((await app.inject({ url, headers: { 'x-hasi-deployment-revision': 'e'.repeat(64) } })).statusCode).toBe(409);
+    expect(calls).toBe(0);
+    expect((await app.inject({ url, headers: { 'x-hasi-deployment-revision': revision } })).statusCode).toBe(200);
+    expect(calls).toBe(1); expect(receivedFence).toBeUndefined();
+    revision = 'f'.repeat(64);
+    expect((await app.inject({ url, headers: { 'x-hasi-deployment-revision': 'a'.repeat(64) } })).statusCode).toBe(409);
+    expect(calls).toBe(1);
+  });
 });

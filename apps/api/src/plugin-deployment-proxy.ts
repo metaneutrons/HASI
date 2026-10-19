@@ -178,6 +178,11 @@ export function registerPluginDeploymentProxyRoutes(app: FastifyInstance, option
         return reply.code(503).header('retry-after', '1').send({ error: 'Active plugin deployment is unavailable.' });
       }
       if (!endpoint) return reply.code(503).header('retry-after', '1').send({ error: 'No plugin deployment is active.' });
+      // Host-owned control header is never forwarded to the executable plugin.
+      // A managed call prepared before update/rollback/restart cannot reach a new route.
+      if (endpoint.deploymentRevision !== undefined && request.headers['x-hasi-deployment-revision'] !== endpoint.deploymentRevision) {
+        return reply.code(409).send({ error: 'The approved plugin deployment changed.' });
+      }
 
       try {
         if (!await options.endpointResolver.assertActiveEndpoint({ installationId, endpoint })) {

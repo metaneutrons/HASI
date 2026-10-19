@@ -170,9 +170,41 @@ until a migration implementation exists; a boolean from the browser cannot
 declare compatibility. Current publisher, logical credential, reviewer and
 configuration authority are checked again by the coordinator.
 
+The host's reviewed source manifest is the signed connection-state baseline,
+not a permanent pin on later managed releases. A separate private
+`runtimeContract` RPC uses a fixed host-only subject and cannot call admin
+methods. Its nonce-bound signed response contains the active approved manifest,
+configuration revision, transport credential revision and logical secret status
+only. There are no origins, image addresses, secret references or secret values
+in that DTO. The worker verifies publisher, catalogue, signed settings,
+credential grant, coordinator, route and inspected runtime before and after
+assembling it. The API rechecks the snapshot around settings reads. There is no
+browser endpoint for this method and no user-admin requirement for ordinary
+model tools to resolve their current contract.
+
+The registry retains the signed local connection/enabled state independently
+of the managed release. Approved major or capability changes can be adopted
+after installer review without restarting the host; the old remote-manifest
+update path rejects managed installations. Plugin-secret readiness comes from
+the worker, so the API needs only its transport credential, not copies of all
+plugin credentials. Configuration disagreement, unavailable authority or revoked
+grants fail closed for that installation. The connected record remains for
+fresh recovery; an explicit disconnected record is never reinstalled.
+
+An opaque deployment revision binds the inspected endpoint, current release,
+active configuration and monotonic route snapshot. Candidate staging and draft
+settings are excluded. The registry includes it in its action binding and sends
+it as a host-owned `x-hasi-deployment-revision` header. The gateway requires an
+exact match before dispatch, rechecks the endpoint and strips that control header
+before forwarding to plugin code. A rollback to an earlier target has a new
+route revision. In-flight registry calls recheck their binding after MCP setup
+and after completion; an ambiguous write still requires the existing unknown
+outcome/reconciliation path. This fence does not itself add explicit proposal
+invalidation status or an immutable invalidation audit.
+
 This implements a managed administration/control path, not full M2 acceptance.
 Actual deployed Linux install/update/recovery, external artifact distribution,
-reviewed capability presentation, host registry pin adoption, explicit pending
+reviewed capability presentation, explicit pending
 action invalidation/audit and the remaining browser matrices still need their
 own implementation or qualification. The public demo does not automatically
 enable executable plugin installation.

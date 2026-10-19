@@ -172,6 +172,13 @@ first installation. Deployed lifecycle, independent artifact distribution and
 the remaining M2 qualification are still open; this does not enable arbitrary
 repository execution in the public demo.
 
+The production host adopts the active contract through a separate authenticated
+installer read, including current tool schemas and logical credential readiness.
+It does not copy plugin secrets into the API process. A lifecycle revision pins
+each gateway request; a stale call cannot switch to a replacement runtime.
+Unready or revoked installations stop advertising model tools while unrelated
+sources remain usable. [Scope and evidence](docs/verification/2026-10-19/managed-contract-adoption.md).
+
 The [synthetic topology qualifier](docs/architecture/production-runtime.md#isolated-identitytopology-qualification)
 runs the actual Next.js handler, two separate API processes, trusted local TLS,
 Test-IdP and disposable PostgreSQL. It checks session/revocation/restart boundaries
