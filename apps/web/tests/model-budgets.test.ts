@@ -13,6 +13,26 @@ describe("shared model budget admission", () => {
     expect(modelPrice("unknown", configuration, loadModelPrices({}))).toBeUndefined();
   });
 
+  it("prices DeepInfra without cache or promotional discounts and preserves existing shared consumption", async () => {
+    const configuration = loadModelConfiguration({});
+    const prices = loadModelPrices({});
+    expect(modelPrice("deepinfra-deepseek-v4.1-flash", configuration, prices)).toMatchObject({
+      basis: "published", inputMicroUsdPerMillion: 200_000, outputMicroUsdPerMillion: 600_000,
+    });
+    const store = new MemoryJsonStore("deepinfra-shared-budget");
+    const previous = createModelBudget(store, prices.filter(price => price.provider !== "deepinfra"), true);
+    await previous.initialize();
+    await previous.reserve({ id: "existing-groq", inputTokens: 100, outputTokens: 20 });
+    await previous.settle("existing-groq", { inputTokens: 100, outputTokens: 20 });
+    const before = await previous.snapshot();
+    const next = createModelBudget(store, prices, true);
+    expect(await next.snapshot()).toEqual(before);
+    const admission = createModelBudgetAdmission(next, configuration, prices);
+    const reservation = await admission.reserve({ profileId: "deepinfra-deepseek-v4.1-flash", inputTokens: 50, outputTokens: 10 });
+    await reservation.settle({ inputTokens: 50, outputTokens: 10 });
+    expect((await next.snapshot()).microUsdUsed).toBeGreaterThan(before.microUsdUsed);
+  });
+
   it("shares a one-dollar ceiling across models and runtimes, keeps unknown holds and resets only on UTC day change", async () => {
     const store = new MemoryJsonStore("shared-budget-runtime");
     const configuration = loadModelConfiguration({});

@@ -8,6 +8,7 @@ const SECRET_REFERENCE_PATTERN = /^env:HASI_LLM_SECRET_[A-Z0-9_]{1,64}$/u;
 const SECRET_REFERENCES = [
   "env:GROQ_API_KEY",
   "env:GWDG_API_KEY",
+  "env:DEEPINFRA_API_KEY",
   "env:OPENAI_API_KEY",
   "env:ANTHROPIC_API_KEY",
   "env:CUSTOM_API_KEY",
@@ -29,6 +30,7 @@ const connectionFields = {
 
 const groqConnectionSchema = z.strictObject({ ...connectionFields, provider: z.literal("groq") });
 const gwdgConnectionSchema = z.strictObject({ ...connectionFields, provider: z.literal("gwdg") });
+const deepinfraConnectionSchema = z.strictObject({ ...connectionFields, provider: z.literal("deepinfra") });
 const openaiConnectionSchema = z.strictObject({
   ...connectionFields,
   provider: z.literal("openai"),
@@ -38,12 +40,13 @@ const anthropicConnectionSchema = z.strictObject({ ...connectionFields, provider
 const customConnectionSchema = z.strictObject({
   ...connectionFields,
   provider: z.literal("custom"),
-  endpoint: z.string().refine((value) => !CONTROL_CHARACTERS.test(value)).trim().min(1).max(2048).pipe(z.url().regex(/^https:\/\/[^/?#\s]+(?:\/[^?#\s]*)?$/u)),
+  endpoint: z.string().refine((value) => !CONTROL_CHARACTERS.test(value)).trim().min(1).max(2048).pipe(z.url().min(1).max(2048).regex(/^https:\/\/[^/?#\s]+(?:\/[^?#\s]*)?$/u)),
 });
 
 const connectionSchema = z.discriminatedUnion("provider", [
   groqConnectionSchema,
   gwdgConnectionSchema,
+  deepinfraConnectionSchema,
   openaiConnectionSchema,
   anthropicConnectionSchema,
   customConnectionSchema,
@@ -220,6 +223,7 @@ const DEFAULT_CONFIGURATION = {
   connections: [
     { id: "groq-demo", label: "GroqCloud demo", provider: "groq", credentialRef: "env:GROQ_API_KEY" },
     { id: "gwdg-demo", label: "GWDG SAIA demo", provider: "gwdg", credentialRef: "env:GWDG_API_KEY" },
+    { id: "deepinfra-demo", label: "DeepInfra demo", provider: "deepinfra", credentialRef: "env:DEEPINFRA_API_KEY" },
   ],
   profiles: [
     {
@@ -258,10 +262,19 @@ const DEFAULT_CONFIGURATION = {
       allowedDataClasses: ["synthetic_demo"],
       parameters: { temperature: 0.2, maxOutputTokens: 1536, timeoutMs: 45_000 },
     },
+    {
+      id: "deepinfra-deepseek-v4.1-flash",
+      label: "DeepInfra · DeepSeek V4.1 Flash · Experimental",
+      connectionId: "deepinfra-demo",
+      modelId: "deepseek-ai/DeepSeek-V4.1-Flash",
+      capabilities: { tools: true },
+      allowedDataClasses: ["synthetic_demo"],
+      parameters: { temperature: 1, maxOutputTokens: 1536, timeoutMs: 45_000 },
+    },
   ],
   policy: {
     defaultProfileId: "groq-oss-120b",
-    userChoice: { enabled: true, profileIds: ["groq-oss-120b", "groq-oss-20b", "groq-qwen-3.8-27b", "gwdg-qwen3-30b"] },
+    userChoice: { enabled: true, profileIds: ["groq-oss-120b", "groq-oss-20b", "groq-qwen-3.8-27b", "gwdg-qwen3-30b", "deepinfra-deepseek-v4.1-flash"] },
     fallbacks: [],
     maxAttempts: 2,
     totalTimeoutMs: 45_000,
@@ -339,6 +352,7 @@ export function loadModelConfiguration(
 const BUILTIN_BASE_URLS = {
   groq: "https://api.groq.com/openai/v1",
   gwdg: "https://chat-ai.academiccloud.de/v1",
+  deepinfra: "https://api.deepinfra.com/v1/openai",
   openai: "https://api.openai.com/v1",
   anthropic: "https://api.anthropic.com/v1",
 } as const;
@@ -349,6 +363,8 @@ export function resolveModelConnection(connection: ModelConnection): ResolvedMod
       return { adapter: "groq", baseURL: BUILTIN_BASE_URLS.groq, api: "chat-completions" };
     case "gwdg":
       return { adapter: "openai-compatible", baseURL: BUILTIN_BASE_URLS.gwdg, api: "chat-completions" };
+    case "deepinfra":
+      return { adapter: "openai-compatible", baseURL: BUILTIN_BASE_URLS.deepinfra, api: "chat-completions" };
     case "openai":
       return { adapter: "openai", baseURL: BUILTIN_BASE_URLS.openai, api: connection.api ?? "responses" };
     case "anthropic":

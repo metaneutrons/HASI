@@ -10,11 +10,11 @@ variables after the 2026-10-18 self-hosted cutover. Vercel and Neon are retired.
 bounded successful synthetic inference checks; credential presence and successful
 inference remain separate states. Neither establishes protected-data approval,
 which belongs to [final institutional M8](../plans/hasi-mvp.md#institutional-acceptance-m8).
-The requested DeepInfra connection is tracked in #81 and is not configured by
-this documentation update.
+The DeepInfra registry implementation is tracked in #81. Local configuration
+and mock tests do not establish a live-qualified deployed connection.
 
 The [version-1 registry configuration](model-provider-configuration.md) now replaces
-the fixed runtime profile array. Standard Groq, GWDG, OpenAI and Anthropic
+the fixed runtime profile array. Standard Groq, GWDG, DeepInfra, OpenAI and Anthropic
 connections and multiple custom connections are operator-configurable. User
 selection and error-specific fallback rules require explicit policy settings;
 the bundled demo enables manual selection and has no fallback rules. The public
@@ -39,6 +39,7 @@ replace that resolver without changing model profiles or the chat interface.
 | --- | --- | --- |
 | GroqCloud demo | `env:GROQ_API_KEY` | First selected provider; provisioned by operator |
 | GWDG SAIA demo | `env:GWDG_API_KEY` | Optional selectable connection; key is provisioned by operator |
+| DeepInfra demo | `env:DEEPINFRA_API_KEY` | Experimental synthetic-only profile; runtime qualification tracked in #81 |
 | Custom OpenAI-compatible | `env:CUSTOM_API_KEY` | Optional; requires valid server-side endpoint, model ID and key |
 | OpenAI | `env:OPENAI_API_KEY` | Naming example; not configured or approved |
 | Anthropic | `env:ANTHROPIC_API_KEY` | Naming example; not configured or approved |
@@ -63,7 +64,8 @@ secret resolver. Additional declared connections can reference `env:OPENAI_API_K
 `env:ANTHROPIC_API_KEY` or `env:HASI_LLM_SECRET_<NAME>`; client input cannot
 select these references. No custom connection values are accepted from a chat request.
 The bundled configuration includes Groq GPT-OSS 120B, 20B and Qwen3.8 27B Preview, the GWDG
-`qwen3-30b-a3b-instruct-2507` profile, and the optional legacy custom profile. Other profiles are declared in the validated operator document, not enabled by client input. The GWDG
+`qwen3-30b-a3b-instruct-2507` profile, DeepInfra `deepseek-ai/DeepSeek-V4.1-Flash`,
+and the optional legacy custom profile. Other profiles are declared in the validated operator document, not enabled by client input. The GWDG
 GPT-OSS 120B profile is deferred after protected Preview probes returned
 upstream HTTP 500; its cause is not established. Qwen passed Preview checks for
 knowledge retrieval and anny room search on 2026-10-16. Production greeting
@@ -114,8 +116,8 @@ then provision only the intended hidden Coolify runtime variables through a
 trusted operator process. Never pass values in arguments, build inputs or chat.
 Use `fnox exec -- <trusted command>` to supply credentials to an authorized
 process without displaying them. `GROQ_API_KEY` and `GWDG_API_KEY` are current;
-`DEEPINFRA_API_KEY` is the requested future credential name and its presence is
-unverified. Do not enable a connection merely because a variable exists.
+`DEEPINFRA_API_KEY` is the DeepInfra reference; encrypted custody presence was
+confirmed on 2026-10-19, while deployed runtime qualification remains separate. Do not enable a connection merely because a variable exists.
 
 Use distinct production and test keys when institutional integrations are
 provisioned. Keep separate provider accounts/projects and data-policy approvals.

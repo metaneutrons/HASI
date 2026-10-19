@@ -22,6 +22,7 @@ import {
 const NOW = new Date("2026-10-16T09:30:00.000Z");
 const FAKE_KEY = "test-groq-key-only";
 const GWDG_FAKE_KEY = "test-gwdg-key-only";
+const DEEPINFRA_FAKE_KEY = "test-deepinfra-key-only";
 const CUSTOM_FAKE_KEY = "test-custom-key-only";
 
 it("rechecks source authority immediately before dispatch and releases only a never-started call", async () => {
@@ -259,11 +260,11 @@ function validCustomEnvironment(overrides: Record<string, string | undefined> = 
 }
 
 describe('server-owned Berlin calendar context', () => {
-  for (const profileId of ['groq-oss-120b', 'gwdg-qwen3-30b', 'custom-default'] as const) {
+  for (const profileId of ['groq-oss-120b', 'gwdg-qwen3-30b', 'deepinfra-deepseek-v4.1-flash', 'custom-default'] as const) {
     it.each(calendarCases)(`anchors relative dates for ${profileId} at $now`, async ({ now, today, tomorrow, after }) => {
       const provider = fakeProvider(completion({ content: 'Hallo.' }));
       await runModelStep(request(profileId), {
-        env: { ...validCustomEnvironment(), GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY },
+        env: { ...validCustomEnvironment(), GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY, DEEPINFRA_API_KEY: DEEPINFRA_FAKE_KEY },
         fetch: provider.fetch,
         now: new Date(now),
       });
@@ -515,6 +516,68 @@ describe("per-attempt model budget admission", () => {
 });
 
 describe("model router", () => {
+  it("uses DeepInfra's own pinned credential and round-trips typed anny calls with accounted usage", async () => {
+    const first = fakeProvider(completion({ toolCalls: [{ id: "di-search", name: "anny_search_resources", arguments: '{"capacity":4}' }] }));
+    const second = fakeProvider(completion({ content: "Die synthetischen Ergebnisse sind ausgewertet." }));
+    const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+    let count = 0;
+    const options: RouterOptions = {
+      env: { GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY, DEEPINFRA_API_KEY: DEEPINFRA_FAKE_KEY },
+      now: NOW,
+      fetch: (input, init) => (++count === 1 ? first : second).fetch(input, init),
+      budgetAdmission: { reserve: () => Promise.resolve({ settle: usage => { settlements.push(usage); return Promise.resolve(); } }) },
+    };
+    const initial = await runModelStep(request("deepinfra-deepseek-v4.1-flash"), options);
+    expect(initial.message.toolCalls).toEqual([{ id: "di-search", name: "anny_search_resources", arguments: { capacity: 4 } }]);
+    const followUp = await runModelStep({ profileId: "deepinfra-deepseek-v4.1-flash", messages: [
+      ...request().messages, initial.message,
+      { role: "tool", toolCallId: "di-search", name: "anny_search_resources", content: '{"resources":[]}' },
+      { role: "user", content: "Fasse zusammen." },
+    ] }, options);
+    for (const call of [...first.calls, ...second.calls]) {
+      expect(call.url).toBe("https://api.deepinfra.com/v1/openai/chat/completions");
+      expect(call.init?.redirect).toBe("error");
+      expect(new Headers(call.init?.headers).get("authorization")).toBe(`Bearer ${DEEPINFRA_FAKE_KEY}`);
+      expect(providerRequest(call.init)).toMatchObject({ model: "deepseek-ai/DeepSeek-V4.1-Flash", temperature: 1, max_tokens: 1536 });
+      expect(providerRequest(call.init).reasoning_effort).toBeUndefined();
+    }
+    expect(requiredMessages(providerRequest(second.calls[0]?.init)).find(message => message.role === "tool")?.tool_call_id).toBe("di-search");
+    expect(followUp.profile.provider).toBe("deepinfra");
+    expect(settlements).toEqual([{ inputTokens: 12, outputTokens: 5 }, { inputTokens: 12, outputTokens: 5 }]);
+  });
+
+  it("disables DeepInfra without its key and enforces explicit user choice", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>();
+    await expectRouterError(runModelStep(request("deepinfra-deepseek-v4.1-flash"), {
+      env: { GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY }, fetch,
+    }), "missing_credentials");
+    const config = loadModelConfiguration({});
+    config.policy.userChoice = { enabled: false, profileIds: [] };
+    await expectRouterError(runModelStep(request("deepinfra-deepseek-v4.1-flash"), {
+      env: { DEEPINFRA_API_KEY: DEEPINFRA_FAKE_KEY, HASI_LLM_CONFIG: JSON.stringify(config) }, fetch,
+    }), "profile_not_approved");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([302, 401, 429, 500])("rejects DeepInfra HTTP %i without redirect, retry, secret disclosure or fallback", async status => {
+    const provider = fakeProvider({ error: { message: `never expose ${DEEPINFRA_FAKE_KEY}` } }, status, { location: "https://attacker.example/collect" });
+    const error = await expectRouterError(runModelStep(request("deepinfra-deepseek-v4.1-flash"), {
+      env: { GROQ_API_KEY: FAKE_KEY, DEEPINFRA_API_KEY: DEEPINFRA_FAKE_KEY }, fetch: provider.fetch,
+    }), status === 429 ? "provider_rate_limited" : "provider_unavailable");
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0]?.init?.redirect).toBe("error");
+    expect(JSON.stringify(error)).not.toContain(DEEPINFRA_FAKE_KEY);
+    expect(JSON.stringify(error)).not.toContain("never expose");
+  });
+
+  it("rejects malformed DeepInfra tool arguments before they can become an action", async () => {
+    const provider = fakeProvider(completion({ toolCalls: [{ id: "di-invalid", name: "anny_search_resources", arguments: '{"capacity":-1,"actor":"administrator"}' }] }));
+    await expectRouterError(runModelStep(request("deepinfra-deepseek-v4.1-flash"), {
+      env: { DEEPINFRA_API_KEY: DEEPINFRA_FAKE_KEY }, fetch: provider.fetch,
+    }), "invalid_model_response");
+    expect(provider.calls).toHaveLength(1);
+  });
+
   it("reports approved profiles without exposing a credential value", () => {
     expect(listModelProfiles({ GROQ_API_KEY: FAKE_KEY })).toEqual({
       configured: true,
@@ -545,6 +608,13 @@ describe("model router", () => {
           label: "GWDG SAIA · Qwen3 30B A3B Instruct 2507 · Experimental",
           modelId: "qwen3-30b-a3b-instruct-2507",
           provider: "gwdg",
+          configured: false,
+        },
+        {
+          id: "deepinfra-deepseek-v4.1-flash",
+          label: "DeepInfra · DeepSeek V4.1 Flash · Experimental",
+          modelId: "deepseek-ai/DeepSeek-V4.1-Flash",
+          provider: "deepinfra",
           configured: false,
         },
       ],
@@ -873,7 +943,7 @@ describe("model router", () => {
       fetchCalled = true;
       return Promise.reject(new Error("Network should not be called."));
     };
-    for (const profileId of ["groq-oss-120b", "gwdg-qwen3-30b", "custom-default"] as const) {
+    for (const profileId of ["groq-oss-120b", "gwdg-qwen3-30b", "deepinfra-deepseek-v4.1-flash", "custom-default"] as const) {
       for (const override of [
         { credentialRef: "env:GROQ_API_KEY" },
         { endpoint: "https://attacker.example/v1" },
@@ -885,6 +955,7 @@ describe("model router", () => {
           ...override,
         }, {
           env: {
+            DEEPINFRA_API_KEY: DEEPINFRA_FAKE_KEY,
             GWDG_API_KEY: GWDG_FAKE_KEY,
             GROQ_API_KEY: FAKE_KEY,
             CUSTOM_API_KEY: CUSTOM_FAKE_KEY,

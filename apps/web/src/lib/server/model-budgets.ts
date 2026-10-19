@@ -8,7 +8,7 @@ import type { ModelBudgetAdmission } from "./model-router";
 import { ModelRouterError } from "./model-router-error";
 
 const priceSchema = z.strictObject({
-  provider: z.enum(["groq", "gwdg", "openai", "anthropic", "custom"]),
+  provider: z.enum(["groq", "gwdg", "deepinfra", "openai", "anthropic", "custom"]),
   baseURL: z.url().max(2048),
   modelId: z.string().min(1).max(256),
   inputMicroUsdPerMillion: z.number().int().positive().max(1_000_000_000),
@@ -17,12 +17,14 @@ const priceSchema = z.strictObject({
 });
 export type ModelPrice = z.infer<typeof priceSchema>;
 
-/** Reviewed 2026-10-18. GWDG's temporary estimate was expressly approved by Fabian. */
+/** Reviewed 2026-10-19. GWDG's temporary estimate was expressly approved by Fabian. */
 const defaultPrices: readonly ModelPrice[] = [
   { provider: "groq", baseURL: "https://api.groq.com/openai/v1", modelId: "openai/gpt-oss-120b", inputMicroUsdPerMillion: 150_000, outputMicroUsdPerMillion: 600_000, basis: "published" },
   { provider: "groq", baseURL: "https://api.groq.com/openai/v1", modelId: "openai/gpt-oss-20b", inputMicroUsdPerMillion: 75_000, outputMicroUsdPerMillion: 300_000, basis: "published" },
   { provider: "groq", baseURL: "https://api.groq.com/openai/v1", modelId: "qwen/qwen3.8-27b", inputMicroUsdPerMillion: 800_000, outputMicroUsdPerMillion: 4_000_000, basis: "published" },
   { provider: "gwdg", baseURL: "https://chat-ai.academiccloud.de/v1", modelId: "qwen3-30b-a3b-instruct-2507", inputMicroUsdPerMillion: 800_000, outputMicroUsdPerMillion: 4_000_000, basis: "operator_estimate" },
+  // Published standard rates; do not depend on temporary promotional/cache discounts.
+  { provider: "deepinfra", baseURL: "https://api.deepinfra.com/v1/openai", modelId: "deepseek-ai/DeepSeek-V4.1-Flash", inputMicroUsdPerMillion: 200_000, outputMicroUsdPerMillion: 600_000, basis: "published" },
 ];
 
 export function loadModelPrices(env: Readonly<Record<string, string | undefined>>): readonly ModelPrice[] {

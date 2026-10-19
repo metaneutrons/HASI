@@ -27,6 +27,7 @@ services:
       # Optional server-only credentials; omit them to disable model calls.
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GWDG_API_KEY: ${GWDG_API_KEY:-}
+      DEEPINFRA_API_KEY: ${DEEPINFRA_API_KEY:-}
       CUSTOM_API_KEY: ${CUSTOM_API_KEY:-}
       CUSTOM_ENDPOINT: ${CUSTOM_ENDPOINT:-}
       CUSTOM_MODEL_ID: ${CUSTOM_MODEL_ID:-}

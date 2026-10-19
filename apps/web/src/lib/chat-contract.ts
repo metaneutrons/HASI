@@ -12,7 +12,7 @@ export const modelProfileSchema = z.strictObject({
   id: modelProfileIdSchema,
   label: z.string().trim().min(1).max(100),
   modelId: z.string().trim().min(1).max(128),
-  provider: z.enum(["groq", "gwdg", "custom", "openai", "anthropic"]),
+  provider: z.enum(["groq", "gwdg", "deepinfra", "custom", "openai", "anthropic"]),
   configured: z.boolean(),
   fallbackLabels: z.array(z.string().min(1).max(100)).max(64).optional(),
 });
@@ -367,7 +367,7 @@ export const modelReplySchema = z
       id: modelProfileIdSchema,
       label: nonEmptyText(100),
       modelId: nonEmptyText(128),
-      provider: z.enum(["groq", "gwdg", "custom", "openai", "anthropic"]),
+      provider: z.enum(["groq", "gwdg", "deepinfra", "custom", "openai", "anthropic"]),
     }),
     routingToken: z.string().min(1).max(2_048).optional(),
     usage: z.strictObject({
