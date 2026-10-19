@@ -1,8 +1,11 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { createServer as createHttpsServer, type ServerOptions as HttpsServerOptions } from 'node:https';
 import { randomBytes, createHash } from 'node:crypto';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 
 const MAX_REQUEST_BYTES = 16 * 1024;
+const MAX_TLS_KEY_BYTES = 64 * 1024;
+const MAX_TLS_CERT_BYTES = 256 * 1024;
 const AUTH_CODE_LIFETIME_MS = 60_000;
 
 export interface TestIdpTokenOverrides {
@@ -14,6 +17,11 @@ export interface TestIdpTokenOverrides {
 }
 
 export type TestIdpRequiredClaim = 'iss' | 'sub' | 'aud' | 'exp' | 'iat' | 'nonce';
+
+export interface TestIdpTlsOptions {
+  readonly key: Buffer | string;
+  readonly cert: Buffer | string;
+}
 
 export interface TestIdpOptions {
   /** Must be explicitly set to test. This server cannot be started in development or production. */
@@ -27,6 +35,8 @@ export interface TestIdpOptions {
   tokenOverrides?: TestIdpTokenOverrides;
   /** Test-only server fixture control for signing an ID token without one required claim. */
   omitClaim?: TestIdpRequiredClaim;
+  /** Constructor-only TLS material for trusted local HTTPS qualification. */
+  tls?: TestIdpTlsOptions;
 }
 
 export interface TestIdpServer {
@@ -54,6 +64,32 @@ function respond(response: ServerResponse, status: number, body: unknown, header
 
 function isLoopbackHost(host: string): boolean {
   return host === '127.0.0.1' || host === '::1';
+}
+
+function copyTlsMaterial(value: unknown): HttpsServerOptions {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('Test IdP TLS configuration must contain only a key and certificate.');
+  }
+  const input = value as TestIdpTlsOptions;
+  const keys = Object.keys(input);
+  if (keys.length !== 2 || !keys.includes('key') || !keys.includes('cert')) {
+    throw new TypeError('Test IdP TLS configuration must contain only a key and certificate.');
+  }
+  const copyField = (value: unknown, maxBytes: number, label: string): Buffer | string => {
+    if (typeof value === 'string') {
+      const bytes = Buffer.byteLength(value, 'utf8');
+      if (bytes === 0 || bytes > maxBytes) throw new TypeError(`Test IdP TLS ${label} is invalid.`);
+      return value;
+    }
+    if (!Buffer.isBuffer(value) || value.byteLength === 0 || value.byteLength > maxBytes) {
+      throw new TypeError(`Test IdP TLS ${label} is invalid.`);
+    }
+    return Buffer.from(value);
+  };
+  return {
+    key: copyField(input.key, MAX_TLS_KEY_BYTES, 'key'),
+    cert: copyField(input.cert, MAX_TLS_CERT_BYTES, 'certificate'),
+  };
 }
 
 function requestHostAllowed(request: IncomingMessage, bindHost: string): boolean {
@@ -90,9 +126,10 @@ export async function startTestIdp(options: TestIdpOptions): Promise<TestIdpServ
   const host = options.host ?? '127.0.0.1';
   if (!isLoopbackHost(host)) throw new TypeError('The test identity provider must bind to loopback.');
   const callback = new URL(options.redirectUri);
-  if (callback.protocol !== 'http:' || !isLoopbackHost(callback.hostname.replace(/^\[|\]$/gu, '')) || callback.username || callback.password || callback.hash) {
-    throw new TypeError('The test IdP requires an HTTP loopback callback URI.');
+  if (!['http:', 'https:'].includes(callback.protocol) || !isLoopbackHost(callback.hostname.replace(/^\[|\]$/gu, '')) || callback.username || callback.password || callback.hash) {
+    throw new TypeError('The test IdP requires an HTTP or HTTPS loopback callback URI.');
   }
+  const tls = options.tls === undefined ? undefined : copyTlsMaterial(options.tls);
 
   const { publicKey, privateKey } = await generateKeyPair('RS256', { modulusLength: 2048 });
   const keyId = randomBytes(12).toString('base64url');
@@ -100,12 +137,18 @@ export async function startTestIdp(options: TestIdpOptions): Promise<TestIdpServ
   const jwk = { ...publicJwk, kid: keyId, use: 'sig', alg: 'RS256' };
   const codes = new Map<string, AuthorizationCode>();
   const clock = options.clock ?? Date.now;
-  const server = createServer((request, response) => {
+  const handle = (request: IncomingMessage, response: ServerResponse) => {
     void handleRequest(request, response).catch(() => {
       if (!response.headersSent) respond(response, 400, { error: 'invalid_request' });
       else response.destroy();
     });
-  });
+  };
+  let server: ReturnType<typeof createServer> | ReturnType<typeof createHttpsServer>;
+  try {
+    server = tls ? createHttpsServer(tls, handle) : createServer(handle);
+  } catch {
+    throw new TypeError('The test IdP TLS configuration is invalid.');
+  }
   let issuer = '';
 
   async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
@@ -113,7 +156,7 @@ export async function startTestIdp(options: TestIdpOptions): Promise<TestIdpServ
       respond(response, 400, { error: 'invalid_request' });
       return;
     }
-    const requestUrl = new URL(request.url ?? '/', issuer || 'http://127.0.0.1');
+    const requestUrl = new URL(request.url ?? '/', issuer || `${tls ? 'https' : 'http'}://127.0.0.1`);
     if (requestUrl.pathname === '/.well-known/openid-configuration' && request.method === 'GET') {
       respond(response, 200, {
         issuer,
@@ -214,7 +257,7 @@ export async function startTestIdp(options: TestIdpOptions): Promise<TestIdpServ
     throw new Error('The local test identity provider could not bind a loopback address.');
   }
   const advertisedHost = host === '::1' ? '[::1]' : host;
-  issuer = `http://${advertisedHost}:${address.port.toString()}`;
+  issuer = `${tls ? 'https' : 'http'}://${advertisedHost}:${address.port.toString()}`;
 
   return {
     issuer,

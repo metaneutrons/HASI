@@ -411,7 +411,7 @@ Dependencies: P3/P4, P1 trust policy and a qualified isolation/runtime design.
 
 ### P6 — Independent plugin and end-to-end qualification
 
-Tracking: #49, P6-A1–P6-A4; former source record [#74](https://github.com/metaneutrons/HASI/issues/74) retains history. The current PR #78 packaging repair is a separate active blocker; passing it does not complete this qualification group.
+Tracking: #49, P6-A1–P6-A4; former source record [#74](https://github.com/metaneutrons/HASI/issues/74) retains history. PR #78 resolved the offline packaging blocker; that repair does not complete this qualification group.
 
 Dependencies: P1–P5; synthetic TestIdP and mock authorities support technical qualification. Real institutional SSO is M8.
 

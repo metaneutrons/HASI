@@ -1,9 +1,10 @@
 # Separate production runtime
 
-Implementation decision: 2026-10-18. Institutional configuration/approval remains
-M1, live source adapters M3–M5, model approval M6 and final operational acceptance
-M7. Fabian deferred final M2 acceptance/device tests; this does not turn synthetic
-identities or successful compilation into institutional acceptance.
+Implementation decision: 2026-10-18; qualification sequencing updated 2026-10-19.
+Plan V4 keeps automated/mock and technical operational qualification in M1–M7.
+Actual-device/native accessibility, institutional participants, real HsH identity,
+source/vendor conformance and protected-data approval belong to final M8.
+Synthetic identities or successful compilation do not establish institutional acceptance.
 
 ## Processes and authority
 
@@ -138,8 +139,49 @@ reviewed authoritative reconciliation callback; never rerun the write to learn
 whether it succeeded. Disconnected or revoked accounts cannot use old receipts
 to regain access. Retained chat text is not an execution authorization.
 
-Final production topology, actual isolation/recovery, browser/assistive-technology
-and institutional end-to-end qualification remain explicitly deferred/open.
+The separate Next.js/two-API identity/session topology has a runnable synthetic
+qualification below. Isolated worker execution, deployment routing/recovery,
+integrated model-budget behavior and automated browser journeys remain technical
+M2 work. Native assistive-technology and institutional end-to-end acceptance is M8.
+
+## Content-free operational events
+
+The production API emits `api.request.completed` through a trusted server-side
+sink. Fields are a fresh server UUID, registered route template (or `unmatched`),
+a bounded HTTP method, response status and monotonic elapsed milliseconds.
+Raw paths/queries, headers, cookies, bodies, claims, user identifiers, credentials
+and exception messages are excluded. Fastify request logging stays disabled.
+The frontend returns only the valid backend `x-request-id`; an incoming ID cannot
+choose it. Sink exceptions do not alter API responses or expose their payload.
+This event is operational telemetry, not a durable authorization or action receipt.
+
+## Isolated identity/topology qualification
+
+Use a disposable local PostgreSQL database named exactly `hasi_topology_test`,
+reachable through an explicit `127.0.0.1` port. The runner rejects URL query
+overrides and never uses `DATABASE_URL`. Build the production frontend first:
+
+```sh
+HASI_APP_MODE=production pnpm --filter @hasi/web exec next build
+HASI_TOPOLOGY_QUALIFY=1 pnpm exec tsx scripts/qualify-production-topology.ts
+```
+
+Set `TEST_DATABASE_URL` through the test environment; never put a real password in
+shell arguments. The runner starts the actual Next.js handler and two distinct
+API processes, verifies HTTPS using an ephemeral local certificate, and runs the
+loopback-only Test-IdP with authorization code/PKCE. All child environments are
+allowlisted; no model or plugin credentials are inherited. Nothing is installed
+in the system trust store and TLS verification is never disabled.
+
+Checks include cross-replica OIDC transactions and sessions, secure host-only
+cookies, forged identity/Host/origin and replay denial, concurrent session reads,
+an exact restarted-replica session check, current authority downgrade and logout
+across replicas. Failed certificate trust is a counter-probe with the expected
+TLS error. The runner removes its processes, listeners and temporary keys; its
+isolated database is caller-owned and must be discarded after the run.
+It makes zero model calls and does not qualify a plugin worker, a model budget,
+native browser behavior or institutional access. Measured latency is descriptive,
+not an agreed performance threshold. See the [dated evidence](../verification/2026-10-19/m2-runtime.md).
 
 ## Protected knowledge workspaces
 
@@ -154,5 +196,5 @@ In OIDC mode the frontend requires durable `DATABASE_URL` workspace storage and
 `/api/chat/workspace` authenticates, checks origins, bounds input, sanitizes
 source/derived context and uses subject-bound signed PostgreSQL CAS records.
 The same reference resolution is repeated before model dispatch and on load.
-The public Vercel fixture demo continues its separate local-history behavior;
+The public Coolify fixture demo continues its separate local-history behavior;
 adding a provider key never enables institutional access or processing approval.

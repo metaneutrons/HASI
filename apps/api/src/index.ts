@@ -11,6 +11,7 @@ import { actionPreviewSchema, actionResolutionSchema, type ActionPolicy, type Ac
 import type { KnowledgeContextStore } from './knowledge-context.js';
 import { PluginAccountError } from './plugin-accounts.js';
 import { SERVICE_IT_DEMO_ORIGIN } from '@hasi/demo-fixtures/knowledge-catalog';
+import { registerOperationalEventHooks, type OperationalEventSink } from './operational-events.js';
 
 export { PluginRegistry, compatibleUpdate, RequestError } from './registry.js';
 export { OidcIdentityProvider, OidcAuthenticationError } from './oidc.js';
@@ -29,6 +30,7 @@ export { createPluginDeploymentGateway } from './plugin-deployment-proxy.js';
 export { createDockerPluginDriver } from './docker-plugin-driver.js';
 export { PluginDeploymentCoordinator, verifyPluginRelease } from './plugin-artifacts.js';
 export { assertMockMode, MockIdentityProvider, withDemoPluginClaims } from './identity.js';
+export { createConsoleOperationalEventSink, operationalEventName, operationalRequestMethods, type OperationalEventSink, type OperationalRequestEvent, type OperationalRequestMethod } from './operational-events.js';
 const ANNY = 'de.hsh.hasi.anny';
 const annyId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/);
 const time = z.iso.datetime({ offset: true });
@@ -45,12 +47,14 @@ export interface ApiOptions {
   knowledgeOriginalOrigins?: Readonly<Record<'service_it' | 'intranet', string>>;
   knowledgeDemoServiceItOrigin?: string;
   secureCookies?: boolean; sessionCookieName?: string; actionPolicies?: Readonly<Record<string, ActionPolicy>>;
+  operationalEventSink?: OperationalEventSink;
 }
 
 export async function createApi(options: ApiOptions) {
   if (options.knowledgeDemoServiceItOrigin !== undefined && (options.mode === 'production'
     || options.knowledgeDemoServiceItOrigin !== SERVICE_IT_DEMO_ORIGIN)) throw new Error('Unapproved synthetic source origin.');
   const app = Fastify({ logger: false, bodyLimit: 65536 });
+  registerOperationalEventHooks(app, options.operationalEventSink);
   options.registry.configureCatalog(options.pluginCatalog ?? []);
   await options.registry.restoreConnections();
   app.addHook('onClose', async () => { await options.registry.close(); });
