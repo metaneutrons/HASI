@@ -1,0 +1,22 @@
+{
+  "qualification": "public-synthetic-demo-knowledge",
+  "qualified": true,
+  "expectedRevision": "c8d1631747d4882fd993827db90c5011f6eb4c49",
+  "checks": {
+    "separateSubjectsInSameWorkspace": true,
+    "germanEnglishDocumentsAndFreshnessFields": true,
+    "authorizedSearchAndCitations": true,
+    "sourceAudienceDenials": true,
+    "subjectBoundContexts": true,
+    "wrongRevisionDenied": true,
+    "reviewedHtmlSourceLink": true,
+    "exactRevisionStable": true
+  },
+  "requests": 23,
+  "modelCalls": 0,
+  "cleanupVerified": true,
+  "retainedState": "Synthetic workspace/context records retain the normal demo TTL. Login/logout use the deployed session store.",
+  "sessionCleanup": "Observed sessions were authenticated before logout and rejected afterward.",
+  "institutionalAcceptance": false,
+  "signedInstitutionalSourceAcceptance": false
+}
