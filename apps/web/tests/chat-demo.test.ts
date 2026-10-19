@@ -51,6 +51,32 @@ describe("bounded German chat demo parser", () => {
     expect(classifyIntent('Beides passt, keine Präferenz.', true)).toBe('rooms');
     expect(classifyIntent('Mir egal.', false)).toBe('help');
   });
+  it('treats a new-search prefix as control text while preserving resource-name keywords', () => {
+    const now = new Date('2026-10-19T08:00:00.000Z');
+    const request = mergeRoomRequest(
+      'Neue Raumsuche: Ich brauche morgen ein Einzelbüro im Gebäude 1J von 10 bis 16 Uhr.',
+      {},
+      now,
+    );
+    expect(request).toMatchObject({
+      kind: 'workplace',
+      officeType: 'single',
+      date: '2026-10-20',
+      time: '10:00',
+      durationMinutes: 360,
+      location: '1J',
+    });
+    expect(request.query).toBeUndefined();
+    expect(matchingResources(hshDemoCatalog.resources, request)).toHaveLength(7);
+
+    const namedRequest = mergeRoomRequest(
+      'Neue Raumsuche: Ich brauche morgen ein Einzelbüro, das Flex-Büro Grace Hopper, im Gebäude 1J von 10 bis 16 Uhr.',
+      {},
+      now,
+    );
+    expect(namedRequest.query).toBe('grace hopper');
+    expect(matchingResources(hshDemoCatalog.resources, namedRequest).map(({ id }) => id)).toEqual(['190449']);
+  });
   it('distinguishes one workplace in an office from rooms with person capacities', () => {
     const resources: Resource[] = [
       { ...required(rooms[0]), id: 'desk', name: 'Platz 1', kind: 'workplace', parentId: 'office', parentName: 'Büro Amrum', capacity: null },
