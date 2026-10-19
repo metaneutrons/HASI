@@ -175,6 +175,7 @@ function harness(handler?: (request: Harness['calls'][number], index: number) =>
 describe('Coolify deployment controller gates', () => {
   it('waits without reading or writing the journal when maintenance holds the shared lock', async () => {
     const test = harness();
+    if (typeof process.getuid !== 'function') throw new Error('POSIX identity is required for storage lock qualification.');
     const uid = process.getuid();
     const directory = await mkdtemp(join(await realpath(tmpdir()), 'hasi-controller-lock-'));
     const lockPath = join(directory, 'storage-maintenance.lock');
@@ -193,6 +194,7 @@ describe('Coolify deployment controller gates', () => {
   });
 
   it('fails closed on a stale or unsafe lock file instead of stealing it', async () => {
+    if (typeof process.getuid !== 'function') throw new Error('POSIX identity is required for storage lock qualification.');
     const uid = process.getuid();
     const directory = await mkdtemp(join(await realpath(tmpdir()), 'hasi-controller-stale-lock-'));
     const stalePath = join(directory, 'stale.lock');
