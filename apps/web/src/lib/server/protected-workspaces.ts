@@ -10,6 +10,7 @@ import {
   type ChatMessage,
   type ChatWorkspace,
 } from "../chat-sessions";
+import type { NativeHistoryAccess, NativeHistoryResolver } from "./native-history";
 import { knowledgeDocumentSchema, type KnowledgeDocument } from "../knowledge";
 import type { KnowledgeEvidence, WireMessage } from "../chat-contract";
 import {
@@ -51,6 +52,8 @@ export interface ProtectedWorkspaceOptions {
   readonly secret: string;
   readonly resolve: KnowledgeContextResolver;
   readonly clock?: () => number;
+  readonly resolveNative?: NativeHistoryResolver;
+  readonly authority?: () => Promise<string>;
 }
 
 export class ProtectedWorkspaceError extends Error {
@@ -151,15 +154,13 @@ function sanitizeDisplayMessages(
   messages: readonly ChatMessage[],
   history: readonly WireMessage[],
   contexts: ReadonlyMap<string, SafeResolvedContext>,
+  native: NativeHistoryAccess,
 ): ChatMessage[] {
   const validWireMessages = validModelWireMessages(history);
   return messages.map((message) => {
     if (message.role === "user") {
-      const safeMessage = { ...message };
-      delete safeMessage.sources;
-      delete safeMessage.sourceContextId;
-      delete safeMessage.evidence;
-      return safeMessage;
+      return { id: message.id, role: "user", text: message.text,
+        ...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }) };
     }
 
     const contextId = message.sourceContextId;
@@ -191,7 +192,36 @@ function sanitizeDisplayMessages(
       };
     }
     if (message.evidence !== undefined) return unavailableMessage(message);
-    if (isNativeHelperCard(message)) return message;
+    if (isNativeHelperCard(message)) {
+      const base = { id: message.id, role: "assistant" as const,
+        ...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }) };
+      if (message.rooms !== undefined) {
+        const resources = new Map(native.resources.map(resource => [resource.id, resource]));
+        const rooms = message.rooms.flatMap(room => {
+          const resource = resources.get(room.resource.id);
+          return resource ? [{ resource, intervals: [], checked: false,
+            ...(room.requestedStartDate ? { requestedStartDate: room.requestedStartDate } : {}),
+            ...(room.requestedEndDate ? { requestedEndDate: room.requestedEndDate } : {}) }] : [];
+        });
+        return rooms.length ? { ...base, tool: "anny · Frühere Suchergebnisse", rooms,
+          text: "Aktuell freigegebene Ressourcen aus deiner früheren Suche. Prüfe die Verfügbarkeit erneut." }
+          : unavailableMessage(message);
+      }
+      if (message.bookings !== undefined) {
+        const ids = new Set(message.bookings.map(booking => booking.id));
+        const bookings = native.bookings.filter(booking => ids.has(booking.id)).slice(0, 10);
+        return bookings.length ? { ...base, tool: "anny · Eigene Buchungen", bookings, text: "Aktueller Stand deiner früher angezeigten Buchungen." }
+          : unavailableMessage(message);
+      }
+      if (message.proposal !== undefined) {
+        const proposal = native.proposals.get(message.proposal.id);
+        return proposal ? { ...base, proposal, tool: "Aktion · Aktueller Beleg",
+          text: proposal.status === "pending" ? "Prüfe den aktuellen Vorschlag. Nur deine separate Bestätigung kann die Aktion ausführen."
+            : "Aktueller Stand der früher vorgeschlagenen Aktion." } : unavailableMessage(message);
+      }
+      // Browser-authored labels, confirmations and free-form tool text are not evidence.
+      return unavailableMessage(message);
+    }
     return unavailableMessage(message);
   });
 }
@@ -314,6 +344,18 @@ export class ProtectedWorkspaceStore {
 
   private async sanitize(workspace: ChatWorkspace): Promise<ChatWorkspace> {
     const sessions = [];
+    let native: NativeHistoryAccess = { resources: [], bookings: [], proposals: new Map() };
+    let authority: string | undefined;
+    if (this.options.authority) {
+      try { authority = await this.options.authority(); } catch { authority = ""; }
+      if (!authority || !/^[a-f0-9]{64}$/u.test(authority)) {
+        authority = "";
+        native = { resources: [], bookings: [], proposals: new Map() };
+      }
+    }
+    if (!this.options.authority || authority) {
+      try { native = await this.options.resolveNative?.(workspace) ?? native; } catch { /* Fail closed. */ }
+    }
     for (const session of workspace.sessions) {
       const snapshot = session.snapshot;
       const contextIds = historyContextIds(snapshot.history, snapshot.messages);
@@ -340,6 +382,7 @@ export class ProtectedWorkspaceStore {
           { conversationId: session.id, profileId, messages: snapshot.history },
           this.signer,
           (requestedIds) => Promise.resolve(requestedIds.map((contextId) => resolved.get(contextId) ?? { contextId, status: "unavailable" })),
+          authority,
         );
         history = rebuilt.request.messages;
       } catch {
@@ -350,9 +393,15 @@ export class ProtectedWorkspaceStore {
         snapshot: {
           ...snapshot,
           history,
-          messages: sanitizeDisplayMessages(snapshot.messages, history, resolved),
+          messages: sanitizeDisplayMessages(snapshot.messages, history, resolved, native),
+          chosenRoom: native.resources.find(resource => resource.id === snapshot.chosenRoom?.id) ?? null,
+          activeProposal: snapshot.activeProposal && native.proposals.has(snapshot.activeProposal) ? snapshot.activeProposal : null,
         },
       });
+    }
+    if (this.options.authority && authority) {
+      // If authority moved while rebuilding cards/sources, do not return a mixed snapshot.
+      if (await this.options.authority() !== authority) throw new ProtectedWorkspaceError();
     }
     return parseChatWorkspace({ ...workspace, sessions }, this.options.ownerId);
   }

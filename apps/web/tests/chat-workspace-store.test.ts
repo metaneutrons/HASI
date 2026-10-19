@@ -230,3 +230,22 @@ describe("mounted chat workspace isolation", () => {
     expect(storage.getItem(chatStorageKey("student"))).toBe(prior);
   });
 });
+
+
+it("redacts cached native cards and selected targets when protected persistence loses authority", () => {
+  const store = createChatWorkspaceStore("protected-owner", memory());
+  const session = required(store.getSnapshot().workspace.sessions[0]);
+  const resource = { id: "desk", serviceId: "service", name: "DENIED CACHED DESK", description: "", location: "1J", capacity: 1, features: [] };
+  store.update(session.id, { ...session.snapshot, input: "Unsent draft", chosenRoom: resource, activeProposal: "old-proposal", activeResult: "old-result",
+    messages: [{ id: "user", role: "user", text: "My question", rooms: [{ resource, intervals: [], checked: true }] }, { id: "native", role: "assistant", text: "Old native result", tool: "anny · Raumsuche", rooms: [{ resource, intervals: [], checked: false }] }] }, false);
+  store.redactProtectedContent("Authority unavailable");
+  const snapshot = required(store.getSnapshot().workspace.sessions[0]).snapshot;
+  expect(snapshot.chosenRoom).toBeNull();
+  expect(snapshot.activeProposal).toBeNull();
+  expect(snapshot.activeResult).toBeNull();
+  expect(snapshot.input).toBe("Unsent draft");
+  expect(snapshot.messages[0]).toEqual({ id: "user", role: "user", text: "My question" });
+  expect(snapshot.messages[1]?.text).toContain("nicht mehr verfügbar");
+  expect(JSON.stringify(snapshot)).not.toContain("DENIED CACHED DESK");
+  store.flush();
+});

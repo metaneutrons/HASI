@@ -106,12 +106,8 @@ export function PluginResultApp({ pluginId, presentationId, initialResult }: Plu
     }
   };
 
-  const initialToolResult = initialResult && isBoundedPluginAppResult(initialResult)
-    ? {
-        content: [{ type: 'text' as const, text: 'Vorhandene Ergebnisse.' }],
-        structuredContent: initialResult,
-      }
-    : undefined;
+  // Cached display bodies carry no current account/resource authority. The
+  // view performs fresh typed reads; the host separately rebuilds native cards.
   const initialToolArguments = initialResult
     ? initialPluginAppArguments(initialResult)
     : undefined;
@@ -130,7 +126,7 @@ export function PluginResultApp({ pluginId, presentationId, initialResult }: Plu
         {loadState === 'error' && (
           <div role="alert" className="space-y-3 text-sm">
             <p>{loadError}</p>
-            <NativeResultFallback result={initialResult} />
+            <p className="text-[var(--muted)]">Bitte nutze die aktuell freigegebenen Ergebniskarten im Chat oder suche erneut.</p>
             <button type="button" onClick={() => void loadResource()} className="min-h-11 rounded-lg border border-[var(--line-strong)] px-3 font-semibold hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">
               Erneut versuchen
             </button>
@@ -147,12 +143,7 @@ export function PluginResultApp({ pluginId, presentationId, initialResult }: Plu
               allowedToolNames={resource.allowedToolNames}
               toolGrants={resource.tools}
               onToolCall={handleAppToolCall}
-              {...(initialToolResult ? { initialToolResult } : {})}
             />
-            <details className="rounded-lg bg-[var(--surface-soft)] px-3 py-2 text-sm">
-              <summary className="cursor-pointer font-medium">Vorhandene native Ergebnisse anzeigen</summary>
-              <div className="pt-2"><NativeResultFallback result={initialResult} /></div>
-            </details>
           </div>
         )}
       </div>
@@ -185,23 +176,6 @@ function parseApprovedResource(value: unknown): ApprovedResource | null {
   return allowedToolNames.length > 0 ? { resourceHtml: html, resourceSha256: sha256, csp, tools, allowedToolNames } : null;
 }
 
-function NativeResultFallback({ result }: { result: PluginAppInitialResult | undefined }) {
-  const resources = Array.isArray(result?.resources) ? result.resources.slice(0, 12).filter(isPlainRecord) : [];
-  if (resources.length === 0) return <p className="text-[var(--muted)]">Die bisherigen nativen Ergebnisse im Chat bleiben verfügbar.</p>;
-  return (
-    <section aria-label="Vorhandene native Ergebnisse" className="rounded-lg bg-[var(--surface-soft)] p-3">
-      <p className="mb-2 font-semibold">Vorhandene Ergebnisse</p>
-      <ul className="space-y-2">
-        {resources.map((item, index) => {
-          const title = safeText(item.name, 'Ressource');
-          const location = safeText(item.location, '');
-          return <li key={`${title}-${String(index)}`}><span className="font-medium">{title}</span>{location ? <span className="text-[var(--muted)]"> · {location}</span> : null}</li>;
-        })}
-      </ul>
-    </section>
-  );
-}
-
 function safeLoadError(error: unknown): string {
   const status = error instanceof Error && 'status' in error ? error.status : undefined;
   if (status === 401) return 'Bitte melde dich an, um die Plugin-Ansicht zu öffnen.';
@@ -210,17 +184,12 @@ function safeLoadError(error: unknown): string {
   return 'Die Plugin-Ansicht ist momentan nicht verfügbar.';
 }
 
-function safeText(value: unknown, fallback: string): string {
-  if (typeof value !== 'string') return fallback;
-  const text = value.trim();
-  return text.length > 240 ? `${text.slice(0, 237)}…` : text || fallback;
-}
-
 function initialPluginAppArguments(result: PluginAppInitialResult): Record<string, unknown> | undefined {
   const arguments_: Record<string, unknown> = {};
   if (isOffsetDateTime(result.requestedStartDate)) arguments_.requestedStartDate = result.requestedStartDate;
   if (isOffsetDateTime(result.requestedEndDate)) arguments_.requestedEndDate = result.requestedEndDate;
-  if (typeof result.availabilityChecked === 'boolean') arguments_.chatAvailabilityChecked = result.availabilityChecked;
+  // Earlier availability is never a current availability assertion.
+  arguments_.chatAvailabilityChecked = false;
   return Object.keys(arguments_).length > 0 ? arguments_ : undefined;
 }
 

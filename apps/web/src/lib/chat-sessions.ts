@@ -112,7 +112,7 @@ const plainTextSchema = (maximum: number) =>
     "Text contains unsupported control characters.",
   );
 
-const resourceSchema = z.strictObject({
+export const resourceSchema = z.strictObject({
   id: idSchema,
   name: plainTextSchema(160),
   description: plainTextSchema(320),
@@ -134,7 +134,7 @@ const intervalSchema = z
   })
   .refine(({ startDate, endDate }) => Date.parse(endDate) > Date.parse(startDate));
 
-const proposalSchema = z
+export const proposalSchema = z
   .strictObject({
     preview: actionPreviewSchema.optional(),
     action: z.enum(["book", "cancel_booking"]).optional(),
@@ -176,7 +176,7 @@ const pluginToolProposalSchema = z.strictObject({
   expiresAt: offsetDateTimeSchema,
 });
 
-const bookingSchema = z
+export const bookingSchema = z
   .strictObject({
     id: idSchema,
     resourceName: plainTextSchema(160),
@@ -447,7 +447,7 @@ function normalizeRoomRequest(request: z.infer<typeof roomRequestSchema>): RoomR
   };
 }
 
-function normalizeResource(resource: z.infer<typeof resourceSchema>): Resource {
+export function normalizeResource(resource: z.infer<typeof resourceSchema>): Resource {
   return {
     id: resource.id,
     name: resource.name,

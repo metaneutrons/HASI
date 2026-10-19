@@ -56,12 +56,6 @@ export function browserChatStorage(): StorageLike | undefined {
   catch { return undefined; }
 }
 
-function isNativeHelper(message: ChatWorkspace["sessions"][number]["snapshot"]["messages"][number]): boolean {
-  return message.role === "assistant"
-    && message.sources === undefined && message.sourceContextId === undefined && message.evidence === undefined
-    && (message.proposal !== undefined || message.rooms !== undefined || message.bookings !== undefined
-      || message.tool?.startsWith("anny ·") === true || message.tool?.startsWith("Plugin ·") === true);
-}
 
 function preserveDrafts(remote: ChatWorkspace, local: ChatWorkspace, ownerId: string): ChatWorkspace {
   const localById = new Map(local.sessions.map(session => [session.id, session]));
@@ -138,8 +132,12 @@ export function createChatWorkspaceStore(
       snapshot: {
         ...session.snapshot,
         history: [],
+        chosenRoom: null,
+        activeProposal: null,
+        activeResult: null,
         messages: session.snapshot.messages.map(item => {
-          if (item.role !== "assistant" || isNativeHelper(item)) return item;
+          if (item.role !== "assistant") return { id: item.id, role: "user" as const, text: item.text,
+            ...(item.timestamp === undefined ? {} : { timestamp: item.timestamp }) };
           return {
             id: item.id,
             role: "assistant" as const,

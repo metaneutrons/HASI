@@ -4,6 +4,8 @@ import { chatAccess } from "@/lib/server/chat-access";
 import { productionWebConfiguration } from "@/lib/server/core-api";
 import { productionKnowledgeResolver } from "@/lib/server/knowledge-context";
 import { ProtectedWorkspaceConflict, ProtectedWorkspaceStore } from "@/lib/server/protected-workspaces";
+import { productionNativeHistoryResolver } from "@/lib/server/native-history";
+import { productionHistoryAuthority } from "@/lib/server/history-authority";
 import { getServerChatStorage } from "@/lib/server/server-chat-storage";
 
 export const runtime = "nodejs";
@@ -94,6 +96,8 @@ function createWorkspaceService(access: ProductionChatAccess) {
     scope: access.production.scope,
     secret: access.production.secret,
     resolve: productionKnowledgeResolver(access.request),
+    resolveNative: productionNativeHistoryResolver(access.request),
+    authority: () => productionHistoryAuthority(access.request),
   }));
 }
 
