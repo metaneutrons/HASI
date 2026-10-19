@@ -1,4 +1,4 @@
-import { createHash, createPublicKey, sign, verify, type KeyObject } from 'node:crypto';
+import { createHash, createPublicKey, randomUUID, sign, verify, type KeyObject } from 'node:crypto';
 import { Client, SdkHttpError, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
@@ -83,6 +83,7 @@ export interface PluginRegistryOptions {
 
 interface InstalledPlugin {
   instanceId: string;
+  lifecycleRevision?: string;
   fetch: typeof fetch;
   settings?: Awaited<ReturnType<PluginSettingsStore['binding']>>;
   registration: Registration;
@@ -98,6 +99,7 @@ interface InstalledPlugin {
 
 interface UnsignedPluginState {
   schemaVersion: 1;
+  lifecycleRevision?: string;
   scope: string;
   pluginId: string;
   expectedManifestDigest: string;
@@ -128,6 +130,7 @@ const DEFAULT_SCOPE = 'default';
 const DEFAULT_CANDIDATE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const persistedStateSchema = z.strictObject({
   schemaVersion: z.literal(1),
+  lifecycleRevision: z.uuid().optional(),
   scope: z.string().min(1).max(256),
   pluginId: z.string().min(1).max(256),
   expectedManifestDigest: z.string().regex(/^[a-f0-9]{64}$/),
@@ -262,6 +265,7 @@ export class PluginRegistry {
       initialManifest: state.initialManifest,
       manifest: state.manifest,
       enabled: state.enabled,
+      ...(state.lifecycleRevision ? { lifecycleRevision: state.lifecycleRevision } : {}),
       ...(state.candidate && state.candidateBaseDigest !== undefined && state.candidateExpiresAt !== undefined ? {
         candidate: state.candidate,
         candidateBaseDigest: state.candidateBaseDigest,
@@ -279,6 +283,7 @@ export class PluginRegistry {
       initialManifest: state.initialManifest,
       manifest: state.manifest,
       enabled: state.enabled,
+      ...(state.lifecycleRevision ? { lifecycleRevision: state.lifecycleRevision } : {}),
     };
   }
 
@@ -308,6 +313,7 @@ export class PluginRegistry {
         initialManifest,
         manifest,
         enabled: parsed.enabled,
+        ...(parsed.lifecycleRevision ? { lifecycleRevision: parsed.lifecycleRevision } : {}),
         ...(candidate ? { candidate } : {}),
         ...(parsed.candidateBaseDigest ? { candidateBaseDigest: parsed.candidateBaseDigest } : {}),
         ...(parsed.candidateExpiresAt !== undefined ? { candidateExpiresAt: parsed.candidateExpiresAt } : {}),
@@ -341,6 +347,7 @@ export class PluginRegistry {
       initialManifest,
       manifest: initialManifest,
       enabled: true,
+      lifecycleRevision: randomUUID(),
     };
     return this.signState(state);
   }
@@ -362,6 +369,7 @@ export class PluginRegistry {
       initialManifest: plugin.initialManifest,
       manifest: plugin.manifest,
       enabled: plugin.enabled,
+      ...(plugin.lifecycleRevision ? { lifecycleRevision: plugin.lifecycleRevision } : {}),
       ...(candidateState ? {
         candidate: candidateState.candidate,
         candidateBaseDigest: candidateState.candidateBaseDigest,
@@ -375,6 +383,8 @@ export class PluginRegistry {
     plugin.initialManifest = state.initialManifest;
     plugin.manifest = state.manifest;
     plugin.enabled = state.enabled;
+    if (state.lifecycleRevision) plugin.lifecycleRevision = state.lifecycleRevision;
+    else delete plugin.lifecycleRevision;
     if (state.candidate) {
       plugin.candidate = state.candidate;
       if (state.candidateBaseDigest === undefined || state.candidateExpiresAt === undefined) throw new RequestError(409, 'Der gespeicherte Plugin-Zustand ist ungültig oder wurde verändert.');
@@ -459,7 +469,7 @@ export class PluginRegistry {
     if (!this.store) {
       const current = this.unsignedState(this.stateFromPlugin(plugin));
       const updated = update(current);
-      this.applyState(plugin, this.signState(updated.state));
+      this.applyState(plugin, this.signState(this.lifecycleState(current, updated.state)));
       return updated.result;
     }
     const stored = await updateJson<PersistedPluginState, { state: PersistedPluginState; result: R }>(
@@ -469,12 +479,23 @@ export class PluginRegistry {
       value => {
         const current = this.validatePersistedState(value, plugin.registration, plugin.instanceId);
         const updated = update(this.unsignedState(current));
-        const signed = this.signState(updated.state);
+        const signed = this.signState(this.lifecycleState(current, updated.state));
         return { value: signed, result: { state: signed, result: updated.result } };
       },
     );
     this.applyState(plugin, this.validatePersistedState(stored.state, plugin.registration, plugin.instanceId));
     return stored.result;
+  }
+
+  /** Active transitions cannot resurrect a proposal after disable/enable or A/B/A.
+   * Candidate discovery is deliberately outside this epoch. Existing signed
+   * records without an epoch remain verifiable until their first transition. */
+  private lifecycleState(current: UnsignedPluginState, updated: UnsignedPluginState): UnsignedPluginState {
+    const next = { ...updated };
+    delete next.lifecycleRevision;
+    if (current.enabled !== next.enabled || digest(current.manifest) !== digest(next.manifest)) next.lifecycleRevision = randomUUID();
+    else if (current.lifecycleRevision) next.lifecycleRevision = current.lifecycleRevision;
+    return next;
   }
 
   async install(registration: Registration): Promise<void> {
@@ -534,6 +555,7 @@ export class PluginRegistry {
 
     const plugin: InstalledPlugin = {
       instanceId, fetch: this.transport(registration), registration,
+      ...(state.lifecycleRevision ? { lifecycleRevision: state.lifecycleRevision } : {}),
       initialManifest: state.initialManifest,
       manifest: state.manifest,
       enabled: state.enabled,
@@ -660,7 +682,7 @@ export class PluginRegistry {
     }
   }
   private bindingFor(plugin: InstalledPlugin): string {
-    return digest({ instanceId: plugin.instanceId, manifest: digest(plugin.manifest), configuration: plugin.settings?.digest ?? null, enabled: plugin.enabled, endpoint: this.endpoint(plugin.registration).href, credentialRevision: plugin.registration.credentialRevision ?? 'legacy-v1', network: plugin.registration.allowedPrivateCidrs ?? [], sourcePolicy: plugin.registration.sourcePolicy ?? this.defaultSourcePolicy ?? null, ...(plugin.managedDeploymentRevision ? { deployment: plugin.managedDeploymentRevision } : {}) });
+    return digest({ instanceId: plugin.instanceId, lifecycleRevision: plugin.lifecycleRevision ?? null, manifest: digest(plugin.manifest), configuration: plugin.settings?.digest ?? null, enabled: plugin.enabled, endpoint: this.endpoint(plugin.registration).href, credentialRevision: plugin.registration.credentialRevision ?? 'legacy-v1', network: plugin.registration.allowedPrivateCidrs ?? [], sourcePolicy: plugin.registration.sourcePolicy ?? this.defaultSourcePolicy ?? null, ...(plugin.managedDeploymentRevision ? { deployment: plugin.managedDeploymentRevision } : {}) });
   }
   async binding(id: string) { return this.bindingFor(await this.refresh(this.get(id))); }
   async authorityBinding(id: string, actor: ActorContext) {
