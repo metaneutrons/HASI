@@ -35,6 +35,16 @@ function loggedJson(value: unknown): unknown {
 }
 
 describe("public chat admission and error boundary", () => {
+  it("reports missing service authority without blaming the provider or exposing internal details", async () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const response = await handleChatPost(request(), { run: () => Promise.reject(new ModelRouterError("required_tools_unavailable", "private account projection")), admit: () => Promise.resolve(true), allowedOrigins: [origin] });
+      expect(response.status).toBe(409);
+      const payload = await parseJson(response, errorResponseSchema);
+      expect(payload.error).toContain("Verbundene Dienste");
+      expect(payload.error).not.toMatch(/Modellanbieter|private account/u);
+    } finally { warning.mockRestore(); }
+  });
   it("rejects cross-origin requests and privileged message roles before any provider or limiter call", async () => {
     const run = vi.fn(() => Promise.resolve(reply));
     const admit = vi.fn(() => Promise.resolve(true));

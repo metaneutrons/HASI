@@ -84,6 +84,9 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
     if (cause instanceof ModelRouterError && cause.code === "context_unavailable") {
       return error("Die Quellenrechte oder Dokumentfassungen haben sich geändert oder können nicht geprüft werden. Bitte suche erneut. Eine Antwort ohne aktuelle Quellenfreigabe wird nicht angezeigt.", 409);
     }
+    if (cause instanceof ModelRouterError && cause.code === "required_tools_unavailable") {
+      return Response.json({ code: "required_tools_unavailable", error: "Der benötigte Dienst ist für dein Konto derzeit nicht freigegeben. Prüfe die Verbindung unter „Verbundene Dienste“. Eine interne Ressourcen-ID ist dafür nicht nötig." }, { status: 409, headers });
+    }
     if (cause instanceof ModelRouterError && cause.code === "profile_not_approved") {
       return error("Das gewählte Modell oder die Routing-Freigabe ist für diese Anfrage nicht zugelassen. Beginne einen neuen Chat mit dem konfigurierten Standardmodell.", 403);
     }

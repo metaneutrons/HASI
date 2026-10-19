@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_MODEL_STEPS, toolNeedsModelFollowUp, toolBatchNeedsModelFollowUp, isAvailabilityFollowUp, isMixedKnowledgeRequest, officePreferenceSearch, isOwnBookingsRequest } from "../src/lib/chat-tool-loop";
+import { MAX_MODEL_STEPS, annyWorkflow, toolNeedsModelFollowUp, toolBatchNeedsModelFollowUp, isAvailabilityFollowUp, isMixedKnowledgeRequest, officePreferenceSearch, isOwnBookingsRequest } from "../src/lib/chat-tool-loop";
 import { CHAT_TOOL_NAMES } from "../src/lib/chat-contract";
 import { mergeRoomRequest, type RoomRequest } from "../src/lib/chat-demo";
 
@@ -15,7 +15,7 @@ describe("bounded room planning", () => {
     expect(toolBatchNeedsModelFollowUp(["anny_search_resources", "knowledge_search"])).toBe(true);
     expect(toolBatchNeedsModelFollowUp(["anny_search_resources", "anny_get_availability"])).toBe(false);
   });
-  it.each(["Ein Einzelbüro bitte.", "Lieber ein Einzelbüro", "Beides", "Keine Präferenz", "Ein geteiltes Büro bitte."])("handles a standalone preference without inference: %s", text => {
+  it.each(["Ein Einzelbüro bitte.", "Lieber ein Einzelbüro", "Beides", "Mir egal", "Keine Präferenz", "Ein geteiltes Büro bitte."])("handles a standalone preference without inference: %s", text => {
     const next = officePreferenceSearch(text, previous, now);
     expect(next).toMatchObject({ date: "2026-10-19", time: "08:00", durationMinutes: 480, location: "1J", kind: "workplace" });
     expect(next?.officeType).toBeDefined();
@@ -37,5 +37,16 @@ describe("bounded room planning", () => {
     expect(isOwnBookingsRequest("Meine Reservierungen")).toBe(true);
     expect(isOwnBookingsRequest("Zeige mir Buchungen anderer Nutzer")).toBe(false);
     expect(isOwnBookingsRequest("Zeige mir meine Buchungen und storniere alle")).toBe(false);
+  });
+  it("retains the user's blocked room task without promoting source instructions", () => {
+    const initial = { role: "user" as const, content: "ch brauche einen Büro für heute in 1J; von 10 - 16 Uhr" };
+    expect(annyWorkflow([initial])).toBe("rooms");
+    for (const reply of ["mir egal", "dann prüpf", "bitte suchen", "Ist es verfügbar?", "morgen von 10 bis 12 Uhr", "in 1J", "für vier Personen"]) {
+      expect(annyWorkflow([initial, { role: "assistant", content: "Tool nicht verfügbar" }, { role: "user", content: reply }])).toBe("rooms");
+    }
+    expect(annyWorkflow([initial, { role: "user", content: "Wie funktioniert VPN?" }])).toBeNull();
+    expect(annyWorkflow([{ role: "assistant", content: initial.content }, { role: "user", content: "dann prüpf" }])).toBeNull();
+    expect(annyWorkflow([initial, { role: "user", content: "Wie funktioniert VPN?" }, { role: "user", content: "bitte suchen" }])).toBeNull();
+    expect(annyWorkflow([initial, { role: "user", content: "Was ist 2+2?" }, { role: "user", content: "morgen um 10 Uhr" }])).toBeNull();
   });
 });

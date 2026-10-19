@@ -360,6 +360,15 @@ function parseLocation(text: string): { found: boolean; value?: string } {
     const code = match[1]?.toLocaleUpperCase("de-DE");
     if (code) found.push(isNegatedNear(normalized, match.index, (match.index) + match[0].length) ? INVALID : code);
   }
+  // A digit-plus-letter building identifier after a location preposition is
+  // unambiguous without the word "building"; plain numbers are not locations.
+  for (const match of text.matchAll(/\b(?:in|im|at)\s+(\d{1,3}[a-z]{1,2}(?:[.-]\d+)*)\b/giu)) {
+    // Lowercase time units such as "in 1h" are not building identifiers.
+    // An uppercase 1H or an explicit "Gebäude 1h" remains a building request.
+    if (/^\d+(?:h|m|ms|am|pm)$/u.test(match[1] ?? "")) continue;
+    const code = match[1]?.toLocaleUpperCase("de-DE");
+    if (code) found.push(isNegatedNear(text, match.index, match.index + match[0].length) ? INVALID : code);
+  }
   for (const match of normalized.matchAll(/\bexpo[\s-]*plaza\b/gu)) {
     found.push(isNegatedNear(normalized, match.index, (match.index) + match[0].length) ? INVALID : "Expo Plaza");
   }

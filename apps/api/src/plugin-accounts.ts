@@ -481,8 +481,8 @@ export class PluginAccountService {
     const remedies: PluginAccountRemedy[] = [];
     if (!this.options.adapter) remedies.push('configure_adapter');
     else if (overrides.adapterUnavailable) remedies.push('retry_status');
-    if (status === 'unlinked' || status === 'expired' || status === 'revoked' || status === 'disconnected') remedies.push('connect');
-    if (status === 'linked') remedies.push('renew');
+    if (status === 'unlinked' || status === 'revoked' || status === 'disconnected') remedies.push('connect');
+    if (status === 'linked' || status === 'expired') remedies.push('renew');
     if (state.revocationStatus === 'pending') remedies.push('retry_revocation');
     return {
       installationId: this.options.installationId,

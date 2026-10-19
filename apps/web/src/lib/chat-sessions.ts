@@ -60,6 +60,7 @@ export interface ChatMessage {
   confirmed?: boolean;
   model?: string;
   interactionId?: string;
+  serviceConnection?: { installationId: string; label: string; requestId: string };
 }
 
 export type ChatProfileId = z.infer<typeof chatProfileIdSchema>;
@@ -211,6 +212,7 @@ const chatMessageSchema = z.strictObject({
   confirmed: z.boolean().optional(),
   model: plainTextSchema(128).optional(),
   interactionId: idSchema.optional(),
+  serviceConnection: z.strictObject({ installationId: z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/u), label: plainTextSchema(200), requestId: z.uuid() }).optional(),
 });
 
 const roomRequestSchema = z.strictObject({
@@ -515,6 +517,7 @@ function normalizeChatMessage(message: z.infer<typeof chatMessageSchema>): ChatM
     ...(message.confirmed === undefined ? {} : { confirmed: message.confirmed }),
     ...(message.model === undefined ? {} : { model: message.model }),
     ...(message.interactionId === undefined ? {} : { interactionId: message.interactionId }),
+    ...(message.serviceConnection === undefined ? {} : { serviceConnection: message.serviceConnection }),
   };
 }
 

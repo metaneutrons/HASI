@@ -110,6 +110,21 @@ async function beginAndComplete(service: PluginAccountService, subject = SUBJECT
 }
 
 describe('personal plugin account lifecycle', () => {
+  it('offers a real renewal after expiry and restores access only after explicit completion', async () => {
+    let now = Date.now();
+    const clock = () => now;
+    const external = trustedAdapter({ clock });
+    const base = fixture({ adapter: external.adapter, clock });
+    expect((await base.service.status(SUBJECT)).remedies).toEqual(['connect']);
+    await beginAndComplete(base.service);
+    now += 60_001;
+    const expired = await base.service.status(SUBJECT);
+    expect(expired).toMatchObject({ status: 'expired', remedies: ['renew'] });
+    await expect(base.service.resolveAuthority(SUBJECT)).rejects.toMatchObject({ code: 'account_not_linked' });
+    await beginAndComplete(base.service, SUBJECT, 'renewal');
+    expect((await base.service.status(SUBJECT)).status).toBe('linked');
+    expect((await base.service.resolveAuthority(SUBJECT)).projection.permissions).toEqual(['calendar:read']);
+  });
   it('requires a trusted production adapter, pins authorization, and rejects unsafe return paths', async () => {
     const base = fixture();
     expect(() => new PluginAccountService({ ...base.serviceOptions, mode: 'production' })).toThrow(/trusted adapter/u);
