@@ -38,8 +38,10 @@ The prototype includes a validated server-owned model/provider registry,
 explicit selection/fallback policy, a Groq connection and synthetic knowledge
 fixtures. The current public demo runs on the Hetzner host under Coolify with
 private PostgreSQL 18.6; the Vercel project and Neon database are retired. The
-Coolify service still uses a preloaded image; exact-source CI builds and
-automatic deployment remain open in [#79](https://github.com/metaneutrons/HASI/issues/79).
+Coolify builds and deploys exact CI-qualified main revisions through the private
+controller accepted in [#79](https://github.com/metaneutrons/HASI/issues/79),
+preserving PostgreSQL, test sessions and the shared budget. Current deployed
+revision evidence belongs to that issue and the public readiness endpoint.
 Local development runs separate plugin processes. The anny flow
 uses synthetic data, including a 61-resource catalog snapshot: 37 workplaces,
 6 meeting rooms and 18 office containers. The 43 bookable resources support
@@ -48,8 +50,13 @@ proposals with separate user confirmation. The actual anny HTTP client still
 talks to a contract-based mock. Generic registry-driven chat discovery,
 schema-driven configuration, personal account lifecycle, durable action
 receipts and independent artifact/runtime composition are implemented. Final
-M2 technical qualification is deferred; real institutional identity/source
-contracts are M8 work. See the [implementation ledger](../verification/2026-10-18/m2-implementation.md).
+M2 technical qualification remains required under Plan V4. The separate
+Next.js/two-API synthetic identity topology and content-free request events
+have [dated evidence](../verification/2026-10-19/m2-runtime.md); isolated plugin
+execution and the remaining P1–P6/BUD-A1/WEB-A1 matrices remain separate.
+Real institutional identity/source contracts are M8 work. See the earlier
+[implementation ledger](../verification/2026-10-18/m2-implementation.md) for its
+historical implementation checkpoint.
 
 The M3 candidate adds signed source-export ingestion, permission-aware hybrid
 retrieval, incident expiry, source revisions, protected retained context and
@@ -69,7 +76,7 @@ supports technical M3 qualification only; remaining technical cases stay in #50.
 At candidate `095f3c5`, hosted CI failed the existing cold-store reference-plugin
 packaging test on both Node versions; this was recorded in [P6 source issue #74](https://github.com/metaneutrons/HASI/issues/74),
 now a P6 qualification group under #49. Earlier green CI at `1ffd651` is not
-evidence for the later candidate. The active PR #78 packaging repair explicitly
+evidence for the later candidate. The merged PR #78 packaging repair explicitly
 prepares dependencies online, then packages offline with the frozen lockfile;
 local verification also denies all network access. Error categories are fixed,
 with no
@@ -129,9 +136,10 @@ defenses and their acceptance scenarios are part of the MVP; see
 [security and model evaluation](../architecture/security-and-models.md).
 The [first benchmark plan](../evaluation/benchmark-v1.md) proposes five current
 candidate profiles, a 200-case curated dataset and blinded comparison criteria.
-DeepInfra with DeepSeek-V4.1-Flash is the requested next provider after the
-synthetic Service-IT demo. Its provider/model contract and credential readiness
-are unverified. Track the bounded addition in [#81](https://github.com/metaneutrons/HASI/issues/81) under
+DeepInfra with DeepSeek-V4.1-Flash is the requested additive provider after the
+synthetic Service-IT demo. Its exact-model registry and bounded deployed
+synthetic chat/tool qualification are recorded in
+[#81](https://github.com/metaneutrons/HASI/issues/81) under
 [DI-A1–DI-A4](model-provider-routing.md#deepinfra-follow-up), before the final M6
 comparison; do not reopen accepted [#32–#34](https://github.com/metaneutrons/HASI/issues/32) or treat synthetic smoke results as protected-data approval.
 
