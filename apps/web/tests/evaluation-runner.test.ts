@@ -47,8 +47,8 @@ function syntheticResponse(overrides: Partial<EvaluationTransportResponse> = {})
 }
 
 describe("offline evaluation harness contract", () => {
-  it("validates the twelve draft development cases with fixed clocks and versioned fixture evidence", () => {
-    expect(cases).toHaveLength(12);
+  it("validates draft development cases with fixed clocks and versioned fixture evidence", () => {
+    expect(cases.length).toBeGreaterThanOrEqual(20);
     expect(cases.every((evaluationCase) => evaluationCase.reviewStatus === "draft")).toBe(true);
     expect(cases.every((evaluationCase) => evaluationCase.datasetSplit === "development")).toBe(true);
     expect(cases.every((evaluationCase) => evaluationCase.clock.timezone === "Europe/Berlin")).toBe(true);
