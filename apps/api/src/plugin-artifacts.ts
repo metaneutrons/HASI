@@ -357,12 +357,21 @@ const rollbackPendingSchema = z.strictObject({
   configurationRevision: z.string().min(1).max(256),
   targetDigest: z.string().regex(SHA256),
 });
-const pendingSchema = z.discriminatedUnion('kind', [stagePendingSchema, activatePendingSchema, rollbackPendingSchema]);
+const discardPendingSchema = z.strictObject({
+  kind: z.literal('discard'),
+  operationId: z.string().min(1).max(128).regex(OPAQUE_ID),
+  stagingOperationId: z.string().min(1).max(128).regex(OPAQUE_ID),
+  stagedDeploymentId: z.string().min(1).max(128).regex(OPAQUE_ID),
+  baseCurrentDigest: z.string().regex(SHA256).nullable(),
+  configurationRevision: z.string().min(1).max(256),
+  candidateDigest: z.string().regex(SHA256),
+});
+const pendingSchema = z.discriminatedUnion('kind', [stagePendingSchema, activatePendingSchema, rollbackPendingSchema, discardPendingSchema]);
 const deploymentStateSchema = z.strictObject({
   schemaVersion: z.literal(1),
   installationId: z.string().min(1).max(128).regex(OPAQUE_ID),
   pluginId: z.string().min(1).max(128).regex(PLUGIN_ID),
-  status: z.enum(['empty', 'active', 'staging', 'stage-unknown', 'candidate-ready', 'review-required', 'activating', 'activation-unknown', 'rolling-back', 'rollback-unknown']),
+  status: z.enum(['empty', 'active', 'staging', 'stage-unknown', 'candidate-ready', 'review-required', 'discarding', 'discard-unknown', 'activating', 'activation-unknown', 'rolling-back', 'rollback-unknown']),
   configurationRevision: z.string().min(1).max(256),
   configurationSchemaVersion: z.number().int().positive().max(2_147_483_647),
   current: storedReleaseSchema.nullable(),
@@ -373,6 +382,7 @@ const deploymentStateSchema = z.strictObject({
 type StoredRelease = z.infer<typeof storedReleaseSchema>;
 type Candidate = z.infer<typeof candidateSchema>;
 type PendingOperation = z.infer<typeof pendingSchema>;
+type DiscardOperation = Extract<PendingOperation, { kind: 'discard' }>;
 type DeploymentState = z.infer<typeof deploymentStateSchema>;
 
 function releaseDigest(envelope: PluginReleaseEnvelope): string {
@@ -442,15 +452,22 @@ function validateStateInvariants(state: DeploymentState): void {
   const stageState = state.status === 'staging' || state.status === 'stage-unknown';
   const activationState = state.status === 'activating' || state.status === 'activation-unknown';
   const rollbackState = state.status === 'rolling-back' || state.status === 'rollback-unknown';
+  const discardState = state.status === 'discarding' || state.status === 'discard-unknown';
   if (state.status === 'empty' && (state.current || state.candidate || state.pending)) throw new Error('invalid empty state');
   if (state.status === 'active' && (!state.current || state.candidate || state.pending)) throw new Error('invalid active state');
   if (stageState && (!state.candidate || state.pending?.kind !== 'stage')) throw new Error('invalid stage state');
   if (activationState && (!state.candidate || state.pending?.kind !== 'activate')) throw new Error('invalid activation state');
   if (rollbackState && (!state.current || !state.previous || state.candidate || state.pending?.kind !== 'rollback')) throw new Error('invalid rollback state');
+  if (discardState && (!state.candidate?.stagedDeploymentId || state.pending?.kind !== 'discard')) throw new Error('invalid discard state');
   if (state.status === 'candidate-ready' && (!state.candidate?.stagedDeploymentId || state.pending || !reviewIsSufficient(state.candidate))) throw new Error('invalid ready candidate');
   if (state.status === 'review-required' && (!state.candidate?.stagedDeploymentId || state.pending || reviewIsSufficient(state.candidate))) throw new Error('invalid review state');
   if (state.candidate && state.pending && state.pending.kind !== 'rollback' && state.pending.candidateDigest !== state.candidate.releaseDigest) throw new Error('pending candidate changed');
   if (state.pending?.kind === 'rollback' && state.pending.targetDigest !== state.previous?.releaseDigest) throw new Error('rollback target changed');
+  if (state.pending?.kind === 'discard'
+    && (state.pending.stagingOperationId !== state.candidate?.stagingOperationId
+      || state.pending.stagedDeploymentId !== state.candidate.stagedDeploymentId
+      || state.pending.candidateDigest !== state.candidate.releaseDigest
+      || state.pending.baseCurrentDigest !== (state.current?.releaseDigest ?? null))) throw new Error('discard target changed');
 }
 
 function parseState(value: unknown, installationId: string): DeploymentState {
@@ -472,7 +489,7 @@ export interface PluginDeploymentSnapshot {
   readonly configurationSchemaVersion: number;
   readonly current: PluginReleaseIdentity | null;
   readonly previous: PluginReleaseIdentity | null;
-  readonly candidate: (PluginReleaseIdentity & { readonly staged: boolean; readonly requiresReview: boolean }) | null;
+  readonly candidate: (PluginReleaseIdentity & { readonly staged: boolean; readonly requiresReview: boolean; readonly stagingOperationId: string | null }) | null;
 }
 
 function snapshot(state: DeploymentState): PluginDeploymentSnapshot {
@@ -481,6 +498,7 @@ function snapshot(state: DeploymentState): PluginDeploymentSnapshot {
       ...releaseIdentity(state.candidate.envelope, state.candidate.releaseDigest),
       staged: state.candidate.stagedDeploymentId !== undefined,
       requiresReview: requiresReview(state.candidate),
+      stagingOperationId: state.candidate.stagingOperationId ?? null,
     })
     : null;
   return Object.freeze({
@@ -507,7 +525,10 @@ export interface DeploymentDriver {
     readonly secretAssignments: readonly LogicalSecretAssignment[];
   }): Promise<{ readonly deploymentId: string }>;
   check(input: { readonly installationId: string; readonly deploymentId: string; readonly releaseDigest: string }): Promise<boolean>;
-  /** Idempotent cleanup for an unhealthy candidate that has never been activated. */
+  /**
+   * Idempotent exact-ID cleanup for an inactive candidate. Implementations
+   * must freshly reject an active deployment or an ID owned by another stage.
+   */
   discard(input: { readonly installationId: string; readonly operationId: string; readonly deploymentId: string }): Promise<void>;
   activate(input: {
     readonly installationId: string;
@@ -628,85 +649,160 @@ export class PluginDeploymentCoordinator {
   }
 
   /**
-   * Marks a staged candidate as cleanup-pending before asking the driver to
-   * discard it. The original stage operation ID is part of the persisted
-   * ownership proof, so cleanup never guesses at a container identity.
+   * Records an immutable cleanup intent before asking the driver to discard a
+   * staged candidate. The cleanup operation fences coordinator state while the
+   * original stage operation ID proves driver ownership.
    */
   private async discardRevokedCandidate(input: {
     readonly installationId: string;
     readonly candidate: Candidate;
     readonly expectedActivationOperationId?: string;
+    readonly expectedStageOperationId?: string;
+    /** A stage ID positively observed from the exact pending stage operation. */
+    readonly observedStageDeploymentId?: string;
   }): Promise<{ readonly cleaned: boolean; readonly state: DeploymentState }> {
-    const stagedDeploymentId = input.candidate.stagedDeploymentId;
     const key = this.key(input.installationId);
-    if (!stagedDeploymentId) {
-      const { state } = await this.read(input.installationId);
-      return { cleaned: false, state };
-    }
-
-    let stageOperationId = input.candidate.stagingOperationId;
-    for (let attempt = 0; attempt < 12; attempt += 1) {
-      const entry = await this.options.store.read(key);
-      if (!entry) throw new PluginArtifactError('Plugin installation was not initialized.');
-      const state = parseState(entry.value, input.installationId);
-      const candidate = state.candidate;
-      if (candidate?.releaseDigest !== input.candidate.releaseDigest
-        || (candidate.stagedDeploymentId !== undefined && candidate.stagedDeploymentId !== stagedDeploymentId)) {
-        return { cleaned: false, state };
-      }
-      stageOperationId ??= candidate.stagingOperationId;
-      if (!stageOperationId && state.pending?.kind === 'stage') stageOperationId = state.pending.operationId;
-      if (!stageOperationId) return { cleaned: false, state };
-
-      const pending = state.pending;
-      const stageOperationAlreadyPending = pending?.kind === 'stage' && pending.operationId === stageOperationId;
-      const expectedActivationPending = pending?.kind === 'activate'
-        && pending.operationId === input.expectedActivationOperationId;
-      const readyCandidate = !pending && (state.status === 'candidate-ready' || state.status === 'review-required');
-      if (!stageOperationAlreadyPending && !expectedActivationPending && !readyCandidate) {
-        return { cleaned: false, state };
-      }
-
-      const cleanupPending: PendingOperation = {
-        kind: 'stage',
-        operationId: stageOperationId,
-        baseCurrentDigest: candidate.baseCurrentDigest,
-        configurationRevision: candidate.configurationRevision,
-        candidateDigest: candidate.releaseDigest,
-      };
-      const cleanupState: DeploymentState = {
-        ...state,
-        status: 'stage-unknown',
-        candidate: { ...candidate, stagedDeploymentId },
-        pending: cleanupPending,
-      };
-      validateStateInvariants(cleanupState);
-      if (await this.options.store.compareAndSet(key, entry.revision, cleanupState)) break;
-      if (attempt === 11) throw new PluginArtifactError('Plugin deployment state changed concurrently.');
-    }
-
-    const cleanupOperationId = stageOperationId;
-    if (!cleanupOperationId) {
-      const { state } = await this.read(input.installationId);
-      return { cleaned: false, state };
-    }
+    let entry: { revision: string; value: unknown } | undefined;
     try {
-      await this.options.driver.discard({ installationId: input.installationId, operationId: cleanupOperationId, deploymentId: stagedDeploymentId });
+      entry = await this.options.store.read(key);
     } catch {
-      const { state } = await this.read(input.installationId);
+      throw new PluginArtifactError('Plugin deployment state could not be verified.');
+    }
+    if (!entry) throw new PluginArtifactError('Plugin installation was not initialized.');
+    const state = parseState(entry.value, input.installationId);
+    const candidate = state.candidate;
+    const adoptingObservedStage = input.observedStageDeploymentId !== undefined;
+    const stagedDeploymentId = input.observedStageDeploymentId ?? input.candidate.stagedDeploymentId;
+    if (!candidate
+      || !stagedDeploymentId
+      || !isDeploymentId(stagedDeploymentId)
+      || candidate.releaseDigest !== input.candidate.releaseDigest
+      || (candidate.stagedDeploymentId !== stagedDeploymentId
+        && !(adoptingObservedStage && candidate.stagedDeploymentId === undefined))
+      || (input.candidate.stagedDeploymentId !== undefined && input.candidate.stagedDeploymentId !== stagedDeploymentId)
+      || candidate.configurationRevision !== input.candidate.configurationRevision
+      || candidate.baseCurrentDigest !== input.candidate.baseCurrentDigest
+      || candidate.baseCurrentDigest !== (state.current?.releaseDigest ?? null)) {
+      return { cleaned: false, state };
+    }
+
+    const stageOperationId = input.expectedStageOperationId
+      ?? input.candidate.stagingOperationId
+      ?? candidate.stagingOperationId
+      ?? (state.pending?.kind === 'stage' ? state.pending.operationId : undefined);
+    if (!stageOperationId
+      || (candidate.stagingOperationId !== undefined && candidate.stagingOperationId !== stageOperationId)
+      || (input.candidate.stagingOperationId !== undefined && input.candidate.stagingOperationId !== stageOperationId)) {
+      return { cleaned: false, state };
+    }
+
+    const pending = state.pending;
+    const stageOperationAlreadyPending = pending?.kind === 'stage'
+      && pending.operationId === stageOperationId
+      && (state.status === 'staging' || state.status === 'stage-unknown');
+    const observedStageIsFencedByPendingOperation = adoptingObservedStage
+      && input.expectedStageOperationId === stageOperationId
+      && stageOperationAlreadyPending
+      && pending.candidateDigest === candidate.releaseDigest
+      && pending.baseCurrentDigest === candidate.baseCurrentDigest
+      && pending.configurationRevision === candidate.configurationRevision
+      && state.configurationRevision === candidate.configurationRevision;
+    const expectedActivationPending = pending?.kind === 'activate'
+      && input.expectedActivationOperationId !== undefined
+      && pending.operationId === input.expectedActivationOperationId
+      && (state.status === 'activating' || state.status === 'activation-unknown');
+    const readyCandidate = !pending && (state.status === 'candidate-ready' || state.status === 'review-required');
+    if (adoptingObservedStage && !observedStageIsFencedByPendingOperation) return { cleaned: false, state };
+    if (!stageOperationAlreadyPending && !expectedActivationPending && !readyCandidate) {
+      return { cleaned: false, state };
+    }
+
+    const cleanupPending: PendingOperation = {
+      kind: 'discard',
+      operationId: randomUUID(),
+      stagingOperationId: stageOperationId,
+      stagedDeploymentId,
+      baseCurrentDigest: candidate.baseCurrentDigest,
+      configurationRevision: candidate.configurationRevision,
+      candidateDigest: candidate.releaseDigest,
+    };
+    const candidateWithStageOperation: Candidate = {
+      ...candidate,
+      stagingOperationId: stageOperationId,
+      stagedDeploymentId,
+    };
+    const cleanupState: DeploymentState = {
+      ...state,
+      status: 'discarding',
+      candidate: candidateWithStageOperation,
+      pending: cleanupPending,
+    };
+    validateStateInvariants(cleanupState);
+
+    let committed = false;
+    try {
+      committed = await this.options.store.compareAndSet(key, entry.revision, cleanupState);
+    } catch {
+      const latest = await this.read(input.installationId);
+      return { cleaned: false, state: latest.state };
+    }
+    if (!committed) {
+      const latest = await this.read(input.installationId);
+      return { cleaned: false, state: latest.state };
+    }
+    return this.executeDiscardIntent(input.installationId, cleanupPending, candidateWithStageOperation);
+  }
+
+  private async markDiscardUnknown(installationId: string, pending: DiscardOperation): Promise<DeploymentState> {
+    try {
+      return await this.mutateOperation(installationId, pending.operationId, 'discard', state => ({ ...state, status: 'discard-unknown' }));
+    } catch {
+      const { state } = await this.read(installationId);
+      return state;
+    }
+  }
+
+  private async executeDiscardIntent(
+    installationId: string,
+    pending: DiscardOperation,
+    candidate: Candidate,
+  ): Promise<{ readonly cleaned: boolean; readonly state: DeploymentState }> {
+    const deploymentId = candidate.stagedDeploymentId;
+    if (!deploymentId
+      || deploymentId !== pending.stagedDeploymentId
+      || candidate.stagingOperationId !== pending.stagingOperationId
+      || candidate.releaseDigest !== pending.candidateDigest) {
+      const state = await this.markDiscardUnknown(installationId, pending);
       return { cleaned: false, state };
     }
 
     try {
-      const state = await this.mutateOperation(input.installationId, cleanupOperationId, 'stage', current => ({
-        ...current,
-        status: current.current ? 'active' : 'empty',
-        candidate: null,
-        pending: null,
-      }));
-      return { cleaned: true, state };
+      await this.options.driver.discard({ installationId, operationId: pending.stagingOperationId, deploymentId });
     } catch {
-      const { state } = await this.read(input.installationId);
+      const state = await this.markDiscardUnknown(installationId, pending);
+      return { cleaned: false, state };
+    }
+
+    try {
+      const cleared = await this.mutateOperation(installationId, pending.operationId, 'discard', state => {
+        if (state.pending?.kind !== 'discard'
+          || state.pending.stagingOperationId !== pending.stagingOperationId
+          || state.pending.stagedDeploymentId !== deploymentId
+          || state.pending.candidateDigest !== pending.candidateDigest
+          || state.candidate?.stagingOperationId !== pending.stagingOperationId
+          || state.candidate.stagedDeploymentId !== deploymentId) {
+          throw new PluginArtifactError('Plugin discard operation is no longer current.');
+        }
+        return {
+          ...state,
+          status: state.current ? 'active' : 'empty',
+          candidate: null,
+          pending: null,
+        };
+      });
+      return { cleaned: true, state: cleared };
+    } catch {
+      const state = await this.markDiscardUnknown(installationId, pending);
       return { cleaned: false, state };
     }
   }
@@ -773,6 +869,164 @@ export class PluginDeploymentCoordinator {
   async get(installationId: string): Promise<PluginDeploymentSnapshot> {
     const { state } = await this.read(installationId);
     return snapshot(state);
+  }
+
+  /**
+   * Converges trusted operator-managed configuration metadata after an
+   * independently verified compatible configuration change. This method is
+   * not an authorization renewal and must not be exposed to client input.
+   */
+  async synchronizeConfigurationRevision(input: {
+    readonly installationId: string;
+    readonly expectedRevision: string;
+    readonly approvedConfigurationRevision: string;
+    readonly configurationCompatible: boolean;
+  }): Promise<PluginDeploymentSnapshot> {
+    if (!Object.is(input.configurationCompatible, true)) {
+      throw new PluginArtifactError('Plugin configuration compatibility was not confirmed.');
+    }
+    if (typeof input.expectedRevision !== 'string'
+      || input.expectedRevision.length < 1
+      || input.expectedRevision.length > 256
+      || input.expectedRevision.includes('\0')) {
+      throw new PluginArtifactError('Plugin configuration revision is invalid.');
+    }
+    if (typeof input.approvedConfigurationRevision !== 'string'
+      || input.approvedConfigurationRevision.length < 1
+      || input.approvedConfigurationRevision.length > 256
+      || input.approvedConfigurationRevision.includes('\0')) {
+      throw new PluginArtifactError('Plugin configuration revision is invalid.');
+    }
+
+    const key = this.key(input.installationId);
+    const readEntry = async () => {
+      try {
+        return await this.options.store.read(key);
+      } catch {
+        throw new PluginArtifactError('Plugin deployment state could not be verified.');
+      }
+    };
+    const entry = await readEntry();
+    if (!entry) throw new PluginArtifactError('Plugin installation was not initialized.');
+    const current = parseState(entry.value, input.installationId);
+    if ((current.status !== 'empty' && current.status !== 'active') || current.candidate || current.pending) {
+      throw new PluginArtifactError('Plugin configuration cannot be synchronized during a deployment operation.');
+    }
+    if (current.configurationRevision !== input.expectedRevision) {
+      throw new PluginArtifactError('Plugin configuration revision is stale.');
+    }
+
+    // The target is deliberately read from the server-owned configuration
+    // authority. The approved revision only binds the compatibility preflight
+    // to that value; it cannot select the destination.
+    const targetRevision = await this.liveConfigurationRevision(input.installationId);
+    if (targetRevision !== input.approvedConfigurationRevision) {
+      throw new PluginArtifactError('Plugin configuration compatibility was not confirmed for the current revision.');
+    }
+    const next: DeploymentState = targetRevision === current.configurationRevision
+      ? current
+      : { ...current, configurationRevision: targetRevision };
+    validateStateInvariants(next);
+
+    // Check authority immediately before any potential write. Passing the
+    // proposed state lets currentSnapshot require the live revision to equal
+    // the authoritative target while the stored state still has the old one.
+    await this.currentSnapshot(next, targetRevision);
+
+    if (targetRevision === current.configurationRevision) {
+      const verifiedEntry = await readEntry();
+      if (verifiedEntry?.revision !== entry.revision) {
+        throw new PluginArtifactError('Plugin deployment state changed concurrently.');
+      }
+      const verifiedState = parseState(verifiedEntry.value, input.installationId);
+      if ((verifiedState.status !== 'empty' && verifiedState.status !== 'active')
+        || verifiedState.candidate
+        || verifiedState.pending
+        || verifiedState.configurationRevision !== input.expectedRevision) {
+        throw new PluginArtifactError('Plugin deployment state changed concurrently.');
+      }
+      await this.currentSnapshot(verifiedState, targetRevision);
+      return snapshot(verifiedState);
+    }
+
+    let committed: boolean;
+    try {
+      // Keep the CAS anchored to the exact state inspected above.
+      committed = await this.options.store.compareAndSet(key, entry.revision, next);
+    } catch {
+      // The store may have committed before its acknowledgement was lost. Only
+      // treat that as success when the exact proposed state is present and the
+      // same server-owned configuration revision is still authoritative.
+      try {
+        const verifiedEntry = await readEntry();
+        if (!verifiedEntry) throw new Error('missing state');
+        const verifiedState = parseState(verifiedEntry.value, input.installationId);
+        if (JSON.stringify(verifiedState) !== JSON.stringify(next)) throw new Error('state differs');
+        await this.currentSnapshot(verifiedState, targetRevision);
+        return snapshot(verifiedState);
+      } catch {
+        throw new PluginArtifactError('Plugin deployment state could not be updated.');
+      }
+    }
+    if (!committed) throw new PluginArtifactError('Plugin deployment state changed concurrently.');
+
+    // Configuration can change while the store write is in flight. Verify
+    // live authority on the far side of CAS and ensure no deployment state
+    // replaced this synchronized snapshot before returning it.
+    await this.currentSnapshot(next, targetRevision);
+    const verifiedEntry = await readEntry();
+    if (!verifiedEntry) throw new PluginArtifactError('Plugin installation was not initialized.');
+    const verifiedState = parseState(verifiedEntry.value, input.installationId);
+    if (JSON.stringify(verifiedState) !== JSON.stringify(next)) {
+      throw new PluginArtifactError('Plugin deployment state changed concurrently.');
+    }
+    await this.currentSnapshot(verifiedState, targetRevision);
+    return snapshot(verifiedState);
+  }
+
+  /**
+   * Cancels and deletes a known inactive candidate at the operator's request.
+   * This trusted control path is not a client authorization or activation path.
+   */
+  async discardCandidate(input: {
+    readonly installationId: string;
+    readonly candidateDigest: string;
+    readonly stagingOperationId: string;
+    readonly configurationRevision: string;
+  }): Promise<PluginDeploymentSnapshot> {
+    const key = this.key(input.installationId);
+    const { revision, state } = await this.read(input.installationId);
+    const candidate = state.candidate;
+    if ((state.status !== 'candidate-ready' && state.status !== 'review-required')
+      || state.pending
+      || !candidate?.stagedDeploymentId
+      || !isDeploymentId(candidate.stagedDeploymentId)
+      || candidate.releaseDigest !== input.candidateDigest
+      || candidate.stagingOperationId !== input.stagingOperationId
+      || candidate.configurationRevision !== input.configurationRevision
+      || state.configurationRevision !== input.configurationRevision
+      || candidate.baseCurrentDigest !== (state.current?.releaseDigest ?? null)) {
+      throw new PluginArtifactError('Plugin candidate is not available for this discard request.');
+    }
+
+    const cleanupPending: DiscardOperation = {
+      kind: 'discard',
+      operationId: randomUUID(),
+      stagingOperationId: input.stagingOperationId,
+      stagedDeploymentId: candidate.stagedDeploymentId,
+      baseCurrentDigest: candidate.baseCurrentDigest,
+      configurationRevision: state.configurationRevision,
+      candidateDigest: candidate.releaseDigest,
+    };
+    const discarding: DeploymentState = {
+      ...state,
+      status: 'discarding',
+      pending: cleanupPending,
+    };
+    validateStateInvariants(discarding);
+    await this.compareAndSet(key, revision, discarding);
+    const result = await this.executeDiscardIntent(input.installationId, cleanupPending, candidate);
+    return snapshot(result.state);
   }
 
   async stageCandidate(input: {
@@ -888,19 +1142,12 @@ export class PluginDeploymentCoordinator {
       return { outcome: 'stage-unknown', operationId, state: snapshot(unknown) };
     }
     if (!healthy) {
-      try {
-        await this.options.driver.discard({ installationId: input.installationId, operationId, deploymentId: staged.deploymentId });
-      } catch {
-        const unknown = await this.mutateOperation(input.installationId, operationId, 'stage', state => ({ ...state, status: 'stage-unknown' }));
-        return { outcome: 'stage-unknown', operationId, state: snapshot(unknown) };
-      }
-      const failed = await this.mutateOperation(input.installationId, operationId, 'stage', state => ({
-        ...state,
-        status: state.current ? 'active' : 'empty',
-        candidate: null,
-        pending: null,
-      }));
-      return { outcome: 'stage-failed', operationId, state: snapshot(failed) };
+      const cleanup = await this.discardRevokedCandidate({ installationId: input.installationId, candidate: stageStored.candidate });
+      return {
+        outcome: cleanup.cleaned ? 'stage-failed' : 'stage-unknown',
+        operationId,
+        state: snapshot(cleanup.state),
+      };
     }
 
     let configurationStillCurrent = true;
@@ -1147,18 +1394,46 @@ export class PluginDeploymentCoordinator {
   async reconcile(installationId: string): Promise<{ readonly outcome: 'resolved' | 'unknown'; readonly state: PluginDeploymentSnapshot }> {
     const { state: before } = await this.read(installationId);
     const pending = before.pending;
-    if (!pending || !['staging', 'stage-unknown', 'activating', 'activation-unknown', 'rolling-back', 'rollback-unknown'].includes(before.status)) {
+    if (!pending || !['staging', 'stage-unknown', 'discarding', 'discard-unknown', 'activating', 'activation-unknown', 'rolling-back', 'rollback-unknown'].includes(before.status)) {
       throw new PluginArtifactError('No unknown plugin deployment operation requires reconciliation.');
     }
+
+    if (pending.kind === 'discard') {
+      const candidate = before.candidate;
+      if (!candidate?.stagedDeploymentId
+        || candidate.stagingOperationId !== pending.stagingOperationId
+        || candidate.stagedDeploymentId !== pending.stagedDeploymentId
+        || candidate.releaseDigest !== pending.candidateDigest) {
+        throw new PluginArtifactError('Plugin discard state is invalid.');
+      }
+      const unresolved = async () => {
+        const state = await this.markDiscardUnknown(installationId, pending);
+        return { outcome: 'unknown' as const, state: snapshot(state) };
+      };
+
+      let observation: DeploymentObservation;
+      try {
+        // The original stage token identifies the candidate's driver-owned
+        // resource; the discard operation ID only fences coordinator state.
+        observation = await this.options.driver.reconcile({ installationId, operationId: pending.stagingOperationId });
+      } catch {
+        return unresolved();
+      }
+      const activeId = observation.activeDeploymentId;
+      const stagedId = observation.stagedDeploymentId;
+      if ((activeId !== null && !isDeploymentId(activeId))
+        || (stagedId !== null && !isDeploymentId(stagedId))
+        || activeId !== (before.current?.deploymentId ?? null)
+        || (stagedId !== null && stagedId !== candidate.stagedDeploymentId)) {
+        return unresolved();
+      }
+
+      const cleanup = await this.executeDiscardIntent(installationId, pending, candidate);
+      return { outcome: cleanup.cleaned ? 'resolved' : 'unknown', state: snapshot(cleanup.state) };
+    }
+
     let observation: DeploymentObservation;
     try { observation = await this.options.driver.reconcile({ installationId, operationId: pending.operationId }); } catch {
-      return { outcome: 'unknown', state: snapshot(before) };
-    }
-    try {
-      if (await this.liveConfigurationRevision(installationId) !== pending.configurationRevision) {
-        return { outcome: 'unknown', state: snapshot(before) };
-      }
-    } catch {
       return { outcome: 'unknown', state: snapshot(before) };
     }
     const activeId = observation.activeDeploymentId;
@@ -1170,54 +1445,81 @@ export class PluginDeploymentCoordinator {
       const currentId = before.current?.deploymentId ?? null;
       const candidate = before.candidate;
       if (!candidate) throw new PluginArtifactError('Plugin candidate state is invalid.');
-      const observedStage = candidate.stagedDeploymentId ?? stagedId;
-      if (observedStage && observedStage === stagedId && activeId === currentId) {
-        const observedCandidate: Candidate = {
-          ...candidate,
-          stagingOperationId: candidate.stagingOperationId ?? pending.operationId,
-          stagedDeploymentId: observedStage,
-        };
-        const verified = this.verified(candidate.envelope);
-        if (!await this.currentlyTrusted(verified, candidate.secretAssignments)) {
-          const cleanup = await this.discardRevokedCandidate({ installationId, candidate: observedCandidate });
-          return { outcome: cleanup.cleaned ? 'resolved' : 'unknown', state: snapshot(cleanup.state) };
-        }
-        const healthy = await this.options.driver.check({ installationId, deploymentId: observedStage, releaseDigest: candidate.releaseDigest }).catch(() => undefined);
-        if (healthy === undefined) return { outcome: 'unknown', state: snapshot(before) };
-        if (!healthy) {
-          try {
-            await this.options.driver.discard({ installationId, operationId: pending.operationId, deploymentId: observedStage });
-          } catch {
-            return { outcome: 'unknown', state: snapshot(before) };
-          }
-          const discarded = await this.mutateOperation(installationId, pending.operationId, 'stage', current => ({
-            ...current,
-            status: current.current ? 'active' : 'empty',
-            candidate: null,
-            pending: null,
-          }));
-          return { outcome: 'resolved', state: snapshot(discarded) };
-        }
-        if (!await this.currentlyTrusted(verified, candidate.secretAssignments)) {
-          const cleanup = await this.discardRevokedCandidate({ installationId, candidate: observedCandidate });
-          return { outcome: cleanup.cleaned ? 'resolved' : 'unknown', state: snapshot(cleanup.state) };
-        }
-        const state = await this.mutateOperation(installationId, pending.operationId, 'stage', current => {
-          if (!current.candidate) throw new PluginArtifactError('Plugin candidate state is invalid.');
-          const stagedCandidate: Candidate = { ...current.candidate, stagedDeploymentId: observedStage };
-          return { ...current, candidate: stagedCandidate, status: reviewIsSufficient(stagedCandidate) ? 'candidate-ready' : 'review-required', pending: null };
-        });
-        return { outcome: 'resolved', state: snapshot(state) };
+      const observedStage = stagedId;
+      if (activeId !== currentId
+        || !observedStage
+        || observedStage === currentId
+        || (candidate.stagedDeploymentId !== undefined && candidate.stagedDeploymentId !== observedStage)
+        || (candidate.stagingOperationId !== undefined && candidate.stagingOperationId !== pending.operationId)
+        || pending.candidateDigest !== candidate.releaseDigest
+        || pending.baseCurrentDigest !== candidate.baseCurrentDigest
+        || pending.configurationRevision !== candidate.configurationRevision) {
+        // A missing stage observation is inconclusive: the driver may still
+        // finish a timed-out create, so keep its original pending fence.
+        return { outcome: 'unknown', state: snapshot(before) };
       }
-      if (activeId === currentId && stagedId === null) {
-        const state = await this.mutateOperation(installationId, pending.operationId, 'stage', current => ({
-          ...current,
-          status: current.current ? 'active' : 'empty',
-          candidate: null,
-          pending: null,
-        }));
-        return { outcome: 'resolved', state: snapshot(state) };
+
+      const observedCandidate: Candidate = {
+        ...candidate,
+        stagingOperationId: pending.operationId,
+        stagedDeploymentId: observedStage,
+      };
+      const discardObservedStage = async () => this.discardRevokedCandidate({
+        installationId,
+        candidate: observedCandidate,
+        expectedStageOperationId: pending.operationId,
+        observedStageDeploymentId: observedStage,
+      });
+      const configurationIsCurrent = async (): Promise<boolean | undefined> => {
+        try { return await this.liveConfigurationRevision(installationId) === pending.configurationRevision; } catch { return undefined; }
+      };
+
+      const currentConfiguration = await configurationIsCurrent();
+      if (currentConfiguration === undefined) return { outcome: 'unknown', state: snapshot(before) };
+      if (!currentConfiguration) {
+        const cleanup = await discardObservedStage();
+        return { outcome: cleanup.cleaned ? 'resolved' : 'unknown', state: snapshot(cleanup.state) };
       }
+
+      let verified: VerifiedPluginRelease;
+      try {
+        verified = this.verified(candidate.envelope);
+      } catch {
+        const cleanup = await discardObservedStage();
+        return { outcome: cleanup.cleaned ? 'resolved' : 'unknown', state: snapshot(cleanup.state) };
+      }
+      if (!await this.currentlyTrusted(verified, candidate.secretAssignments)) {
+        const cleanup = await discardObservedStage();
+        return { outcome: cleanup.cleaned ? 'resolved' : 'unknown', state: snapshot(cleanup.state) };
+      }
+
+      const healthy = await this.options.driver.check({ installationId, deploymentId: observedStage, releaseDigest: candidate.releaseDigest }).catch(() => undefined);
+      if (healthy === undefined) return { outcome: 'unknown', state: snapshot(before) };
+      if (!healthy) {
+        const cleanup = await discardObservedStage();
+        return { outcome: cleanup.cleaned ? 'resolved' : 'unknown', state: snapshot(cleanup.state) };
+      }
+
+      const stillCurrentConfiguration = await configurationIsCurrent();
+      if (stillCurrentConfiguration === undefined) return { outcome: 'unknown', state: snapshot(before) };
+      if (!stillCurrentConfiguration || !await this.currentlyTrusted(verified, candidate.secretAssignments)) {
+        const cleanup = await discardObservedStage();
+        return { outcome: cleanup.cleaned ? 'resolved' : 'unknown', state: snapshot(cleanup.state) };
+      }
+
+      const state = await this.mutateOperation(installationId, pending.operationId, 'stage', current => {
+        if (!current.candidate) throw new PluginArtifactError('Plugin candidate state is invalid.');
+        const stagedCandidate: Candidate = { ...current.candidate, stagedDeploymentId: observedStage };
+        return { ...current, candidate: stagedCandidate, status: reviewIsSufficient(stagedCandidate) ? 'candidate-ready' : 'review-required', pending: null };
+      });
+      return { outcome: 'resolved', state: snapshot(state) };
+    }
+
+    try {
+      if (await this.liveConfigurationRevision(installationId) !== pending.configurationRevision) {
+        return { outcome: 'unknown', state: snapshot(before) };
+      }
+    } catch {
       return { outcome: 'unknown', state: snapshot(before) };
     }
 

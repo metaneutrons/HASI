@@ -433,6 +433,8 @@ function verifyContainerHardening(body: EngineObject, config: EngineObject, host
 
   return config.User === '65532:65532'
     && config.Image === labels[IMAGE_LABEL]
+    && stringArray(config.Env)?.filter(value => value.startsWith('HASI_PLUGIN_INSTALLATION_ID='))
+      .join('\0') === `HASI_PLUGIN_INSTALLATION_ID=${labels[INSTALLATION_LABEL] ?? ''}`
     && hostConfig.NetworkMode === networkName
     && (hostConfig.PidMode === undefined || hostConfig.PidMode === '')
     && hostConfig.IpcMode === 'private'
@@ -978,7 +980,7 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
       await assertEmptyInternalNetwork(input.policy.network.name);
       await assertDaemonSeccomp();
       const env = await secretEnvironment({ installationId: input.installationId, release: input.release, assignments: input.secretAssignments });
-      const body = createBody(input, env);
+      const body = createBody(input, [`HASI_PLUGIN_INSTALLATION_ID=${input.installationId}`, ...env]);
 
       let created: DockerEngineResponse;
       try {

@@ -315,7 +315,7 @@ describe('operator-local Docker plugin driver', () => {
     expect(body.User).toBe('65532:65532');
     expect(body.Entrypoint).toBeUndefined();
     expect(body.Cmd).toBeUndefined();
-    expect(body.Env).toEqual(['HASI_SECRET_WEATHER_KEY=only-in-engine-request']);
+    expect(body.Env).toEqual(['HASI_PLUGIN_INSTALLATION_ID=installation-1', 'HASI_SECRET_WEATHER_KEY=only-in-engine-request']);
     expect(hostConfig).toMatchObject({
       NetworkMode: 'hasi-plugin-net',
       ReadonlyRootfs: true,
@@ -541,6 +541,24 @@ describe('operator-local Docker plugin driver', () => {
     await expect(driver.discard({ installationId: 'installation-1', operationId: 'stage-operation-1', deploymentId: CONTAINER_ID })).resolves.toBeUndefined();
     expect(engine.stopCount).toBe(0);
     expect(engine.deleteCount).toBe(0);
+  });
+
+  it.each(['missing', 'foreign', 'duplicate'] as const)('rejects a %s runtime installation binding before traffic or cleanup', async kind => {
+    const engine = new FakeDockerEngine();
+    const loopbackProbe = vi.fn(() => Promise.resolve(true));
+    const driver = createDockerPluginDriver(driverOptions(engine, routingController().routing, { loopbackProbe }));
+    const staged = await driver.stage(stageInput());
+    engine.mutateCandidate = inspection => {
+      const config = record(inspection.Config);
+      const env = (config.Env as string[]).filter(value => !value.startsWith('HASI_PLUGIN_INSTALLATION_ID='));
+      if (kind === 'foreign') env.push('HASI_PLUGIN_INSTALLATION_ID=other-installation');
+      if (kind === 'duplicate') env.push('HASI_PLUGIN_INSTALLATION_ID=installation-1', 'HASI_PLUGIN_INSTALLATION_ID=installation-1');
+      config.Env = env;
+    };
+    await expect(driver.check({ installationId: 'installation-1', deploymentId: staged.deploymentId, releaseDigest: release().releaseDigest })).rejects.toMatchObject({ outcome: 'unknown' });
+    await expect(driver.discard({ installationId: 'installation-1', operationId: 'stage-operation-1', deploymentId: staged.deploymentId })).rejects.toBeInstanceOf(DockerPluginDriverError);
+    expect(loopbackProbe).not.toHaveBeenCalled();
+    expect(engine.removedIds).toEqual([]);
   });
 
   it('checks health only through the fixed loopback endpoint and rejects changed runtime hardening', async () => {

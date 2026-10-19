@@ -20,6 +20,13 @@ trust boundary and is not the repair.
 
 ## Paired platform relay
 
+The driver supplies the non-secret `HASI_PLUGIN_INSTALLATION_ID` from its
+server-owned stage input. Inspection requires exactly one matching environment
+entry and the same installation label before health checks, routing or cleanup.
+Plugin SDK servers must bind `acceptedInstallationIds` to their configured
+installation; a valid invocation signature does not authorize another instance.
+The reference artifact demonstrates this binding explicitly.
+
 The driver keeps a candidate unpublished on a dedicated internal bridge for
 its staging generation. The candidate has no Docker port binding. Its
 `PluginContainerLaunchPolicy.ingress` records the literal `127.0.0.1` host

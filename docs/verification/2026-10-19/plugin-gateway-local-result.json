@@ -1,0 +1,62 @@
+{
+  "qualification": "postgres-paired-plugin-gateway-lifecycle",
+  "qualified": true,
+  "fullP5P6Acceptance": false,
+  "independentDistributionAcceptance": false,
+  "nativeReads": 10,
+  "activationCommits": 2,
+  "checks": {
+    "twoProcessesServeActiveA": true,
+    "validSignedForeignInstallationDenied": true,
+    "unauthenticatedDenied": true,
+    "stagedBDoesNotReplaceA": true,
+    "lostCommittedReplyReconciledWithoutReplay": true,
+    "newProcessRestoresBFromPostgres": true,
+    "failedPreflightPreservesB": true,
+    "changedConfigurationCanCancelAndConverge": true,
+    "realGatewayRollbackToA": true,
+    "revokedRollbackDenied": true,
+    "withdrawalStopsGatewayTraffic": true
+  },
+  "artifacts": [
+    {
+      "version": "1.0.0",
+      "artifactSha256": "af18a50f0f1016d2c6f3d4d863b44eee0fbb46cb69beffdb37789d7a88d96629",
+      "manifestDigest": "5cbee0101afb557940503dea42ebb8af228caafd6386942a50002d1d298be8b4",
+      "image": "localhost/hasi-reference-qualification@sha256:ac7c737c8529cbb900153293f5d9f1d12f0e321f7a5a37d367ea1aa445ef3d94",
+      "releaseDigest": "7c6907c8c8f397768306d7157f3e3f7be17c8d9860ea6388115bcd6ba8d76a98"
+    },
+    {
+      "version": "1.1.0",
+      "artifactSha256": "a8ee7fe90e420370abf54f7fac938b20969e5fe40887cf50946c47f0960e258b",
+      "manifestDigest": "61da4e8ae6f1595d0a00d4a8c40231abe09da43133da8a2357824347749a06ab",
+      "image": "localhost/hasi-reference-qualification@sha256:73362e69317d30dd4027d1707b5eabf90bf35a503a13173af1f7aef590f8ce48",
+      "releaseDigest": "8b09d28a043757daf037ff1030a54e8678e16015bcac7837e1d287b828eaf250"
+    }
+  ],
+  "ownerId": "gateway-qualifier-8f9229486a8e",
+  "installationId": "reference-8f9229486a8e",
+  "namespace": "gateway-qualification-8f9229486a8e",
+  "cleanupVerified": true,
+  "sourceFileSha256": {
+    "scripts/qualify-plugin-gateway.ts": "d61db812e1c16bf089c454c3eb1af81c9cec53e8064a4c2298907d3aae60d1f0",
+    "scripts/plugin-gateway-qualification-worker.ts": "5ea7b462a1932fe94ed998efcf81c575017fffa0af9b8dcb7ec0ea9605738000",
+    "scripts/plugin-gateway-qualification-config.ts": "6a6e0d31592ba248f70533ecd5d398d74728c6dc5f2ad3b2d56fc29fa50f576e",
+    "scripts/healthy-plugin-qualification.ts": "d9c8f71aaee245fa2ce32ae7d7963c282e612118c5b777a70056322627deeeaa",
+    "scripts/package-reference-plugin.ts": "57439f0a4655c76ee4121758a4120bbb25a5346515dc1b5613c000a4f3705d59",
+    "apps/api/src/plugin-artifacts.ts": "9d1ef6eddb422b48ce7f853c9e43cdf4076fde74dc6b9c92d69ae4737bf73fdf",
+    "apps/api/src/plugin-route-controller.ts": "d7415cbca92b57b97fdfed893ccb375e85ff811086652e46788c168f9f5e077f",
+    "apps/api/src/plugin-deployment-binding.ts": "e7721f5e5c747a75aabd58f909675ed8300c4ba28b342a4e4ffc174127d22518",
+    "apps/api/src/plugin-deployment-proxy.ts": "4f3237f5b1c5cfb4b2dfa487ef841904a132054eaa50c61704e228e08f5d1196",
+    "apps/api/src/docker-plugin-driver.ts": "dc5965328a874d09f718408c3682f4b77e41b540603da9a663a3c4b3f5c2249b",
+    "apps/api/src/docker-plugin-relay.ts": "c57c61df90885ad198ad88cfa7abb0096b93f2c6d7893b50aea0b2762470954c",
+    "apps/api/src/plugin-relay-program.ts": "956a46136146f3a131c86835f46bb4711b731f0ccb0524466e6eb1248ccacce3",
+    "examples/reference-plugin/src/server.js": "a561e62d207c9f0f10090e1625073a931bce940c5a6dad724190c108b475c31d",
+    "pnpm-lock.yaml": "149a6441e0f0a995d5a055a2e63f4481edcb61b983c5815ab943fad8c096726e"
+  },
+  "runtime": {
+    "node": "v26.11.1",
+    "platform": "darwin",
+    "arch": "arm64"
+  }
+}

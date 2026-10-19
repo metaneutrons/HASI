@@ -166,6 +166,52 @@ healthy immutable image, runtime denial and actual recovery exercises remain
 qualification gates. Never mount the Docker Engine socket into a plugin or
 expose it to the demo admin. Vercel functions cannot host this installer.
 
+### Operator-managed configuration and candidate cleanup
+
+`synchronizeConfigurationRevision` updates deployment metadata only for a stable
+empty/active installation. The trusted operator must first check configuration
+compatibility, then supply the stored `expectedRevision` and the exact
+`approvedConfigurationRevision`. The destination comes from the live server
+authority. A changed compatibility target, in-flight deployment or CAS conflict
+requires a fresh inspection; this operation neither renews release/review trust
+nor substitutes secret references. An acknowledgement lost after a committed
+write is accepted only after exact-state and live-authority readback.
+
+To cancel a positively staged candidate, use `discardCandidate` with its digest,
+original configuration revision and exposed `stagingOperationId`. Cleanup writes
+a separate durable discard intent before driver I/O. A fresh coordinator resumes
+that exact cleanup after a lost delete reply, even if configuration or trust has
+since changed. It retains the active/previous artifacts. Unknown stages must be
+reconciled: only a positively observed deployment from the exact pending stage
+can be adopted for cleanup. Absence does not prove a timed-out create cannot
+still complete. An active or foreign observation remains unresolved.
+
+The route controller's trusted `withdraw` compares owner, installation, active
+deployment/digest and configuration revision in the same CAS journal used for
+activation. A committed withdrawal has an explicit null route; stale operations
+cannot clear a newer route. Stop traffic before discarding an active runtime.
+These operator APIs are not public admin/HTTP actions; production composition
+must wire authorization, audit, compatibility preflight and pending-action
+invalidation before exposing a complete update/disable journey.
+
+The disposable local PostgreSQL/gateway exercise is:
+
+```sh
+HASI_DOCKER_QUALIFY=1 \
+TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:32775/hasi_topology_test \
+pnpm exec tsx scripts/qualify-plugin-gateway.ts
+```
+
+Use an existing isolated passwordless test database with that exact name and
+adjust only its loopback port. The script rejects production database names,
+non-loopback endpoints, passwords, URL options and ambient PostgreSQL overrides.
+It runs two gateway processes with separate connections, paired containers and
+two separately packaged versions; it tests committed lost-reply recovery,
+restart, failed preflight, cancellation after configuration change, rollback,
+revocation and route withdrawal. All authority and actions are synthetic. On
+uncertain runtime cleanup it retains durable recovery rows and returns failure.
+This does not qualify deployed Linux topology or independent distribution.
+
 See [v2 contracts](plugin-contract-v2.md), [budget provisioning](model-budget.md),
 [criterion evidence](../verification/2026-10-18/m2-foundation.md),
 [Docker evidence](../verification/2026-10-18/m2-container-driver.md) and
