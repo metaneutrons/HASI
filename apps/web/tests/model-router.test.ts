@@ -1611,6 +1611,43 @@ it("requests an initial native resource search for a fully specified office task
   expect(reply.message.toolCalls?.[0]?.arguments).toEqual({ kind: "workplace", location: "1J" });
 });
 
+it.each([false, true])("enforces the initial search result contract and hides unverified provider prose (search call: %s)", async hasSearch => {
+  const pluginId = "de.hsh.hasi.anny"; const name = "anny.search_resources";
+  const modelName = `hasi_${createHash("sha256").update(`${pluginId}\0${name}`).digest("hex").slice(0, 24)}`;
+  const provider = fakeProvider(completion({
+    content: "Das Suchtool ist nicht verfügbar. Bitte gib eine Ressourcen-ID an.",
+    ...(hasSearch ? { toolCalls: [{ id: "required-search", name: "anny_search_resources", arguments: '{"kind":"workplace","location":"1J"}' }] } : {}),
+    usage: { prompt_tokens: 12, completion_tokens: 5 },
+  }));
+  const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+  const run = runModelStep({ ...request(), messages: [{ role: "user", content: "Ich brauche heute ein Büro in 1J von 10 bis 16 Uhr." }] }, {
+    env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW,
+    authorizedTools: [{ pluginId, name, modelName, title: "Ressourcen", description: "Search", effect: "read", requiredPermissions: ["rooms:read"], inputSchema: { type: "object", properties: {} }, outputSchema: { type: "object" } }],
+    budgetAdmission: { reserve: () => Promise.resolve({ settle: usage => { settlements.push(usage); return Promise.resolve(); } }) },
+  });
+  if (hasSearch) {
+    const reply = await run;
+    expect(reply.message.content).toBe("");
+    expect(reply.message.toolCalls).toEqual([{ id: "required-search", name: "anny_search_resources", arguments: { kind: "workplace", location: "1J" } }]);
+    expect(reply.usage).toEqual({ inputTokens: 12, outputTokens: 5 });
+  } else await expectRouterError(run, "provider_unavailable");
+  expect(provider.calls).toHaveLength(1);
+  // The pinned SDK throws before exposing usage for a tool-choice violation;
+  // retain its conservative reservation instead of inventing measured tokens.
+  expect(settlements).toEqual(hasSearch ? [{ inputTokens: 12, outputTokens: 5 }] : [undefined]);
+});
+
+it("rejects extra search calls on a turn restricted to one initial discovery read", async () => {
+  const pluginId = "de.hsh.hasi.anny"; const name = "anny.search_resources";
+  const modelName = `hasi_${createHash("sha256").update(`${pluginId}\0${name}`).digest("hex").slice(0, 24)}`;
+  const provider = fakeProvider(completion({ toolCalls: ["first-search", "extra-search"].map(id => ({ id, name: "anny_search_resources", arguments: '{"kind":"workplace","location":"1J"}' })) }));
+  await expectRouterError(runModelStep({ ...request(), messages: [{ role: "user", content: "Suche ein Büro in 1J." }] }, {
+    env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW,
+    authorizedTools: [{ pluginId, name, modelName, title: "Ressourcen", description: "Search", effect: "read", requiredPermissions: ["rooms:read"], inputSchema: { type: "object", properties: {} }, outputSchema: { type: "object" } }],
+  }), "invalid_model_response");
+  expect(provider.calls).toHaveLength(1);
+});
+
 it.each([true, false])("does not let historical Anny results suppress a new search or replace a known-resource availability check (new search: %s)", async newSearch => {
   const pluginId = "de.hsh.hasi.anny";
   const authorizedTools = ["anny.search_resources", "anny.get_availability"].map(name => ({
