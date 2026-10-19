@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
+import { MemoryJsonStore, ModelBudgetLedger } from "@hasi/state";
 
 vi.mock("server-only", () => ({}));
 vi.mock("../src/lib/server/demo-runtime", () => ({ canonicalDemoRequest: vi.fn(), getDemoRuntime: vi.fn() }));
@@ -11,6 +12,7 @@ import {
   type ChatRequest,
 } from "../src/lib/chat-contract";
 import { loadModelConfiguration } from "../src/lib/server/model-config";
+import { createModelBudgetAdmission, loadModelPrices } from "../src/lib/server/model-budgets";
 import { createRoutingPins } from "../src/lib/server/routing-pins";
 
 import {
@@ -1432,6 +1434,58 @@ describe("operator routing policy", () => {
     const reply = await runModelStep(input(), { env, fetch, now: NOW, routingPins: pins() });
     expect(reply.profile.id).toBe("gwdg-qwen3-30b");
     expect(calls).toHaveLength(2);
+  });
+
+  it("keeps a timed-out provider hold when fallback admission is exhausted", async () => {
+    const config = loadModelConfiguration({});
+    config.policy.fallbacks = [{ from: "groq-oss-120b", targets: ["gwdg-qwen3-30b"], on: ["timeout"] }];
+    const env = { GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY, HASI_LLM_CONFIG: JSON.stringify(config) };
+    const prices = loadModelPrices({});
+    const ledger = new ModelBudgetLedger(new MemoryJsonStore(`router-timeout-fallback-${randomUUID()}`), {
+      scope: "router-timeout-fallback-test",
+      windowMs: 60_000,
+      inputTokenLimit: 100_000,
+      outputTokenLimit: 1_536,
+      microUsdLimit: 1_000_000_000,
+      inputMicroUsdPerMillion: 1_000_000,
+      outputMicroUsdPerMillion: 1_000_000,
+      now: () => NOW.getTime(),
+    });
+    const ledgerAdmission = createModelBudgetAdmission(ledger, config, prices);
+    const reserveInputs: { profileId: string; inputTokens: number; outputTokens: number }[] = [];
+    const budgetAdmission: NonNullable<RouterOptions["budgetAdmission"]> = {
+      reserve: input => {
+        reserveInputs.push(input);
+        return ledgerAdmission.reserve(input);
+      },
+    };
+    const calls: string[] = [];
+    const fetch: typeof globalThis.fetch = url => {
+      calls.push(requestUrl(url));
+      if (calls.length === 1) return Promise.reject(new DOMException("private provider timeout detail", "TimeoutError"));
+      return Promise.resolve(new Response(JSON.stringify(completion({ content: "must not run" })), {
+        headers: { "content-type": "application/json" },
+      }));
+    };
+
+    const error = await expectRouterError(runModelStep(input(), {
+      env,
+      fetch,
+      now: NOW,
+      routingPins: pins(),
+      budgetAdmission,
+    }), "budget_exhausted");
+
+    expect(error.message).toBe("The model budget could not admit this attempt.");
+    expect(error.message).not.toContain("private provider timeout detail");
+    expect(reserveInputs.map(({ profileId }) => profileId)).toEqual(["groq-oss-120b", "gwdg-qwen3-30b"]);
+    expect(calls).toEqual(["https://api.groq.com/openai/v1/chat/completions"]);
+    expect(await ledger.snapshot()).toMatchObject({
+      outputTokensUsed: 1_536,
+      reservationsInWindow: 1,
+      unresolvedReservations: 1,
+      unknownUsageReservations: 1,
+    });
   });
 
   it("fails closed for invalid explicit configuration and forged routing tokens", async () => {
