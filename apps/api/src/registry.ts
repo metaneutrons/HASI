@@ -1033,7 +1033,7 @@ export class PluginRegistry {
       const result = await client.callTool({ name, arguments: args });
       if (result.isError) throw new RequestError(502, 'Die Plugin-Anfrage konnte nicht ausgeführt werden.');
       const output: unknown = result.structuredContent;
-      if (!output || typeof output !== 'object' || Array.isArray(output) || !validator.validate(currentTool.outputSchema, output)) throw new RequestError(502, 'Die Plugin-Antwort entspricht nicht dem vereinbarten Vertrag.');
+      if (!output || typeof output !== 'object' || Array.isArray(output) || !validateSchema(currentTool.outputSchema, output)) throw new RequestError(502, 'Die Plugin-Antwort entspricht nicht dem vereinbarten Vertrag.');
       if (Buffer.byteLength(JSON.stringify(output)) > 65536) throw new RequestError(502, 'Die Plugin-Antwort ist zu groß.');
       if (authority !== await this.authorityBinding(id, originalActor)) throw new RequestError(409, 'Die persönliche Kontoberechtigung wurde geändert.');
       if (plugin.managedDeploymentRevision && this.bindingFor(await this.refresh(plugin)) !== invocationBinding) throw new RequestError(409, 'Die freigegebene Plugin-Installation wurde geändert.');
