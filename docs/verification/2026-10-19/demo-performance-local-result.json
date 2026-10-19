@@ -1,0 +1,134 @@
+{
+  "phase": "complete",
+  "namespace": "demo-performance-a954909c-5753-40d7-9f6d-7aaad90124a0",
+  "cleanupFailure": null,
+  "topology": "local-standalone-next-demo-api-loopback-postgres",
+  "transport": "http-loopback",
+  "apiMode": "test",
+  "publicHttpsPerformanceQualified": false,
+  "users": 5,
+  "role": "employee",
+  "batchesPerRoute": 2,
+  "samplesPerUserPerBatch": 20,
+  "samplesPerBatch": 100,
+  "p95LimitMs": 1000,
+  "coldSessionMs": 461.1,
+  "routes": [
+    {
+      "route": "anny.resources",
+      "batches": [
+        {
+          "batch": 1,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "p95Ms": 181.43,
+          "passed": true
+        },
+        {
+          "batch": 2,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "p95Ms": 120.16,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "route": "anny.availability",
+      "batches": [
+        {
+          "batch": 1,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "p95Ms": 131.54,
+          "passed": true
+        },
+        {
+          "batch": 2,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "p95Ms": 110.32,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "route": "knowledge.search",
+      "batches": [
+        {
+          "batch": 1,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "p95Ms": 446.55,
+          "passed": true
+        },
+        {
+          "batch": 2,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "p95Ms": 542.57,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "route": "knowledge.document",
+      "batches": [
+        {
+          "batch": 1,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "p95Ms": 113.07,
+          "passed": true
+        },
+        {
+          "batch": 2,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "p95Ms": 118.05,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "route": "plugin-accounts.status",
+      "batches": [
+        {
+          "batch": 1,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "p95Ms": 82,
+          "passed": true
+        },
+        {
+          "batch": 2,
+          "sampleCount": 100,
+          "errorCount": 0,
+          "p95Ms": 89.39,
+          "passed": true
+        }
+      ]
+    }
+  ],
+  "delayControl": {
+    "route": "anny.resources",
+    "delayMs": 1200,
+    "sampleCount": 100,
+    "errorCount": 0,
+    "p95Ms": 1339.12,
+    "passed": false,
+    "rejectedBySameGate": true
+  },
+  "cleanupVerified": true,
+  "status": "passed",
+  "applicationSourceRevision": "bd599280ee16d9b002697c6af38a0d1237269fc3",
+  "sourceFileSha256": {
+    "scripts/qualify-demo-performance.ts": "c4607721a6fe340f647beffdfe22de4d943ef6e447aa822edbd02106b7f3818d",
+    "scripts/demo-performance-qualification.ts": "b8d4afaff9319ce88436cf685ca889c786fc31156d9dab3e4e36b0dc3ffdb28e",
+    "fixtures/anny-hsh-rooms-v1.json": "4b395851e0c4f3201048d6aa0e7d455996ad4b4dac1fb01edd5d570c8d973705",
+    "fixtures/knowledge-demo-v1.json": "735b20d99c41293d5f5609842457f7b0f816ae028a72eb19ab7e91639f186917",
+    "fixtures/service-it-synthetic-v1.json": "7ea103b723db9118a9527d8ec16df9a0dc22579279003e30f5bd235cf5d1102f",
+    "pnpm-lock.yaml": "149a6441e0f0a995d5a055a2e63f4481edcb61b983c5815ab943fad8c096726e"
+  },
+  "buildId": "h6dP84KtegXTg462FH4yM"
+}
