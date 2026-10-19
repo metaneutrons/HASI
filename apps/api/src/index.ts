@@ -12,6 +12,8 @@ import type { KnowledgeContextStore } from './knowledge-context.js';
 import { PluginAccountError } from './plugin-accounts.js';
 import { SERVICE_IT_DEMO_ORIGIN } from '@hasi/demo-fixtures/knowledge-catalog';
 import { registerOperationalEventHooks, type OperationalEventSink } from './operational-events.js';
+import type { ManagedPluginAdmin } from './managed-plugin-admin.js';
+import { registerManagedPluginAdminRoutes } from './managed-plugin-admin-routes.js';
 
 export { PluginRegistry, compatibleUpdate, RequestError } from './registry.js';
 export { OidcIdentityProvider, OidcAuthenticationError } from './oidc.js';
@@ -48,6 +50,7 @@ export interface ApiOptions {
   knowledgeDemoServiceItOrigin?: string;
   secureCookies?: boolean; sessionCookieName?: string; actionPolicies?: Readonly<Record<string, ActionPolicy>>;
   operationalEventSink?: OperationalEventSink;
+  managedPlugins?: ManagedPluginAdmin;
 }
 
 export async function createApi(options: ApiOptions) {
@@ -85,6 +88,11 @@ export async function createApi(options: ApiOptions) {
   });
   const requireUser = async (token: string | undefined) => { const user = await identity.resolve(token); if (!user) throw new RequestError(401, oidc ? 'Bitte melde dich an.' : 'Bitte wähle zuerst ein Testkonto.'); return user; };
   const requireAdmin = async (token: string | undefined) => { const user = await requireUser(token); if (user.role !== 'admin' || !user.actor.permissions.includes('plugins:manage')) throw new RequestError(403, 'Diese Funktion ist der Administration vorbehalten.'); return user; };
+  registerManagedPluginAdminRoutes(app, {
+    cookieName,
+    requireAdmin,
+    ...(options.managedPlugins ? { service: options.managedPlugins } : {}),
+  });
   const accountService = (id: string) => {
     options.registry.manifest(id);
     const service = options.registry.accounts.get(id);
@@ -415,5 +423,6 @@ export async function createApi(options: ApiOptions) {
 export function createRegistry(privateKey: KeyObject): PluginRegistry { return new PluginRegistry(privateKey); }
 
 export { personas, type Persona, type IdentityProvider } from './identity.js';
+export type { ManagedPluginAdmin } from './managed-plugin-admin.js';
 
 export { createContentHttpClient, type ContentHttpClient, type ContentHttpOptions } from './content-transport.js';

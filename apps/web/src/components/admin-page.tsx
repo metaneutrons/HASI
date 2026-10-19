@@ -17,6 +17,7 @@ import { apiRequest, postJson } from "@/lib/api";
 import type { Plugin, PluginTool } from "@/lib/types";
 import { PluginConfigPanel } from "./plugin-config-panel";
 import { PluginSourcePanel } from "./plugin-source-panel";
+import { ManagedPluginPanel } from "./managed-plugin-panel";
 
 interface UpdateState { status: "current" | "available" | "blocked"; message: string }
 type PendingById = Record<string, "toggle" | "check" | "activate" | undefined>;
@@ -244,6 +245,7 @@ export function AdminPage() {
         <span className="environment-badge"><span className="status-dot" /> Testdaten</span>
       </div>
       <PluginSourcePanel onChanged={loadPlugins} />
+      <ManagedPluginPanel onChanged={loadPlugins} />
 
       {notice && <div className="admin-notice" role="status"><span>{notice}</span><button className="icon-button" type="button" aria-label="Meldung schließen" onClick={() => { setNotice(null); }}><CircleAlert size={16} /></button></div>}
 

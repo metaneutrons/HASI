@@ -11,6 +11,7 @@ import type { PluginAccountService } from './plugin-accounts.js';
 import type { PluginDeploymentBinding } from './plugin-deployment-binding.js';
 import { createPluginDeploymentGateway } from './plugin-deployment-proxy.js';
 import type { DockerPluginActiveEndpointResolver } from './docker-plugin-driver.js';
+import type { ManagedPluginAdmin } from './managed-plugin-admin.js';
 import { createConsoleOperationalEventSink, type OperationalEventSink } from './operational-events.js';
 
 /** Same stable key as the verified OIDC provider; e-mail is never an account authority. */
@@ -61,6 +62,9 @@ export interface ProductionRuntimeOptions {
   deploymentBindings?: ReadonlyMap<string, PluginDeploymentBinding>;
   /** Embedded operator compositions only; prefer a separate worker process in institutional hosting. */
   managedGateway?: { endpointResolver: DockerPluginActiveEndpointResolver; port: number; installationIds: readonly string[] };
+  /** Private installer process; the public API never receives its Docker driver. */
+  externalManagedGateway?: { origin: string; installationIds: readonly string[] };
+  managedPlugins?: ManagedPluginAdmin;
 }
 
 /** Separate long-lived API/worker topology; the public Coolify fixture stack is not used. */
@@ -73,7 +77,12 @@ export async function createProductionRuntime(options: ProductionRuntimeOptions)
     if (!user) throw new Error('Institutional account not authorized');
     return user;
   }, resolveAuthority: subject => directory.resolve(subject) });
-  const managed = new Set(options.managedGateway?.installationIds ?? []);
+  if (options.managedGateway && options.externalManagedGateway) throw new TypeError('Choose one managed gateway topology');
+  if (options.externalManagedGateway) {
+    const external = new URL(options.externalManagedGateway.origin);
+    if (external.origin !== options.externalManagedGateway.origin || external.protocol !== 'http:' || external.hostname !== '127.0.0.1' || external.username || external.password) throw new TypeError('Managed gateway must be operator-local');
+  }
+  const managed = new Set(options.managedGateway?.installationIds ?? options.externalManagedGateway?.installationIds ?? []);
   if ([...managed].some(id => !options.plugins.some(plugin => plugin.id === id) || !options.deploymentBindings?.has(id))) throw new TypeError('Managed plugins require an approved source and current configuration/route binding');
   const gateway = options.managedGateway ? await createPluginDeploymentGateway({ ...options.managedGateway, authorize: ({ installationId, authorization }) => {
     const plugin = options.plugins.find(source => source.id === installationId && managed.has(installationId));
@@ -82,28 +91,29 @@ export async function createProductionRuntime(options: ProductionRuntimeOptions)
     return actual.length === expected.length && timingSafeEqual(actual, expected);
   } }) : undefined;
   let registry: PluginRegistry | undefined;
+  const gatewayOrigin = gateway?.origin ?? options.externalManagedGateway?.origin;
   try {
     registry = new PluginRegistry(options.privateKey, {
       store: options.store,
       scope: options.scope,
       envelopeResults: true,
       resolveActor: async subject => (await directory.resolve(subject))?.actor,
-      ...(gateway ? { operatorManagedLoopbackOrigin: gateway.origin } : {}),
+      ...(gatewayOrigin ? { operatorManagedLoopbackOrigin: gatewayOrigin } : {}),
       ...(options.accounts ? { accounts: options.accounts } : {}),
       ...(options.deploymentBindings ? { deploymentBindings: options.deploymentBindings } : {}),
     });
-    const plugins = options.plugins.map(source => gateway && managed.has(source.id) ? {
+    const plugins = options.plugins.map(source => gatewayOrigin && managed.has(source.id) ? {
       ...source,
       registration: {
         ...source.registration,
-        endpoint: `${gateway.origin}/api/plugin-deployments/${source.id}/mcp`,
+        endpoint: `${gatewayOrigin}/api/plugin-deployments/${source.id}/mcp`,
         allowLoopback: false,
       },
     } : source);
     // Catalogue entries are approvals to connect, not an instruction to reinstall removed sources.
     // createApi restores only durable connected records; a fresh installation is explicit admin work.
     const knowledgeContexts = createRegistryKnowledgeContexts({ registry, store: options.store, privateKey: options.privateKey, scope: options.scope, resolveActor: async subject => (await directory.resolve(subject))?.actor });
-    const app = await createApi({ mode: 'production', knowledgeContexts, registry, identity, store: options.store, origin: origin.origin, allowedHosts: [options.apiHostname], secureCookies: true, sessionCookieName: '__Host-hasi-session', pluginCatalog: plugins, operationalEventSink: options.operationalEventSink ?? createConsoleOperationalEventSink(), ...(options.actionPolicies ? { actionPolicies: options.actionPolicies } : {}) });
+    const app = await createApi({ mode: 'production', knowledgeContexts, registry, identity, store: options.store, origin: origin.origin, allowedHosts: [options.apiHostname], secureCookies: true, sessionCookieName: '__Host-hasi-session', pluginCatalog: plugins, operationalEventSink: options.operationalEventSink ?? createConsoleOperationalEventSink(), ...(options.actionPolicies ? { actionPolicies: options.actionPolicies } : {}), ...(options.managedPlugins ? { managedPlugins: options.managedPlugins } : {}) });
     if (gateway) app.addHook('onClose', () => gateway.close());
     app.get('/health', () => ({ status: 'ok' }));
     return { app, registry, directory };

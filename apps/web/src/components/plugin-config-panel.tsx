@@ -40,6 +40,10 @@ export interface PluginConfigPanelProps {
   pluginId: string;
   name: string;
   tools: ConfigurationToolOption[];
+  /** API resource root. By default this is the existing remote-plugin admin path. */
+  apiBase?: string;
+  mode?: 'remote' | 'managed';
+  onChanged?: () => void | Promise<void>;
 }
 
 const panelStyle = {
@@ -59,7 +63,14 @@ const summaryStyle = {
   listStyle: 'none',
 } as const;
 
-export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelProps) {
+export function PluginConfigPanel({
+  pluginId,
+  name,
+  tools,
+  apiBase = `/api/admin/plugins/${encodeURIComponent(pluginId)}`,
+  mode = 'remote',
+  onChanged,
+}: PluginConfigPanelProps) {
   const panelRef = useRef<HTMLDetailsElement>(null);
   const mounted = useRef<boolean>(false);
   const controllers = useRef(new Set<AbortController>());
@@ -138,7 +149,15 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
   }
 
   function endpoint(suffix = ''): string {
-    return `/api/admin/plugins/${encodeURIComponent(pluginId)}/configuration${suffix}`;
+    return `${apiBase}/configuration${suffix}`;
+  }
+
+  async function notifyConfigurationChanged(): Promise<void> {
+    try {
+      await onChanged?.();
+    } catch {
+      // A parent refresh must not make a saved configuration look unsuccessful.
+    }
   }
 
   function adoptDetails(next: PluginConfigurationDetails) {
@@ -163,7 +182,7 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
     setConnectionTestError(null);
     setConnectionTest(null);
     try {
-      const response = await request<unknown>(`/api/admin/plugins/${encodeURIComponent(pluginId)}/test-connection`, {
+      const response = await request<unknown>(`${apiBase}/test-connection`, {
         method: 'POST',
         body: JSON.stringify({}),
       });
@@ -247,6 +266,7 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
       setServerFieldErrors({});
       setConflict(false);
       setNotice('Entwurf gespeichert. Er wird erst nach der getrennten Aktivierung wirksam.');
+      await notifyConfigurationChanged();
     } catch (cause) {
       if (!isStillMounted()) return;
       const status = getHttpStatus(cause);
@@ -291,6 +311,7 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
       } catch {
         if (isStillMounted()) setLoadError('Der Entwurf wurde aktiviert, aber der aktuelle Status konnte nicht neu geladen werden. Bitte aktualisiere die Ansicht.');
       }
+      await notifyConfigurationChanged();
     } catch (cause) {
       if (!isStillMounted()) return;
       const status = getHttpStatus(cause);
@@ -310,7 +331,7 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
     setLoadError(null);
     setNotice(null);
     try {
-      const response = await request<unknown>(`/api/admin/plugins/${encodeURIComponent(pluginId)}/check-update`, {
+      const response = await request<unknown>(`${apiBase}/check-update`, {
         method: 'POST',
         body: JSON.stringify({}),
       });
@@ -391,7 +412,7 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
               </div>
             </section>
 
-            <section aria-label="Verbindungstest" style={sectionStyle}>
+            {mode === 'remote' && <section aria-label="Verbindungstest" style={sectionStyle}>
               <div style={sectionHeadingStyle}>
                 <h4 style={headingStyle}><RefreshCw size={15} aria-hidden="true" /> Verbindungstest</h4>
                 <button
@@ -439,7 +460,7 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
                   )}
                 </div>
               )}
-            </section>
+            </section>}
 
             <div style={{ display: 'flex', minWidth: 0, flexWrap: 'wrap', gap: '6px 16px', color: 'var(--muted)', fontSize: 13 }}>
               <span>Serverrevision <strong style={{ color: 'var(--ink)' }}>{pluginDetails.revision}</strong></span>
@@ -629,7 +650,7 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
               </p>
             )}
 
-            <section aria-label="Updateprüfung" style={sectionStyle}>
+            {mode === 'remote' && <section aria-label="Updateprüfung" style={sectionStyle}>
               <div style={{ display: 'flex', minWidth: 0, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--ink-soft)', fontSize: 13, fontWeight: 620 }}><RefreshCw size={15} aria-hidden="true" /> Updateprüfung</span>
                 <button className="text-button" type="button" disabled={busy !== null || conflict} onClick={() => { void checkUpdate(); }} style={{ minHeight: 44 }}>
@@ -642,7 +663,7 @@ export function PluginConfigPanel({ pluginId, name, tools }: PluginConfigPanelPr
                   <span>{updateStatus.message}</span>
                 </div>
               )}
-            </section>
+            </section>}
 
             {pluginDetails.audit.length > 0 && (
               <section aria-labelledby={`${id}-audit-heading`} style={sectionStyle}>

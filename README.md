@@ -164,6 +164,14 @@ The separate `pnpm knowledge:serve` composition accepts approved signed exports 
 
 A separate production API entrypoint and frontend-to-API transport are available; see [production composition](docs/architecture/production-runtime.md). They require real operator configuration and institutional authority provisioning. The public demo does not use this production identity path.
 
+The separate trusted managed-plugin installer now provides approved-release
+staging, manifest preflight, explicit review, activation, cancellation, rollback
+and reconciliation through private signed RPC and the admin interface. Docker
+access belongs only to that worker. Configuration can be prepared before the
+first installation. Deployed lifecycle, independent artifact distribution and
+the remaining M2 qualification are still open; this does not enable arbitrary
+repository execution in the public demo.
+
 The [synthetic topology qualifier](docs/architecture/production-runtime.md#isolated-identitytopology-qualification)
 runs the actual Next.js handler, two separate API processes, trusted local TLS,
 Test-IdP and disposable PostgreSQL. It checks session/revocation/restart boundaries

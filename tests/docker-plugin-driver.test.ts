@@ -594,6 +594,7 @@ describe('operator-local Docker plugin driver', () => {
 
     const endpoint = await driver.resolveActiveEndpoint({ installationId: 'installation-1' });
     expect(endpoint).toEqual({
+      stageOperationId: 'stage-operation-1',
       deploymentId: CONTAINER_ID,
       relayDeploymentId: RELAY_ID,
       releaseDigest: release().releaseDigest,
@@ -605,6 +606,110 @@ describe('operator-local Docker plugin driver', () => {
 
     active = { ...active, releaseDigest: 'f'.repeat(64) };
     await expect(driver.assertActiveEndpoint({ installationId: 'installation-1', endpoint: endpoint! })).resolves.toBe(false);
+  });
+
+  it('resolves a staged candidate only from its exact operation, release, image, and configuration revision', async () => {
+    const engine = new FakeDockerEngine();
+    const loopbackProbe = vi.fn(() => Promise.resolve(true));
+    const driver = createDockerPluginDriver(driverOptions(engine, routingController().routing, { loopbackProbe }));
+    await driver.stage(stageInput());
+    const writesAfterStage = engine.requests.filter(request => request.method !== 'GET').length;
+
+    const endpoint = await driver.resolveCandidateEndpoint({
+      installationId: 'installation-1',
+      operationId: 'stage-operation-1',
+      imageDigest: release().imageDigest,
+      releaseDigest: release().releaseDigest,
+      configurationRevision: 'config-revision-1',
+    });
+    expect(endpoint).toEqual({
+      stageOperationId: 'stage-operation-1',
+      deploymentId: CONTAINER_ID,
+      relayDeploymentId: RELAY_ID,
+      releaseDigest: release().releaseDigest,
+      host: '127.0.0.1',
+      port: 43121,
+      containerPort: 3000,
+    });
+    expect(loopbackProbe).toHaveBeenCalledWith(expect.objectContaining({ host: '127.0.0.1', port: 43121, path: '/healthz' }));
+    expect(engine.requests.filter(request => request.method !== 'GET')).toHaveLength(writesAfterStage);
+
+    const beforeProbeCount = loopbackProbe.mock.calls.length;
+    await expect(driver.resolveCandidateEndpoint({
+      installationId: 'installation-1',
+      operationId: 'other-stage-operation',
+      imageDigest: release().imageDigest,
+      releaseDigest: release().releaseDigest,
+      configurationRevision: 'config-revision-1',
+    })).resolves.toBeNull();
+    for (const mismatch of [
+      { imageDigest: 'e'.repeat(64), releaseDigest: release().releaseDigest, configurationRevision: 'config-revision-1' },
+      { imageDigest: release().imageDigest, releaseDigest: 'e'.repeat(64), configurationRevision: 'config-revision-1' },
+      { imageDigest: release().imageDigest, releaseDigest: release().releaseDigest, configurationRevision: 'stale-config' },
+    ]) {
+      await expect(driver.resolveCandidateEndpoint({ installationId: 'installation-1', operationId: 'stage-operation-1', ...mismatch }))
+        .rejects.toBeInstanceOf(DockerPluginDriverError);
+    }
+    expect(loopbackProbe).toHaveBeenCalledTimes(beforeProbeCount);
+  });
+
+  it('fences runtime health and dispatch when the trusted custody grant is revoked', async () => {
+    const engine = new FakeDockerEngine();
+    const route = routingController({ readActiveRoute: () => Promise.resolve({ deploymentId: CONTAINER_ID, releaseDigest: release().releaseDigest }) });
+    let authorized = true;
+    const authorizeRuntime = vi.fn(() => Promise.resolve(authorized));
+    const driver = createDockerPluginDriver(driverOptions(engine, route.routing, { authorizeRuntime }));
+    await driver.stage(stageInput());
+    const endpoint = await driver.resolveActiveEndpoint({ installationId: 'installation-1' });
+    if (!endpoint) throw new Error('Expected owned runtime endpoint');
+    expect(authorizeRuntime).toHaveBeenCalledWith({ installationId: 'installation-1', stagingOperationId: 'stage-operation-1', releaseDigest: release().releaseDigest });
+    authorized = false;
+    await expect(driver.check({ installationId: 'installation-1', deploymentId: CONTAINER_ID, releaseDigest: release().releaseDigest })).resolves.toBe(false);
+    await expect(driver.resolveActiveEndpoint({ installationId: 'installation-1' })).rejects.toBeInstanceOf(DockerPluginDriverError);
+    await expect(driver.assertActiveEndpoint({ installationId: 'installation-1', endpoint })).resolves.toBe(false);
+    authorizeRuntime.mockRejectedValue(new Error('custody unavailable'));
+    await expect(driver.check({ installationId: 'installation-1', deploymentId: CONTAINER_ID, releaseDigest: release().releaseDigest })).resolves.toBe(false);
+  });
+
+  it('rejects foreign candidate ownership and an unhealthy staged relay before returning an endpoint', async () => {
+    const foreignEngine = new FakeDockerEngine();
+    const foreignDriver = createDockerPluginDriver(driverOptions(foreignEngine, routingController().routing));
+    await foreignDriver.stage(stageInput());
+    foreignEngine.inspectedLabels = { ...record(foreignEngine.createdBody?.Labels), 'hasi.owner': 'another-owner' };
+    await expect(foreignDriver.resolveCandidateEndpoint({
+      installationId: 'installation-1',
+      operationId: 'stage-operation-1',
+      imageDigest: release().imageDigest,
+      releaseDigest: release().releaseDigest,
+      configurationRevision: 'config-revision-1',
+    })).rejects.toBeInstanceOf(DockerPluginDriverError);
+
+    const activeEngine = new FakeDockerEngine();
+    const activeProbe = vi.fn(() => Promise.resolve(true));
+    const activeRoute = routingController({ readActiveDeploymentId: () => Promise.resolve(CONTAINER_ID) });
+    const activeDriver = createDockerPluginDriver(driverOptions(activeEngine, activeRoute.routing, { loopbackProbe: activeProbe }));
+    await activeDriver.stage(stageInput());
+    await expect(activeDriver.resolveCandidateEndpoint({
+      installationId: 'installation-1',
+      operationId: 'stage-operation-1',
+      imageDigest: release().imageDigest,
+      releaseDigest: release().releaseDigest,
+      configurationRevision: 'config-revision-1',
+    })).rejects.toBeInstanceOf(DockerPluginDriverError);
+    expect(activeProbe).not.toHaveBeenCalled();
+
+    const unhealthyEngine = new FakeDockerEngine();
+    const unhealthyDriver = createDockerPluginDriver(driverOptions(unhealthyEngine, routingController().routing, {
+      loopbackProbe: () => Promise.resolve(false),
+    }));
+    await unhealthyDriver.stage(stageInput());
+    await expect(unhealthyDriver.resolveCandidateEndpoint({
+      installationId: 'installation-1',
+      operationId: 'stage-operation-1',
+      imageDigest: release().imageDigest,
+      releaseDigest: release().releaseDigest,
+      configurationRevision: 'config-revision-1',
+    })).rejects.toBeInstanceOf(DockerPluginDriverError);
   });
 
   it('reconciles from engine-owned labels and the routing authority without mutation', async () => {
