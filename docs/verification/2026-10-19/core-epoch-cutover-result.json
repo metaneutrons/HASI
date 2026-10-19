@@ -1,0 +1,56 @@
+{
+  "event": "core_epoch_cutover_qualified",
+  "scope": "disposable-postgres-and-local-processes",
+  "node": "v24.21.0",
+  "sources": {
+    "preEpoch": {
+      "commit": "e9a28743d5fe2338509d6c9e5f4bd4dda1c33501",
+      "registrySha256": "5e3dc88f0ca02facdf0699a0f084ad55bb29cdca13977c8ee6491cdc04799831",
+      "registrySourceClean": true
+    },
+    "epochAware": {
+      "commit": "c10d3ee06c6bfd0700c68455d259ce341f093c74",
+      "registrySha256": "311425e909cfe7add12aa600ec12bc729f30fce95c7a72a1bf2c939a33f8e5be",
+      "registrySourceClean": true
+    }
+  },
+  "workerPids": {
+    "oldWriter": 66702,
+    "epochTransition": 66713,
+    "restart": 66729,
+    "legacyDecoderProbe": 66730
+  },
+  "checks": {
+    "oldSignedStateSeededWithoutEpoch": true,
+    "oldWriterExitedGracefullyAndPidWasGoneBeforeEpochProcess": true,
+    "newCoreValidatedOldSignatureWithoutRewritingBeforeFirstTransition": true,
+    "disableEnablePersistedEpochAndChangedBinding": true,
+    "secondEpochAwareProcessVerifiedSignatureAndStableBinding": true,
+    "syntheticReadWorkedAfterTransitionAndRestart": true,
+    "stoppedLegacyDecoderRejectedEpochRecordWithoutMutation": true,
+    "syntheticSessionBudgetAndProposalSentinelsPreserved": true
+  },
+  "sentinelEvidence": {
+    "sessionRevision": "8d425d48-eb75-44d6-ac7d-937be05b5ce0",
+    "budgetRevision": "531078b9-8c6d-4e06-8c04-537a7f40cd86",
+    "proposalRevision": "45e2151c-52f0-4850-a99a-2ced4e904ebc",
+    "legacyBindingChanged": true
+  },
+  "limits": [
+    "Session, budget, and proposal rows are labeled synthetic sentinels, not the production session or budget implementation.",
+    "The proposal check compares a synthetic stored binding; it does not exercise the public API confirmation route.",
+    "The legacy process pins and checks the old registry source only, not a complete historical dependency tree, Coolify container or production app image.",
+    "This does not qualify a live Coolify drain, public traffic handoff, managed installer deployment, or production rollback.",
+    "No model/provider, booking, institutional service, production database, or production credential was used."
+  ],
+  "cleanup": {
+    "exactOwnedKeysRemoved": 5,
+    "noDatabaseOrNamespaceDrop": true
+  },
+  "qualifierSourceSha256": {
+    "scripts/qualify-core-epoch-cutover.ts": "6664b079dd54bed0abe7ab7e1408d568630dc828ccc12dd2c2ac5114146b3884",
+    "scripts/core-epoch-cutover-worker.ts": "9351f5d4d0bcb9c81636f95a0705e68575d86e53a2cee3255a2fcd857c4ba908",
+    "scripts/plugin-gateway-qualification-config.ts": "6a6e0d31592ba248f70533ecd5d398d74728c6dc5f2ad3b2d56fc29fa50f576e",
+    "apps/api/src/registry.ts": "311425e909cfe7add12aa600ec12bc729f30fce95c7a72a1bf2c939a33f8e5be"
+  }
+}

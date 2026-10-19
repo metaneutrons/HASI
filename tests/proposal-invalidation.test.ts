@@ -431,7 +431,7 @@ describe('proposal invalidation ledger', () => {
     const invalidEvent = { ...signedEvent, retainUntil };
     const signature = sign(
       null,
-      Buffer.from(['hasi:proposal-invalidation-event:v1', String(invalidEvent.scopeDigest), digest(invalidEvent)].join(':'), 'utf8'),
+      Buffer.from(['hasi:proposal-invalidation-event:v1', result.event.event.scopeDigest, digest(invalidEvent)].join(':'), 'utf8'),
       test.privateKey,
     ).toString('base64url');
     const malformed = {

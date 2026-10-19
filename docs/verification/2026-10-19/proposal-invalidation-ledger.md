@@ -47,10 +47,10 @@ sliding expiry on repeated reads, and both records becoming unreadable after
 expiry without an exact-key read recreating the projection. The focused run
 passes 49 tests across `proposal-invalidation.test.ts`,
 `proposal-binding-guard.test.ts` and `plugin-lifecycle.test.ts`. The API project
-typecheck and scoped ESLint pass. A repository-wide typecheck was also run, but
-it currently reports two unresolved `isDeepStrictEqual` references in the
-concurrent, root-owned `scripts/qualify-core-epoch-cutover.ts`; it does not
-report an error in the assigned API files. Existing race and terminal-state
+typecheck and scoped ESLint pass. Root also passed the repository-wide
+TypeScript check after correcting the malformed-event test's typed scope access;
+the concurrent qualifier's incomplete imports were resolved before that final
+check. Existing race and terminal-state
 tests continue to cover execution claims and non-pending proposals. No
 provider call, external business write or background drain is performed by
 this primitive.
