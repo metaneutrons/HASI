@@ -42,9 +42,18 @@ requires operator inspection before removal.
 
 Install the script on the host at a root-owned path such as
 `/opt/hasi-deploy/demo-storage-maintenance.mjs`, then review a dry run with
-`/usr/bin/node /opt/hasi-deploy/demo-storage-maintenance.mjs`. The host operator
-installs the systemd units. A oneshot service should run as root with
-`ExecStart=/usr/bin/node /opt/hasi-deploy/demo-storage-maintenance.mjs --apply`.
+`/opt/hasi-deploy/node24 /opt/hasi-deploy/demo-storage-maintenance.mjs`. The host operator
+installs the systemd units. The host has no distribution-managed Node runtime.
+Provision `/opt/hasi-deploy/node24` from `/usr/local/bin/node` in the existing
+controller container only after verifying that container's image uses the
+reviewed, digest-pinned Node 24 image in the controller service. Compare the
+copied binary's SHA-256 with the container binary, set root ownership and mode
+`0755`, and verify its version and script syntax on the host before use. This
+avoids an unpinned package download; the host runtime must be refreshed when the
+controller image pin changes. Do not copy container environment or arguments.
+
+A oneshot service should run as root with
+`ExecStart=/opt/hasi-deploy/node24 /opt/hasi-deploy/demo-storage-maintenance.mjs --apply`.
 A timer can use `OnBootSec=15min`, `OnUnitActiveSec=1h`, and `Persistent=true`.
 After installation, run `systemctl daemon-reload`, enable the timer, and inspect
 its next run and the sanitized service result with `systemctl list-timers` and
