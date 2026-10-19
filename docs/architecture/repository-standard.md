@@ -72,7 +72,7 @@ The [delivery plan](../plans/releases-and-demo.md) defines the acceptance gates;
 its linked issues record the exact merged, qualified and published states. No
 stable release or GHCR image is claimed by this architecture document.
 
-## Historical Doctor findings (2026-10-16)
+## Known Doctor findings (2026-10-16)
 
 The read-only GitHub audit passed 17 API checks with no failures. At that audit,
 the web TypeScript configuration did not yet inherit all shared strict options,
@@ -83,7 +83,6 @@ That tracking gap is addressed by the [MVP epic #47](https://github.com/metaneut
 and [roadmap epic #55](https://github.com/metaneutrons/HASI/issues/55) on 2026-10-18.
 The TypeScript and ESLint statements above describe the 2026-10-16 audit state;
 they were superseded by the later configuration migration below.
-
 
 ## WEB-A1 configuration reconciliation (2026-10-19)
 
