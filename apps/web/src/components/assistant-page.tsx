@@ -24,6 +24,7 @@ import { PersonalConnectionNotice } from "@/components/personal-connection-notic
 import { ChatServiceConnection } from "@/components/chat-service-connection";
 import { parsePluginAccountList } from "@/lib/plugin-accounts";
 import { ChatMessageCopy } from "@/components/chat-message-copy";
+import { ChatMarkdown } from "@/components/chat-markdown";
 import { bookingStatusLabel } from "@/lib/chat-message-copy";
 import { ChatRoomResults } from "@/components/chat-room-results";
 import { PluginResultApp } from "@/components/plugin-result-app";
@@ -124,6 +125,7 @@ interface ConversationProps { sessionId: string; ownerId: string; name: string; 
 function Conversation({ sessionId, ownerId, name, initial, active, configuration, onSnapshot, onDraft, onNewChat, newChatDisabled, onShowHistory }: ConversationProps) {
   const [messages, setMessages] = useState<Message[]>(initial.messages);
   const [input, setInput] = useState(initial.input);
+  const [inputNotice, setInputNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [activity, setActivity] = useState("");
   const [request, setRequest] = useState<RoomRequest>(initial.request);
@@ -173,6 +175,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   function updateRequest(next: RoomRequest) { roomIntent.current = next; setRequest(next); }
 
   function updateInput(next: string) {
+    setInputNotice("");
     onDraft(sessionId, next);
     setInput(next);
   }
@@ -525,13 +528,13 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
 
   async function send(text: string) {
     const trimmed = text.trim();
-    if (!trimmed || trimmed.length > 2000 || !canSend || !start("Anfrage wird verarbeitet")) return;
+    if (!trimmed || text.length > 4000 || !canSend || !start("Anfrage wird verarbeitet")) return;
     routingToken.current = undefined;
     resolvedProfile.current = null;
     setFallbackLabel(null);
     updateInput("");
-    const eventId = add({ role: "user", text: trimmed });
-    if (!offline) appendHistory("user", trimmed, eventId);
+    const eventId = add({ role: "user", text });
+    if (!offline) appendHistory("user", text, eventId);
     setActiveResult(null);
     const pendingProposal = activeProposal;
     setActiveProposal(null);
@@ -897,7 +900,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                 <div className="chat-message-meta">{message.timestamp ? <time className="chat-message-time" dateTime={message.timestamp.createdAt} title="Servereingang · Europe/Berlin">{formatMessageTime(message.timestamp.createdAt)}</time> : <span className="chat-message-time">Zeitpunkt unbekannt</span>}<ChatMessageCopy message={message} /></div>
                 <div className="chat-message-body">
                   {message.tool && <span className="chat-tool-label"><Check size={13} aria-hidden="true" /> {message.tool}</span>}
-                  <p>{message.text}</p>
+                  <ChatMarkdown source={message.text} />
                   {serviceConnection && <ChatServiceConnection
                     key={`${serviceConnection.installationId}:${serviceConnection.requestId}`}
                     installationId={serviceConnection.installationId}
@@ -962,7 +965,16 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
       <div className="chat-composer-dock">
         <form className="chat-composer" onSubmit={submit}>
           <label className="sr-only" htmlFor={inputId}>Nachricht an HASI</label>
-          <textarea id={inputId} ref={composer} rows={2} maxLength={2000} value={input} onChange={(event) => { updateInput(event.currentTarget.value); }} placeholder="Frag HASI oder beschreibe, was du vorhast …" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(input); } }} />
+          <span className="sr-only" id={`${inputId}-formatting`}>Markdown ist möglich. Umschalt und Eingabetaste fügt eine neue Zeile ein. Eingabetaste sendet die Nachricht.</span>
+          <textarea id={inputId} ref={composer} rows={2} maxLength={4000} value={input} aria-describedby={`${inputId}-formatting${inputNotice ? ` ${inputId}-notice` : ""}`} onChange={(event) => { updateInput(event.currentTarget.value); }} placeholder="Frag HASI oder beschreibe, was du vorhast …" onPaste={(event) => {
+            const field = event.currentTarget;
+            const pasted = event.clipboardData.getData("text/plain");
+            if (field.value.length - (field.selectionEnd - field.selectionStart) + pasted.length > 4000) {
+              event.preventDefault();
+              setInputNotice("Nicht eingefügt: maximal 4.000 Zeichen. Dein Entwurf bleibt erhalten.");
+            }
+          }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(input); } }} />
+          {inputNotice && <p className="chat-input-notice" id={`${inputId}-notice`} role="alert">{inputNotice}</p>}
           <div className="chat-composer-bottom"><span><span className="status-dot" /> {offline ? "Dialog-Demo · ohne Sprachmodell" : modelLoading ? "Modellstatus wird geladen …" : selectedProfile?.configured ? `${providerLabel ?? "Modellanbieter"} · anny-Testdaten` : `${providerLabel ?? "Modellanbieter"} nicht konfiguriert`}</span><button type="submit" aria-label="Nachricht senden" disabled={busy || !canSend || !input.trim()}><ArrowUp size={20} aria-hidden="true" /></button></div>
         </form>
         <p className="chat-footnote">{offline ? "Dialog-Demo mit Testdaten · synthetisches IT- und Intranet-Wissen" : `Nachrichten und ausgewählte Toolergebnisse gehen an ${providerLabel ?? "den ausgewählten Modellanbieter"}. Bitte nur Testdaten eingeben.${selectedProfile?.fallbackLabels?.length ? ` Konfigurierte Ausweichmodelle: ${selectedProfile.fallbackLabels.join(", ")}.` : ""}`}</p>

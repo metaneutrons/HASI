@@ -26,6 +26,7 @@
     "@ai-sdk/openai-compatible": "3.0.69",
     "@hasi/demo-fixtures": "workspace:*",
     "@hasi/demo-runtime": "workspace:*",
+    "@hasi/knowledge-plugin": "workspace:*",
     "@hasi/plugin-sdk": "workspace:*",
     "@hasi/state": "workspace:*",
     "@modelcontextprotocol/ext-apps": "2.0.3",
@@ -35,9 +36,10 @@
     "next": "16.4.2",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
     "server-only": "0.0.1",
-    "zod": "4.6.7",
-    "@hasi/knowledge-plugin": "workspace:*"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
