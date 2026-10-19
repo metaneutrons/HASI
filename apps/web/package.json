@@ -23,7 +23,7 @@
     "@ai-sdk/anthropic": "4.0.81",
     "@ai-sdk/groq": "4.0.62",
     "@ai-sdk/openai": "4.0.95",
-    "@ai-sdk/openai-compatible": "3.0.69",
+    "@ai-sdk/openai-compatible": "3.0.70",
     "@hasi/demo-fixtures": "workspace:*",
     "@hasi/demo-runtime": "workspace:*",
     "@hasi/knowledge-plugin": "workspace:*",
