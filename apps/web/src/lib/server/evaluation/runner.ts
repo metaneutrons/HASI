@@ -12,6 +12,11 @@ import {
   projectEvaluationModelInput,
   type EvaluationModelInput,
 } from "./input-projection";
+import {
+  assessEvaluationOracle,
+  parseEvaluationOracle,
+  type EvaluationOracleAssessment,
+} from "./oracles";
 
 const syntheticMeasurementsSchema = z.strictObject({
   kind: z.literal("synthetic"),
@@ -56,6 +61,8 @@ export type EvaluationTransport = (input: EvaluationModelInput) => Promise<unkno
 export interface EvaluationRunDependencies {
   /** Server-produced evidence identity allowlist for this synthetic fixture run. */
   serverAuthorizedEvidence: ReadonlySet<string>;
+  /** Optional server-owned deterministic assertions; this is never case or model input. */
+  oracle?: unknown;
   /** Required injection point. This module deliberately provides no transport implementation. */
   transport: EvaluationTransport;
 }
@@ -86,7 +93,7 @@ export type EvaluationRun = RunMetadata & {
     }
   | {
       transport: { status: "completed"; response: EvaluationTransportResponse };
-      assessment: NotAssessed;
+      assessment: NotAssessed | EvaluationOracleAssessment;
     }
 );
 
@@ -120,6 +127,9 @@ export async function runEvaluationCase(
 
   const evaluationCase = evaluationCaseSchema.parse(value);
   const input = projectEvaluationModelInput(evaluationCase, dependencies.serverAuthorizedEvidence);
+  const oracle = dependencies.oracle === undefined
+    ? undefined
+    : parseEvaluationOracle(dependencies.oracle);
   const metadata = runMetadata(evaluationCase);
   const inputDigestSha256 = digestModelInput(input);
   const common = {
@@ -151,6 +161,8 @@ export async function runEvaluationCase(
   return {
     ...common,
     transport: { status: "completed", response: response.data },
-    assessment: { status: "not_assessed", reason: "synthetic_transport_only" },
+    assessment: oracle
+      ? assessEvaluationOracle(oracle, response.data, input)
+      : { status: "not_assessed", reason: "synthetic_transport_only" },
   };
 }
