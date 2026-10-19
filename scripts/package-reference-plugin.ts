@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import type { Dirent } from 'node:fs';
-import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, readlink, rm, writeFile } from 'node:fs/promises';
+import { copyFile, lchmod, lstat, mkdir, mkdtemp, readFile, readdir, readlink, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -192,7 +192,17 @@ async function artifactFiles(root: string): Promise<ReferenceArtifactFile[]> {
         files.push({ path, kind: 'directory', mode: stats.mode & 0o777, size: 0 });
         await visit(fullPath);
       } else if (child.isSymbolicLink()) {
-        const stats = await lstat(fullPath);
+        let stats = await lstat(fullPath);
+        if ((stats.mode & 0o777) !== 0o777 && process.platform === 'darwin') {
+          // Linux archives expose symlink mode 0777; normalize macOS's 0755 before recording this mode-bound digest.
+          // lchmod changes the link itself; chmod would follow it and mutate target permissions.
+          // eslint-disable-next-line @typescript-eslint/no-deprecated -- Required to normalize symlink mode on macOS.
+          await lchmod(fullPath, 0o777);
+        }
+        stats = await lstat(fullPath);
+        if ((stats.mode & 0o777) !== 0o777) {
+          throw new Error('Reference artifact symbolic link permissions could not be normalized.');
+        }
         const target = await readlink(fullPath);
         files.push({ path, kind: 'symlink', mode: stats.mode & 0o777, size: Buffer.byteLength(target, 'utf8'), target });
       } else if (child.isFile()) {
