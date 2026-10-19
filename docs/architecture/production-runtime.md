@@ -90,13 +90,100 @@ the public API.
 
 ### Operator-local Docker container composition
 
+The standalone `apps/api/dist/managed-plugin-worker.js` now composes the actual
+installer, Docker driver, durable coordinator, signed settings, route binding,
+private gateway and administration RPC. Startup requires `HASI_MODE=production`,
+`HASI_MANAGED_INSTALLER=1`, `HASI_INSTALLER_CONFIG`, `DATABASE_URL` and
+`HASI_PRIVATE_KEY`. Run it as a separate trusted host process. The public API's
+optional `installer` operator configuration contains only `origin`,
+`gatewayOrigin`, `ownerId` and `installationIds`. Each managed source also has a
+reviewed `manifest` matching its `manifestDigest`. Both origins must be literal
+HTTP loopback origins; expose neither listener through the public reverse proxy.
+The API builds only the private RPC client and durable configuration bindings.
+This is a **same-host process topology with a shared network namespace**. Two
+ordinary Docker containers do not share loopback. A container deployment must
+explicitly arrange the shared namespace or add a separately reviewed private
+transport; setting the worker's container DNS name as a loopback origin cannot
+make this composition work. No such production container deployment is claimed
+qualified here.
+
+The worker's bounded version-1 operator document declares scope/owner, two
+listener ports, Docker socket, approved isolated/relay networks, publisher public
+keys and namespace grants, `installations` and logical environment `credentials`.
+The strict schema is next to the entrypoint. Each installation declares its
+configuration schema version, approved restore-plan IDs and releases. A release
+contains an operator ID, publisher-signed envelope, exact manifest, hardened
+launch options, logical secret assignments, reviewed license and inventory
+digest. It cannot carry secret values. Credential slots use only
+`HASI_PLUGIN_SECRET_*` environment names with independently assigned revisions.
+Rotate logical assignments and retire affected runtimes when replacing secrets.
+Publisher/catalogue/credential grants are re-read for operations; topology
+changes require a controlled worker restart. Images and generation networks must
+already be provisioned by the operator. Automatic artifact acquisition and its
+inventory verification are still separate M2 work.
+
+Before container creation the worker appends a signed credential-grant snapshot
+bound to the installation, original stage operation and release. It contains
+only logical assignments and independently managed custody revisions/readiness,
+including the service transport revision. It contains no secret values or
+value-derived hashes. The gateway compares this snapshot with current custody
+on resolution and again before forwarding. Any changed or missing assignment,
+including optional/undeclared container assignments, blocks that runtime. A
+restarted worker cannot re-sign an old container with the newest grant. Stage
+identity comes from fresh Docker ownership inspection. Rebuild/redeployment with
+the approved replacement grants is required after rotation.
+
+The admin uses `/api/admin/managed-plugins` and the shared browser-safe DTOs.
+Configuration setup is available before a container exists. Mutations require
+the exact current state token and a command UUID. The worker re-resolves the
+subject through the signed authority directory; an API token's asserted role is
+insufficient. Its short-lived Ed25519 RPC signature binds actor, scope and the
+entire strict request. Each request has a fresh signed nonce. The response is
+also signed and binds that nonce, actor, scope and exact request/response digests;
+a replacement loopback listener cannot replay a prior successful response.
+A browser never supplies image/endpoint/socket options or
+credential references. Only the trusted worker receives Docker access.
+The catalogue sends release summaries and configuration-toggle labels, not full
+tool schemas, descriptions or identity claims. The private response reader is
+bounded at 16 MiB to cover the allowed 32-installation catalogue; request bodies
+remain bounded at 32 KiB. Revoked publisher releases cannot execute, but their
+installation and exact candidate remain visible for status and cleanup rather
+than preventing unrelated installations from starting.
+
+Each command has separate signed, append-only intent/completion CAS records.
+Repeating the same command ID reads its result and never dispatches it again;
+different payloads under that ID are denied. A missing completion is
+**uncertain**, not evidence of a live executor or a failed side effect. An
+explicit reconcile operation uses the coordinator's existing durable intent;
+it does not replay the original mutation. Historical uncertain command receipts
+remain uncertain if no exact outcome was recorded. The current authoritative
+installation view is returned separately. No timeout-based ownership takeover,
+record pruning or inference from container absence is introduced.
+
+Every new release requires explicit review. Approval and activation preflight the
+actual candidate manifest through its inspected, exact stage/image/release/config
+loopback endpoint. HTTP is bounded and redirects, HTML and credentials in URLs
+are not accepted. The endpoint is inspected again after fetching. Approval and
+activation CAS-pin the same staging operation so a replacement candidate cannot
+inherit a prior preflight. Changed configuration schema versions are rejected
+until a migration implementation exists; a boolean from the browser cannot
+declare compatibility. Current publisher, logical credential, reviewer and
+configuration authority are checked again by the coordinator.
+
+This implements a managed administration/control path, not full M2 acceptance.
+Actual deployed Linux install/update/recovery, external artifact distribution,
+reviewed capability presentation, host registry pin adoption, explicit pending
+action invalidation/audit and the remaining browser matrices still need their
+own implementation or qualification. The public demo does not automatically
+enable executable plugin installation.
+
 `createDockerPluginDriver` is an explicit operator-local composition. It requires
 `enabled: true`, `deploymentTarget: "operator-local"`, an absolute Docker socket
 path, a server-owned `ownerId`, `allowedInternalNetworks`, the distinct required
 `relayNetwork`, an operator-owned routing controller and a server-side secret
 resolver. It refuses Vercel and demo-mode processes. This driver is not enabled
-by the public demo or the standalone JSON production entrypoint; trusted
-application wiring must provide these options. Never give the Docker socket to
+by the public demo or the public API process. The separate managed installer
+entrypoint supplies these options from a reviewed operator document. Never give the Docker socket to
 a plugin container or public administrator.
 
 The operator provisions an empty internal bridge for each deployment generation

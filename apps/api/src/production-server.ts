@@ -6,16 +6,22 @@ import { createProductionRuntime } from './production-runtime.js';
 import { EnvironmentPluginSecretCustody } from './plugin-secrets.js';
 import type { ActionPolicy } from './action-policy.js';
 import { sourcePolicySchema } from './result-envelope.js';
-import { digest } from '@hasi/plugin-sdk';
+import { digest, manifestSchema } from '@hasi/plugin-sdk';
+import { createManagedPluginRpcClient } from './managed-plugin-rpc.js';
+import { PluginRouteController } from './plugin-route-controller.js';
+import { PluginDeploymentBinding } from './plugin-deployment-binding.js';
+import { PluginSettingsStore } from './plugin-settings.js';
 
 const label = z.string().min(1).max(256);
 const slot = z.strictObject({ environmentName: z.string().regex(/^HASI_PLUGIN_SECRET_[A-Z0-9_]{1,80}$/), revision: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/) });
 const configSchema = z.strictObject({
   version: z.literal(1), scope: label, webOrigin: z.url(), apiHostname: label,
   oidc: z.strictObject({ issuer: z.url(), clientId: label }),
+  installer: z.strictObject({ origin: z.url(), gatewayOrigin: z.url(), ownerId: label, installationIds: z.array(label).min(1).max(32) }).optional(),
   plugins: z.array(z.strictObject({
     id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/), label,
     endpoint: z.url(), manifestDigest: z.string().regex(/^[a-f0-9]{64}$/), credential: slot,
+    manifest: manifestSchema.optional(),
     sourcePolicy: sourcePolicySchema,
     allowedPrivateCidrs: z.array(z.string().max(64)).max(16).optional(),
     secrets: z.record(z.string().max(128), slot).default({}),
@@ -38,6 +44,7 @@ async function main() {
   const store = new PostgresJsonStore(`production:${configuration.scope}`, { poolConfig: { connectionString: required('DATABASE_URL'), max: 8, connectionTimeoutMillis: 5000 } });
   await store.initialize();
   try {
+    const privateKey = createPrivateKey(required('HASI_PRIVATE_KEY'));
     const plugins = await Promise.all(configuration.plugins.map(async plugin => {
       const transport = new EnvironmentPluginSecretCustody({ service: plugin.credential }, process.env);
       const serviceToken = await transport.use('service', value => Promise.resolve(value));
@@ -57,7 +64,20 @@ async function main() {
       },
       reconcile: async input => runtime.registry.reconcile(id, input.executionTool, { ...input.arguments }, input.actor, input.executionId, await runtime.registry.binding(id)),
     };
-    const runtime = await createProductionRuntime({ privateKey: createPrivateKey(required('HASI_PRIVATE_KEY')), store, scope: configuration.scope, webOrigin: configuration.webOrigin, apiHostname: configuration.apiHostname, plugins, identity: { ...configuration.oidc, ...(process.env.HASI_OIDC_CLIENT_SECRET ? { clientSecret: process.env.HASI_OIDC_CLIENT_SECRET } : {}) }, actionPolicies: policies });
+    const installer = configuration.installer;
+    const managedOptions = installer ? (() => {
+      if (new Set(installer.installationIds).size !== installer.installationIds.length) throw new Error('Duplicate managed installation');
+      const settings = new PluginSettingsStore(privateKey, store, configuration.scope);
+      const routes = new PluginRouteController({ store, scope: configuration.scope, ownerId: installer.ownerId });
+      const bindings = new Map(installer.installationIds.map(id => {
+        const plugin = configuration.plugins.find(item => item.id === id);
+        if (!plugin?.manifest || digest(plugin.manifest) !== plugin.manifestDigest) throw new Error('Managed installation requires an approved manifest');
+        const manifest = plugin.manifest;
+        return [id, new PluginDeploymentBinding({ routes, ownerId: installer.ownerId, readAuthoritativeRevision: async installationId => (await settings.read(installationId, manifest)).activeRevision })] as const;
+      }));
+      return { deploymentBindings: bindings, externalManagedGateway: { origin: installer.gatewayOrigin, installationIds: installer.installationIds }, managedPlugins: createManagedPluginRpcClient({ origin: installer.origin, privateKey, scope: configuration.scope }) };
+    })() : {};
+    const runtime = await createProductionRuntime({ privateKey, store, scope: configuration.scope, webOrigin: configuration.webOrigin, apiHostname: configuration.apiHostname, plugins, identity: { ...configuration.oidc, ...(process.env.HASI_OIDC_CLIENT_SECRET ? { clientSecret: process.env.HASI_OIDC_CLIENT_SECRET } : {}) }, actionPolicies: policies, ...managedOptions });
     runtime.app.addHook('onClose', async () => { await store.close(); });
     const port = Number(process.env.HASI_API_PORT ?? '4100');
     if (!Number.isSafeInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid API port');

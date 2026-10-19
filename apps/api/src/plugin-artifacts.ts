@@ -1031,6 +1031,8 @@ export class PluginDeploymentCoordinator {
 
   async stageCandidate(input: {
     readonly installationId: string;
+    /** Optional extra CAS pin for trusted administrator dispatch. */
+    readonly baseCurrentDigest?: string | null;
     readonly release: unknown;
     readonly configurationRevision: string;
     readonly configurationCompatible: boolean;
@@ -1042,6 +1044,7 @@ export class PluginDeploymentCoordinator {
     const key = this.key(input.installationId);
     const { revision, state: current } = await this.read(input.installationId);
     if (current.status !== 'empty' && current.status !== 'active') throw new PluginArtifactError('Another plugin deployment operation is in progress.');
+    if (Object.hasOwn(input, 'baseCurrentDigest') && input.baseCurrentDigest !== (current.current?.releaseDigest ?? null)) throw new PluginArtifactError('Plugin deployment base changed before staging.');
     const release = verifyPluginRelease(input.release, this.options.resolvePublisher);
     if (release.pluginId !== current.pluginId || !input.configurationCompatible) throw new PluginArtifactError('Plugin release or configuration is incompatible with this installation.');
     if (input.configurationRevision !== current.configurationRevision) throw new PluginArtifactError('Plugin configuration revision is stale.');
@@ -1172,10 +1175,11 @@ export class PluginDeploymentCoordinator {
     return { outcome: ready.status as 'candidate-ready' | 'review-required', operationId, state: snapshot(ready) };
   }
 
-  async approveCandidate(input: { readonly installationId: string; readonly candidateDigest: string; readonly approval: PluginChangeReview }): Promise<PluginDeploymentSnapshot> {
+  async approveCandidate(input: { readonly installationId: string; readonly candidateDigest: string; readonly stagingOperationId?: string; readonly approval: PluginChangeReview }): Promise<PluginDeploymentSnapshot> {
     const key = this.key(input.installationId);
     const { revision, state } = await this.read(input.installationId);
-    if (state.status !== 'review-required' || state.candidate?.releaseDigest !== input.candidateDigest) {
+    if (state.status !== 'review-required' || state.candidate?.releaseDigest !== input.candidateDigest
+      || (input.stagingOperationId !== undefined && state.candidate.stagingOperationId !== input.stagingOperationId)) {
       throw new PluginArtifactError('No matching plugin candidate is awaiting review.');
     }
     const parsed = reviewApprovalSchema.safeParse(input.approval);
@@ -1194,13 +1198,15 @@ export class PluginDeploymentCoordinator {
   async activate(input: {
     readonly installationId: string;
     readonly candidateDigest: string;
+    readonly stagingOperationId?: string;
     readonly baseCurrentDigest: string | null;
     readonly configurationRevision: string;
   }): Promise<{ readonly outcome: 'activated' | 'known-failure' | 'unknown'; readonly operationId: string; readonly state: PluginDeploymentSnapshot }> {
     const key = this.key(input.installationId);
     const { revision, state: current } = await this.read(input.installationId);
     const candidate = current.candidate;
-    if (current.status !== 'candidate-ready' || !candidate?.stagedDeploymentId || candidate.releaseDigest !== input.candidateDigest || candidate.baseCurrentDigest !== input.baseCurrentDigest || !reviewIsSufficient(candidate)) {
+    if (current.status !== 'candidate-ready' || !candidate?.stagedDeploymentId || candidate.releaseDigest !== input.candidateDigest || candidate.baseCurrentDigest !== input.baseCurrentDigest || !reviewIsSufficient(candidate)
+      || (input.stagingOperationId !== undefined && candidate.stagingOperationId !== input.stagingOperationId)) {
       throw new PluginArtifactError('Plugin candidate is not ready for this activation.');
     }
     if (input.configurationRevision !== current.configurationRevision || candidate.configurationRevision !== current.configurationRevision) {
