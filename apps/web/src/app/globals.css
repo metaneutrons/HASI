@@ -1137,6 +1137,7 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .chat-speaker { flex-wrap: wrap; }
 .chat-speaker svg { color: var(--accent); }
 .chat-message-body { min-width: 0; }
+.chat-input-notice { margin: 8px 0; color: var(--accent); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
 .chat-message-body > p { margin: 0; color: var(--ink-soft); font-size: 16px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 .chat-message--user { max-width: 86%; justify-self: end; }
 .chat-message--user .chat-speaker { justify-content: flex-end; }

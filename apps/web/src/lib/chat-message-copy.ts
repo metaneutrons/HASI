@@ -16,9 +16,14 @@ export function bookingStatusLabel(status: string) {
 
 const intervalText = (start: string, end: string) => `${formatDateTime(start)} bis ${formatTime(end)} Uhr`;
 
+/** Return the exact Markdown source for clipboard and source-view use. */
+export function chatMessageMarkdownSource(message: ChatMessage): string {
+  return message.text;
+}
+
 /** Explicit content only: never serialize message metadata, tool arguments or UI controls. */
 export function chatMessageCopyText(message: ChatMessage, origin: string): string {
-  const sections = [message.text.trim()];
+  const sections = [message.text];
   for (const { resource, checked, intervals } of message.rooms ?? []) {
     sections.push([
       resource.name,

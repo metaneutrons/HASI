@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { chatMessageCopyText } from "../src/lib/chat-message-copy";
+import { chatMessageCopyText, chatMessageMarkdownSource } from "../src/lib/chat-message-copy";
 import type { ChatMessage } from "../src/lib/chat-sessions";
 
 const origin = "https://hasi.example";
 const message: ChatMessage = { id: "internal-message-id", role: "assistant", text: "Deine Ergebnisse.", model: "internal-model", interactionId: "internal-interaction" };
 
 describe("message clipboard content", () => {
+  it("returns exact Markdown source with leading, trailing and line-ending whitespace preserved", () => {
+    const source = "    const ready = true;\n\nEin Satz.  \nFortsetzung.\r\n";
+    expect(chatMessageMarkdownSource({ ...message, text: source })).toBe(source);
+    expect(chatMessageCopyText({ ...message, text: source }, origin)).toBe(source);
+  });
+
   it("copies plain text without message, model or interaction metadata", () => {
     expect(chatMessageCopyText({ ...message, text: "Hallo\n\nZweite Zeile." }, origin)).toBe("Hallo\n\nZweite Zeile.");
   });
