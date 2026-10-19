@@ -103,6 +103,8 @@ export interface DockerPluginRoutingController {
 }
 
 export interface DockerPluginActiveEndpoint {
+  /** Trusted worker lifecycle fence, checked by the host gateway before dispatch. */
+  readonly deploymentRevision?: string;
   /** Exact original stage identity; required by the managed worker's custody fence. */
   readonly stageOperationId?: string;
   readonly deploymentId: string;

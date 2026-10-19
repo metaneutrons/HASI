@@ -12,6 +12,7 @@ import type { PluginSecretCustody } from './plugin-secrets.js';
 import { resultEnvelope, sourcePolicySchema, type SourcePolicy, type ResultPaginationPolicy } from './result-envelope.js';
 import { PluginAccountError, type PluginAccountService } from './plugin-accounts.js';
 import type { PluginDeploymentBinding } from './plugin-deployment-binding.js';
+import { managedPluginRuntimeContractSchema, type ManagedPluginRuntimeContract } from './managed-plugin-contract.js';
 
 export class RequestError extends Error {
   constructor(public readonly status: number, message: string) { super(message); }
@@ -36,9 +37,17 @@ export interface Registration {
   allowLoopback: boolean;
   /** Operator-approved previous pins for an intentional contract migration. Never request input. */
   approvedPreviousManifestDigests?: readonly string[];
+  /** Private worker control-plane fence. Never populated by browser/plugin input. */
+  managedDeploymentRevision?: string;
 }
 
 export interface ApprovedPluginSource { id: string; label: string; registration: Registration }
+
+/** A private, operator-authenticated authority, never a plugin/browser manifest. */
+export interface ManagedPluginContractSource {
+  initialManifest: PluginManifest;
+  read(): Promise<ManagedPluginRuntimeContract | null>;
+}
 
 export interface PluginConnectionTestResult {
   instanceId: string;
@@ -55,6 +64,7 @@ export interface PluginRegistryOptions {
   /** Current host authority; production composition must resolve this independently of caller snapshots. */
   resolveActor?: (subject: string) => Promise<ActorContext | undefined>;
   deploymentBindings?: ReadonlyMap<string, PluginDeploymentBinding>;
+  managedContracts?: ReadonlyMap<string, ManagedPluginContractSource>;
   accounts?: ReadonlyMap<string, PluginAccountService>;
   /** Mandatory host provenance for production; v1 callers can retain explicit compatibility mode. */
   envelopeResults?: boolean;
@@ -80,6 +90,7 @@ interface InstalledPlugin {
   manifest: PluginManifest;
   enabled: boolean;
   healthy: boolean;
+  managedDeploymentRevision?: string;
   candidate?: PluginManifest;
   candidateBaseDigest?: string;
   candidateExpiresAt?: number;
@@ -153,8 +164,10 @@ export class PluginRegistry {
   private readonly deploymentBindings: ReadonlyMap<string, PluginDeploymentBinding>;
   private readonly resolveActor: PluginRegistryOptions['resolveActor'];
   private readonly operatorManagedLoopbackOrigin: string | undefined;
+  private readonly managedContracts: ReadonlyMap<string, ManagedPluginContractSource>;
 
   constructor(private readonly privateKey: KeyObject, options: PluginRegistryOptions = {}) {
+    this.managedContracts = options.managedContracts ?? new Map();
     if (privateKey.type !== 'private' || privateKey.asymmetricKeyType !== 'ed25519') {
       throw new TypeError('Plugin registry state requires an Ed25519 private key');
     }
@@ -163,6 +176,7 @@ export class PluginRegistry {
     const candidateTtlMs = options.candidateTtlMs ?? DEFAULT_CANDIDATE_TTL_MS;
     if (!Number.isSafeInteger(candidateTtlMs) || candidateTtlMs < 1) throw new TypeError('Candidate TTL must be a positive safe integer');
     this.store = options.store;
+    if (this.managedContracts.size && !this.store) throw new TypeError('Managed contracts require durable signed connection state');
     this.scope = scope;
     this.fetchImpl = options.fetch ?? globalThis.fetch;
     this.envelopeResults = options.envelopeResults ?? false;
@@ -193,7 +207,13 @@ export class PluginRegistry {
   }
 
   private transport(registration: Registration): typeof fetch {
-    if (this.fetchImpl !== fetch) return this.fetchImpl;
+    const withFence = (transport: typeof fetch): typeof fetch => registration.managedDeploymentRevision ? async (input, init) => {
+      const headers = new Headers(input instanceof Request ? input.headers : undefined);
+      new Headers(init?.headers).forEach((value, name) => { headers.set(name, value); });
+      headers.set('x-hasi-deployment-revision', registration.managedDeploymentRevision ?? '');
+      return transport(input, { ...init, headers });
+    } : transport;
+    if (this.fetchImpl !== fetch) return withFence(this.fetchImpl);
     const endpoint = this.endpoint(registration);
     const policyKey = digest({ origin: endpoint.origin, loopback: registration.allowLoopback, operatorManagedLoopbackOrigin: this.operatorManagedLoopbackOrigin ?? null, privateCidrs: registration.allowedPrivateCidrs ?? [] });
     let transport = this.transports.get(policyKey);
@@ -201,7 +221,7 @@ export class PluginRegistry {
       transport = createPluginFetch({ origins: [endpoint.origin], allowLoopback: registration.allowLoopback, ...(this.operatorManagedLoopbackOrigin ? { operatorManagedLoopbackOrigin: this.operatorManagedLoopbackOrigin } : {}), ...(registration.allowedPrivateCidrs ? { allowedPrivateCidrs: registration.allowedPrivateCidrs } : {}), maxResponseBytes: 2 * 1024 * 1024 });
       this.transports.set(policyKey, transport);
     }
-    return transport;
+    return withFence(transport);
   }
 
   async close(): Promise<void> { const transports = [...this.transports.values()]; this.transports.clear(); await Promise.all(transports.map(transport => transport.close())); }
@@ -369,12 +389,67 @@ export class PluginRegistry {
 
   private async refresh(plugin: InstalledPlugin): Promise<InstalledPlugin> {
     if (!await this.sourceConnected(plugin.instanceId)) throw new RequestError(409, 'Die Verbindung wurde entfernt. Bitte neu verbinden.');
+    if (this.managedContracts.has(plugin.instanceId)) return this.refreshManaged(plugin);
     if (!this.store) { plugin.settings = await this.settings.binding(plugin.instanceId, plugin.manifest, plugin.registration.secretReady, plugin.registration.secretRevision); return plugin; }
     const stored = await this.store.read(this.stateKey(plugin.instanceId));
     if (!stored) throw new RequestError(409, 'Der gespeicherte Plugin-Zustand fehlt.');
     this.applyState(plugin, this.validatePersistedState(stored.value, plugin.registration, plugin.instanceId));
     plugin.settings = await this.settings.binding(plugin.instanceId, plugin.manifest, plugin.registration.secretReady, plugin.registration.secretRevision);
     return plugin;
+  }
+
+  private async refreshManaged(previous: InstalledPlugin, connecting = false): Promise<InstalledPlugin> {
+    const authority = this.managedContracts.get(previous.instanceId);
+    if (!authority) throw new RequestError(409, 'Die verwaltete Plugin-Freigabe fehlt.');
+    // Keep each invocation's snapshot independent from concurrent refreshes.
+    const plugin = { ...previous };
+    try {
+      let localRevision: string | undefined;
+      let connectionRevision: string | undefined;
+      if (this.store) {
+        const record = await this.store.read(this.stateKey(plugin.instanceId));
+        if (!record) throw new Error('Missing connection state');
+        localRevision = record.revision;
+        this.applyState(plugin, this.validatePersistedState(record.value, plugin.registration, plugin.instanceId));
+        if (this.catalogSources.has(plugin.instanceId)) {
+          const connection = await this.store.read(this.catalogKey(plugin.instanceId));
+          const connected = connection ? this.connectionActive(connection.value, plugin.instanceId) : false;
+          if (!connecting && !connected) throw new Error('Managed connection withdrawn');
+          connectionRevision = connection?.revision;
+        }
+      }
+      const contract = managedPluginRuntimeContractSchema.parse(await authority.read());
+      if (contract.installationId !== plugin.instanceId || contract.manifest.id !== authority.initialManifest.id) throw new Error('Contract identity changed');
+      this.validateManifestSchemas(contract.manifest);
+      const statuses = new Map(contract.secretStatuses.map(secret => [secret.name, secret]));
+      const registration = { ...plugin.registration,
+        secretReady: (name: string) => statuses.get(name)?.configured ?? false,
+        secretRevision: (name: string) => statuses.get(name)?.revision ?? null,
+        credentialRevision: contract.transportCredentialRevision,
+        managedDeploymentRevision: contract.deploymentRevision,
+      };
+      delete registration.secretCustody;
+      const settings = await this.settings.binding(plugin.instanceId, contract.manifest, registration.secretReady, registration.secretRevision);
+      if (!settings.ready || settings.activeRevision !== contract.configurationRevision) throw new Error('Configuration disagreement');
+      const after = managedPluginRuntimeContractSchema.parse(await authority.read());
+      if (digest(contract) !== digest(after)) throw new Error('Managed contract changed while refreshing');
+      if (this.store && ((await this.store.read(this.stateKey(plugin.instanceId)))?.revision !== localRevision
+        || this.catalogSources.has(plugin.instanceId) && (await this.store.read(this.catalogKey(plugin.instanceId)))?.revision !== connectionRevision)) throw new Error('Local connection authority changed');
+      plugin.registration = registration;
+      plugin.fetch = this.transport(registration);
+      plugin.manifest = contract.manifest;
+      plugin.settings = settings;
+      plugin.managedDeploymentRevision = contract.deploymentRevision;
+      plugin.healthy = true;
+      delete plugin.candidate; delete plugin.candidateBaseDigest; delete plugin.candidateExpiresAt;
+      this.installed.set(plugin.instanceId, plugin);
+      return plugin;
+    } catch {
+      // Retain the connected record, but never advertise stale capabilities.
+      const unavailable = { ...previous, healthy: false }; delete unavailable.settings;
+      this.installed.set(plugin.instanceId, unavailable);
+      throw new RequestError(409, 'Die aktuelle verwaltete Plugin-Freigabe ist nicht verfügbar.');
+    }
   }
 
   private async updateState<R>(
@@ -403,13 +478,18 @@ export class PluginRegistry {
   }
 
   async install(registration: Registration): Promise<void> {
+    return this.installRegistration(registration, false);
+  }
+
+  private async installRegistration(registration: Registration, connecting: boolean): Promise<void> {
     if (this.envelopeResults) sourcePolicySchema.parse(registration.sourcePolicy ?? this.defaultSourcePolicy);
     if (registration.secretCustody) {
       const custody = registration.secretCustody;
       registration = { ...registration, secretReady: name => custody.status(name).configured, secretRevision: name => custody.status(name).revision };
     }
     this.endpoint(registration);
-    const liveManifest = await this.fetchManifest(registration);
+    const managed = registration.instanceId ? this.managedContracts.get(registration.instanceId) : undefined;
+    const liveManifest = managed ? manifestSchema.parse(managed.initialManifest) : await this.fetchManifest(registration);
     if (!valid(liveManifest.version)) throw new RequestError(409, 'Plugin-Freigabe oder Version stimmt nicht überein.');
     const instanceId = registration.instanceId ?? liveManifest.id;
     if (liveManifest.manifestVersion === 1 && instanceId !== liveManifest.id) throw new RequestError(409, 'Mehrere Installationen erfordern den V2-Vertrag.');
@@ -461,8 +541,11 @@ export class PluginRegistry {
       ...(state.candidate && state.candidateBaseDigest !== undefined && state.candidateExpiresAt !== undefined ? { candidate: state.candidate, candidateBaseDigest: state.candidateBaseDigest, candidateExpiresAt: state.candidateExpiresAt } : {}),
     };
     this.validateManifestSchemas(plugin.manifest);
-    plugin.settings = await this.settings.binding(instanceId, plugin.manifest, registration.secretReady, registration.secretRevision);
     this.installed.set(instanceId, plugin);
+    try {
+      if (managed) await this.refreshManaged(plugin, connecting);
+      else plugin.settings = await this.settings.binding(instanceId, plugin.manifest, registration.secretReady, registration.secretRevision);
+    } catch (error) { this.installed.delete(instanceId); throw error; }
   }
 
   list() {
@@ -475,6 +558,13 @@ export class PluginRegistry {
   }
   modelTools(actor: ActorContext) { return this.authorizedModelTools(actor); }
   async authorizedModelTools(actor: ActorContext) {
+    for (const id of this.managedContracts.keys()) {
+      const plugin = this.installed.get(id);
+      if (plugin) {
+        try { await this.refresh(plugin); }
+        catch { const unavailable = { ...plugin, healthy: false }; delete unavailable.settings; this.installed.set(id, unavailable); }
+      }
+    }
     const tools = this.candidateTools(actor);
     const allowed: typeof tools = [];
     for (const id of new Set(tools.map(tool => tool.pluginId))) {
@@ -522,15 +612,17 @@ export class PluginRegistry {
   async restoreConnections(): Promise<void> {
     if (!this.store) return;
     for (const source of this.catalogSources.values()) {
-      const record = await this.store.read(this.catalogKey(source.id));
-      if (record && this.connectionActive(record.value, source.id) && !this.installed.has(source.id)) await this.install(source.registration);
+      try {
+        const record = await this.store.read(this.catalogKey(source.id));
+        if (record && this.connectionActive(record.value, source.id) && !this.installed.has(source.id)) await this.install(source.registration);
+      } catch (error) { if (!this.managedContracts.has(source.id)) throw error; }
     }
   }
   async connectSource(id: string): Promise<void> {
     const source = this.catalogSources.get(id);
     if (!source) throw new RequestError(403, 'Diese Quelle wurde nicht von der Betreiberseite freigegeben.');
     if (this.installed.has(id)) throw new RequestError(409, 'Diese Verbindung ist bereits installiert.');
-    await this.install(source.registration);
+    await this.installRegistration(source.registration, true);
     if (this.store) {
       try { await updateJson<unknown, undefined>(this.store, this.catalogKey(id), () => this.connectionRecord(id, false), raw => { this.connectionActive(raw, id); return { value: this.connectionRecord(id, true), result: undefined }; }); }
       catch { this.installed.delete(id); throw new RequestError(503, 'Die Verbindung konnte nicht dauerhaft gespeichert werden.'); }
@@ -538,7 +630,7 @@ export class PluginRegistry {
   }
   async removeSource(id: string): Promise<void> {
     if (!this.catalogSources.has(id)) throw new RequestError(403, 'Gebündelte Dienste werden über die Betreiberkonfiguration entfernt.');
-    await this.setEnabled(id, false);
+    if (this.installed.has(id)) await this.setEnabled(id, false);
     if (this.store) await updateJson<unknown, undefined>(this.store, this.catalogKey(id), () => this.connectionRecord(id, false), raw => { this.connectionActive(raw, id); return { value: this.connectionRecord(id, false), result: undefined }; });
     this.installed.delete(id);
   }
@@ -549,13 +641,26 @@ export class PluginRegistry {
     return record !== undefined && this.connectionActive(record.value, id);
   }
   async refreshAll(): Promise<void> {
+    // A worker outage/withdrawn route must not prevent unrelated sources from working.
+    // Connected managed sources resume only after fresh private authority succeeds.
+    for (const source of this.catalogSources.values()) {
+      if (this.managedContracts.has(source.id) && !this.installed.has(source.id)) {
+        try { if (await this.sourceConnected(source.id)) await this.install(source.registration); } catch { /* Keep this source unavailable. */ }
+      }
+    }
     for (const plugin of [...this.installed.values()]) {
-      if (!await this.sourceConnected(plugin.instanceId)) this.installed.delete(plugin.instanceId);
-      else await this.refresh(plugin);
+      try {
+        if (!await this.sourceConnected(plugin.instanceId)) this.installed.delete(plugin.instanceId);
+        else await this.refresh(plugin);
+      } catch (error) {
+        if (!this.managedContracts.has(plugin.instanceId)) throw error;
+        const unavailable = { ...plugin, healthy: false }; delete unavailable.settings;
+        this.installed.set(plugin.instanceId, unavailable);
+      }
     }
   }
   private bindingFor(plugin: InstalledPlugin): string {
-    return digest({ instanceId: plugin.instanceId, manifest: digest(plugin.manifest), configuration: plugin.settings?.digest ?? null, enabled: plugin.enabled, endpoint: this.endpoint(plugin.registration).href, credentialRevision: plugin.registration.credentialRevision ?? 'legacy-v1', network: plugin.registration.allowedPrivateCidrs ?? [], sourcePolicy: plugin.registration.sourcePolicy ?? this.defaultSourcePolicy ?? null });
+    return digest({ instanceId: plugin.instanceId, manifest: digest(plugin.manifest), configuration: plugin.settings?.digest ?? null, enabled: plugin.enabled, endpoint: this.endpoint(plugin.registration).href, credentialRevision: plugin.registration.credentialRevision ?? 'legacy-v1', network: plugin.registration.allowedPrivateCidrs ?? [], sourcePolicy: plugin.registration.sourcePolicy ?? this.defaultSourcePolicy ?? null, ...(plugin.managedDeploymentRevision ? { deployment: plugin.managedDeploymentRevision } : {}) });
   }
   async binding(id: string) { return this.bindingFor(await this.refresh(this.get(id))); }
   async authorityBinding(id: string, actor: ActorContext) {
@@ -660,11 +765,13 @@ export class PluginRegistry {
   }
 
   async setEnabled(id: string, enabled: boolean): Promise<void> {
-    const plugin = await this.refresh(this.get(id));
+    // Withdrawal must remain possible while a managed worker is unavailable.
+    const plugin = !enabled && this.managedContracts.has(id) ? this.get(id) : await this.refresh(this.get(id));
     await this.updateState(plugin, state => ({ state: { ...state, enabled }, result: undefined }));
   }
 
   async checkUpdate(id: string) {
+    if (this.managedContracts.has(id)) throw new RequestError(409, 'Verwaltete Releases werden in der Installationsverwaltung geprüft.');
     const plugin = await this.refresh(this.get(id));
     const baseDigest = digest(plugin.manifest);
     await this.updateState(plugin, state => {
@@ -689,6 +796,7 @@ export class PluginRegistry {
   }
 
   async activateUpdate(id: string): Promise<void> {
+    if (this.managedContracts.has(id)) throw new RequestError(409, 'Verwaltete Releases werden in der Installationsverwaltung aktiviert.');
     const plugin = await this.refresh(this.get(id));
     const result = await this.updateState(plugin, state => {
       const candidate = state.candidate;
@@ -749,6 +857,7 @@ export class PluginRegistry {
     if (expectedBinding !== undefined && this.bindingFor(plugin) !== expectedBinding) throw new RequestError(409, 'Die bestätigte Plugin-Konfiguration ist nicht mehr aktuell.');
     this.assertInvocation(plugin, name, args, actor, execution, source);
     const version = plugin.manifest.version;
+    const invocationBinding = this.bindingFor(plugin);
     const settingsDigest = plugin.settings?.digest;
     const manifestDigest = digest(plugin.manifest);
     const tokenActor = projectActorContext(actor, plugin.manifest);
@@ -762,6 +871,7 @@ export class PluginRegistry {
       if (authority !== await this.authorityBinding(id, originalActor)) throw new RequestError(409, 'Die persönliche Kontoberechtigung wurde geändert.');
       if (expectedBinding !== undefined && this.bindingFor(current) !== expectedBinding) throw new RequestError(409, 'Die bestätigte Plugin-Konfiguration ist nicht mehr aktuell.');
       if (!current.enabled) throw new RequestError(409, 'Das Plugin ist deaktiviert.');
+      if (plugin.managedDeploymentRevision && this.bindingFor(current) !== invocationBinding) throw new RequestError(409, 'Die freigegebene Plugin-Installation wurde geändert.');
       if (digest(current.manifest) !== manifestDigest || current.settings?.digest !== settingsDigest) throw new RequestError(409, 'Die Plugin-Version wurde geändert. Bitte erneut prüfen und freigeben.');
       const currentTool = this.assertInvocation(current, name, args, actor, execution, source);
       const serverVersion = client.getServerVersion();
@@ -772,6 +882,7 @@ export class PluginRegistry {
       if (!output || typeof output !== 'object' || Array.isArray(output) || !validator.validate(currentTool.outputSchema, output)) throw new RequestError(502, 'Die Plugin-Antwort entspricht nicht dem vereinbarten Vertrag.');
       if (Buffer.byteLength(JSON.stringify(output)) > 65536) throw new RequestError(502, 'Die Plugin-Antwort ist zu groß.');
       if (authority !== await this.authorityBinding(id, originalActor)) throw new RequestError(409, 'Die persönliche Kontoberechtigung wurde geändert.');
+      if (plugin.managedDeploymentRevision && this.bindingFor(await this.refresh(plugin)) !== invocationBinding) throw new RequestError(409, 'Die freigegebene Plugin-Installation wurde geändert.');
       plugin.healthy = true;
       return this.projectOutput(current, name, output as Record<string, unknown>, tokenActor);
     } catch (error) {

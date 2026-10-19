@@ -3,7 +3,7 @@ import { createPrivateKey, createPublicKey, timingSafeEqual } from 'node:crypto'
 import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import { PostgresJsonStore } from '@hasi/state';
-import { digest } from '@hasi/plugin-sdk';
+import { digest, manifestSchema } from '@hasi/plugin-sdk';
 import { createDockerPluginDriver } from './docker-plugin-driver.js';
 import { PluginRouteController } from './plugin-route-controller.js';
 import { PluginDeploymentBinding } from './plugin-deployment-binding.js';
@@ -11,6 +11,7 @@ import { createPluginDeploymentGateway } from './plugin-deployment-proxy.js';
 import { createManagedPluginPreflight } from './managed-plugin-preflight.js';
 import { ManagedPluginInstaller, managedPluginInstallerCatalogSchema } from './managed-plugin-installer.js';
 import { createManagedPluginRpcServer } from './managed-plugin-rpc.js';
+import { managedPluginRuntimeContractSchema, type ManagedPluginRuntimeContract } from './managed-plugin-contract.js';
 import { EnvironmentPluginSecretCustody } from './plugin-secrets.js';
 import { ProductionAuthorityDirectory } from './production-runtime.js';
 import { PluginRuntimeCredentials } from './plugin-runtime-credentials.js';
@@ -115,20 +116,118 @@ export async function startManagedPluginWorker(environment: Readonly<Record<stri
       try { await routes.read({ ownerId: configuration.ownerId, installationId: entry.id }); }
       catch { await routes.initializeInstallation({ installationId: entry.id, configurationRevision: String((await installer.configuration(entry.id)).activeRevision) }); }
     }
-    const resolveActiveEndpoint: typeof driver.resolveActiveEndpoint = async input => {
-          await reload();
-          const endpoint = await driver.resolveActiveEndpoint(input);
-          if (!endpoint) return null;
-          if (!endpoint.stageOperationId) return null;
-          await runtimeCredentials.assertCurrent({ installationId: input.installationId, operationId: endpoint.stageOperationId, releaseDigest: endpoint.releaseDigest });
-          const state = await installer.coordinator.get(input.installationId);
-          const catalog = configuration.installations.find(item => item.id === input.installationId);
-          const release = catalog?.releases.find(item => verifyPluginRelease(item.envelope, publisherId => configuration.publishers.find(publisher => publisher.publisherId === publisherId)).releaseDigest === endpoint.releaseDigest
-            && state.current?.releaseDigest === endpoint.releaseDigest && state.current.manifestDigest === digest(item.manifest));
-          if (!release || !(await installer.configuration(input.installationId, state.current?.releaseDigest)).ready) return null;
-          await binding.assertCurrent(input.installationId, Number(state.configurationRevision));
-          return endpoint;
+    type DockerEndpoint = NonNullable<Awaited<ReturnType<typeof driver.resolveActiveEndpoint>>>;
+    type ActiveEndpoint = Omit<DockerEndpoint, 'stageOperationId'> & { readonly stageOperationId: string; readonly deploymentRevision: string };
+    const findApprovedRelease = (config: Awaited<ReturnType<typeof load>>, installationId: string, releaseDigest: string) => {
+      const installation = config.installations.find(item => item.id === installationId);
+      if (!installation) return undefined;
+      for (const release of installation.releases) {
+        try {
+          const verified = verifyPluginRelease(release.envelope, publisherId => config.publishers.find(publisher => publisher.publisherId === publisherId));
+          const manifest = manifestSchema.parse(release.manifest);
+          if (verified.pluginId === installation.pluginId && verified.releaseDigest === releaseDigest
+            && verified.manifestDigest === digest(manifest) && manifest.id === installation.pluginId && manifest.version === verified.version) {
+            return { release, manifest, verified };
+          }
+        } catch { /* An invalid, unapproved or revoked release is never active authority. */ }
+      }
+      return undefined;
     };
+    const resolveActiveEndpoint = async (input: { readonly installationId: string }): Promise<ActiveEndpoint | null> => {
+      const config = await reload();
+      const endpoint = await driver.resolveActiveEndpoint(input);
+      if (!endpoint?.stageOperationId) return null;
+      await runtimeCredentials.assertCurrent({ installationId: input.installationId, operationId: endpoint.stageOperationId, releaseDigest: endpoint.releaseDigest });
+      const state = await installer.coordinator.get(input.installationId);
+      if (state.installationId !== input.installationId || state.current?.releaseDigest !== endpoint.releaseDigest) return null;
+      const approved = findApprovedRelease(config, input.installationId, endpoint.releaseDigest);
+      if (state.current.manifestDigest !== approved?.verified.manifestDigest) return null;
+      const settings = await installer.configuration(input.installationId, endpoint.releaseDigest);
+      const configurationRevision = Number(state.configurationRevision);
+      if (!settings.ready || !Number.isSafeInteger(configurationRevision) || settings.activeRevision !== configurationRevision) return null;
+      await binding.assertCurrent(input.installationId, configurationRevision);
+      const route = await routes.read({ ownerId: config.ownerId, installationId: input.installationId });
+      if (route.configurationRevision !== state.configurationRevision || route.active?.deploymentId !== endpoint.deploymentId
+        || route.active.releaseDigest !== endpoint.releaseDigest) return null;
+      if (!await driver.assertActiveEndpoint({ installationId: input.installationId, endpoint })) return null;
+      const deploymentRevision = digest({ endpoint, current: state.current, configurationRevision: state.configurationRevision, route });
+      return { ...endpoint, stageOperationId: endpoint.stageOperationId, deploymentRevision };
+    };
+
+    const readRuntimeContract = async (installationId: string): Promise<ManagedPluginRuntimeContract | null> => {
+      const endpoint = await resolveActiveEndpoint({ installationId });
+      if (!endpoint) return null;
+      const config = await reload();
+      const state = await installer.coordinator.get(installationId);
+      const route = await routes.read({ ownerId: config.ownerId, installationId });
+      const approved = findApprovedRelease(config, installationId, endpoint.releaseDigest);
+      const configurationRevision = Number(state.configurationRevision);
+      if (!approved || state.current?.releaseDigest !== endpoint.releaseDigest
+        || state.current.manifestDigest !== approved.verified.manifestDigest
+        || route.active?.deploymentId !== endpoint.deploymentId || route.active.releaseDigest !== endpoint.releaseDigest
+        || route.configurationRevision !== state.configurationRevision
+        || !Number.isSafeInteger(configurationRevision)) return null;
+
+      const settings = await installer.configuration(installationId, endpoint.releaseDigest);
+      if (!settings.ready || settings.activeRevision !== configurationRevision) return null;
+      await binding.assertCurrent(installationId, configurationRevision);
+
+      const transport = (await custody(installationId, true)).status('service');
+      if (!transport.configured || !transport.revision) return null;
+      const secrets = await custody(installationId);
+      const assignments = new Map(approved.release.secretAssignments.map(assignment => [assignment.name, assignment.secretRef]));
+      const secretStatuses = (approved.manifest.manifestVersion === 2 ? approved.manifest.secrets ?? [] : []).map(secret => {
+        const reference = assignments.get(secret.name);
+        const status = reference ? secrets.status(reference) : { configured: false, revision: null };
+        return { name: secret.name, configured: status.configured, revision: status.revision };
+      });
+      await runtimeCredentials.assertCurrent({ installationId, operationId: endpoint.stageOperationId, releaseDigest: endpoint.releaseDigest });
+      if (digest({ endpoint: withoutRevision(endpoint), current: state.current, configurationRevision: state.configurationRevision, route }) !== endpoint.deploymentRevision) return null;
+
+      const rawContract = managedPluginRuntimeContractSchema.parse({
+        installationId,
+        manifest: approved.manifest,
+        manifestDigest: approved.verified.manifestDigest,
+        configurationRevision,
+        deploymentRevision: endpoint.deploymentRevision,
+        transportCredentialRevision: transport.revision,
+        secretStatuses,
+        enabled: true,
+      });
+
+      // Re-read all authorities after assembling the DTO. An observed update,
+      // route move, publisher revocation or credential rotation denies this snapshot.
+      const latestEndpoint = await resolveActiveEndpoint({ installationId });
+      if (latestEndpoint?.deploymentRevision !== endpoint.deploymentRevision) return null;
+      const latestConfig = await reload();
+      const latestState = await installer.coordinator.get(installationId);
+      const latestRoute = await routes.read({ ownerId: latestConfig.ownerId, installationId });
+      const latestApproved = findApprovedRelease(latestConfig, installationId, endpoint.releaseDigest);
+      if (!latestApproved || latestState.current?.releaseDigest !== endpoint.releaseDigest
+        || latestState.current.manifestDigest !== rawContract.manifestDigest
+        || latestState.configurationRevision !== state.configurationRevision
+        || digest(latestRoute) !== digest(route)
+        || latestApproved.verified.manifestDigest !== rawContract.manifestDigest) return null;
+      const latestSettings = await installer.configuration(installationId, endpoint.releaseDigest);
+      if (!latestSettings.ready || latestSettings.activeRevision !== configurationRevision) return null;
+      await binding.assertCurrent(installationId, configurationRevision);
+      const latestTransport = (await custody(installationId, true)).status('service');
+      const latestSecrets = await custody(installationId);
+      const latestSecretStatuses = (latestApproved.manifest.manifestVersion === 2 ? latestApproved.manifest.secrets ?? [] : []).map(secret => {
+        const reference = new Map(latestApproved.release.secretAssignments.map(assignment => [assignment.name, assignment.secretRef])).get(secret.name);
+        const status = reference ? latestSecrets.status(reference) : { configured: false, revision: null };
+        return { name: secret.name, configured: status.configured, revision: status.revision };
+      });
+      if (digest(latestTransport) !== digest(transport) || digest(latestSecretStatuses) !== digest(secretStatuses)) return null;
+      await runtimeCredentials.assertCurrent({ installationId, operationId: latestEndpoint.stageOperationId, releaseDigest: endpoint.releaseDigest });
+      return rawContract;
+    };
+
+    function withoutRevision(endpoint: ActiveEndpoint): DockerEndpoint {
+      return { stageOperationId: endpoint.stageOperationId, deploymentId: endpoint.deploymentId,
+        relayDeploymentId: endpoint.relayDeploymentId, releaseDigest: endpoint.releaseDigest,
+        host: endpoint.host, port: endpoint.port, containerPort: endpoint.containerPort };
+    }
     gateway = await createPluginDeploymentGateway({ port: configuration.gatewayPort,
       endpointResolver: {
         resolveActiveEndpoint,
@@ -145,7 +244,7 @@ export async function startManagedPluginWorker(environment: Readonly<Record<stri
         });
       },
     });
-    rpc = await createManagedPluginRpcServer({ service: installer, publicKey: createPublicKey(privateKey), privateKey, scope: configuration.scope, port: configuration.rpcPort });
+    rpc = await createManagedPluginRpcServer({ service: installer, runtimeContract: readRuntimeContract, publicKey: createPublicKey(privateKey), privateKey, scope: configuration.scope, port: configuration.rpcPort });
     return { close: async () => { await rpc?.close(); await gateway?.close(); await store.close(); } };
   } catch { await rpc?.close(); await gateway?.close(); await store.close(); throw new Error('Installer startup failed'); }
 }

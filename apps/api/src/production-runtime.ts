@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { createRegistryKnowledgeContexts } from './knowledge-context-runtime.js';
 import { createApi, type ApiOptions } from './index.js';
 import { OidcIdentityProvider, type OidcIdentityProviderOptions } from './oidc.js';
-import { PluginRegistry, type ApprovedPluginSource } from './registry.js';
+import { PluginRegistry, type ApprovedPluginSource, type ManagedPluginContractSource } from './registry.js';
 import type { Persona } from './identity.js';
 import type { PluginAccountService } from './plugin-accounts.js';
 import type { PluginDeploymentBinding } from './plugin-deployment-binding.js';
@@ -65,6 +65,7 @@ export interface ProductionRuntimeOptions {
   /** Private installer process; the public API never receives its Docker driver. */
   externalManagedGateway?: { origin: string; installationIds: readonly string[] };
   managedPlugins?: ManagedPluginAdmin;
+  managedContracts?: ReadonlyMap<string, ManagedPluginContractSource>;
 }
 
 /** Separate long-lived API/worker topology; the public Coolify fixture stack is not used. */
@@ -84,6 +85,7 @@ export async function createProductionRuntime(options: ProductionRuntimeOptions)
   }
   const managed = new Set(options.managedGateway?.installationIds ?? options.externalManagedGateway?.installationIds ?? []);
   if ([...managed].some(id => !options.plugins.some(plugin => plugin.id === id) || !options.deploymentBindings?.has(id))) throw new TypeError('Managed plugins require an approved source and current configuration/route binding');
+  if ([...(options.managedContracts?.keys() ?? [])].some(id => !managed.has(id)) || [...managed].some(id => !options.managedContracts?.has(id))) throw new TypeError('Managed contracts must match managed gateway installations');
   const gateway = options.managedGateway ? await createPluginDeploymentGateway({ ...options.managedGateway, authorize: ({ installationId, authorization }) => {
     const plugin = options.plugins.find(source => source.id === installationId && managed.has(installationId));
     if (!plugin || !authorization) return false;
@@ -101,6 +103,7 @@ export async function createProductionRuntime(options: ProductionRuntimeOptions)
       ...(gatewayOrigin ? { operatorManagedLoopbackOrigin: gatewayOrigin } : {}),
       ...(options.accounts ? { accounts: options.accounts } : {}),
       ...(options.deploymentBindings ? { deploymentBindings: options.deploymentBindings } : {}),
+      ...(options.managedContracts ? { managedContracts: options.managedContracts } : {}),
     });
     const plugins = options.plugins.map(source => gatewayOrigin && managed.has(source.id) ? {
       ...source,
