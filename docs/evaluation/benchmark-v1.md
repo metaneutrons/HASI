@@ -150,10 +150,12 @@ its user turns, authorized evidence, approved tool definitions/results and any
 sanitized backend action status needed for the current task. Fixture approval
 events do not become model-controlled tool arguments.
 
-The [12 draft example cases](example-cases.json) illustrate the format using
+The [20 draft development smoke cases](example-cases.json) illustrate the format using
 fictitious documents, roles and room data. They are not real HsH policy or a
-validated test suite. Their assertion strings are specifications for a later
-TypeScript runner, not executable tests.
+validated model benchmark. Their assertion strings are grading specifications,
+not executable quality judgments. The bounded TypeScript runner validates and
+projects inputs to an explicitly injected offline transport; it does not score
+fixture responses as model quality. See the [smoke corpus evidence](../verification/2026-10-19/evaluation-smoke-corpus.md).
 
 ## Three evaluation layers
 
