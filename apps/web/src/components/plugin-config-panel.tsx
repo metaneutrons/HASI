@@ -11,9 +11,10 @@ import {
   Save,
   ShieldCheck,
 } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState, type SyntheticEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { apiRequest } from '@/lib/api';
 import { PluginConfigFields } from '@/components/plugin-config-fields';
+import { useActionFocusRecovery } from '@/lib/use-action-focus-recovery';
 import {
   configurationRequestError,
   getConfigurationFieldSet,
@@ -72,9 +73,18 @@ export function PluginConfigPanel({
   onChanged,
 }: PluginConfigPanelProps) {
   const panelRef = useRef<HTMLDetailsElement>(null);
+  const summaryRef = useRef<HTMLElement>(null);
+  const saveButtonRef = useRef<HTMLButtonElement>(null);
+  const activateButtonRef = useRef<HTMLButtonElement>(null);
+  const reloadConflictButtonRef = useRef<HTMLButtonElement>(null);
+  const keepInputsButtonRef = useRef<HTMLButtonElement>(null);
+  const retryLoadButtonRef = useRef<HTMLButtonElement>(null);
+  const testConnectionButtonRef = useRef<HTMLButtonElement>(null);
+  const updateButtonRef = useRef<HTMLButtonElement>(null);
   const mounted = useRef<boolean>(false);
   const controllers = useRef(new Set<AbortController>());
   const fieldElements = useRef(new Map<string, HTMLInputElement | HTMLSelectElement>());
+  const { beginFocusRecovery, completeFocusRecovery, cancelFocusRecovery, flushFocusRecovery } = useActionFocusRecovery();
   const id = useId();
   const [pluginDetails, setPluginDetails] = useState<PluginConfigurationDetails | null>(null);
   const [rawValues, setRawValues] = useState<Record<string, unknown>>({});
@@ -175,8 +185,9 @@ export function PluginConfigPanel({
     return parsePluginConfigurationResponse(response);
   }
 
-  async function testConnection() {
+  async function testConnection(origin: HTMLElement) {
     if (!pluginDetails) return;
+    const focusToken = beginFocusRecovery(origin);
     const secrets = pluginDetails.secrets;
     setBusy('test');
     setConnectionTestError(null);
@@ -190,6 +201,7 @@ export function PluginConfigPanel({
       if (result.instanceId !== pluginId) throw new TypeError('Invalid plugin connection test response');
       if (!isStillMounted()) return;
       setConnectionTest(result);
+      completeFocusRecovery(focusToken, () => testConnectionButtonRef.current);
     } catch (cause) {
       if (!isStillMounted()) return;
       const status = getHttpStatus(cause);
@@ -198,12 +210,13 @@ export function PluginConfigPanel({
         : status === 401 || status === 403
           ? 'Du bist nicht berechtigt, diesen Verbindungstest auszuführen.'
           : 'Der Verbindungstest konnte nicht abgeschlossen werden. Deine Eingaben bleiben erhalten.');
+      completeFocusRecovery(focusToken, () => testConnectionButtonRef.current);
     } finally {
       if (isStillMounted()) setBusy(null);
     }
   }
 
-  async function loadDetails() {
+  async function loadDetails(focusToken: symbol | null = null) {
     setBusy('load');
     setLoadError(null);
     setNotice(null);
@@ -211,9 +224,11 @@ export function PluginConfigPanel({
       const next = await fetchDetails();
       if (!isStillMounted()) return;
       adoptDetails(next);
+      completeFocusRecovery(focusToken, firstEnabledConfigurationField);
     } catch (cause) {
       if (!isStillMounted()) return;
       setLoadError(configurationRequestError(getHttpStatus(cause)));
+      completeFocusRecovery(focusToken, () => keepInputsButtonRef.current ?? retryLoadButtonRef.current ?? summaryRef.current);
     } finally {
       if (isStillMounted()) setBusy(null);
     }
@@ -234,7 +249,18 @@ export function PluginConfigPanel({
     queueMicrotask(() => panelRef.current?.querySelector<HTMLElement>('summary')?.focus());
   }
 
-  async function saveDraft() {
+  function firstEnabledConfigurationField(): HTMLElement | null {
+    for (const element of fieldElements.current.values()) {
+      if (element.isConnected && !element.disabled) return element;
+    }
+    return summaryRef.current;
+  }
+
+  useLayoutEffect(() => {
+    if (busy === null) flushFocusRecovery();
+  }, [busy, conflict, confirmReload, pluginDetails?.revision, localChanges, draftPending, loadError, flushFocusRecovery]);
+
+  async function saveDraft(origin: HTMLElement) {
     if (!pluginDetails) return;
     const payload = validation.payload;
     if (!validation.valid || payload === undefined) {
@@ -242,6 +268,7 @@ export function PluginConfigPanel({
       setNotice('Bitte prüfe die markierten Felder. Der Server kontrolliert die Konfiguration zusätzlich.');
       return;
     }
+    const focusToken = beginFocusRecovery(origin);
     setBusy('draft');
     setLoadError(null);
     setNotice(null);
@@ -266,6 +293,10 @@ export function PluginConfigPanel({
       setServerFieldErrors({});
       setConflict(false);
       setNotice('Entwurf gespeichert. Er wird erst nach der getrennten Aktivierung wirksam.');
+      completeFocusRecovery(focusToken, () => {
+        const activateButton = activateButtonRef.current;
+        return activateButton && !activateButton.disabled ? activateButton : summaryRef.current;
+      });
       await notifyConfigurationChanged();
     } catch (cause) {
       if (!isStillMounted()) return;
@@ -276,18 +307,26 @@ export function PluginConfigPanel({
         setServerFieldErrors(serverErrors);
         focusFirstError(serverErrors);
       }
-      if (status === 409) setConflict(true);
+      if (status === 409) {
+        setConflict(true);
+        completeFocusRecovery(focusToken, () => reloadConflictButtonRef.current);
+      } else if (Object.keys(serverErrors).length === 0) {
+        completeFocusRecovery(focusToken, () => saveButtonRef.current);
+      } else {
+        cancelFocusRecovery(focusToken);
+      }
     } finally {
       if (isStillMounted()) setBusy(null);
     }
   }
 
-  async function activateDraft() {
+  async function activateDraft(origin: HTMLElement) {
     if (!pluginDetails || !draftPending || localChanges) return;
     if (missingSecrets.length > 0) {
       setLoadError('Erforderliche Zugangsdaten fehlen. Sie müssen serverseitig eingerichtet werden, bevor der Entwurf aktiviert werden kann.');
       return;
     }
+    const focusToken = beginFocusRecovery(origin);
     setBusy('activate');
     setLoadError(null);
     setNotice(null);
@@ -312,18 +351,28 @@ export function PluginConfigPanel({
         if (isStillMounted()) setLoadError('Der Entwurf wurde aktiviert, aber der aktuelle Status konnte nicht neu geladen werden. Bitte aktualisiere die Ansicht.');
       }
       await notifyConfigurationChanged();
+      completeFocusRecovery(focusToken, () => summaryRef.current);
     } catch (cause) {
       if (!isStillMounted()) return;
       const status = getHttpStatus(cause);
       setLoadError(configurationRequestError(status));
-      if (status === 409) setConflict(true);
+      if (status === 409) {
+        setConflict(true);
+        completeFocusRecovery(focusToken, () => reloadConflictButtonRef.current ?? summaryRef.current);
+      } else {
+        completeFocusRecovery(focusToken, () => {
+          const activateButton = activateButtonRef.current;
+          return activateButton && !activateButton.disabled ? activateButton : summaryRef.current;
+        });
+      }
     } finally {
       if (mounted.current) setBusy(null);
     }
   }
 
-  async function checkUpdate() {
+  async function checkUpdate(origin: HTMLElement) {
     if (conflict) return;
+    const focusToken = beginFocusRecovery(origin);
     const stateBeforeCheck = pluginDetails;
     const hadLocalChanges = localChanges;
     const hadPendingDraft = draftPending;
@@ -358,9 +407,11 @@ export function PluginConfigPanel({
           ? 'Der Serverstand wurde aktualisiert. Aktionen mit der früheren Revision sind ungültig; der aktuelle Entwurf wurde neu geladen.'
           : update.message);
       }
+      completeFocusRecovery(focusToken, () => reloadConflictButtonRef.current ?? updateButtonRef.current);
     } catch (cause) {
       if (!isStillMounted()) return;
       setLoadError(configurationRequestError(getHttpStatus(cause)));
+      completeFocusRecovery(focusToken, () => reloadConflictButtonRef.current ?? updateButtonRef.current);
     } finally {
       if (isStillMounted()) setBusy(null);
     }
@@ -382,7 +433,7 @@ export function PluginConfigPanel({
 
   return (
     <details ref={panelRef} className="plugin-config-panel" style={panelStyle} onToggle={handleToggle}>
-      <summary style={summaryStyle} aria-label={`Plug-in-Einstellungen öffnen: ${name}`}>
+      <summary ref={summaryRef} style={summaryStyle} aria-label={`Plug-in-Einstellungen öffnen: ${name}`}>
         <span style={{ display: 'grid', minWidth: 0, gap: 3 }}>
           <strong style={{ fontSize: 14, fontWeight: 650 }}>Einstellungen und Funktionsfreigaben</strong>
           <span style={{ color: 'var(--muted)', fontSize: 12 }}>Konfiguration, Zugangsdatenstatus und deaktivierte Funktionen</span>
@@ -396,7 +447,17 @@ export function PluginConfigPanel({
         ) : loadError && !pluginDetails ? (
           <div role="alert" style={noticeStyle('error')}>
             <span>{loadError}</span>
-            <button className="button button--secondary" type="button" disabled={busy !== null} onClick={() => { void loadDetails(); }} style={buttonStyle}>
+            <button
+              ref={retryLoadButtonRef}
+              className="button button--secondary"
+              type="button"
+              disabled={busy !== null}
+              onClick={(event) => {
+                const focusToken = beginFocusRecovery(event.currentTarget);
+                void loadDetails(focusToken);
+              }}
+              style={buttonStyle}
+            >
               Erneut laden
             </button>
           </div>
@@ -416,10 +477,11 @@ export function PluginConfigPanel({
               <div style={sectionHeadingStyle}>
                 <h4 style={headingStyle}><RefreshCw size={15} aria-hidden="true" /> Verbindungstest</h4>
                 <button
+                  ref={testConnectionButtonRef}
                   className="button button--secondary"
                   type="button"
                   disabled={busy !== null}
-                  onClick={() => { void testConnection(); }}
+                  onClick={(event) => { void testConnection(event.currentTarget); }}
                   style={buttonStyle}
                 >
                   {busy === 'test' ? <><span className="spinner" /> Verbindung wird geprüft</> : <>Aktive Verbindung testen <RefreshCw size={14} aria-hidden="true" /></>}
@@ -472,7 +534,17 @@ export function PluginConfigPanel({
             {loadError && <div role="alert" style={noticeStyle('error')}>
               <span>{loadError}</span>
               {conflict && !confirmReload && (
-                <button className="button button--secondary" type="button" onClick={() => { setConfirmReload(true); }} style={buttonStyle}>
+                <button
+                  ref={reloadConflictButtonRef}
+                  className="button button--secondary"
+                  type="button"
+                  onClick={(event) => {
+                    const token = beginFocusRecovery(event.currentTarget);
+                    completeFocusRecovery(token, () => keepInputsButtonRef.current);
+                    setConfirmReload(true);
+                  }}
+                  style={buttonStyle}
+                >
                   Serverstand neu laden
                 </button>
               )}
@@ -480,10 +552,29 @@ export function PluginConfigPanel({
                 <div style={{ display: 'grid', gap: 8 }}>
                   <span>Beim Neuladen werden deine lokalen Eingaben verworfen.</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    <button className="button button--secondary" type="button" disabled={busy !== null} onClick={() => { void loadDetails(); }} style={buttonStyle}>
+                    <button
+                      className="button button--secondary"
+                      type="button"
+                      disabled={busy !== null}
+                      onClick={(event) => {
+                        const token = beginFocusRecovery(event.currentTarget);
+                        void loadDetails(token);
+                      }}
+                      style={buttonStyle}
+                    >
                       {busy === 'load' ? 'Wird geladen …' : 'Verwerfen und neu laden'}
                     </button>
-                    <button className="button button--secondary" type="button" onClick={() => { setConfirmReload(false); }} style={buttonStyle}>Eingaben behalten</button>
+                    <button
+                      ref={keepInputsButtonRef}
+                      className="button button--secondary"
+                      type="button"
+                      onClick={(event) => {
+                        const token = beginFocusRecovery(event.currentTarget);
+                        completeFocusRecovery(token, () => reloadConflictButtonRef.current);
+                        setConfirmReload(false);
+                      }}
+                      style={buttonStyle}
+                    >Eingaben behalten</button>
                   </div>
                 </div>
               )}
@@ -625,19 +716,21 @@ export function PluginConfigPanel({
             {validation.valid && validation.payload && (
               <div style={{ display: 'flex', minWidth: 0, flexWrap: 'wrap', justifyContent: 'flex-end', gap: 9 }}>
                 <button
+                  ref={saveButtonRef}
                   className="button button--secondary"
                   type="button"
                   disabled={busy !== null || conflict || !localChanges || unknownDisabledTools.length > 0}
-                  onClick={() => { void saveDraft(); }}
+                  onClick={(event) => { void saveDraft(event.currentTarget); }}
                   style={buttonStyle}
                 >
                   {busy === 'draft' ? <><span className="spinner" /> Entwurf wird gespeichert</> : <>Entwurf speichern <Save size={15} aria-hidden="true" /></>}
                 </button>
                 <button
+                  ref={activateButtonRef}
                   className="button button--secondary"
                   type="button"
                   disabled={busy !== null || conflict || localChanges || !draftPending || missingSecrets.length > 0 || unknownDisabledTools.length > 0}
-                  onClick={() => { void activateDraft(); }}
+                  onClick={(event) => { void activateDraft(event.currentTarget); }}
                   style={{ ...buttonStyle, borderColor: 'var(--accent)', color: 'var(--accent-deep)' }}
                 >
                   {busy === 'activate' ? <><span className="spinner" /> Wird aktiviert</> : <>Entwurf aktivieren <Check size={15} aria-hidden="true" /></>}
@@ -653,7 +746,14 @@ export function PluginConfigPanel({
             {mode === 'remote' && <section aria-label="Updateprüfung" style={sectionStyle}>
               <div style={{ display: 'flex', minWidth: 0, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--ink-soft)', fontSize: 13, fontWeight: 620 }}><RefreshCw size={15} aria-hidden="true" /> Updateprüfung</span>
-                <button className="text-button" type="button" disabled={busy !== null || conflict} onClick={() => { void checkUpdate(); }} style={{ minHeight: 44 }}>
+                <button
+                  ref={updateButtonRef}
+                  className="text-button"
+                  type="button"
+                  disabled={busy !== null || conflict}
+                  onClick={(event) => { void checkUpdate(event.currentTarget); }}
+                  style={{ minHeight: 44 }}
+                >
                   {busy === 'update' ? <><span className="spinner" /> Prüfen</> : <>Updates prüfen <RefreshCw size={14} aria-hidden="true" /></>}
                 </button>
               </div>

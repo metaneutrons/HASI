@@ -13,7 +13,7 @@ import {
   TerminalSquare,
   Trash2,
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import type {
   ManagedPluginCommand,
   ManagedPluginCommandResult,
@@ -21,6 +21,7 @@ import type {
 } from '@hasi/plugin-sdk/deployment-admin';
 import { managedPluginCatalogSchema, managedPluginCommandResultSchema } from '@hasi/plugin-sdk/deployment-admin';
 import { apiRequest, postJson } from '@/lib/api';
+import { useActionFocusRecovery } from '@/lib/use-action-focus-recovery';
 import { PluginConfigPanel } from '@/components/plugin-config-panel';
 import styles from './managed-plugin-panel.module.css';
 
@@ -122,6 +123,14 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
   const [selectedRelease, setSelectedRelease] = useState<Record<string, string | undefined>>({});
   const [restorePlanId, setRestorePlanId] = useState<Record<string, string | undefined>>({});
   const busyIds = useRef(new Set<string>());
+  const refreshButtonRef = useRef<HTMLButtonElement>(null);
+  const retryLoadButtonRef = useRef<HTMLButtonElement>(null);
+  const statusButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const reviewButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const restorePlanInputRefs = useRef(new Map<string, HTMLInputElement>());
+  const activateButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const installationStatusRefs = useRef(new Map<string, HTMLElement>());
+  const { beginFocusRecovery, completeFocusRecovery, flushFocusRecovery } = useActionFocusRecovery();
 
   const adoptInstallations = useCallback((next: ManagedPluginView[]) => {
     setInstallations(next);
@@ -137,7 +146,7 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
     });
   }, []);
 
-  const refresh = useCallback(async (showLoading = false) => {
+  const refresh = useCallback(async (showLoading = false, focusToken: symbol | null = null) => {
     if (showLoading) setLoading(true);
     else setRefreshing(true);
     setLoadError(null);
@@ -149,12 +158,33 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      completeFocusRecovery(focusToken, () => retryLoadButtonRef.current ?? refreshButtonRef.current);
     }
-  }, [adoptInstallations]);
+  }, [adoptInstallations, completeFocusRecovery]);
 
   useEffect(() => {
     void refresh(true);
   }, [refresh]);
+
+  useLayoutEffect(() => {
+    flushFocusRecovery();
+  }, [busy, attempts, installations, loading, refreshing, loadError, flushFocusRecovery]);
+
+  function focusTargetForInstallation(id: string): HTMLElement | null {
+    const statusButton = statusButtonRefs.current.get(id);
+    if (statusButton && !statusButton.disabled) return statusButton;
+
+    const reviewButton = reviewButtonRefs.current.get(id);
+    if (reviewButton && !reviewButton.disabled) return reviewButton;
+
+    const restorePlanInput = restorePlanInputRefs.current.get(id);
+    if (restorePlanInput && !restorePlanInput.disabled) return restorePlanInput;
+
+    const activateButton = activateButtonRefs.current.get(id);
+    if (activateButton && !activateButton.disabled) return activateButton;
+
+    return installationStatusRefs.current.get(id) ?? null;
+  }
 
   function replaceInstallation(next: ManagedPluginView) {
     setInstallations((current) => current.map((item) => item.id === next.id ? next : item));
@@ -205,7 +235,8 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
   async function runCommand(
     view: ManagedPluginView,
     operation: Operation,
-    details?: { releaseId?: string; restorePlanId?: string },
+    details: { releaseId?: string; restorePlanId?: string } | undefined,
+    origin: HTMLElement,
   ) {
     const id = view.id;
     if (busyIds.current.has(id) || attempts[id]) return;
@@ -218,6 +249,7 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
     }
 
     const label = operationLabels[operation];
+    const focusToken = beginFocusRecovery(origin);
     setBusyFor(id, 'command');
     setFeedback((current) => ({ ...current, [id]: undefined }));
     // Keep this exact command ID if the response is lost. Status checks reuse it.
@@ -226,6 +258,7 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
       const result = managedPluginCommandResultSchema.parse(await postJson<unknown>(`${endpoint(id)}/commands`, command));
       if (result.commandId !== command.commandId || result.view.id !== id) throw new Error('Die Befehlskennung stimmt nicht überein.');
       await completeResult(id, result, label, command);
+      completeFocusRecovery(focusToken, () => focusTargetForInstallation(id));
     } catch (cause) {
       setAttempt(id, { command, operationLabel: label, status: 'check-required' });
       setFeedback((current) => ({
@@ -235,14 +268,16 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
           message: `${getErrorMessage(cause, 'Die Antwort auf den Befehl fehlt.')} Prüfe den Status mit derselben Befehlskennung.`,
         },
       }));
+      completeFocusRecovery(focusToken, () => focusTargetForInstallation(id));
     } finally {
       setBusyFor(id, undefined);
     }
   }
 
-  async function checkCommandStatus(id: string) {
+  async function checkCommandStatus(id: string, origin: HTMLElement) {
     const attempt = attempts[id];
     if (!attempt || busyIds.current.has(id)) return;
+    const focusToken = beginFocusRecovery(origin);
     setBusyFor(id, 'status');
     setFeedback((current) => ({ ...current, [id]: undefined }));
     try {
@@ -251,6 +286,7 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
       ));
       if (result.commandId !== attempt.command.commandId || result.view.id !== id) throw new Error('Die Befehlskennung stimmt nicht überein.');
       await completeResult(id, result, attempt.operationLabel, attempt.command);
+      completeFocusRecovery(focusToken, () => focusTargetForInstallation(id));
     } catch (cause) {
       setAttempt(id, { ...attempt, status: 'check-required' });
       setFeedback((current) => ({
@@ -260,6 +296,7 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
           message: `${getErrorMessage(cause, 'Der Status konnte nicht geprüft werden.')} Die Befehlskennung bleibt gespeichert; du kannst denselben Status erneut prüfen.`,
         },
       }));
+      completeFocusRecovery(focusToken, () => focusTargetForInstallation(id));
     } finally {
       setBusyFor(id, undefined);
     }
@@ -275,7 +312,17 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
           <h2 id="managed-plugin-heading">Verwaltete Plugin-Installationen</h2>
           <p>Release, Prüfung und Aktivierung für verwaltete Installationen. Diese Ansicht ist vom Plugin-Katalog getrennt.</p>
         </div>
-        <button className={styles.iconButton} type="button" onClick={() => void refresh(false)} disabled={loading || refreshing} aria-label="Verwaltete Installationen aktualisieren">
+        <button
+          ref={refreshButtonRef}
+          className={styles.iconButton}
+          type="button"
+          onClick={(event) => {
+            const focusToken = beginFocusRecovery(event.currentTarget);
+            void refresh(false, focusToken);
+          }}
+          disabled={loading || refreshing}
+          aria-label="Verwaltete Installationen aktualisieren"
+        >
           <RefreshCw size={16} aria-hidden="true" className={refreshing ? styles.spinning : undefined} />
         </button>
       </div>
@@ -284,7 +331,16 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
         <div className={styles.loadError} role="alert">
           <CircleAlert size={18} aria-hidden="true" />
           <span>{loadError}</span>
-          <button className={styles.secondaryButton} type="button" onClick={() => void refresh(true)} disabled={loading}>
+          <button
+            ref={retryLoadButtonRef}
+            className={styles.secondaryButton}
+            type="button"
+            onClick={(event) => {
+              const focusToken = beginFocusRecovery(event.currentTarget);
+              void refresh(true, focusToken);
+            }}
+            disabled={loading}
+          >
             Erneut laden
           </button>
         </div>
@@ -331,7 +387,15 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
                     <h3>{view.label}</h3>
                     <code>{view.id}</code>
                   </div>
-                  <span className={joinClasses(styles.status, view.status === 'active' || view.status === 'candidate-ready' ? styles.statusGood : recoverableStatuses.has(view.status) || view.status === 'review-required' ? styles.statusWarning : undefined)}>
+                  <span
+                    ref={(element) => {
+                      if (element) installationStatusRefs.current.set(view.id, element);
+                      else installationStatusRefs.current.delete(view.id);
+                    }}
+                    className={joinClasses(styles.status, view.status === 'active' || view.status === 'candidate-ready' ? styles.statusGood : recoverableStatuses.has(view.status) || view.status === 'review-required' ? styles.statusWarning : undefined)}
+                    role="status"
+                    tabIndex={-1}
+                  >
                     {view.status === 'active' || view.status === 'candidate-ready'
                       ? <CircleCheck size={14} aria-hidden="true" />
                       : recoverableStatuses.has(view.status) || view.status === 'review-required'
@@ -393,10 +457,10 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
                     </select>
                     {release && <ReleaseDetails release={release} expanded />}
                     <div className={styles.actionRow}>
-                      <ActionButton variant="primary" disabled={locked || !canStage} onClick={() => { if (release) void runCommand(view, 'stage', { releaseId: release.id }); }}>
+                      <ActionButton variant="primary" disabled={locked || !canStage} onClick={(event) => { if (release) void runCommand(view, 'stage', { releaseId: release.id }, event.currentTarget); }}>
                         {busyKind === 'command' && attempts[view.id]?.command.operation === 'stage' ? <><span className={styles.spinner} /> Wird bereitgestellt</> : <>Release bereitstellen</>}
                       </ActionButton>
-                      <ActionButton variant="secondary" disabled={locked || !canSynchronize} onClick={() => void runCommand(view, 'synchronize')}>
+                      <ActionButton variant="secondary" disabled={locked || !canSynchronize} onClick={(event) => void runCommand(view, 'synchronize', undefined, event.currentTarget)}>
                         <RefreshCw size={15} aria-hidden="true" /> Konfiguration abgleichen
                       </ActionButton>
                     </div>
@@ -413,6 +477,10 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
                       <>
                         <label htmlFor={`restore-${view.id}`} className={styles.fieldLabel}>ID des genehmigten Wiederherstellungsplans</label>
                         <input
+                          ref={(element) => {
+                            if (element) restorePlanInputRefs.current.set(view.id, element);
+                            else restorePlanInputRefs.current.delete(view.id);
+                          }}
                           id={`restore-${view.id}`}
                           className={styles.input}
                           value={restoreId}
@@ -430,11 +498,15 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
                       <ActionButton
                         variant="primary"
                         disabled={locked || !canReview || (candidateIsIrreversible && !isValidOperatorId(restoreId))}
-                        onClick={() => void runCommand(view, 'approve', { ...(restoreId ? { restorePlanId: restoreId } : {}) })}
+                        buttonRef={(element) => {
+                          if (element) reviewButtonRefs.current.set(view.id, element);
+                          else reviewButtonRefs.current.delete(view.id);
+                        }}
+                        onClick={(event) => void runCommand(view, 'approve', { ...(restoreId ? { restorePlanId: restoreId } : {}) }, event.currentTarget)}
                       >
                         {busyKind === 'command' && attempts[view.id]?.command.operation === 'approve' ? <><span className={styles.spinner} /> Prüfung läuft</> : <>Prüfung bestätigen</>}
                       </ActionButton>
-                      <ActionButton variant="danger" disabled={locked || !canCancel} onClick={() => void runCommand(view, 'cancel')}>
+                      <ActionButton variant="danger" disabled={locked || !canCancel} onClick={(event) => void runCommand(view, 'cancel', undefined, event.currentTarget)}>
                         <Trash2 size={15} aria-hidden="true" /> Kandidat verwerfen
                       </ActionButton>
                     </div>
@@ -446,10 +518,18 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
                     <div className={styles.reviewHeading}><CircleCheck size={17} aria-hidden="true" /><strong>Prüfung abgeschlossen</strong></div>
                     <p>Der Kandidat ist freigegeben und kann aktiviert oder verworfen werden.</p>
                     <div className={styles.actionRow}>
-                      <ActionButton variant="primary" disabled={locked || !canActivate} onClick={() => void runCommand(view, 'activate')}>
+                      <ActionButton
+                        variant="primary"
+                        disabled={locked || !canActivate}
+                        buttonRef={(element) => {
+                          if (element) activateButtonRefs.current.set(view.id, element);
+                          else activateButtonRefs.current.delete(view.id);
+                        }}
+                        onClick={(event) => void runCommand(view, 'activate', undefined, event.currentTarget)}
+                      >
                         {busyKind === 'command' && attempts[view.id]?.command.operation === 'activate' ? <><span className={styles.spinner} /> Wird aktiviert</> : <>Version aktivieren</>}
                       </ActionButton>
-                      <ActionButton variant="danger" disabled={locked || !canCancel} onClick={() => void runCommand(view, 'cancel')}>
+                      <ActionButton variant="danger" disabled={locked || !canCancel} onClick={(event) => void runCommand(view, 'cancel', undefined, event.currentTarget)}>
                         <Trash2 size={15} aria-hidden="true" /> Kandidat verwerfen
                       </ActionButton>
                     </div>
@@ -459,7 +539,7 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
 
                 {view.status === 'active' && view.previous && (
                   <div className={styles.actionRow}>
-                    <ActionButton variant="secondary" disabled={locked || !canRollback} onClick={() => void runCommand(view, 'rollback')}>
+                    <ActionButton variant="secondary" disabled={locked || !canRollback} onClick={(event) => void runCommand(view, 'rollback', undefined, event.currentTarget)}>
                       <RotateCcw size={15} aria-hidden="true" /> Zur vorherigen Version zurückkehren
                     </ActionButton>
                   </div>
@@ -468,7 +548,7 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
                 {canReconcile && (
                   <div className={styles.reconcileBox}>
                     <p><AlertTriangle size={15} aria-hidden="true" /> Ein Vorgang ist noch nicht abschließend geklärt.</p>
-                    <ActionButton variant="secondary" disabled={locked} onClick={() => void runCommand(view, 'reconcile')}>
+                    <ActionButton variant="secondary" disabled={locked} onClick={(event) => void runCommand(view, 'reconcile', undefined, event.currentTarget)}>
                       {busyKind === 'command' && attempts[view.id]?.command.operation === 'reconcile' ? <><span className={styles.spinner} /> Status wird geklärt</> : <>Vorgangsstatus klären</>}
                     </ActionButton>
                   </div>
@@ -481,7 +561,16 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
                         ? `${pending.operationLabel}: Antwort fehlt. Die Befehlskennung ${pending.command.commandId} bleibt für die Statusprüfung gespeichert.`
                         : `${pending.operationLabel}: Der Vorgang läuft unter ${pending.command.commandId}.`}
                     </span></div>
-                    <button className={styles.secondaryButton} type="button" onClick={() => void checkCommandStatus(view.id)} disabled={busyKind !== undefined}>
+                    <button
+                      ref={(element) => {
+                        if (element) statusButtonRefs.current.set(view.id, element);
+                        else statusButtonRefs.current.delete(view.id);
+                      }}
+                      className={styles.secondaryButton}
+                      type="button"
+                      onClick={(event) => void checkCommandStatus(view.id, event.currentTarget)}
+                      disabled={busyKind !== undefined}
+                    >
                       {busyKind === 'status' ? <><span className={styles.spinner} /> Status wird geprüft</> : <>Status prüfen</>}
                     </button>
                   </div>
@@ -519,13 +608,15 @@ function ActionButton({
   children,
   disabled,
   onClick,
+  buttonRef,
   variant,
 }: {
   children: ReactNode;
   disabled: boolean;
-  onClick: () => void;
+  onClick: (event: ReactMouseEvent<HTMLButtonElement>) => void;
+  buttonRef?: (element: HTMLButtonElement | null) => void;
   variant: 'primary' | 'secondary' | 'danger';
 }) {
   const className = variant === 'primary' ? styles.primaryButton : variant === 'danger' ? styles.dangerButton : styles.secondaryButton;
-  return <button className={className} type="button" onClick={onClick} disabled={disabled}>{children}</button>;
+  return <button ref={buttonRef} className={className} type="button" onClick={onClick} disabled={disabled}>{children}</button>;
 }
