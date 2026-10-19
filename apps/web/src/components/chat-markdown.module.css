@@ -19,7 +19,7 @@
 .markdown ol { list-style-type: decimal; }
 .markdown ul ul { list-style-type: circle; }
 .markdown ul ul ul { list-style-type: square; }
-.markdown :global(ul.contains-task-list) { list-style: none; padding-left: 0; }
+.markdown :global(li.task-list-item) { list-style: none; }
 .markdown li + li { margin-top: 0.25em; }
 .markdown blockquote { margin: 0 0 0.9em; padding: 0.1em 0 0.1em 1em; border-left: 3px solid var(--accent); color: var(--muted); }
 .markdown blockquote > :last-child { margin-bottom: 0; }
@@ -32,5 +32,5 @@
 .tableWrap th, .tableWrap td { padding: 8px 11px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; white-space: nowrap; }
 .tableWrap th { background: var(--surface-soft); color: var(--ink); font-weight: 620; }
 .tableWrap tr:last-child td { border-bottom: 0; }
-.markdown input[type="checkbox"] { margin: 0 0.4em 0 0; accent-color: var(--accent); pointer-events: none; }
+.markdown input[type="checkbox"] { margin: 0 0.4em 0 -1.4em; accent-color: var(--accent); pointer-events: none; }
 .markdown hr { height: 1px; margin: 1.2em 0; border: 0; background: var(--line); }
