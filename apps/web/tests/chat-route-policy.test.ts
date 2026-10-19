@@ -1,0 +1,198 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { expectedModelToolName } from "../src/lib/server/authorized-tools";
+import { loadModelConfiguration } from "../src/lib/server/model-config";
+
+const budgetMock = vi.hoisted(() => ({ getAdmission: vi.fn() }));
+
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/server/model-budgets", async importOriginal => ({
+  ...await importOriginal<typeof import("@/lib/server/model-budgets")>(),
+  getModelBudgetAdmission: budgetMock.getAdmission,
+}));
+
+const webOrigin = "https://hasi.example.edu";
+const apiOrigin = "https://api.example.edu";
+const conversationId = "61f65b8d-d053-4e0a-8d69-e56c6b1650f7";
+
+interface ProviderRequest {
+  model?: string;
+  messages?: { role?: string; content?: string }[];
+  tools?: { name?: string; function?: { name?: string } }[];
+}
+
+function tool(pluginId: string, name: string) {
+  return {
+    pluginId,
+    name,
+    title: "Status",
+    description: "Liest einen freigegebenen Status.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    outputSchema: { type: "object", additionalProperties: true },
+    effect: "read",
+    requiredPermissions: ["status:read"],
+    modelName: expectedModelToolName(pluginId, name),
+  };
+}
+
+function urlOf(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
+function readProviderRequest(init: RequestInit | undefined): ProviderRequest {
+  if (typeof init?.body !== "string") throw new TypeError("Expected a serialized provider request.");
+  return JSON.parse(init.body) as ProviderRequest;
+}
+
+function providerToolNames(body: ProviderRequest): string[] {
+  return (body.tools ?? []).map(item => item.function?.name ?? item.name).filter((name): name is string => typeof name === "string");
+}
+
+function configureModelPolicy(): void {
+  const configuration = loadModelConfiguration({});
+  const profileIds = ["groq-oss-120b", "groq-oss-20b", "groq-qwen-3.8-27b"] as const;
+  for (const profileId of profileIds) {
+    const profile = configuration.profiles.find(candidate => candidate.id === profileId);
+    if (!profile) throw new Error("Expected a bundled Groq profile.");
+    profile.capabilities.tools = true;
+    profile.allowedDataClasses = profileId === "groq-qwen-3.8-27b" ? ["public"] : ["public", "confidential"];
+  }
+  configuration.policy.userChoice = { enabled: true, profileIds: [...profileIds] };
+  configuration.policy.fallbacks = [];
+  vi.stubEnv("HASI_LLM_CONFIG", JSON.stringify(configuration));
+}
+
+async function postChat(body: unknown): Promise<Response> {
+  const { POST } = await import("../src/app/api/chat/route");
+  return POST(new Request(webOrigin + "/api/chat", {
+    method: "POST",
+    headers: {
+      host: new URL(webOrigin).host,
+      origin: webOrigin,
+      cookie: "hasi_session=test-only-cookie",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  }));
+}
+
+describe("chat route profile switching policy", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VERCEL", "");
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("HASI_APP_MODE", "production");
+    vi.stubEnv("HASI_DEMO_MODE", "0");
+    vi.stubEnv("HASI_WEB_ORIGIN", webOrigin);
+    vi.stubEnv("HASI_API_ORIGIN", apiOrigin);
+    vi.stubEnv("HASI_CHAT_SIGNING_SECRET", "test-only-signing-secret-".padEnd(43, "x"));
+    vi.stubEnv("HASI_CONTEXT_DATA_CLASSES", JSON.stringify(["public", "confidential"]));
+    vi.stubEnv("GROQ_API_KEY", "test-only-groq-key");
+    configureModelPolicy();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("reloads actor-approved tools on each profile switch and blocks a profile that cannot receive the full context", async () => {
+    const toolSnapshots = [
+      [tool("example.status", "status.read")],
+      [tool("example.catalog", "catalog.read")],
+      [tool("example.records", "records.read")],
+    ];
+    const providerRequests: ProviderRequest[] = [];
+    const sessionFetches: string[] = [];
+    const toolFetches: string[] = [];
+    const reservedProfiles: string[] = [];
+
+    budgetMock.getAdmission.mockImplementation(() => Promise.resolve({
+      reserve: (input: { profileId: string }) => {
+        reservedProfiles.push(input.profileId);
+        return Promise.resolve({ settle: () => Promise.resolve(undefined) });
+      },
+    }));
+
+    vi.stubGlobal("fetch", ((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(urlOf(input));
+      if (url.origin === apiOrigin && url.pathname === "/api/session") {
+        sessionFetches.push(url.href);
+        return Promise.resolve(Response.json({
+          user: { id: "test-account" },
+          mode: "oidc",
+          modelContext: { dataClasses: ["public", "confidential"] },
+        }));
+      }
+      if (url.origin === apiOrigin && url.pathname === "/api/tools") {
+        toolFetches.push(url.href);
+        const snapshot = toolSnapshots[toolFetches.length - 1];
+        if (!snapshot) throw new Error("Unexpected extra tool-catalog request.");
+        return Promise.resolve(Response.json({ tools: snapshot }));
+      }
+      if (url.origin === "https://api.groq.com" && url.pathname === "/openai/v1/chat/completions") {
+        const request = readProviderRequest(init);
+        providerRequests.push(request);
+        return Promise.resolve(Response.json({
+          id: "chatcmpl-route-policy-test",
+          object: "chat.completion",
+          created: 1_797_136_800,
+          model: request.model ?? "test-model",
+          choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: "Test response." } }],
+          usage: { prompt_tokens: 12, completion_tokens: 3 },
+        }));
+      }
+      throw new Error("Unexpected test fetch: " + url.href);
+    }) satisfies typeof fetch);
+
+    const first = await postChat({
+      conversationId,
+      profileId: "groq-oss-120b",
+      messages: [{ role: "user", content: "Read the current status." }],
+    });
+    expect(first.status).toBe(200);
+    const firstReply = await first.json() as { message: Record<string, unknown>; profile: { id: string } };
+    expect(firstReply.profile.id).toBe("groq-oss-120b");
+
+    const second = await postChat({
+      conversationId,
+      profileId: "groq-oss-20b",
+      messages: [
+        { role: "user", content: "Read the current status." },
+        firstReply.message,
+        { role: "user", content: "Read the status again." },
+      ],
+    });
+    expect(second.status).toBe(200);
+    const secondReply = await second.json() as { message: Record<string, unknown>; profile: { id: string } };
+    expect(secondReply.profile.id).toBe("groq-oss-20b");
+
+    const third = await postChat({
+      conversationId,
+      profileId: "groq-qwen-3.8-27b",
+      messages: [
+        { role: "user", content: "Read the current status." },
+        firstReply.message,
+        { role: "user", content: "Read the status again." },
+        secondReply.message,
+        { role: "user", content: "Read the status after switching models." },
+      ],
+    });
+
+    expect(third.status).toBe(403);
+    expect(await third.text()).toContain("Routing-Freigabe");
+    expect(sessionFetches).toHaveLength(3);
+    expect(toolFetches).toHaveLength(3);
+    expect(providerRequests[1]?.messages).toEqual(expect.arrayContaining([
+      expect.objectContaining({ role: "user", content: "Read the current status." }),
+      expect.objectContaining({ role: "assistant", content: "Test response." }),
+      expect.objectContaining({ role: "user", content: "Read the status again." }),
+    ]));
+    expect(providerRequests.map(request => request.model)).toEqual(["openai/gpt-oss-120b", "openai/gpt-oss-20b"]);
+    expect(providerToolNames(providerRequests[0] ?? {})).toEqual([toolSnapshots[0]?.[0]?.modelName]);
+    expect(providerToolNames(providerRequests[1] ?? {})).toEqual([toolSnapshots[1]?.[0]?.modelName]);
+    expect(providerToolNames(providerRequests[1] ?? {})).not.toContain(toolSnapshots[0]?.[0]?.modelName);
+    expect(reservedProfiles).toEqual(["groq-oss-120b", "groq-oss-20b"]);
+  });
+});
