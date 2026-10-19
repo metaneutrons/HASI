@@ -1,6 +1,9 @@
 # HASI consolidated delivery plan
 
-Plan version: 5. Scope decision: 2026-10-19. V5 records Fabian's decision to
+Plan version: 6. Performance decision: 2026-10-19. V6 records Fabian's
+agreed demo response-time targets for M2/M7 in the
+[performance contract](../architecture/technical-basis.md#demo-performance-targets).
+It does not claim that the targets have passed measurement. V5 records Fabian's decision to
 operate the disposable demo without a backup requirement. Production encrypted
 backup, off-host replication/failure monitoring and restore qualification move
 intact to final M8-A8. Independent service-health monitoring, incident handling,
@@ -12,7 +15,8 @@ Test-IdP, mocks, synthetic data and browser/device simulation. Required CI and
 technical operational exercises remain required. The earlier V3 changed only
 issue granularity and was adopted on 2026-10-18.
 
-Decision state: **V5 changes the demo backup acceptance scope; V4 retains its
+Decision state: **V6 adds agreed technical demo performance targets; V5 retains
+the demo backup acceptance scope; V4 retains its
 qualification sequencing and final mobile-quality requirements.** Real iPhone/Safari, Android/Chrome,
 VoiceOver/TalkBack and participant acceptance remain mandatory in M8-A7; they
 are not claimed passed by simulation. Other P1–P6 security/runtime criteria,

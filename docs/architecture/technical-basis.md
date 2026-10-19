@@ -93,6 +93,45 @@ and offline content are separate scope decisions. A future HsH app can embed
 the web experience or provide its own UI against the same API; choose that
 integration after verifying the app's authentication and navigation constraints.
 
+## Demo performance targets
+
+Fabian approved these technical M2/M7 targets on 2026-10-19 (Plan V6):
+
+- Non-generative API queries: **p95 at most 1,000 ms with five concurrent
+  synthetic test users**.
+- Local UI reactions: **at most 200 ms** for the named, measured interactions.
+- Model generation latency, provider rate limits and retry delays are measured
+  and reported separately; they are not silently included or hidden in these
+  two results.
+
+Measure API time at the caller from dispatch to receipt and validation of the
+complete response, including authentication/policy, application and storage
+work. Identify each tested room, knowledge and status route, source/artifact
+revision, deployment topology, dataset, environment and omitted routes. Keep
+five distinct authenticated synthetic users active concurrently, preserving
+per-user isolation. For qualification, collect at least 20 completed queries
+per user per tested route, and repeat the batch. Calculate each route's p95
+with the nearest-rank method (`ceil(0.95 * n)` in the sorted observations).
+Errors and timeouts fail that batch rather than disappearing from latency
+statistics. Record cold-start behavior separately from the warmed query batch;
+a fast session endpoint alone does not qualify the whole application.
+
+For local UI changes, measure from the triggering input to the corresponding
+committed visible feedback in the actual rendered component. Name the
+interaction and browser/viewport, repeat it and retain the maximum observed
+duration against 200 ms. Test immediate pending/error feedback independently
+of a network operation's total time. Tool-call and model-call counters remain
+separate; opening or paging existing results must not silently generate a model
+request. Browser-control tool round-trip time is not a UI latency measurement.
+
+Each measurement instrument needs a passing control and an intentionally delayed
+countercase that exceeds its relevant target and fails the same gate. Use only
+synthetic read data and local test delays; do not slow the public demo, call a
+paid model, execute real business actions or reset the shared budget. These are
+bounded technical acceptance targets for a small demo, not a production
+availability SLA or actual-device/institutional M8-A7 acceptance. The result
+reports and milestone issues own measured execution state.
+
 ## Application boundaries
 
 ```mermaid
