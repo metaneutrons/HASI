@@ -6,6 +6,7 @@ import { loadAuthorizedModelTools } from "@/lib/server/authorized-tools";
 import { getModelBudgetAdmission, loadModelPrices, modelPrice } from "@/lib/server/model-budgets";
 import { createKnowledgeEvidence, rebuildKnowledgeContext } from "@/lib/server/knowledge-evidence";
 import { productionKnowledgeResolver } from "@/lib/server/knowledge-context";
+import { productionHistoryAuthority } from "@/lib/server/history-authority";
 import type { ChatRequest } from "@/lib/chat-contract";
 import { ModelRouterError } from "@/lib/server/model-router-error";
 import { loadModelConfiguration } from "@/lib/server/model-config";
@@ -30,14 +31,21 @@ export async function POST(request: Request) {
   const signer = access.production ? createKnowledgeEvidence(access.production.secret, access.production.scope) : undefined;
   const resolve = productionKnowledgeResolver(access.request);
   let rebuilt: Awaited<ReturnType<typeof rebuildKnowledgeContext>> | undefined;
+  let authorityDigest: string | undefined;
   const assertCurrent = async () => {
+    if (signer) {
+      if (!authorityDigest || await productionHistoryAuthority(access.request) !== authorityDigest) throw new ModelRouterError("context_unavailable", "Conversation authority changed");
+    }
     if (!rebuilt?.contextIds.length) return;
     const current = await resolve(rebuilt.contextIds);
     if (current.some(item => item.status !== "valid")) throw new ModelRouterError("context_unavailable", "Source authority changed");
   };
   return handleChatPost(access.request, {
     run: async (input: ChatRequest) => {
-      rebuilt = signer ? await rebuildKnowledgeContext(input, signer, resolve) : undefined;
+      if (signer) {
+        authorityDigest = await productionHistoryAuthority(access.request);
+        rebuilt = await rebuildKnowledgeContext(input, signer, resolve, authorityDigest);
+      } else rebuilt = undefined;
       const request = rebuilt?.request ?? input;
       const reply = await runModelStep(request, { context: access.modelContext, budgetAdmission: await getModelBudgetAdmission(), routingPins: access.routingPins, authorizedTools: await loadAuthorizedModelTools(access.request), messageTimes: request.messages.map(message => access.clock.verify(message, message.timestamp)), ...(signer ? { beforeProviderCall: assertCurrent } : {}), telemetry: metrics => { console.info("HASI model usage", JSON.stringify(metrics)); } });
       await assertCurrent();
@@ -45,7 +53,10 @@ export async function POST(request: Request) {
       return reply;
     },
     finalize: (reply, input) => {
-      if (signer && input.conversationId) reply.message.evidence = signer.stamp(input.conversationId, reply.message, rebuilt?.contextIds ?? []);
+      if (signer && input.conversationId) {
+        if (!authorityDigest) throw new ModelRouterError("context_unavailable", "Current conversation authority is unavailable");
+        reply.message.evidence = signer.stamp(input.conversationId, reply.message, rebuilt?.contextIds ?? [], authorityDigest);
+      }
       return Promise.resolve();
     },
     clock: access.clock,

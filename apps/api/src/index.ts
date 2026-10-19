@@ -187,6 +187,11 @@ export async function createApi(options: ApiOptions) {
     return { proposal: publicProposal(proposal) };
   };
   app.get('/api/session', async request => { const user = await identity.resolve(request.cookies[cookieName]); return { mode: sessionMode, user: user ? publicUser(user) : null, ...(options.mode === 'production' && user ? { modelContext: { dataClasses: ['public', 'internal', 'confidential'] } } : {}) }; });
+  app.get('/api/history/authority', async request => {
+    const user = await requireUser(request.cookies[cookieName]);
+    await options.registry.refreshAll();
+    return { authorityDigest: await options.registry.historyAuthorityBinding(user.actor) };
+  });
   if (oidc) {
     app.get('/api/auth/login', async (request, reply) => {
       const { returnTo } = z.strictObject({ returnTo: z.string().max(128).optional() }).parse(request.query);

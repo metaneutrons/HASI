@@ -793,6 +793,34 @@ export class PluginRegistry {
     const current = await this.actorFor(id, actor);
     return digest({ actor: projectActorContext(current.actor, this.get(id).manifest), accountRevision: current.revision ?? null });
   }
+  /** Opaque current authority for retained model history. No actor or account fields leave the API. */
+  async historyAuthorityBinding(actor: ActorContext): Promise<string> {
+    const currentActor = this.resolveActor ? await this.resolveActor(actor.subject) : actor;
+    if (currentActor?.subject !== actor.subject) throw new RequestError(403, 'Die aktuellen Kontorechte geben diese Sitzung nicht frei.');
+    const plugins: { pluginId: string; status: 'enabled' | 'disabled'; binding: string; accountAuthority: string }[] = [];
+    for (const plugin of [...this.installed.values()].sort((left, right) => left.instanceId.localeCompare(right.instanceId))) {
+      if (!plugin.healthy || !plugin.settings) throw new RequestError(503, 'Die aktuelle Plugin-Freigabe kann nicht sicher geprüft werden.');
+      let accountAuthority: string;
+      try {
+        accountAuthority = await this.authorityBinding(plugin.instanceId, currentActor);
+      } catch (error) {
+        if (error instanceof PluginAccountError && (error.statusCode === 403 || error.statusCode === 409)) accountAuthority = 'inaccessible';
+        else throw error;
+      }
+      plugins.push({
+        pluginId: plugin.instanceId,
+        status: plugin.enabled ? 'enabled' : 'disabled',
+        binding: this.bindingFor(plugin),
+        accountAuthority,
+      });
+    }
+    return digest({
+      domain: 'hasi:history-authority:v1',
+      subject: currentActor.subject,
+      actorDigest: digest({ domain: 'hasi:history-actor:v1', actor: currentActor }),
+      plugins,
+    });
+  }
   /** Read-only recovery can survive renewal only if the complete current account/grant projection agrees. */
   async reconciliationAuthorityBinding(id: string, actor: ActorContext) {
     return digest(projectActorContext((await this.actorFor(id, actor)).actor, this.get(id).manifest));

@@ -8,6 +8,7 @@ import { knowledgeModelDocuments } from "../knowledge";
 import { ModelRouterError } from "./model-router-error";
 
 const EVIDENCE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const AUTHORITY_DIGEST = /^[a-f0-9]{64}$/u;
 
 type AssistantMessage = Extract<WireMessage, { role: "assistant" }>;
 export interface ResolvedKnowledgeContext {
@@ -26,26 +27,29 @@ function body(message: AssistantMessage) {
 export function createKnowledgeEvidence(secret: string, scope: string, clock: () => number = Date.now) {
   if (!secret || !scope) throw new TypeError("Knowledge evidence requires a host secret and subject scope");
   const key = Buffer.from(hkdfSync("sha256", secret, Buffer.alloc(0), "hasi-derived-knowledge-v1", 32));
-  const proof = (conversationId: string, message: AssistantMessage, contextIds: readonly string[], expiresAt: string) =>
-    createHmac("sha256", key).update(digest({ scope, conversationId, body: body(message), contextIds, expiresAt })).digest();
+  const proof = (conversationId: string, message: AssistantMessage, contextIds: readonly string[], expiresAt: string, authorityDigest?: string) =>
+    createHmac("sha256", key).update(digest({ scope, conversationId, body: body(message), contextIds, expiresAt, authorityDigest: authorityDigest ?? null })).digest();
   return {
-    stamp(conversationId: string, message: AssistantMessage, ids: readonly string[]): KnowledgeEvidence {
+    stamp(conversationId: string, message: AssistantMessage, ids: readonly string[], authorityDigest?: string): KnowledgeEvidence {
       z.uuid().parse(conversationId);
       z.uuid().parse(message.id);
+      if (authorityDigest !== undefined && !AUTHORITY_DIGEST.test(authorityDigest)) throw new TypeError("Invalid history authority digest");
       const contextIds = [...new Set(ids)].sort();
       if (contextIds.length > 32) throw new ModelRouterError("context_unavailable", "Knowledge dependency limit reached");
       const expiresAt = new Date(clock() + EVIDENCE_RETENTION_MS).toISOString();
-      return knowledgeEvidenceSchema.parse({ contextIds, expiresAt, receipt: proof(conversationId, message, contextIds, expiresAt).toString("base64url") });
+      return knowledgeEvidenceSchema.parse({ ...(authorityDigest ? { authorityDigest } : {}), contextIds, expiresAt, receipt: proof(conversationId, message, contextIds, expiresAt, authorityDigest).toString("base64url") });
     },
-    verify(conversationId: string, message: AssistantMessage): KnowledgeEvidence | undefined {
+    verify(conversationId: string, message: AssistantMessage, currentAuthorityDigest?: string): KnowledgeEvidence | undefined {
       try {
         z.uuid().parse(conversationId);
         z.uuid().parse(message.id);
+        if (currentAuthorityDigest !== undefined && !AUTHORITY_DIGEST.test(currentAuthorityDigest)) return undefined;
         const evidence = knowledgeEvidenceSchema.parse(message.evidence);
+        if (currentAuthorityDigest !== undefined && evidence.authorityDigest !== currentAuthorityDigest) return undefined;
         const expires = Date.parse(evidence.expiresAt);
         if (expires <= clock() || expires > clock() + EVIDENCE_RETENTION_MS || new Set(evidence.contextIds).size !== evidence.contextIds.length) return undefined;
         const actual = Buffer.from(evidence.receipt, "base64url");
-        const expected = proof(conversationId, message, evidence.contextIds, evidence.expiresAt);
+        const expected = proof(conversationId, message, evidence.contextIds, evidence.expiresAt, evidence.authorityDigest);
         return actual.length === expected.length && timingSafeEqual(actual, expected) ? evidence : undefined;
       } catch { return undefined; }
     },
@@ -62,18 +66,29 @@ function toolContextId(message: Extract<WireMessage, { role: "tool" }>) {
 }
 
 /** Rebuild protected history from host evidence; browser-carried source bodies are never authoritative. */
-export async function rebuildKnowledgeContext(input: ChatRequest, signer: ReturnType<typeof createKnowledgeEvidence>, resolve: KnowledgeContextResolver) {
+export async function rebuildKnowledgeContext(input: ChatRequest, signer: ReturnType<typeof createKnowledgeEvidence>, resolve: KnowledgeContextResolver, currentAuthorityDigest?: string) {
   const conversationId = input.conversationId;
   if (!conversationId) throw new ModelRouterError("context_unavailable", "A production conversation identity is required");
   const proofs = new Map<AssistantMessage, KnowledgeEvidence>();
   const ids = new Set<string>();
+  const pending = new Map<string, string>();
   for (const message of input.messages) {
+    if (message.role === "user") { pending.clear(); continue; }
     if (message.role === "assistant") {
-      const evidence = signer.verify(conversationId, message);
-      if (evidence) { proofs.set(message, evidence); evidence.contextIds.forEach(id => ids.add(id)); }
-    } else if (message.role === "tool") {
-      const id = toolContextId(message);
-      if (id) ids.add(id);
+      const evidence = signer.verify(conversationId, message, currentAuthorityDigest);
+      pending.clear();
+      if (evidence) {
+        proofs.set(message, evidence);
+        evidence.contextIds.forEach(id => ids.add(id));
+        message.toolCalls?.forEach(call => pending.set(call.id, call.name));
+      }
+    } else {
+      if (pending.get(message.toolCallId) !== message.name) continue;
+      pending.delete(message.toolCallId);
+      if (message.name === "knowledge_search") {
+        const id = toolContextId(message);
+        if (id) ids.add(id);
+      }
     }
   }
   if (ids.size > 32) throw new ModelRouterError("context_unavailable", "Knowledge dependency limit reached");
@@ -83,7 +98,7 @@ export async function rebuildKnowledgeContext(input: ChatRequest, signer: Return
   const valid = new Map(resolved.filter(value => value.status === "valid" && Array.isArray(value.documents)).map(value => [value.contextId, value]));
   const dependencies = new Set<string>();
   const messages: WireMessage[] = [];
-  const pending = new Map<string, string>();
+  pending.clear();
   const invalidMessageIds: string[] = [];
   let changed = false;
   for (const message of input.messages) {

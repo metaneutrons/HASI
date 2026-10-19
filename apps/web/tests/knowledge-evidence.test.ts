@@ -96,4 +96,39 @@ describe("current knowledge evidence in model history", () => {
     expect(result.request.messages.map(message => message.content)).toEqual(["Question", "Continue"]);
     expect(result.changed).toBe(true);
   });
+
+  it("retains only proofs signed for the current history authority", async () => {
+    const signer = createKnowledgeEvidence("synthetic-secret", "subject-one");
+    const foreignSigner = createKnowledgeEvidence("synthetic-secret", "subject-two");
+    const conversationId = randomUUID();
+    const currentAuthority = "a".repeat(64);
+    const changedAuthority = "b".repeat(64);
+    const makeMessage = (content: string, proofSigner = signer, proofAuthority?: string) => {
+      const message: Extract<WireMessage, { role: "assistant" }> = { id: randomUUID(), role: "assistant", content };
+      message.evidence = proofSigner.stamp(conversationId, message, [], proofAuthority);
+      return message;
+    };
+    const changed = makeMessage("OLD_AUTHORITY_ANSWER", signer, changedAuthority);
+    const missing = makeMessage("MISSING_AUTHORITY_ANSWER");
+    const tampered = makeMessage("ORIGINAL_AUTHORITY_ANSWER", signer, currentAuthority);
+    tampered.content = "TAMPERED_AUTHORITY_ANSWER";
+    const foreign = makeMessage("FOREIGN_SUBJECT_ANSWER", foreignSigner, currentAuthority);
+    const current = makeMessage("CURRENT_AUTHORITY_ANSWER", signer, currentAuthority);
+    const resolve = vi.fn(() => Promise.resolve([]));
+    const result = await rebuildKnowledgeContext({ profileId: "groq-oss-120b", conversationId, messages: [
+      { role: "user", content: "First" }, changed,
+      { role: "user", content: "Second" }, missing,
+      { role: "user", content: "Third" }, tampered,
+      { role: "user", content: "Fourth" }, foreign,
+      { role: "user", content: "Fifth" }, current,
+      { role: "user", content: "Continue" },
+    ] }, signer, resolve, currentAuthority);
+
+    const retained = JSON.stringify(result.request.messages);
+    for (const excluded of ["OLD_AUTHORITY_ANSWER", "MISSING_AUTHORITY_ANSWER", "TAMPERED_AUTHORITY_ANSWER", "FOREIGN_SUBJECT_ANSWER"]) expect(retained).not.toContain(excluded);
+    expect(retained).toContain("CURRENT_AUTHORITY_ANSWER");
+    expect(resolve).not.toHaveBeenCalled();
+    expect(result.invalidMessageIds).toEqual([changed.id, missing.id, tampered.id, foreign.id]);
+    expect(result.changed).toBe(true);
+  });
 });

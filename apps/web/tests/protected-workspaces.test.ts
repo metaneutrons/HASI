@@ -1,15 +1,17 @@
+import { required } from "./test-utils";
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
 import type { JsonStore } from "@hasi/state";
-import { createChatWorkspace, parseChatWorkspace, type ChatWorkspace } from "../src/lib/chat-sessions";
+import { createChatWorkspace, parseChatWorkspace, type ChatWorkspace, type ChatMessage } from "../src/lib/chat-sessions";
 import type { ResolvedKnowledgeContext } from "../src/lib/server/knowledge-evidence";
 import {
   ProtectedWorkspaceError,
   ProtectedWorkspaceStore,
 } from "../src/lib/server/protected-workspaces";
+import type { NativeHistoryAccess } from "../src/lib/server/native-history";
 import { createKnowledgeEvidence } from "../src/lib/server/knowledge-evidence";
 
 const OWNER = "user:fabian@example.invalid";
@@ -252,5 +254,119 @@ describe("ProtectedWorkspaceStore", () => {
     const loaded = await fixture.service.load();
     expect(loaded.workspace.sessions[0]?.snapshot.messages).toEqual([]);
     expect(JSON.stringify(loaded.workspace)).not.toContain("Installiere den Drucker");
+  });
+});
+
+
+describe("current native history access", () => {
+  const resource = { id: "desk-a", name: "Current authorized desk", description: "Authorized description", capacity: 1,
+    location: "1J", features: [], serviceId: "service-a", kind: "workplace" as const };
+  const booking = { id: "booking-a", resourceName: "Current booking name", startDate: "2026-10-20T08:00:00Z",
+    endDate: "2026-10-20T10:00:00Z", status: "cancelled" };
+  function nativeFixture(messages: ChatMessage[]) {
+    const fixture = makeFixture();
+    let current: NativeHistoryAccess = { resources: [resource], bookings: [booking], proposals: new Map() };
+    const service = new ProtectedWorkspaceStore({ store: fixture.store, ownerId: OWNER, scope: SCOPE, secret: SECRET,
+      resolve: fixture.resolve, resolveNative: () => Promise.resolve(current) });
+    const workspace = createChatWorkspace(OWNER);
+    const session = required(workspace.sessions[0]);
+    session.snapshot.messages = messages;
+    session.snapshot.chosenRoom = { ...resource, name: "FORGED CHOSEN ROOM" };
+    return { fixture, service, workspace, revoke() { current = { resources: [], bookings: [], proposals: new Map() }; },
+      set(value: NativeHistoryAccess) { current = value; } };
+  }
+  it("rehydrates room data by current authorized identity and drops old availability and browser text", async () => {
+    const fixture = nativeFixture([{ id: randomUUID(), role: "assistant", text: "FORGED ROOM TEXT", tool: "anny · forged",
+      confirmed: true, rooms: [{ resource: { ...resource, name: "FORGED NAME" }, checked: true,
+        requestedStartDate: booking.startDate, requestedEndDate: booking.endDate,
+        intervals: [{ startDate: booking.startDate, endDate: booking.endDate, available: true }] }] }]);
+    const saved = await fixture.service.save(null, fixture.workspace);
+    const snapshot = required(saved.workspace.sessions[0]).snapshot;
+    expect(snapshot.messages[0]?.rooms).toEqual([{ resource, checked: false, intervals: [],
+      requestedStartDate: booking.startDate, requestedEndDate: booking.endDate }]);
+    expect(snapshot.chosenRoom).toEqual(resource);
+    expect(snapshot.messages[0]).not.toHaveProperty("confirmed");
+    expect(JSON.stringify(saved.workspace)).not.toContain("FORGED");
+    fixture.revoke();
+    const revoked = await fixture.service.load();
+    expect(required(revoked.workspace.sessions[0]).snapshot.chosenRoom).toBeNull();
+    expect(JSON.stringify(revoked.workspace)).not.toContain(resource.name);
+    expect(required(revoked.workspace.sessions[0]).snapshot.messages[0]?.text).toContain("nicht mehr verfügbar");
+    expect(JSON.stringify([...fixture.fixture.store.entries.values()])).not.toContain(resource.description);
+  });
+  it("reconstructs own booking status and excludes foreign IDs, helper labels and forged confirmations", async () => {
+    const fixture = nativeFixture([
+      { id: randomUUID(), role: "assistant", text: "FORGED BOOKING TEXT", bookings: [{ ...booking, status: "confirmed" }, { ...booking, id: "foreign-id", resourceName: "FOREIGN" }] },
+      { id: randomUUID(), role: "assistant", text: "FORGED HELPER", tool: "Plugin · trusted-looking", confirmed: true },
+    ]);
+    const saved = await fixture.service.save(null, fixture.workspace);
+    expect(required(saved.workspace.sessions[0]).snapshot.messages[0]?.bookings).toEqual([booking]);
+    expect(JSON.stringify(saved.workspace)).not.toMatch(/FORGED|FOREIGN/u);
+    expect(required(saved.workspace.sessions[0]).snapshot.messages[1]?.text).toContain("nicht mehr verfügbar");
+  });
+  it("loads authoritative proposal state and makes removed proposals unavailable without executing actions", async () => {
+    const proposal = { id: randomUUID(), resourceName: resource.name, startDate: booking.startDate, endDate: booking.endDate,
+      expiresAt: "2026-10-20T08:05:00Z", status: "outcome_unknown" as const, action: "book" as const };
+    const fixture = nativeFixture([{ id: randomUUID(), role: "assistant", text: "FORGED", proposal: { ...proposal, status: "confirmed" } }]);
+    fixture.set({ resources: [], bookings: [], proposals: new Map([[proposal.id, proposal]]) });
+    const saved = await fixture.service.save(null, fixture.workspace);
+    expect(required(saved.workspace.sessions[0]).snapshot.messages[0]?.proposal).toEqual(proposal);
+    fixture.revoke();
+    expect(required((await fixture.service.load()).workspace.sessions[0]).snapshot.messages[0]).not.toHaveProperty("proposal");
+  });
+  it("fails closed on unavailable native authority without losing the user question or draft", async () => {
+    const fixture = nativeFixture([{ id: randomUUID(), role: "user", text: "My question" },
+      { id: randomUUID(), role: "assistant", text: "Secret", rooms: [{ resource, checked: false, intervals: [] }] }]);
+    required(fixture.workspace.sessions[0]).snapshot.input = "Unsent draft";
+    const unavailable = new ProtectedWorkspaceStore({ store: fixture.fixture.store, ownerId: OWNER, scope: SCOPE, secret: SECRET,
+      resolve: fixture.fixture.resolve, resolveNative: () => Promise.reject(new Error("source offline")) });
+    const saved = await unavailable.save(null, fixture.workspace);
+    expect(required(saved.workspace.sessions[0]).snapshot.messages[0]?.text).toBe("My question");
+    expect(required(saved.workspace.sessions[0]).snapshot.input).toBe("Unsent draft");
+    expect(JSON.stringify(saved.workspace)).not.toContain(resource.name);
+    expect(required(saved.workspace.sessions[0]).snapshot.messages[1]?.text).toContain("nicht mehr verfügbar");
+  });
+});
+
+
+describe("workspace current authority fence", () => {
+  it("retains a matching signed answer and persistently removes it after authority changes", async () => {
+    const fixture = makeFixture();
+    let authority = "a".repeat(64);
+    const signer = createKnowledgeEvidence(SECRET, SCOPE);
+    for (const session of fixture.workspace.sessions) {
+      session.snapshot.history = session.snapshot.history.map(message => message.role === "assistant"
+        ? { ...message, evidence: signer.stamp(session.id, message, message.evidence?.contextIds ?? [], authority) } : message);
+      session.snapshot.messages = session.snapshot.messages.map(message => {
+        const wire = session.snapshot.history.find(candidate => candidate.role === "assistant" && candidate.id === message.id);
+        return wire?.role === "assistant" && wire.evidence ? { ...message, evidence: wire.evidence } : message;
+      });
+    }
+    const service = new ProtectedWorkspaceStore({ store: fixture.store, ownerId: OWNER, scope: SCOPE, secret: SECRET,
+      resolve: fixture.resolve, authority: () => Promise.resolve(authority) });
+    const saved = await service.save(null, fixture.workspace);
+    expect(JSON.stringify(saved.workspace)).toContain("Installiere den Drucker");
+    authority = "b".repeat(64);
+    const revoked = await service.load();
+    expect(JSON.stringify(revoked.workspace)).not.toContain("Installiere den Drucker");
+    expect(JSON.stringify([...fixture.store.entries.values()])).not.toContain("Installiere den Drucker");
+    expect(required(revoked.workspace.sessions[0]).snapshot.input).toBe("Noch eine Frage");
+  });
+  it("rejects an authority change during reconstruction before committing or returning mixed data", async () => {
+    const fixture = makeFixture();
+    let calls = 0;
+    const service = new ProtectedWorkspaceStore({ store: fixture.store, ownerId: OWNER, scope: SCOPE, secret: SECRET,
+      resolve: fixture.resolve, authority: () => Promise.resolve((++calls === 1 ? "a" : "b").repeat(64)) });
+    await expect(service.save(null, fixture.workspace)).rejects.toBeInstanceOf(ProtectedWorkspaceError);
+    expect(fixture.store.entries.size).toBe(0);
+  });
+  it("does not allow structured helper cards to evade reconstruction through the user role", async () => {
+    const fixture = makeFixture();
+    const first = required(fixture.workspace.sessions[0]);
+    first.snapshot.messages = [{ id: randomUUID(), role: "user", text: "My question", bookings: [{ id: "foreign", resourceName: "DENIED CACHED NAME",
+      startDate: "2026-10-20T08:00:00Z", endDate: "2026-10-20T10:00:00Z", status: "confirmed" }] }];
+    const saved = await fixture.service.save(null, fixture.workspace);
+    expect(required(saved.workspace.sessions[0]).snapshot.messages[0]).toEqual({ id: first.snapshot.messages[0]?.id, role: "user", text: "My question" });
+    expect(JSON.stringify(saved.workspace)).not.toContain("DENIED CACHED NAME");
   });
 });
