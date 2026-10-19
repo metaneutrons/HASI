@@ -23,7 +23,7 @@ export interface ChatProposal {
   resourceName: string;
   startDate: string;
   endDate: string;
-  status: "pending" | "confirmed" | "outcome_unknown" | "failed";
+  status: "pending" | "confirmed" | "outcome_unknown" | "failed" | "invalidated";
   expiresAt: string;
 }
 

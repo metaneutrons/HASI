@@ -1,4 +1,4 @@
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, sign } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createPluginServer, digest, type ActorContext, type PluginManifest } from '@hasi/plugin-sdk';
 import { MemoryJsonStore } from '../packages/state/src/index.js';
@@ -40,6 +40,23 @@ afterEach(async () => {
 });
 
 describe('plugin registry runtime updates', () => {
+  it('retains a fresh installation epoch in a process-local registry', async () => {
+    const pluginManifest = manifest('0.1.0');
+    const server = createServer(pluginManifest);
+    const endpoint = await listenOnEphemeralPort(server);
+    const registration = { endpoint, serviceToken, expectedManifestDigest: digest(pluginManifest), allowLoopback: true };
+    const first = new PluginRegistry(privateKey);
+    await first.install(registration);
+    const originalBinding = await first.binding(pluginId);
+    expect(await first.binding(pluginId)).toBe(originalBinding);
+    await first.setEnabled(pluginId, true);
+    expect(await first.binding(pluginId)).toBe(originalBinding);
+    const reconstructed = new PluginRegistry(privateKey);
+    await reconstructed.install(registration);
+    expect(await reconstructed.binding(pluginId)).not.toBe(originalBinding);
+    await expect(reconstructed.invoke(pluginId, 'records.read', {}, actor)).resolves.toEqual({ value: 'served-0.1.0' });
+  });
+
   it('invokes a compatible replacement without restarting the registry and blocks permission changes', async () => {
     const v010 = manifest('0.1.0');
     const server010 = createServer(v010);
@@ -105,14 +122,51 @@ describe('plugin registry runtime updates', () => {
     const second = new PluginRegistry(privateKey, { store, scope: 'test-enablement' });
     await second.install(registration);
 
+    const initialBinding = await first.binding(pluginId);
+    expect(await second.binding(pluginId)).toBe(initialBinding);
+    await first.setEnabled(pluginId, true);
+    expect(await second.binding(pluginId)).toBe(initialBinding);
+
     await first.setEnabled(pluginId, false);
     await expect(second.invoke(pluginId, 'records.read', {}, actor)).rejects.toMatchObject({ status: 409 });
     expect(second.list().find(plugin => plugin.id === pluginId)?.enabled).toBe(false);
 
     await first.setEnabled(pluginId, true);
     await expect(second.invoke(pluginId, 'records.read', {}, actor)).resolves.toEqual({ value: 'served-0.1.0' });
+    const renewedBinding = await second.binding(pluginId);
+    expect(renewedBinding).not.toBe(initialBinding);
+    const restarted = new PluginRegistry(privateKey, { store, scope: 'test-enablement' });
+    await restarted.install(registration);
+    expect(await restarted.binding(pluginId)).toBe(renewedBinding);
     const stored = await store.read(stateKey('test-enablement'));
     expect(JSON.stringify(stored?.value)).not.toContain(serviceToken);
+  });
+
+  it('verifies an existing signed state before adding a lifecycle epoch on an active transition', async () => {
+    const pluginManifest = manifest('0.1.0');
+    const server = createServer(pluginManifest);
+    const endpoint = await listenOnEphemeralPort(server);
+    const store = new MemoryJsonStore('registry-existing-epoch');
+    const registration = { endpoint, serviceToken, expectedManifestDigest: digest(pluginManifest), allowLoopback: true };
+    const registry = new PluginRegistry(privateKey, { store, scope: 'existing-epoch' });
+    await registry.install(registration);
+    const key = stateKey('existing-epoch');
+    const original = await store.read(key);
+    if (!original) throw new Error('Missing signed state');
+    const unsigned = { ...(original.value as Record<string, unknown>) };
+    delete unsigned.lifecycleRevision;
+    delete unsigned.signature;
+    const signature = sign(null, Buffer.from(`hasi-plugin-registry-state-v1\0${digest(unsigned)}`), privateKey).toString('base64url');
+    expect(await store.compareAndSet(key, original.revision, { ...unsigned, signature })).toBe(true);
+    const existingBinding = await registry.binding(pluginId);
+    await registry.setEnabled(pluginId, false);
+    await registry.setEnabled(pluginId, true);
+    expect(await registry.binding(pluginId)).not.toBe(existingBinding);
+
+    const current = await store.read(key);
+    if (!current) throw new Error('Missing transitioned state');
+    expect(await store.compareAndSet(key, current.revision, { ...(current.value as Record<string, unknown>), lifecycleRevision: '00000000-0000-4000-8000-000000000001' })).toBe(true);
+    await expect(registry.binding(pluginId)).rejects.toMatchObject({ status: 409 });
   });
 
   it('persists update candidates and approved manifests across registry instances', async () => {
@@ -123,18 +177,22 @@ describe('plugin registry runtime updates', () => {
     const store = new MemoryJsonStore('registry-update');
     const first = new PluginRegistry(privateKey, { store, scope: 'test-updates' });
     await first.install(registration);
+    const beforeCandidate = await first.binding(pluginId);
 
     await server010.close();
     const v011 = manifest('0.1.1');
     const server011 = createServer(v011);
     await server011.listen({ host: '127.0.0.1', port: getPort(endpoint) });
     await expect(first.checkUpdate(pluginId)).resolves.toMatchObject({ status: 'available' });
+    expect(await first.binding(pluginId)).toBe(beforeCandidate);
 
     const second = new PluginRegistry(privateKey, { store, scope: 'test-updates' });
     await second.install(registration);
     expect(second.version(pluginId)).toBe('0.1.0');
+    expect(await second.binding(pluginId)).toBe(beforeCandidate);
     await second.activateUpdate(pluginId);
     expect(second.version(pluginId)).toBe('0.1.1');
+    expect(await first.binding(pluginId)).not.toBe(beforeCandidate);
     await expect(first.invoke(pluginId, 'records.read', {}, actor)).resolves.toEqual({ value: 'served-0.1.1' });
   });
 

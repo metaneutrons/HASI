@@ -59,6 +59,25 @@ async function createHarness(resolveActor?: (subject: string) => Promise<ActorCo
 }
 
 describe('authoritative action reconciliation', () => {
+  it('does not revive a pending confirmation after disable and re-enable', async () => {
+    const fixture = await createHarness();
+    try {
+      const cookie = await fixture.cookieFor('student');
+      const oldProposal = await fixture.prepare(cookie);
+      await fixture.registry.setEnabled(fixture.manifest.id, false);
+      await fixture.registry.setEnabled(fixture.manifest.id, true);
+      const rejected = await fixture.api.inject({ method: 'POST', url: `/api/proposals/${oldProposal}/confirm`, headers: { ...fixture.headers, cookie }, payload: {} });
+      expect(rejected.statusCode, rejected.body).toBe(409);
+      expect(fixture.writes).toBe(0);
+
+      const freshProposal = await fixture.prepare(cookie);
+      const accepted = await fixture.api.inject({ method: 'POST', url: `/api/proposals/${freshProposal}/confirm`, headers: { ...fixture.headers, cookie }, payload: {} });
+      expect(accepted.statusCode, accepted.body).toBe(200);
+      expect(accepted.json<{ proposal: { status: string } }>().proposal.status).toBe('confirmed');
+      expect(fixture.writes).toBe(1);
+    } finally { await fixture.close(); }
+  });
+
   it.each(['transport', 'post-call-authority-conflict'])('recovers %s after a successful write without replaying it', async failure => {
     const fixture = await createHarness();
     const { api, headers, manifest, registry } = fixture;

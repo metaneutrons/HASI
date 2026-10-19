@@ -1,4 +1,4 @@
-import { createHash, createPublicKey, sign, verify, type KeyObject } from 'node:crypto';
+import { createHash, createPublicKey, randomUUID, sign, verify, type KeyObject } from 'node:crypto';
 import { Client, SdkHttpError, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
@@ -13,6 +13,8 @@ import { resultEnvelope, sourcePolicySchema, type SourcePolicy, type ResultPagin
 import { PluginAccountError, type PluginAccountService } from './plugin-accounts.js';
 import type { PluginDeploymentBinding } from './plugin-deployment-binding.js';
 import { managedPluginRuntimeContractSchema, type ManagedPluginRuntimeContract } from './managed-plugin-contract.js';
+import { ProposalBindingGuard } from './proposal-binding-guard.js';
+import type { ProposalRetentionUntil } from './proposal-invalidation.js';
 
 export class RequestError extends Error {
   constructor(public readonly status: number, message: string) { super(message); }
@@ -81,8 +83,14 @@ export interface PluginRegistryOptions {
   reviewedAppDigests?: readonly string[];
 }
 
+export type ActionBindingObservation =
+  | { status: 'current'; binding: string }
+  | { status: 'withdrawn'; binding: string; reason: 'plugin_disabled' | 'plugin_removed' }
+  | { status: 'unavailable' };
+
 interface InstalledPlugin {
   instanceId: string;
+  lifecycleRevision?: string;
   fetch: typeof fetch;
   settings?: Awaited<ReturnType<PluginSettingsStore['binding']>>;
   registration: Registration;
@@ -98,6 +106,7 @@ interface InstalledPlugin {
 
 interface UnsignedPluginState {
   schemaVersion: 1;
+  lifecycleRevision?: string;
   scope: string;
   pluginId: string;
   expectedManifestDigest: string;
@@ -128,6 +137,7 @@ const DEFAULT_SCOPE = 'default';
 const DEFAULT_CANDIDATE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const persistedStateSchema = z.strictObject({
   schemaVersion: z.literal(1),
+  lifecycleRevision: z.uuid().optional(),
   scope: z.string().min(1).max(256),
   pluginId: z.string().min(1).max(256),
   expectedManifestDigest: z.string().regex(/^[a-f0-9]{64}$/),
@@ -262,6 +272,7 @@ export class PluginRegistry {
       initialManifest: state.initialManifest,
       manifest: state.manifest,
       enabled: state.enabled,
+      ...(state.lifecycleRevision ? { lifecycleRevision: state.lifecycleRevision } : {}),
       ...(state.candidate && state.candidateBaseDigest !== undefined && state.candidateExpiresAt !== undefined ? {
         candidate: state.candidate,
         candidateBaseDigest: state.candidateBaseDigest,
@@ -279,6 +290,7 @@ export class PluginRegistry {
       initialManifest: state.initialManifest,
       manifest: state.manifest,
       enabled: state.enabled,
+      ...(state.lifecycleRevision ? { lifecycleRevision: state.lifecycleRevision } : {}),
     };
   }
 
@@ -308,6 +320,7 @@ export class PluginRegistry {
         initialManifest,
         manifest,
         enabled: parsed.enabled,
+        ...(parsed.lifecycleRevision ? { lifecycleRevision: parsed.lifecycleRevision } : {}),
         ...(candidate ? { candidate } : {}),
         ...(parsed.candidateBaseDigest ? { candidateBaseDigest: parsed.candidateBaseDigest } : {}),
         ...(parsed.candidateExpiresAt !== undefined ? { candidateExpiresAt: parsed.candidateExpiresAt } : {}),
@@ -341,6 +354,7 @@ export class PluginRegistry {
       initialManifest,
       manifest: initialManifest,
       enabled: true,
+      lifecycleRevision: randomUUID(),
     };
     return this.signState(state);
   }
@@ -362,6 +376,7 @@ export class PluginRegistry {
       initialManifest: plugin.initialManifest,
       manifest: plugin.manifest,
       enabled: plugin.enabled,
+      ...(plugin.lifecycleRevision ? { lifecycleRevision: plugin.lifecycleRevision } : {}),
       ...(candidateState ? {
         candidate: candidateState.candidate,
         candidateBaseDigest: candidateState.candidateBaseDigest,
@@ -375,6 +390,8 @@ export class PluginRegistry {
     plugin.initialManifest = state.initialManifest;
     plugin.manifest = state.manifest;
     plugin.enabled = state.enabled;
+    if (state.lifecycleRevision) plugin.lifecycleRevision = state.lifecycleRevision;
+    else delete plugin.lifecycleRevision;
     if (state.candidate) {
       plugin.candidate = state.candidate;
       if (state.candidateBaseDigest === undefined || state.candidateExpiresAt === undefined) throw new RequestError(409, 'Der gespeicherte Plugin-Zustand ist ungültig oder wurde verändert.');
@@ -388,14 +405,40 @@ export class PluginRegistry {
   }
 
   private async refresh(plugin: InstalledPlugin): Promise<InstalledPlugin> {
-    if (!await this.sourceConnected(plugin.instanceId)) throw new RequestError(409, 'Die Verbindung wurde entfernt. Bitte neu verbinden.');
     if (this.managedContracts.has(plugin.instanceId)) return this.refreshManaged(plugin);
-    if (!this.store) { plugin.settings = await this.settings.binding(plugin.instanceId, plugin.manifest, plugin.registration.secretReady, plugin.registration.secretRevision); return plugin; }
-    const stored = await this.store.read(this.stateKey(plugin.instanceId));
-    if (!stored) throw new RequestError(409, 'Der gespeicherte Plugin-Zustand fehlt.');
-    this.applyState(plugin, this.validatePersistedState(stored.value, plugin.registration, plugin.instanceId));
-    plugin.settings = await this.settings.binding(plugin.instanceId, plugin.manifest, plugin.registration.secretReady, plugin.registration.secretRevision);
-    return plugin;
+    const snapshot = { ...plugin };
+    if (!this.store) {
+      snapshot.settings = await this.settings.binding(snapshot.instanceId, snapshot.manifest, snapshot.registration.secretReady, snapshot.registration.secretRevision);
+      this.installed.set(snapshot.instanceId, snapshot);
+      return snapshot;
+    }
+
+    const connectionRevision = this.catalogSources.has(snapshot.instanceId)
+      ? (await this.readActiveConnection(snapshot.instanceId))?.revision
+      : undefined;
+    if (this.catalogSources.has(snapshot.instanceId) && connectionRevision === undefined) throw new RequestError(409, 'Die Verbindung wurde entfernt. Bitte neu verbinden.');
+    const state = await this.store.read(this.stateKey(snapshot.instanceId));
+    if (!state) throw new RequestError(409, 'Der gespeicherte Plugin-Zustand fehlt.');
+    this.applyState(snapshot, this.validatePersistedState(state.value, snapshot.registration, snapshot.instanceId));
+    const settings = await this.settings.binding(snapshot.instanceId, snapshot.manifest, snapshot.registration.secretReady, snapshot.registration.secretRevision);
+
+    const currentState = await this.store.read(this.stateKey(snapshot.instanceId));
+    if (currentState?.revision !== state.revision) throw new RequestError(409, 'Der gespeicherte Plugin-Zustand wurde parallel geändert.');
+    if (connectionRevision !== undefined) {
+      const currentConnection = await this.readActiveConnection(snapshot.instanceId);
+      if (currentConnection?.revision !== connectionRevision) throw new RequestError(409, 'Die Verbindung wurde parallel geändert.');
+    }
+
+    snapshot.settings = settings;
+    this.installed.set(snapshot.instanceId, snapshot);
+    return snapshot;
+  }
+
+  private async readActiveConnection(id: string): Promise<{ revision: string } | undefined> {
+    if (!this.store) return undefined;
+    const record = await this.store.read(this.catalogKey(id));
+    if (!record || !this.connectionActive(record.value, id)) return undefined;
+    return { revision: record.revision };
   }
 
   private async refreshManaged(previous: InstalledPlugin, connecting = false): Promise<InstalledPlugin> {
@@ -459,7 +502,7 @@ export class PluginRegistry {
     if (!this.store) {
       const current = this.unsignedState(this.stateFromPlugin(plugin));
       const updated = update(current);
-      this.applyState(plugin, this.signState(updated.state));
+      this.applyState(plugin, this.signState(this.lifecycleState(current, updated.state)));
       return updated.result;
     }
     const stored = await updateJson<PersistedPluginState, { state: PersistedPluginState; result: R }>(
@@ -469,12 +512,23 @@ export class PluginRegistry {
       value => {
         const current = this.validatePersistedState(value, plugin.registration, plugin.instanceId);
         const updated = update(this.unsignedState(current));
-        const signed = this.signState(updated.state);
+        const signed = this.signState(this.lifecycleState(current, updated.state));
         return { value: signed, result: { state: signed, result: updated.result } };
       },
     );
     this.applyState(plugin, this.validatePersistedState(stored.state, plugin.registration, plugin.instanceId));
     return stored.result;
+  }
+
+  /** Active transitions cannot resurrect a proposal after disable/enable or A/B/A.
+   * Candidate discovery is deliberately outside this epoch. Existing signed
+   * records without an epoch remain verifiable until their first transition. */
+  private lifecycleState(current: UnsignedPluginState, updated: UnsignedPluginState): UnsignedPluginState {
+    const next = { ...updated };
+    delete next.lifecycleRevision;
+    if (current.enabled !== next.enabled || digest(current.manifest) !== digest(next.manifest)) next.lifecycleRevision = randomUUID();
+    else if (current.lifecycleRevision) next.lifecycleRevision = current.lifecycleRevision;
+    return next;
   }
 
   async install(registration: Registration): Promise<void> {
@@ -534,6 +588,7 @@ export class PluginRegistry {
 
     const plugin: InstalledPlugin = {
       instanceId, fetch: this.transport(registration), registration,
+      ...(state.lifecycleRevision ? { lifecycleRevision: state.lifecycleRevision } : {}),
       initialManifest: state.initialManifest,
       manifest: state.manifest,
       enabled: state.enabled,
@@ -604,10 +659,13 @@ export class PluginRegistry {
     const value = { version: 1, scope: this.scope, id, connected };
     return { value, signature: sign(null, Buffer.from(digest(value)), this.privateKey).toString('base64url') };
   }
-  private connectionActive(raw: unknown, id: string) {
+  private verifiedConnection(raw: unknown, id: string) {
     const parsed = z.strictObject({ value: z.strictObject({ version: z.literal(1), scope: z.string(), id: z.string(), connected: z.boolean() }), signature: z.string() }).parse(raw);
     if (parsed.value.scope !== this.scope || parsed.value.id !== id || !verify(null, Buffer.from(digest(parsed.value)), this.publicKey, Buffer.from(parsed.signature, 'base64url'))) throw new RequestError(409, 'Ungültige gespeicherte Verbindung.');
-    return parsed.value.connected;
+    return { connected: parsed.value.connected, signedRecordDigest: digest(parsed) };
+  }
+  private connectionActive(raw: unknown, id: string) {
+    return this.verifiedConnection(raw, id).connected;
   }
   async restoreConnections(): Promise<void> {
     if (!this.store) return;
@@ -660,9 +718,77 @@ export class PluginRegistry {
     }
   }
   private bindingFor(plugin: InstalledPlugin): string {
-    return digest({ instanceId: plugin.instanceId, manifest: digest(plugin.manifest), configuration: plugin.settings?.digest ?? null, enabled: plugin.enabled, endpoint: this.endpoint(plugin.registration).href, credentialRevision: plugin.registration.credentialRevision ?? 'legacy-v1', network: plugin.registration.allowedPrivateCidrs ?? [], sourcePolicy: plugin.registration.sourcePolicy ?? this.defaultSourcePolicy ?? null, ...(plugin.managedDeploymentRevision ? { deployment: plugin.managedDeploymentRevision } : {}) });
+    return digest({ instanceId: plugin.instanceId, lifecycleRevision: plugin.lifecycleRevision ?? null, manifest: digest(plugin.manifest), configuration: plugin.settings?.digest ?? null, enabled: plugin.enabled, endpoint: this.endpoint(plugin.registration).href, credentialRevision: plugin.registration.credentialRevision ?? 'legacy-v1', network: plugin.registration.allowedPrivateCidrs ?? [], sourcePolicy: plugin.registration.sourcePolicy ?? this.defaultSourcePolicy ?? null, ...(plugin.managedDeploymentRevision ? { deployment: plugin.managedDeploymentRevision } : {}) });
+  }
+  private withdrawalBinding(id: string, reason: 'plugin_disabled' | 'plugin_removed', lifecycleRevision?: string, connection?: { revision: string; signedRecordDigest: string }): string {
+    return digest({
+      domain: 'hasi:action-binding-observation:v1',
+      scope: digest(this.scope),
+      pluginId: digest(id),
+      reason,
+      ...(reason === 'plugin_disabled' ? { lifecycleRevision: lifecycleRevision ?? null } : {}),
+      ...(connection ? { connectionRevision: connection.revision, signedConnection: connection.signedRecordDigest } : {}),
+    });
+  }
+  /** Observe only signed, durable lifecycle authority. This does not authorize an action. */
+  async observeActionBinding(id: string): Promise<ActionBindingObservation> {
+    try {
+      if (!this.store) return { status: 'unavailable' };
+
+      const source = this.catalogSources.get(id);
+      const plugin = this.installed.get(id);
+      if (source) {
+        const connection = await this.store.read(this.catalogKey(id));
+        if (!connection) return { status: 'unavailable' };
+        const verified = this.verifiedConnection(connection.value, id);
+        if (!/^[A-Za-z0-9._:-]{1,256}$/u.test(connection.revision)) return { status: 'unavailable' };
+        if (!verified.connected) {
+          return {
+            status: 'withdrawn',
+            reason: 'plugin_removed',
+            binding: this.withdrawalBinding(id, 'plugin_removed', undefined, { revision: connection.revision, signedRecordDigest: verified.signedRecordDigest }),
+          };
+        }
+      }
+
+      const registration = plugin?.registration ?? source?.registration;
+      if (!registration) return { status: 'unavailable' };
+      if (this.managedContracts.has(id) || source) {
+        const local = await this.store.read(this.stateKey(id));
+        if (!local) return { status: 'unavailable' };
+        const state = this.validatePersistedState(local.value, registration, id);
+        if (!state.enabled) {
+          return {
+            status: 'withdrawn',
+            reason: 'plugin_disabled',
+            binding: this.withdrawalBinding(id, 'plugin_disabled', state.lifecycleRevision),
+          };
+        }
+      }
+
+      if (!plugin) return { status: 'unavailable' };
+      const fresh = await this.refresh(plugin);
+      if (!fresh.enabled) {
+        return {
+          status: 'withdrawn',
+          reason: 'plugin_disabled',
+          binding: this.withdrawalBinding(id, 'plugin_disabled', fresh.lifecycleRevision),
+        };
+      }
+      return { status: 'current', binding: this.bindingFor(fresh) };
+    } catch {
+      return { status: 'unavailable' };
+    }
   }
   async binding(id: string) { return this.bindingFor(await this.refresh(this.get(id))); }
+  /** Server composition only: keys and scope never enter the HTTP/plugin boundary. */
+  proposalBindingGuard(store: JsonStore, proposalRetentionUntil: ProposalRetentionUntil): ProposalBindingGuard | undefined {
+    if (!this.store) return undefined;
+    return new ProposalBindingGuard({
+      store, privateKey: this.privateKey, scope: this.scope, proposalRetentionUntil,
+      observeActionBinding: id => this.observeActionBinding(id),
+    });
+  }
   async authorityBinding(id: string, actor: ActorContext) {
     const current = await this.actorFor(id, actor);
     return digest({ actor: projectActorContext(current.actor, this.get(id).manifest), accountRevision: current.revision ?? null });

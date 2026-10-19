@@ -19,6 +19,7 @@ import { canStartNewChat } from "@/lib/chat-workspace-store";
 import { ChatSessionList } from "@/components/chat-session-list";
 import { MAX_MODEL_STEPS, annyWorkflow, toolNeedsModelFollowUp, toolBatchNeedsModelFollowUp, isAvailabilityFollowUp, isMixedKnowledgeRequest, officePreferenceSearch, isOwnBookingsRequest } from "@/lib/chat-tool-loop";
 import { ActionPreviewDetails, ActionStatusControl } from "@/components/action-status";
+import { classifyProposalFailure } from "@/lib/proposal-failure";
 import { sameActionPreview } from "@/lib/action-preview";
 import { PersonalConnectionNotice } from "@/components/personal-connection-notice";
 import { ChatServiceConnection } from "@/components/chat-service-connection";
@@ -148,6 +149,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   const pendingRequest = useRef<AbortController | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
+  const proposalCards = useRef(new Map<string, HTMLDivElement>());
+  const pendingProposalFocus = useRef<{ id: string; confirmation: boolean } | null>(null);
   const inputId = useId();
   const messageClock = useRef<ReturnType<typeof createChatMessageClock> | null>(null);
   messageClock.current ??= createChatMessageClock(events => postForChat("/api/chat/timestamps", { messages: events }));
@@ -211,21 +214,36 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   }, [messages, input, profileId, request, roomContext, chosenRoom, activeResult, activeProposal, interrupted, busy, messagesTruncated, sessionId, onSnapshot]);
 
   useEffect(() => {
+    if (busy || !pendingProposalFocus.current) return;
+    const requested = pendingProposalFocus.current;
+    pendingProposalFocus.current = null;
+    const card = proposalCards.current.get(requested.id);
+    // Disabled/removed confirmation buttons lose focus. Restore it after the
+    // final render without interrupting a task switch or a user's newer focus.
+    if (!active || !card?.isConnected || !card.getClientRects().length || card.ownerDocument.activeElement !== card.ownerDocument.body) return;
+    const buttons = card.querySelectorAll<HTMLButtonElement>('button[data-proposal-confirm]');
+    const confirmation = buttons.length === 1 ? buttons.item(0) : null;
+    const target = requested.confirmation && confirmation && !confirmation.disabled ? confirmation : card;
+    target.focus({ preventScroll: true });
+  }, [active, busy, messages]);
+
+  useEffect(() => {
     const element = scroller.current;
     if (active && element) element.scrollTo({ top: latestMessage || busy ? element.scrollHeight : 0, behavior: "instant" });
   }, [latestMessage, busy, active]);
 
-  async function requestForChat<T>(path: string, init: RequestInit = {}): Promise<T> {
+  async function requestForChat<T>(path: string, init: RequestInit = {}, onRequestStart?: () => void): Promise<T> {
     const signal = pendingRequest.current?.signal;
     if (requestWasAborted(alive.current, signal)) throw new DOMException("Chat closed", "AbortError");
     const session = await apiRequest<{ user: User | null }>("/api/session", signal === undefined ? {} : { signal });
     if (requestWasAborted(alive.current, signal) || session.user?.id !== ownerId) throw new Error("Das Testkonto wurde gewechselt. Bitte öffne den Chat erneut.");
+    onRequestStart?.();
     const result = await apiRequest<T>(path, { ...init, ...(signal === undefined ? {} : { signal }) });
     if (requestWasAborted(alive.current, signal)) throw new DOMException("Chat closed", "AbortError");
     return result;
   }
 
-  function postForChat<T>(path: string, body: unknown) { return requestForChat<T>(path, { method: "POST", body: JSON.stringify(body) }); }
+  function postForChat<T>(path: string, body: unknown, onRequestStart?: () => void) { return requestForChat<T>(path, { method: "POST", body: JSON.stringify(body) }, onRequestStart); }
 
   async function loadModelTools(): Promise<PluginToolDescriptor[]> {
     const parsed = parsePluginTools(await requestForChat<unknown>("/api/tools"));
@@ -290,6 +308,13 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   function addActionResult(message: Omit<Message, "id" | "role">) {
     if (!offline) appendHistory("assistant", message.text);
     return add({ ...message, role: "assistant" });
+  }
+
+  function updateProposalStatus(proposalId: string, status: Proposal["status"]) {
+    setMessages((previous) => previous.map((message) => {
+      const proposal = message.proposal;
+      return proposal?.id === proposalId ? { ...message, proposal: { ...proposal, status } } : message;
+    }));
   }
 
   function start(label: string) {
@@ -747,8 +772,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         addActionResult({ text: statusText, tool: toolLabel });
         return;
       }
-      executionAttempted = true;
-      const rawResult = await postForChat<unknown>(`${proposalUrl}/confirm`, {});
+      const rawResult = await postForChat<unknown>(`${proposalUrl}/confirm`, {}, () => { executionAttempted = true; });
       const confirmed = parsePluginProposalSnapshot(rawResult, proposal);
       if (confirmed?.status === "confirmed" && samePluginProposalSnapshot(proposal, confirmed)) {
         setActiveProposal(null);
@@ -758,17 +782,33 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         });
       } else {
         setActiveProposal(null);
+        if (confirmed?.status === "outcome_unknown") updateProposalStatus(proposal.id, "outcome_unknown");
         const text = confirmed?.status === "outcome_unknown"
           ? "Der Dienst konnte den Ausgang der Aktion nicht eindeutig bestätigen. Prüfe den aktuellen Stand, bevor du einen weiteren Vorschlag erstellst."
           : "Die Antwort stimmt nicht eindeutig mit der angezeigten Aktion überein. Prüfe den aktuellen Stand, bevor du erneut vorgehst.";
         addActionResult({ text, tool: toolLabel });
       }
     } catch (cause) {
-      setActiveProposal(null);
       const detail = cause instanceof Error ? cause.message : "Der Dienst hat nicht geantwortet.";
-      const text = executionAttempted
-        ? `Die Antwort auf „${actionName}“ war nicht eindeutig. ${detail} Prüfe zuerst den aktuellen Stand und löse die Aktion nicht erneut aus, bevor das Ergebnis geklärt ist.`
-        : `Der Vorschlag konnte nicht vorab geprüft werden; eine Ausführung wurde nicht angefordert. ${detail}`;
+      const disposition = classifyProposalFailure(cause, executionAttempted);
+      if (disposition === "invalidated") {
+        pendingProposalFocus.current = { id: proposal.id, confirmation: false };
+        setActiveProposal(null);
+        updateProposalStatus(proposal.id, "invalidated");
+      } else if (disposition === "retry_preflight") {
+        pendingProposalFocus.current = { id: proposal.id, confirmation: true };
+        setActiveProposal(proposal.id);
+      } else {
+        setActiveProposal(null);
+        if (disposition === "outcome_unknown") updateProposalStatus(proposal.id, "outcome_unknown");
+      }
+      const text = disposition === "invalidated"
+        ? "Vorschlag ungültig. Die Aktion wurde nicht ausgeführt. Bitte bereite sie neu vor."
+        : disposition === "outcome_unknown"
+          ? `Die Antwort auf „${actionName}“ war nicht eindeutig. ${detail} Prüfe zuerst den aktuellen Stand und löse die Aktion nicht erneut aus, bevor das Ergebnis geklärt ist.`
+          : disposition === "retry_preflight"
+            ? `Der Vorschlag konnte vorab nicht geprüft werden und bleibt offen. Du kannst es erneut versuchen. ${detail}`
+            : `Der Vorschlag konnte nicht vorab geprüft werden; eine Ausführung wurde nicht angefordert. ${detail}`;
       addActionResult({ text, tool: toolLabel });
     } finally {
       await finish();
@@ -806,8 +846,7 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         addActionResult({ text });
         return;
       }
-      executionAttempted = true;
-      const result = await postForChat<{ proposal: AnnyChatProposal; bookingId?: string; status?: "cancelled" }>(`${proposalUrl}/confirm`, {});
+      const result = await postForChat<{ proposal: AnnyChatProposal; bookingId?: string; status?: "cancelled" }>(`${proposalUrl}/confirm`, {}, () => { executionAttempted = true; });
       const responseMatches = sameProposalSnapshot(proposal, result.proposal);
       const bookingIdMatches = cancellation && typeof result.bookingId === "string"
         && result.bookingId.trim().length > 0 && result.bookingId === canonicalBookingId;
@@ -830,21 +869,37 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
         }
       } else {
         setActiveProposal(null);
+        if (result.proposal.status === "outcome_unknown") updateProposalStatus(proposal.id, "outcome_unknown");
         const text = cancellation
           ? !responseMatches || result.proposal.status === "outcome_unknown" || result.proposal.status === "confirmed" ? "Die Antwort passt nicht eindeutig zum angezeigten Stornierungsvorschlag. Prüfe deine Buchungen, bevor du einen neuen Vorschlag erstellst." : "Die Stornierung konnte nicht bestätigt werden. Prüfe den Buchungsstatus, bevor du erneut vorgehst."
           : result.proposal.status === "outcome_unknown" ? "Der Buchungsdienst hat nicht eindeutig geantwortet. Prüfe deine Buchungen, bevor du erneut buchst." : "Die Buchung konnte nicht bestätigt werden. Bitte suche erneut nach freien Zeiten.";
         addActionResult({ text });
       }
     } catch (cause) {
-      setActiveProposal(null);
       const detail = cause instanceof Error ? cause.message : "Der Dienst hat nicht geantwortet.";
-      const text = cancellation
-        ? executionAttempted
-          ? `Die Antwort auf die Stornierung war nicht eindeutig. ${detail} Prüfe zuerst den Status deiner Buchung und erstelle keinen neuen Vorschlag, bevor du das Ergebnis geklärt hast.`
-          : `Der Stornierungsvorschlag konnte nicht vorab geprüft werden; eine Ausführung wurde nicht angefordert. ${detail} Lade deine Buchungen erneut und prüfe den Status.`
-        : executionAttempted
-          ? `Die Antwort auf die Buchung war nicht eindeutig. ${detail} Prüfe zuerst deine Buchungen, bevor du erneut buchst.`
-          : `Der Buchungsvorschlag konnte nicht vorab geprüft werden und wurde nicht ausgeführt. ${detail} Suche erneut nach freien Zeiten.`;
+      const disposition = classifyProposalFailure(cause, executionAttempted);
+      if (disposition === "invalidated") {
+        pendingProposalFocus.current = { id: proposal.id, confirmation: false };
+        setActiveProposal(null);
+        updateProposalStatus(proposal.id, "invalidated");
+      } else if (disposition === "retry_preflight") {
+        pendingProposalFocus.current = { id: proposal.id, confirmation: true };
+        setActiveProposal(proposal.id);
+      } else {
+        setActiveProposal(null);
+        if (disposition === "outcome_unknown") updateProposalStatus(proposal.id, "outcome_unknown");
+      }
+      const text = disposition === "invalidated"
+        ? "Vorschlag ungültig. Die Aktion wurde nicht ausgeführt. Bitte bereite sie neu vor."
+        : disposition === "outcome_unknown"
+          ? cancellation
+            ? `Die Antwort auf die Stornierung war nicht eindeutig. ${detail} Prüfe zuerst den Status deiner Buchung und erstelle keinen neuen Vorschlag, bevor du das Ergebnis geklärt hast.`
+            : `Die Antwort auf die Buchung war nicht eindeutig. ${detail} Prüfe zuerst deine Buchungen, bevor du erneut buchst.`
+          : disposition === "retry_preflight"
+            ? `Der Vorschlag konnte vorab nicht geprüft werden und bleibt offen. Du kannst es erneut versuchen. ${detail}`
+            : cancellation
+              ? `Der Stornierungsvorschlag konnte nicht vorab geprüft werden; eine Ausführung wurde nicht angefordert. ${detail} Lade deine Buchungen erneut und prüfe den Status.`
+              : `Der Buchungsvorschlag konnte nicht vorab geprüft werden und wurde nicht ausgeführt. ${detail} Suche erneut nach freien Zeiten.`;
       addActionResult({ text });
     }
     finally { await finish(); }
@@ -925,8 +980,8 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                     }}
                   />}
                   {message.sources && message.sources.length > 0 && <div className="chat-source-list" aria-label="Gefundene Quellen">{message.sources.map((source) => <Link className="chat-source-card" href={knowledgeDocumentHref(source.id, source.revision)} target="_blank" rel="noreferrer" key={source.id}><BookOpen size={18} aria-hidden="true" /><span><small>{knowledgeSourceLabel(source.sourceSystem, source.synthetic)} · Fassung {source.revision}</small><strong>{source.title}</strong><code>{source.citationId}</code></span><ArrowRight size={16} aria-hidden="true" /></Link>)}</div>}
-                  {pluginProposal && pluginProposalView && <div className="chat-tool-card chat-proposal">
-                    <span className="chat-proposal-label">PLUGINAKTION PRÜFEN</span>
+                  {pluginProposal && pluginProposalView && <div className="chat-tool-card chat-proposal" role="group" tabIndex={-1} aria-label={pluginProposal.status === "invalidated" ? "Vorschlag ungültig" : "Pluginaktionsvorschlag"} ref={node => { if (node) proposalCards.current.set(pluginProposal.id, node); else proposalCards.current.delete(pluginProposal.id); }}>
+                    <span className="chat-proposal-label">{pluginProposal.status === "invalidated" ? "Vorschlag ungültig" : pluginProposal.status === "outcome_unknown" ? "Ausgang unklar" : "PLUGINAKTION PRÜFEN"}</span>
                     <h2>{pluginProposalView.actionTitle}</h2>
                     {pluginProposalView.executionDescription && <p>{pluginProposalView.executionDescription}</p>}
                     <small>Plugin: {pluginProposalView.pluginId} · Werkzeug: <code>{pluginProposalView.executionTool}</code></small>
@@ -934,24 +989,24 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
                     {pluginProposal.resourceName && <p>{pluginProposal.resourceName}</p>}
                     <p>{compactPluginToolResult(pluginProposal.arguments, 800)}</p>
                     <small>Vorbereitet durch: {pluginProposalView.preparationTitle} · Gültig bis {formatTime(pluginProposal.expiresAt)} Uhr</small>
-                    <button className="button button--primary button--wide" type="button" disabled={busy || activeProposal !== pluginProposal.id} onClick={() => { void confirm(pluginProposal); }}>
+                    {pluginProposal.status !== "invalidated" && pluginProposal.status !== "outcome_unknown" && <button className="button button--primary button--wide" data-proposal-confirm type="button" disabled={busy || activeProposal !== pluginProposal.id} onClick={() => { void confirm(pluginProposal); }}>
                       {activeProposal === pluginProposal.id ? pluginProposalView.confirmLabel : "Vorschlag abgeschlossen oder ersetzt"}
                       <Check size={16} aria-hidden="true" />
-                    </button>
+                    </button>}
                   </div>}
-                  {message.proposal && message.proposal.action !== "execute_tool" && <div className="chat-tool-card chat-proposal">
-                    <span className="chat-proposal-label">{message.proposal.action === "cancel_booking" ? "STORNIERUNG PRÜFEN" : "BITTE PRÜFEN UND BESTÄTIGEN"}</span>
+                  {message.proposal && message.proposal.action !== "execute_tool" && <div className="chat-tool-card chat-proposal" role="group" tabIndex={-1} aria-label={message.proposal.status === "invalidated" ? "Vorschlag ungültig" : message.proposal.action === "cancel_booking" ? "Stornierungsvorschlag" : "Buchungsvorschlag"} ref={node => { const proposalId = message.proposal?.id; if (!proposalId) return; if (node) proposalCards.current.set(proposalId, node); else proposalCards.current.delete(proposalId); }}>
+                    <span className="chat-proposal-label">{message.proposal.status === "invalidated" ? "Vorschlag ungültig" : message.proposal.status === "outcome_unknown" ? "Ausgang unklar" : message.proposal.action === "cancel_booking" ? "STORNIERUNG PRÜFEN" : "BITTE PRÜFEN UND BESTÄTIGEN"}</span>
                     <h2>{message.proposal.resourceName}</h2>
                     <ActionPreviewDetails preview={message.proposal.preview} />
                     <p>{formatDateTime(message.proposal.startDate)} bis {formatTime(message.proposal.endDate)} Uhr</p>
                     {message.proposal.action === "cancel_booking" && <p>Diese bestehende Buchung wird erst nach deiner Bestätigung storniert.</p>}
                     <small>Gültig bis {formatTime(message.proposal.expiresAt)} Uhr · Testumgebung</small>
-                    <button className="button button--primary button--wide" type="button" disabled={busy || activeProposal !== message.proposal.id} onClick={() => { if (message.proposal) void confirm(message.proposal); }}>
+                    {message.proposal.status !== "invalidated" && message.proposal.status !== "outcome_unknown" && <button className="button button--primary button--wide" data-proposal-confirm type="button" disabled={busy || activeProposal !== message.proposal.id} onClick={() => { if (message.proposal) void confirm(message.proposal); }}>
                       {activeProposal === message.proposal.id ? message.proposal.action === "cancel_booking" ? "Stornierung bestätigen" : "Buchung bestätigen" : message.proposal.action === "cancel_booking" ? "Stornierungsvorschlag abgeschlossen oder ersetzt" : "Vorschlag abgeschlossen oder ersetzt"}
                       <Check size={16} aria-hidden="true" />
-                    </button>
+                    </button>}
                   </div>}
-                  {message.proposal && !message.confirmed && activeProposal !== message.proposal.id && !offline && <ActionStatusControl proposalId={message.proposal.id} disabled={busy} />}
+                  {message.proposal && !message.confirmed && activeProposal !== message.proposal.id && !offline && <ActionStatusControl proposalId={message.proposal.id} status={message.proposal.status} disabled={busy} />}
                   {message.bookings && message.bookings.length > 0 && <div className="chat-booking-list">{message.bookings.map((booking) => <div className="chat-tool-card" key={booking.id}><h2>{booking.resourceName}</h2><p>{formatDateTime(booking.startDate)} bis {formatTime(booking.endDate)} Uhr</p><div className="chat-booking-footer"><span className="chat-booking-status">{bookingStatusLabel(booking.status)}</span>{canRequestCancellation(booking) && <button className="chat-card-action" type="button" disabled={busy} onClick={() => void prepareCancellation(booking)}>Stornierung beginnen <ArrowRight size={15} aria-hidden="true" /></button>}</div></div>)}</div>}
                   {message.confirmed && <Link className="chat-card-action" href="/bookings">Meine Buchungen öffnen <ArrowRight size={15} aria-hidden="true" /></Link>}
                 </div>

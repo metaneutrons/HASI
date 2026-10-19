@@ -111,6 +111,115 @@ afterEach(async () => {
 });
 
 describe('plugin installation lifecycle bindings', () => {
+  it('persists signed invalidation after disable/re-enable without exposing the proposal to another owner', async () => {
+    const events: string[] = [];
+    const store = new MemoryJsonStore('plugin-lifecycle-durable-invalidation');
+    const fixture = await startPlugin(events);
+    const registry = new PluginRegistry(privateKey, { store });
+    await registry.install(fixture.registration);
+    const runtime = await startApi({ registry, store, identity: new MockIdentityProvider('test') });
+    await setTarget(runtime.api, runtime.adminCookie, 'private-original-target', 0);
+    const prepared = await runtime.api.inject({ method: 'POST', url: '/api/tools/call',
+      headers: { ...headers, cookie: runtime.studentCookie },
+      payload: { pluginId, name: 'lifecycle.prepare', arguments: {} } });
+    expect(prepared.statusCode, prepared.body).toBe(200);
+    const id = prepared.json<{ proposal: { id: string } }>().proposal.id;
+    await registry.setEnabled(pluginId, false);
+    await registry.setEnabled(pluginId, true);
+
+    const observer = vi.spyOn(registry, 'observeActionBinding');
+    const foreign = await runtime.api.inject({ url: `/api/proposals/${id}`, headers: { ...headers, cookie: runtime.adminCookie } });
+    expect(foreign.statusCode).toBe(404);
+    expect(observer).not.toHaveBeenCalled();
+    expect((await store.read(`proposal:${id}`))?.value).toMatchObject({ status: 'pending' });
+
+    const read = await runtime.api.inject({ url: `/api/proposals/${id}`, headers: { ...headers, cookie: runtime.studentCookie } });
+    expect(read.statusCode, read.body).toBe(409);
+    expect(read.json()).toMatchObject({ code: 'proposal_invalidated' });
+    expect(read.body).not.toContain('private-original-target');
+    const invalidated = await store.read(`proposal:${id}`);
+    expect(invalidated?.value).toMatchObject({ status: 'invalidated', invalidation: { event: { reason: 'binding_changed' } } });
+    const confirm = await runtime.api.inject({ method: 'POST', url: `/api/proposals/${id}/confirm`,
+      headers: { ...headers, cookie: runtime.studentCookie }, payload: {} });
+    expect(confirm.statusCode).toBe(409);
+    expect(confirm.json()).toMatchObject({ code: 'proposal_invalidated' });
+    expect((await store.read(`proposal:${id}`))?.revision).toBe(invalidated?.revision);
+    expect(events).toEqual(['prepare:private-original-target']);
+  });
+
+  it('does not recreate invalidated state or execute after its storage retention ends', async () => {
+    let storageNow = Date.now();
+    const events: string[] = [];
+    const store = new MemoryJsonStore('plugin-lifecycle-expired-invalidation', { clock: () => storageNow });
+    const fixture = await startPlugin(events);
+    const registry = new PluginRegistry(privateKey, { store });
+    await registry.install(fixture.registration);
+    const runtime = await startApi({ registry, store, identity: new MockIdentityProvider('test') });
+    await setTarget(runtime.api, runtime.adminCookie, 'expired-private-target', 0);
+    const prepared = await runtime.api.inject({ method: 'POST', url: '/api/tools/call',
+      headers: { ...headers, cookie: runtime.studentCookie },
+      payload: { pluginId, name: 'lifecycle.prepare', arguments: {} } });
+    expect(prepared.statusCode, prepared.body).toBe(200);
+    const proposal = prepared.json<{ proposal: { id: string; expiresAt: string } }>().proposal;
+    await registry.setEnabled(pluginId, false);
+    const invalidated = await runtime.api.inject({ url: `/api/proposals/${proposal.id}`,
+      headers: { ...headers, cookie: runtime.studentCookie } });
+    expect(invalidated.statusCode, invalidated.body).toBe(409);
+    expect(invalidated.json()).toMatchObject({ code: 'proposal_invalidated' });
+    expect(await store.read(`proposal:${proposal.id}`)).toBeDefined();
+
+    // Advance only the storage clock. The mock login remains valid, so a 404
+    // proves proposal retention expiry rather than an authentication failure.
+    storageNow = Date.parse(proposal.expiresAt) + 86_400_001;
+    const writer = vi.spyOn(store, 'compareAndSet');
+    const observer = vi.spyOn(registry, 'observeActionBinding');
+    for (const method of ['GET', 'POST'] as const) {
+      const response = await runtime.api.inject({ method,
+        url: `/api/proposals/${proposal.id}${method === 'POST' ? '/confirm' : ''}`,
+        headers: { ...headers, cookie: runtime.studentCookie }, ...(method === 'POST' ? { payload: {} } : {}) });
+      expect(response.statusCode, response.body).toBe(404);
+      expect(response.body).not.toContain('expired-private-target');
+    }
+    expect(await store.read(`proposal:${proposal.id}`)).toBeUndefined();
+    expect(writer).not.toHaveBeenCalled();
+    expect(observer).not.toHaveBeenCalled();
+    expect(events).toEqual(['prepare:expired-private-target']);
+  });
+
+  it('preserves a pending proposal during unavailable authority and executes it once after recovery', async () => {
+    const events: string[] = [];
+    const store = new MemoryJsonStore('plugin-lifecycle-observation-outage');
+    const fixture = await startPlugin(events);
+    const registry = new PluginRegistry(privateKey, { store });
+    await registry.install(fixture.registration);
+    const runtime = await startApi({ registry, store, identity: new MockIdentityProvider('test') });
+    await setTarget(runtime.api, runtime.adminCookie, 'recoverable-target', 0);
+    const prepared = await runtime.api.inject({ method: 'POST', url: '/api/tools/call',
+      headers: { ...headers, cookie: runtime.studentCookie },
+      payload: { pluginId, name: 'lifecycle.prepare', arguments: {} } });
+    expect(prepared.statusCode, prepared.body).toBe(200);
+    const id = prepared.json<{ proposal: { id: string } }>().proposal.id;
+    const before = await store.read(`proposal:${id}`);
+    const outage = vi.spyOn(registry, 'observeActionBinding').mockResolvedValue({ status: 'unavailable' });
+    for (const method of ['GET', 'POST'] as const) {
+      const response = await runtime.api.inject({ method, url: `/api/proposals/${id}${method === 'POST' ? '/confirm' : ''}`,
+        headers: { ...headers, cookie: runtime.studentCookie }, ...(method === 'POST' ? { payload: {} } : {}) });
+      expect(response.statusCode, response.body).toBe(503);
+      expect(await store.read(`proposal:${id}`)).toEqual(before);
+    }
+    expect(events).toEqual(['prepare:recoverable-target']);
+    outage.mockRestore();
+    const current = await runtime.api.inject({ url: `/api/proposals/${id}`, headers: { ...headers, cookie: runtime.studentCookie } });
+    expect(current.statusCode, current.body).toBe(200);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const confirmed = await runtime.api.inject({ method: 'POST', url: `/api/proposals/${id}/confirm`,
+        headers: { ...headers, cookie: runtime.studentCookie }, payload: {} });
+      expect(confirmed.statusCode, confirmed.body).toBe(200);
+      expect(confirmed.json()).toMatchObject({ proposal: { status: 'confirmed' } });
+    }
+    expect(events).toEqual(['prepare:recoverable-target', 'execute:recoverable-target']);
+  });
+
   it('rejects a confirmation when configuration changes after the route check but before invoke', async () => {
     const events: string[] = [];
     const store = new MemoryJsonStore('plugin-lifecycle-config-race');
