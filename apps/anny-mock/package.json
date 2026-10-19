@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@hasi/demo-fixtures": "workspace:*",
+    "@hasi/plugin-sdk": "workspace:*",
     "fastify": "5.12.7",
     "zod": "4.6.7",
     "@hasi/state": "workspace:*"

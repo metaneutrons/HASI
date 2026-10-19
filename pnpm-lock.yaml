@@ -251,6 +251,9 @@ importers:
       '@hasi/demo-fixtures':
         specifier: workspace:*
         version: link:../../fixtures
+      '@hasi/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
       '@hasi/state':
         specifier: workspace:*
         version: link:../../packages/state

@@ -41,6 +41,7 @@ export type PluginToolHandler = (
 
 export interface CreatePluginServerOptions {
   executionJournal?: ExecutionJournal;
+  reconcileExecution?: (binding: Readonly<ExecutionBinding>, actor: ActorContext) => Promise<Record<string, unknown> | undefined>;
   manifest: PluginManifest;
   publicKey: KeyObject;
   serviceToken: string;
@@ -221,8 +222,17 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
       const invocation = await verifyInvocationTokenClaims(token, { pluginId: manifest.id, pluginVersion: manifest.version, tool: '__hasi.action_status', args: body }, options.publicKey);
       const context = invocation.context;
       const tool = preparedTools.get(body.tool);
-      if (!context || !(options.acceptedInstallationIds ?? [manifest.id]).includes(context.installationId) || context.executionId !== body.executionId || tool?.definition.effect !== 'execute' || !hasRequiredPermissions(invocation.actor, tool.definition)) throw new Error('Invalid status authority');
-      const result = await options.executionJournal.status({ subject: invocation.actor.subject, installationId: context.installationId, executionId: body.executionId, tool: body.tool, argsHash: body.argsHash, configurationRevision: context.configurationRevision });
+      if (!context || !tool) throw new Error('Invalid status authority');
+      if (!(options.acceptedInstallationIds ?? [manifest.id]).includes(context.installationId) || context.executionId !== body.executionId || tool.definition.effect !== 'execute' || !hasRequiredPermissions(invocation.actor, tool.definition)) throw new Error('Invalid status authority');
+      const binding: ExecutionBinding = { subject: invocation.actor.subject, installationId: context.installationId, executionId: body.executionId, tool: body.tool, argsHash: body.argsHash, configurationRevision: context.configurationRevision };
+      const reconcileExecution = options.reconcileExecution;
+      const result = reconcileExecution
+        ? await options.executionJournal.reconcile(binding, async () => {
+          const candidate = await reconcileExecution(Object.freeze(binding), invocation.actor);
+          if (candidate !== undefined && !tool.validateOutput(candidate)) throw new Error('Invalid reconciliation output');
+          return candidate;
+        })
+        : await options.executionJournal.status(binding);
       if (result.status === 'confirmed' && !tool.validateOutput(result.result)) throw new Error('Invalid receipt');
       return result;
     } catch { return reply.code(409).send({ error: 'Status could not be established' }); }

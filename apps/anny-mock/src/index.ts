@@ -2,6 +2,37 @@ import { createHash, randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { MemoryJsonStore, updateJson, type JsonStore } from '@hasi/state';
+import {
+  DEMO_EXECUTION_HEADER,
+  MAX_DEMO_EXECUTION_ARGUMENT_BYTES,
+  decodeDemoExecutionHeader,
+  demoExecutionArgumentsMatch,
+  demoExecutionStatusRequestSchema,
+  digestDemoExecutionBinding,
+  isDemoExecutionCustomerForSubject,
+  isDemoExecutionSubjectInScope,
+  parseDemoExecutionEvidenceMap,
+  prepareDemoExecutionEvidence,
+  type DemoExecutionBinding,
+  type DemoExecutionEvidenceMap
+} from './execution-evidence.js';
+
+export {
+  DEMO_EXECUTION_HEADER,
+  MAX_DEMO_EXECUTION_ARGUMENT_BYTES,
+  decodeDemoExecutionHeader,
+  demoExecutionArgumentsMatch,
+  demoExecutionBindingSchema,
+  demoExecutionEvidenceSchema,
+  demoExecutionHeaderSchema,
+  demoExecutionStatusRequestSchema,
+  demoExecutionStatusSchema,
+  digestDemoExecutionBinding,
+  prepareDemoExecutionEvidence,
+  type DemoExecutionBinding,
+  type DemoExecutionEvidence,
+  type DemoExecutionEvidenceMap
+} from './execution-evidence.js';
 
 export const MOCK_IDS = {
   organization: '00000000-0000-4000-8000-000000000001',
@@ -74,6 +105,8 @@ export interface CreateAnnyMockOptions {
   token?: string;
   store?: JsonStore;
   scope?: string;
+  /** Server-owned workspace UUID used to constrain synthetic execution evidence. */
+  workspaceId?: string;
   /** Optional sanitized catalog supplied by the local demo composition. */
   catalog?: AnnyMockCatalog;
 }
@@ -584,6 +617,34 @@ function sendError(reply: FastifyReply, status: number, title: string, detail: s
   });
 }
 
+function withinDemoExecutionArgumentLimit(value: unknown): boolean {
+  try {
+    return Buffer.byteLength(JSON.stringify(value), 'utf8') <= MAX_DEMO_EXECUTION_ARGUMENT_BYTES;
+  } catch {
+    return false;
+  }
+}
+
+function validateDemoExecutionRequest(
+  binding: DemoExecutionBinding,
+  tool: DemoExecutionBinding['tool'],
+  toolArguments: Record<string, unknown>,
+  scope: string,
+  customerId: string,
+  reply: FastifyReply
+): boolean {
+  if (binding.tool !== tool || !demoExecutionArgumentsMatch(binding, toolArguments)) {
+    sendError(reply, 409, 'Conflict', 'The synthetic execution binding does not match the requested operation.');
+    return false;
+  }
+  if (!isDemoExecutionSubjectInScope(binding.subject, scope)
+    || !isDemoExecutionCustomerForSubject(binding.subject, customerId)) {
+    sendError(reply, 403, 'Forbidden', 'The synthetic execution binding is outside this mock account.');
+    return false;
+  }
+  return true;
+}
+
 function requireAdmin(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -668,13 +729,25 @@ function availabilityIntervals(
 interface MockAggregate {
   orders: MockOrder[];
   bookings: MockBooking[];
+  demoExecutionEvidence: DemoExecutionEvidenceMap;
 }
 
 const MOCK_STATE_KEY_PREFIX = 'orders-bookings:';
 const MOCK_STATE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function initialAggregate(bookings: MockBooking[], orders: MockOrder[]): MockAggregate {
-  return structuredClone({ orders, bookings });
+  return structuredClone({ orders, bookings, demoExecutionEvidence: {} });
+}
+
+function aggregateWithDemoExecutionEvidence(value: unknown): MockAggregate {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('Invalid Anny mock state aggregate.');
+  }
+  const aggregate = value as Record<string, unknown>;
+  const demoExecutionEvidence = Object.hasOwn(aggregate, 'demoExecutionEvidence')
+    ? parseDemoExecutionEvidenceMap(aggregate.demoExecutionEvidence)
+    : {};
+  return { ...aggregate, demoExecutionEvidence } as unknown as MockAggregate;
 }
 
 function createOrder(orderId: string, customerId: string, plans: PlannedBooking[], bookings: MockBooking[]): MockOrder {
@@ -720,6 +793,10 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
   const store = options.store ?? new MemoryJsonStore('anny-mock');
   const scope = options.scope ?? 'local';
   if (!scope.trim()) throw new TypeError('Mock scope must not be empty.');
+  if (options.workspaceId !== undefined && !uuidSchema.safeParse(options.workspaceId).success) {
+    throw new TypeError('Mock workspace ID must be a valid UUID.');
+  }
+  const subjectScope = options.workspaceId ?? scope;
   const catalogRecords = options.catalog === undefined ? undefined : recordsForCatalog(options.catalog);
   const mockResources = catalogRecords?.resources ?? resources;
   const mockServices = catalogRecords?.services ?? services;
@@ -740,11 +817,20 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
   const stateKey = `${MOCK_STATE_KEY_PREFIX}${scope}${catalogStateSuffix}`;
   const expiresAt = (): number => Date.now() + MOCK_STATE_TTL_MS;
   const updateAggregate = <R>(update: (current: MockAggregate) => { value: MockAggregate; result: R }): Promise<R> => (
-    updateJson(store, stateKey, () => initialAggregate(initialBookings, initialOrders), update, expiresAt())
+    updateJson(
+      store,
+      stateKey,
+      () => initialAggregate(initialBookings, initialOrders),
+      (stored) => {
+        const decision = update(aggregateWithDemoExecutionEvidence(stored));
+        return { value: aggregateWithDemoExecutionEvidence(decision.value), result: decision.result };
+      },
+      expiresAt()
+    )
   );
   const readAggregate = async (): Promise<MockAggregate> => {
     const record = await store.read(stateKey);
-    if (record) return record.value as MockAggregate;
+    if (record) return aggregateWithDemoExecutionEvidence(record.value);
     return updateAggregate(current => ({ value: current, result: current }));
   };
 
@@ -834,19 +920,114 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
     });
   });
 
+  app.post('/api/v1/_hasi-demo/execution-status', async (request, reply) => {
+    if (!requireAdmin(request, reply, token)) return;
+    if (!withinDemoExecutionArgumentLimit(request.body)) {
+      sendError(reply, 413, 'Payload Too Large', 'The synthetic execution status request is too large.');
+      return;
+    }
+    const parsed = demoExecutionStatusRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      sendError(reply, 400, 'Bad Request', 'The synthetic execution status request is invalid.');
+      return;
+    }
+
+    const { binding } = parsed.data;
+    if (!isDemoExecutionSubjectInScope(binding.subject, subjectScope)) {
+      return reply.code(200).type('application/json').send({ schemaVersion: 1, receipts: [] });
+    }
+    const stored = await store.read(stateKey);
+    const evidence = stored
+      ? aggregateWithDemoExecutionEvidence(stored.value).demoExecutionEvidence
+      : {};
+    const receipt = evidence[digestDemoExecutionBinding(binding)];
+    const receipts = receipt && isDemoExecutionCustomerForSubject(binding.subject, receipt.customerId)
+      ? [receipt]
+      : [];
+    return reply.code(200).type('application/json').send({ schemaVersion: 1, receipts });
+  });
+
   app.get('/api/v1/bookings/:bookingId/cancel', async (request, reply) => {
     if (!requireAdmin(request, reply, token)) return;
     const query = request.query as PageQuery;
     if (!requireOrganization(query, reply)) return;
     const { bookingId } = request.params as { bookingId: string };
+    const decodedHeader = decodeDemoExecutionHeader(request.headers[DEMO_EXECUTION_HEADER]);
+    if (decodedHeader.kind === 'invalid') {
+      sendError(reply, 400, 'Bad Request', 'The synthetic execution header is invalid.');
+      return;
+    }
+    const executionBinding = decodedHeader.kind === 'valid' ? decodedHeader.binding : undefined;
+    if (executionBinding) {
+      const snapshot = await readAggregate();
+      const originalBooking = snapshot.bookings.find((item) => item.id === bookingId);
+      if (!originalBooking) {
+        sendError(reply, 404, 'Not Found', 'Unknown mock booking.');
+        return;
+      }
+      const originalArguments = {
+        bookingId,
+        resourceId: originalBooking.relationships.resource.data.id,
+        startDate: originalBooking.attributes.start_date,
+        endDate: originalBooking.attributes.end_date
+      };
+      const originalCustomerId = originalBooking.relationships.customer.data.id;
+      if (!validateDemoExecutionRequest(
+        executionBinding,
+        'anny.execute_cancellation',
+        originalArguments,
+        subjectScope,
+        originalCustomerId,
+        reply
+      )) return;
+    }
 
     const result = await updateAggregate<
       | { kind: 'missing' }
       | { kind: 'canceled'; booking: MockBooking }
       | { kind: 'not-cancellable' }
+      | { kind: 'correlation-conflict' }
+      | { kind: 'evidence-limit' }
     >((current) => {
       const booking = current.bookings.find((item) => item.id === bookingId);
       if (!booking) return { value: current, result: { kind: 'missing' as const } };
+
+      const customerId = booking.relationships.customer.data.id;
+      const toolArguments = {
+        bookingId,
+        resourceId: booking.relationships.resource.data.id,
+        startDate: booking.attributes.start_date,
+        endDate: booking.attributes.end_date
+      };
+      let demoExecutionEvidence = current.demoExecutionEvidence;
+      if (executionBinding) {
+        if (executionBinding.tool !== 'anny.execute_cancellation'
+          || !demoExecutionArgumentsMatch(executionBinding, toolArguments)
+          || !isDemoExecutionSubjectInScope(executionBinding.subject, subjectScope)
+          || !isDemoExecutionCustomerForSubject(executionBinding.subject, customerId)) {
+          return { value: current, result: { kind: 'correlation-conflict' as const } };
+        }
+        const prepared = prepareDemoExecutionEvidence(
+          current.demoExecutionEvidence,
+          executionBinding,
+          customerId,
+          toolArguments,
+          { bookingId, status: 'cancelled' }
+        );
+        if (prepared.kind === 'duplicate') {
+          if (booking.attributes.status === 'canceled') {
+            return { value: current, result: { kind: 'canceled' as const, booking } };
+          }
+          return { value: current, result: { kind: 'correlation-conflict' as const } };
+        }
+        if (prepared.kind === 'conflict' || booking.attributes.status === 'canceled') {
+          return { value: current, result: { kind: 'correlation-conflict' as const } };
+        }
+        if (prepared.kind === 'limit') {
+          return { value: current, result: { kind: 'evidence-limit' as const } };
+        }
+        demoExecutionEvidence = prepared.records;
+      }
       if (booking.attributes.status === 'canceled') {
         return { value: current, result: { kind: 'canceled' as const, booking } };
       }
@@ -865,7 +1046,8 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
       return {
         value: {
           ...current,
-          bookings: current.bookings.map((item) => item.id === bookingId ? canceledBooking : item)
+          bookings: current.bookings.map((item) => item.id === bookingId ? canceledBooking : item),
+          demoExecutionEvidence
         },
         result: { kind: 'canceled' as const, booking: canceledBooking }
       };
@@ -879,6 +1061,14 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
       sendError(reply, 409, 'Conflict', 'Only accepted or requested mock bookings can be canceled.');
       return;
     }
+    if (result.kind === 'correlation-conflict') {
+      sendError(reply, 409, 'Conflict', 'The synthetic execution correlation cannot be reused for this booking.');
+      return;
+    }
+    if (result.kind === 'evidence-limit') {
+      sendError(reply, 503, 'Service Unavailable', 'Synthetic execution evidence storage is full.');
+      return;
+    }
 
     return reply.code(200).type('application/vnd.api+json').send({ data: result.booking });
   });
@@ -887,6 +1077,16 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
     if (!requireAdmin(request, reply, token)) return;
     const query = request.query as PageQuery;
     if (!requireOrganization(query, reply)) return;
+    const decodedHeader = decodeDemoExecutionHeader(request.headers[DEMO_EXECUTION_HEADER]);
+    if (decodedHeader.kind === 'invalid') {
+      sendError(reply, 400, 'Bad Request', 'The synthetic execution header is invalid.');
+      return;
+    }
+    const executionBinding = decodedHeader.kind === 'valid' ? decodedHeader.binding : undefined;
+    if (executionBinding && !withinDemoExecutionArgumentLimit(request.body)) {
+      sendError(reply, 413, 'Payload Too Large', 'The correlated mock order request is too large.');
+      return;
+    }
     const parsed = orderFromConfigSchema.safeParse(request.body);
     if (!parsed.success) {
       sendError(reply, 400, 'Bad Request', 'The order configuration does not match the documented booking fields.');
@@ -932,6 +1132,35 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
       });
     }
 
+    let toolArguments: Record<string, unknown> | undefined;
+    let executionCustomerId: string | undefined;
+    if (executionBinding) {
+      if (plannedBookings.length !== 1) {
+        sendError(reply, 409, 'Conflict', 'Correlated mock execution requires exactly one booking.');
+        return;
+      }
+      const planned = plannedBookings[0];
+      if (planned?.customerId !== config.order_customer_id) {
+        sendError(reply, 403, 'Forbidden', 'The correlated mock order customer does not match its booking.');
+        return;
+      }
+      toolArguments = {
+        resourceId: planned.resourceId,
+        serviceId: planned.serviceId,
+        startDate: planned.startDate,
+        endDate: planned.endDate
+      };
+      executionCustomerId = planned.customerId;
+      if (!validateDemoExecutionRequest(
+        executionBinding,
+        'anny.execute_booking',
+        toolArguments,
+        subjectScope,
+        executionCustomerId,
+        reply
+      )) return;
+    }
+
     const orderId = randomUUID();
     const created: MockBooking[] = plannedBookings.map((planned) => {
       const id = randomUUID();
@@ -964,7 +1193,58 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
       };
     });
     const order = createOrder(orderId, config.order_customer_id, plannedBookings, created);
-    const result = await updateAggregate((current) => {
+    const result = await updateAggregate<
+      | { kind: 'created'; order: MockOrder; bookings: MockBooking[] }
+      | { kind: 'duplicate'; order: MockOrder; bookings: MockBooking[] }
+      | { kind: 'conflict' }
+      | { kind: 'correlation-conflict' }
+      | { kind: 'evidence-limit' }
+    >((current) => {
+      let demoExecutionEvidence = current.demoExecutionEvidence;
+      if (executionBinding && toolArguments && executionCustomerId) {
+        if (!isDemoExecutionSubjectInScope(executionBinding.subject, subjectScope)) {
+          return { value: current, result: { kind: 'correlation-conflict' as const } };
+        }
+        const firstBooking = created[0];
+        if (!firstBooking) throw new TypeError('Correlated mock order did not create its booking.');
+        const bookingCustomerId = firstBooking.relationships.customer.data.id;
+        if (bookingCustomerId !== executionCustomerId) {
+          return { value: current, result: { kind: 'correlation-conflict' as const } };
+        }
+        const prepared = prepareDemoExecutionEvidence(
+          current.demoExecutionEvidence,
+          executionBinding,
+          bookingCustomerId,
+          toolArguments,
+          { bookingId: firstBooking.id }
+        );
+        if (prepared.kind === 'duplicate') {
+          const bookingId = prepared.evidence.result.bookingId;
+          if (typeof bookingId !== 'string') return { value: current, result: { kind: 'correlation-conflict' as const } };
+          const priorBooking = current.bookings.find((booking) => booking.id === bookingId);
+          const priorOrderId = priorBooking?.relationships.order.data.id;
+          const priorOrder = priorOrderId === undefined
+            ? undefined
+            : current.orders.find((item) => item.id === priorOrderId);
+          const priorBookings = priorOrder
+            ? current.bookings.filter((booking) => booking.relationships.order.data.id === priorOrder.id)
+            : [];
+          if (!priorOrder || priorBookings.length === 0) {
+            throw new TypeError('Synthetic execution evidence references a missing mock booking.');
+          }
+          return {
+            value: current,
+            result: { kind: 'duplicate' as const, order: priorOrder, bookings: priorBookings }
+          };
+        }
+        if (prepared.kind === 'conflict') {
+          return { value: current, result: { kind: 'correlation-conflict' as const } };
+        }
+        if (prepared.kind === 'limit') {
+          return { value: current, result: { kind: 'evidence-limit' as const } };
+        }
+        demoExecutionEvidence = prepared.records;
+      }
       const hasInternalConflict = plannedBookings.some((planned, index) => plannedBookings.some((other, otherIndex) => (
         otherIndex < index
         && planned.resourceId === other.resourceId
@@ -980,23 +1260,32 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
           planned.endDate
         )
       )));
-      if (hasInternalConflict || hasExistingConflict) return { value: current, result: 'conflict' as const };
+      if (hasInternalConflict || hasExistingConflict) return { value: current, result: { kind: 'conflict' as const } };
       return {
         value: {
           bookings: [...current.bookings, ...created],
-          orders: [...current.orders, order]
+          orders: [...current.orders, order],
+          demoExecutionEvidence
         },
-        result: 'created' as const
+        result: { kind: 'created' as const, order, bookings: created }
       };
     });
-    if (result === 'conflict') {
+    if (result.kind === 'conflict') {
       sendError(reply, 409, 'Conflict', 'A mock booking already occupies this resource during the requested interval.');
+      return;
+    }
+    if (result.kind === 'correlation-conflict') {
+      sendError(reply, 409, 'Conflict', 'The synthetic execution correlation cannot be reused for this order.');
+      return;
+    }
+    if (result.kind === 'evidence-limit') {
+      sendError(reply, 503, 'Service Unavailable', 'Synthetic execution evidence storage is full.');
       return;
     }
 
     return reply.code(200).type('application/vnd.api+json').send({
-      data: order,
-      included: created
+      data: result.order,
+      included: result.bookings
     });
   });
 
