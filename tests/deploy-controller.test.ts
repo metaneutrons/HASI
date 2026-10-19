@@ -87,12 +87,16 @@ interface Harness {
   getJournal: () => DeploymentJournal;
   writes: DeploymentJournal[];
   setMainSequence: (values: string[]) => void;
+  setStorageSequence: (values: (number | Error)[]) => void;
+  storageReads: () => number;
 }
 
 function harness(handler?: (request: Harness['calls'][number], index: number) => Promise<Response> | Response): Harness {
   let journal: DeploymentJournal = { version: 1, records: [] };
   let mainSequence = [SHA];
   let mainReads = 0;
+  let storageSequence: (number | Error)[] = [16 * 1024 ** 3];
+  let storageReads = 0;
   const writes: DeploymentJournal[] = [];
   const calls: Harness['calls'] = [];
   const fakeFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
@@ -140,16 +144,72 @@ function harness(handler?: (request: Harness['calls'][number], index: number) =>
         writes.push(structuredClone(value));
         return Promise.resolve();
       },
+      availableStorageBytes: () => {
+        const value = storageSequence[Math.min(storageReads, storageSequence.length - 1)];
+        storageReads += 1;
+        if (value instanceof Error) return Promise.reject(value);
+        return Promise.resolve(value ?? Number.NaN);
+      },
       now: () => new Date('2026-10-18T12:00:00.000Z'),
     },
     calls,
     getJournal: () => structuredClone(journal),
     writes,
     setMainSequence(values) { mainSequence = values; mainReads = 0; },
+    setStorageSequence(values) { storageSequence = values; storageReads = 0; },
+    storageReads: () => storageReads,
   };
 }
 
 describe('Coolify deployment controller gates', () => {
+  it('waits on low storage before the first Coolify write and keeps authorization retryable', async () => {
+    const test = harness();
+    test.setStorageSequence([8 * 1024 ** 3 - 1]);
+
+    expect(await controllerStep({ applicationUuid: APP_UUID }, TOKEN, test.io)).toEqual({ kind: 'waiting', reason: 'storage_low' });
+    expect(test.storageReads()).toBe(1);
+    expect(test.calls.some((call) => call.method === 'PATCH' || call.url.endsWith('/api/v1/deploy'))).toBe(false);
+    expect(test.getJournal().records.at(0)).toMatchObject({ phase: 'authorized' });
+  });
+
+  it('accepts exactly 8 GiB of available storage at both mutation gates', async () => {
+    const test = harness();
+    test.setStorageSequence([8 * 1024 ** 3, 8 * 1024 ** 3]);
+
+    expect(await controllerStep({ applicationUuid: APP_UUID }, TOKEN, test.io)).toEqual({ kind: 'submitted', reason: 'coolify_accepted' });
+    expect(test.storageReads()).toBe(2);
+    expect(test.calls.some((call) => call.method === 'PATCH')).toBe(true);
+    expect(test.calls.some((call) => call.url.endsWith('/api/v1/deploy'))).toBe(true);
+  });
+
+  it('waits on storage failure, non-finite, and negative readings without terminal rejection', async () => {
+    const invalidReadings: (number | Error)[] = [
+      new Error('private statfs details'),
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      -1,
+    ];
+
+    for (const reading of invalidReadings) {
+      const test = harness();
+      test.setStorageSequence([reading]);
+      expect(await controllerStep({ applicationUuid: APP_UUID }, TOKEN, test.io)).toEqual({ kind: 'waiting', reason: 'storage_unavailable' });
+      expect(test.calls.some((call) => call.method === 'PATCH' || call.url.endsWith('/api/v1/deploy'))).toBe(false);
+      expect(test.getJournal().records.at(0)).toMatchObject({ phase: 'authorized' });
+    }
+  });
+
+  it('checks storage again before POST and leaves a pinned record retryable when it falls low', async () => {
+    const test = harness();
+    test.setStorageSequence([16 * 1024 ** 3, 7 * 1024 ** 3]);
+
+    expect(await controllerStep({ applicationUuid: APP_UUID }, TOKEN, test.io)).toEqual({ kind: 'waiting', reason: 'storage_low' });
+    expect(test.storageReads()).toBe(2);
+    expect(test.calls.some((call) => call.method === 'PATCH')).toBe(true);
+    expect(test.calls.some((call) => call.url.endsWith('/api/v1/deploy'))).toBe(false);
+    expect(test.getJournal().records.at(0)).toMatchObject({ phase: 'pinned' });
+  });
+
   it('parses the exact main ref from a bounded Git smart advertisement', () => {
     expect(parseGitSmartAdvertisement(gitAdvertisement())).toBe(SHA);
     expect(() => parseGitSmartAdvertisement(gitAdvertisement().slice(0, -4))).toThrow('git_advertisement_invalid');

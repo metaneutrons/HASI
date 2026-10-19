@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { lstat, open, readFile, rename, unlink } from 'node:fs/promises';
+import { lstat, open, readFile, rename, statfs, unlink } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -22,6 +22,7 @@ const MAX_HEALTH_CHECKS = 10;
 // The Coolify host shares this controller's clock; allow only timestamp precision and a small clock drift.
 const MAX_COOLIFY_CLOCK_SKEW_MS = 1_000;
 const MAX_JOURNAL_BYTES = 1_000_000;
+const MIN_AVAILABLE_STORAGE_BYTES = 8 * 1024 ** 3;
 const MAX_RECORDS = 4096;
 const TOKEN_PATH = '/run/secrets/coolify-token';
 const CONFIG_PATH = '/etc/hasi/deploy-config.json';
@@ -66,6 +67,7 @@ export interface ControllerIo {
   fetch: typeof fetch;
   readJournal: () => Promise<DeploymentJournal>;
   writeJournal: (journal: DeploymentJournal) => Promise<void>;
+  availableStorageBytes: () => Promise<number>;
   now: () => Date;
 }
 
@@ -178,6 +180,22 @@ function nowText(io: ControllerIo): string {
   const value = io.now();
   if (!(value instanceof Date) || !Number.isFinite(value.getTime())) fail('clock_invalid');
   return value.toISOString();
+}
+
+async function storageGate(io: ControllerIo): Promise<StepResult | undefined> {
+  let availableBytes: number;
+  try {
+    availableBytes = await io.availableStorageBytes();
+  } catch {
+    return { kind: 'waiting', reason: 'storage_unavailable' };
+  }
+  if (!Number.isFinite(availableBytes) || availableBytes < 0) {
+    return { kind: 'waiting', reason: 'storage_unavailable' };
+  }
+  if (availableBytes < MIN_AVAILABLE_STORAGE_BYTES) {
+    return { kind: 'waiting', reason: 'storage_low' };
+  }
+  return undefined;
 }
 
 async function saveRecord(
@@ -633,6 +651,8 @@ async function submit(
     const next = await saveRecord(journal, record, { phase: 'stale', failure: 'main_moved' }, io);
     return { journal: next, result: { kind: 'stale', reason: 'main_moved' } };
   }
+  const storageResult = await storageGate(io);
+  if (storageResult) return { journal, result: storageResult };
   const submitting = await saveRecord(journal, record, { phase: 'submitting', failure: undefined }, io);
   const currentRecord = submitting.records.find((item) => recordKey(item) === recordKey(record));
   if (!currentRecord) fail('journal_invalid');
@@ -682,6 +702,8 @@ async function pinAndSubmit(
     const next = await saveRecord(journal, record, { phase: 'stale', failure: 'main_moved' }, io);
     return { journal: next, result: { kind: 'stale', reason: 'main_moved' } };
   }
+  const storageResult = await storageGate(io);
+  if (storageResult) return { journal, result: storageResult };
   let patch: { status: number };
   try {
     patch = await coolifyRequest(
@@ -944,6 +966,10 @@ async function runCli(): Promise<void> {
     fetch,
     readJournal: () => readDurableJournal(),
     writeJournal: (journal) => writeDurableJournal(journal),
+    availableStorageBytes: async () => {
+      const stats = await statfs(dirname(JOURNAL_PATH), { bigint: true });
+      return Number(stats.bavail * stats.bsize);
+    },
     now: () => new Date(),
   };
   let continuing = true;
