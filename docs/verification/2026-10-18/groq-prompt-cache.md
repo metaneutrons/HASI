@@ -158,10 +158,13 @@ controls, against the same durable daily ledger. Missing state fails closed;
 there is no process-local budget fallback. This added admission path has mock
 regression coverage; no new live cache experiment was run for that change.
 There is no key CLI argument, environment download, public probe endpoint or
-normal build hook. Do not paste a key into a command. When credentials are
-non-downloadable Vercel Secrets, an operator can execute the command in an
-isolated authenticated Preview build with the existing Preview secret, then
-restore the ordinary build command; never promote that diagnostic build.
+normal build hook. Do not paste a key into a command. The Preview builds described above are historical. Vercel is retired and must
+not be used as the current credential or probe environment. Current credentials
+remain in encrypted fnox custody and hidden Coolify runtime configuration. The
+standalone application image does not include these operator source scripts;
+an approved source checkout or a separately qualified diagnostic image is needed
+before executing a live control with the approved secret abstraction and shared
+ledger. This record does not claim that path has been qualified on the new host.
 
 `hasi` freezes one server clock for both calls and compares raw usage to the
 normal router/SDK metrics. `plain` and `plain-20b` send a fixed, entirely
@@ -180,3 +183,18 @@ raw usage object is printed. Missing/null/invalid numeric values remain distinct
 Successful process exit means the measurement completed, **not** that a cache
 hit occurred. A validated documented read count greater than zero is required
 for that claim; latency or identical generated text is insufficient.
+
+
+## Documentation recheck — 2026-10-19
+
+The [official Groq caching documentation](https://console.groq.com/docs/prompt-caching)
+still describes automatic, non-guaranteed cache reuse for GPT-OSS 120B/20B and
+reports reads through `usage.prompt_tokens_details.cached_tokens`. It does not
+explain this account's observed missing field. The existing raw-response control
+results therefore remain unknown, not zero reads or an established hit.
+No new paid/provider control was made for this documentation recheck.
+
+The separate JSON-schema compiler optimization reuses local validation programs.
+It supplies no evidence about Groq prompt caching, saved model tokens or billing.
+CACHE-A1 remains governed by the versioned plan and the current M6 issue until
+its genuine provider evidence or an explicit scope decision is recorded.
