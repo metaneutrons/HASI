@@ -167,12 +167,12 @@ Versioned GHCR images for `linux/amd64` and `linux/arm64` are built only through
 
 The roadmap additionally covers [public web search restricted to operator-approved URL scopes](docs/architecture/restricted-web-search.md), Moodle, Stud.IP, HISinOne (including exam registration and student records), SAP leave/time workflows, and a versioned knowledge base of examination regulations for every degree programme, including scanned PDFs, OCR and exact page citations. These integrations are planned, not implemented.
 
-Technical milestones M1–M7 may qualify with Test-IdP, synthetic content and contract-based mocks. Real HsH identity, effective source rights, actual Anny conformance and protected-data approvals belong to the final [institutional acceptance M8 #80](https://github.com/metaneutrons/HASI/issues/80). Mock qualification cannot authorize those live integrations. The requested DeepInfra addition is tracked in [#81](https://github.com/metaneutrons/HASI/issues/81); the source configures its synthetic-only profile, while deployed live qualification remains tracked there.
+Technical milestones M1–M7 may qualify with Test-IdP, synthetic content, contract-based mocks and automated/browser/simulator tests. Real-device and participant acceptance is reserved for M8. Real HsH identity, effective source rights, actual Anny conformance and protected-data approvals belong to the final [institutional acceptance M8 #80](https://github.com/metaneutrons/HASI/issues/80). Mock qualification cannot authorize those live integrations. The requested DeepInfra addition is tracked in [#81](https://github.com/metaneutrons/HASI/issues/81); its synthetic-only profile passed bounded deployed chat and Anny-tool checks; formal model evaluation and real-user/data acceptance remain separate.
 
 Track delivery in the [unified index #47](https://github.com/metaneutrons/HASI/issues/47),
 later integrations in [roadmap #55](https://github.com/metaneutrons/HASI/issues/55),
 and the six plugin qualification groups P1–P6 in [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
-The approved [v3 plan](docs/plans/consolidated-delivery.md#v3-issue-graph)
+The approved [v4 plan](docs/plans/consolidated-delivery.md#v3-issue-graph)
 consolidates tracking to 13 open issues while preserving all acceptance criteria and evidence.
 The MCP registry supports approved endpoints, compatible updates, schema-driven
 configuration and registry-driven chat tool discovery. Arbitrary plugin code

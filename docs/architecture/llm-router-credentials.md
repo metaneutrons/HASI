@@ -10,8 +10,9 @@ variables after the 2026-10-18 self-hosted cutover. Vercel and Neon are retired.
 bounded successful synthetic inference checks; credential presence and successful
 inference remain separate states. Neither establishes protected-data approval,
 which belongs to [final institutional M8](../plans/hasi-mvp.md#institutional-acceptance-m8).
-The DeepInfra registry implementation is tracked in #81. Local configuration
-and mock tests do not establish a live-qualified deployed connection.
+The DeepInfra delivery is tracked in #81. Its separate
+[deployed synthetic qualification](../verification/2026-10-19/deepinfra.md#deployed-qualification--2026-10-19)
+passed on 2026-10-19; configuration/key presence alone does not establish that result.
 
 The [version-1 registry configuration](model-provider-configuration.md) now replaces
 the fixed runtime profile array. Standard Groq, GWDG, DeepInfra, OpenAI and Anthropic
@@ -117,7 +118,7 @@ trusted operator process. Never pass values in arguments, build inputs or chat.
 Use `fnox exec -- <trusted command>` to supply credentials to an authorized
 process without displaying them. `GROQ_API_KEY` and `GWDG_API_KEY` are current;
 `DEEPINFRA_API_KEY` is the DeepInfra reference; encrypted custody presence was
-confirmed on 2026-10-19, while deployed runtime qualification remains separate. Do not enable a connection merely because a variable exists.
+confirmed on 2026-10-19, with separate deployed synthetic qualification evidence above. Do not enable a connection merely because a variable exists.
 
 Use distinct production and test keys when institutional integrations are
 provisioned. Keep separate provider accounts/projects and data-policy approvals.

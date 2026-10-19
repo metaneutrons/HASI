@@ -114,6 +114,7 @@ describe('plugin manifest v2 contract', () => {
 
   it('rejects duplicate declarations, unresolved references and unsafe schema references', () => {
     expect(manifestSchema.safeParse({ ...manifestV2, tools: [tool, tool] }).success).toBe(false);
+    expect(manifestSchema.safeParse({ ...manifestV2, identity: { claims: ['catalog.tenant', 'catalog.tenant'] } }).success).toBe(false);
     expect(manifestSchema.safeParse({ ...manifestV2, tools: [{ ...tool, presentationId: 'missing' }] }).success).toBe(false);
     expect(manifestSchema.safeParse({ ...manifestV2, secrets: [{ name: 'apiToken', required: true }, { name: 'apiToken', required: false }] }).success).toBe(false);
     expect(manifestSchema.safeParse({ ...manifestV2, configuration: { schema: { ...configSchema, properties: { ...configSchema.properties, apiToken: { type: 'string' } } } } }).success).toBe(false);
@@ -205,6 +206,7 @@ describe('generic actor and public configuration contracts', () => {
       permissions: ['catalog:read'],
       claims: { 'catalog.tenant': 'tenant-1', 'catalog.roles': ['reader', 'editor'], active: true, level: 3 },
     });
+    expect(actorContextSchema.safeParse({ subject: 'u', permissions: [], claims: { 'catalog.roles': ['reader', 'reader'] } }).success).toBe(false);
     expect(actorContextSchema.safeParse({ subject: 'u', permissions: [], claims: { nested: { value: 'no' } } }).success).toBe(false);
     expect(actorContextSchema.safeParse(JSON.parse('{"subject":"u","permissions":[],"claims":{"constructor":"blocked"}}')).success).toBe(false);
     expect(actorContextSchema.safeParse({ subject: 'u', permissions: ['read', 'read'] }).success).toBe(false);
