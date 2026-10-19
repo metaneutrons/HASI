@@ -1,10 +1,15 @@
+import { mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   controllerStep,
+  controllerStepWithStorageLock,
   parseGitSmartAdvertisement,
   parseOperatorConfig,
   selectTrustedRun,
   validateJournal,
+  withDeploymentStorageLock,
   verifySuccessfulJobs,
   type ControllerIo,
   type DeploymentJournal,
@@ -89,6 +94,7 @@ interface Harness {
   setMainSequence: (values: string[]) => void;
   setStorageSequence: (values: (number | Error)[]) => void;
   storageReads: () => number;
+  journalReads: () => number;
 }
 
 function harness(handler?: (request: Harness['calls'][number], index: number) => Promise<Response> | Response): Harness {
@@ -97,6 +103,7 @@ function harness(handler?: (request: Harness['calls'][number], index: number) =>
   let mainReads = 0;
   let storageSequence: (number | Error)[] = [16 * 1024 ** 3];
   let storageReads = 0;
+  let journalReads = 0;
   const writes: DeploymentJournal[] = [];
   const calls: Harness['calls'] = [];
   const fakeFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
@@ -138,7 +145,10 @@ function harness(handler?: (request: Harness['calls'][number], index: number) =>
   return {
     io: {
       fetch: fakeFetch,
-      readJournal: () => Promise.resolve(structuredClone(journal)),
+      readJournal: () => {
+        journalReads += 1;
+        return Promise.resolve(structuredClone(journal));
+      },
       writeJournal: (value) => {
         journal = structuredClone(value);
         writes.push(structuredClone(value));
@@ -158,10 +168,48 @@ function harness(handler?: (request: Harness['calls'][number], index: number) =>
     setMainSequence(values) { mainSequence = values; mainReads = 0; },
     setStorageSequence(values) { storageSequence = values; storageReads = 0; },
     storageReads: () => storageReads,
+    journalReads: () => journalReads,
   };
 }
 
 describe('Coolify deployment controller gates', () => {
+  it('waits without reading or writing the journal when maintenance holds the shared lock', async () => {
+    const test = harness();
+    const uid = process.getuid();
+    const directory = await mkdtemp(join(await realpath(tmpdir()), 'hasi-controller-lock-'));
+    const lockPath = join(directory, 'storage-maintenance.lock');
+    try {
+      await withDeploymentStorageLock(async () => {
+        expect(await controllerStepWithStorageLock({ applicationUuid: APP_UUID }, TOKEN, test.io, lockPath, uid))
+          .toEqual({ kind: 'waiting', reason: 'storage_maintenance' });
+        expect(test.journalReads()).toBe(0);
+        expect(test.writes).toEqual([]);
+        expect(test.calls).toEqual([]);
+      }, lockPath, uid);
+      expect(test.journalReads()).toBe(0);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('fails closed on a stale or unsafe lock file instead of stealing it', async () => {
+    const uid = process.getuid();
+    const directory = await mkdtemp(join(await realpath(tmpdir()), 'hasi-controller-stale-lock-'));
+    const stalePath = join(directory, 'stale.lock');
+    const symlinkPath = join(directory, 'unsafe.lock');
+    try {
+      await writeFile(stalePath, 'stale', { mode: 0o600 });
+      await expect(withDeploymentStorageLock(() => Promise.resolve('must not run'), stalePath, uid))
+        .rejects.toThrow('storage_lock_busy');
+      expect(await readFile(stalePath, 'utf8')).toBe('stale');
+      await symlink(join(directory, 'missing'), symlinkPath);
+      await expect(withDeploymentStorageLock(() => Promise.resolve('must not run'), symlinkPath, uid))
+        .rejects.toThrow('storage_lock_unsafe');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('waits on low storage before the first Coolify write and keeps authorization retryable', async () => {
     const test = harness();
     test.setStorageSequence([8 * 1024 ** 3 - 1]);

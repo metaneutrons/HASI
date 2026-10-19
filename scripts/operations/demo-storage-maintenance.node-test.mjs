@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import {
+  collectContainerImageReferences,
   planImageCleanup,
   runMaintenance,
   withExclusiveLock,
@@ -16,12 +17,14 @@ const SHA_OLD = '1'.repeat(40);
 const SHA_PREVIOUS = '2'.repeat(40);
 const SHA_CURRENT = '3'.repeat(40);
 const SHA_UNRELATED = '4'.repeat(40);
+const SHA_EXTRA = '0'.repeat(40);
 const GIB = 1024 ** 3;
 const LOW_FREE_BYTES = 9 * GIB;
 const IMAGE_OLD_ID = `sha256:${'a'.repeat(64)}`;
 const IMAGE_PREVIOUS_ID = `sha256:${'b'.repeat(64)}`;
 const IMAGE_CURRENT_ID = `sha256:${'c'.repeat(64)}`;
 const IMAGE_FLOOR_ID = `sha256:${'d'.repeat(64)}`;
+const IMAGE_EXTRA_ID = `sha256:${'8'.repeat(64)}`;
 
 function record(sha, updatedAt, phase = 'completed') {
   return {
@@ -79,6 +82,41 @@ test('protects a stopped container reference and its image ID', () => {
   const plan = planImageCleanup(journal(), images(), [stoppedContainer], LOW_FREE_BYTES);
 
   assert.deepEqual(plan.candidates, []);
+});
+
+test('collects only bounded container IDs and selected image references, including the actual image ID', async () => {
+  const containerIds = ['1'.repeat(64), '2'.repeat(64)];
+  const inspectRows = [
+    { Image: 'coolify-generated-alias:latest', ImageID: IMAGE_OLD_ID },
+    { Image: 'independent:tag', ImageID: `sha256:${'9'.repeat(64)}` },
+  ];
+  const commands = [];
+  const references = await collectContainerImageReferences(async (args) => {
+    commands.push(args);
+    if (args[0] === 'container' && args[1] === 'ls') return { stdout: `${containerIds.join('\n')}\n` };
+    assert.deepEqual(args.slice(0, 3), ['container', 'inspect', '--format']);
+    assert.equal(args[3].includes('.Config.Image'), true);
+    assert.equal(args[3].includes('.Image'), true);
+    assert.equal(args[3].includes('Command'), false);
+    assert.equal(args[3].includes('{{json .}}'), false);
+    assert.deepEqual(args.slice(4), containerIds);
+    return { stdout: `${inspectRows.map((row) => JSON.stringify(row)).join('\n')}\n` };
+  });
+
+  assert.deepEqual(commands[0], ['container', 'ls', '--all', '--no-trunc', '--quiet']);
+  assert.deepEqual(references, inspectRows);
+  const protectedPlan = planImageCleanup(journal(), images(), references, LOW_FREE_BYTES);
+  assert.deepEqual(protectedPlan.candidates, []);
+  const counterPlan = planImageCleanup(journal(), images(), [{ Image: 'coolify-generated-alias:latest', ImageID: `sha256:${'9'.repeat(64)}` }], LOW_FREE_BYTES);
+  assert.deepEqual(counterPlan.candidates.map((candidate) => candidate.sha), [SHA_OLD]);
+
+  let inspectCalled = false;
+  await assert.rejects(collectContainerImageReferences(async (args) => {
+    if (args[1] === 'ls') return { stdout: `${Array(1025).fill('a'.repeat(64)).join('\n')}\n` };
+    inspectCalled = true;
+    return { stdout: '' };
+  }), { code: 'docker_output_invalid' });
+  assert.equal(inspectCalled, false);
 });
 
 test('does not treat foreign repos, malformed tags, or unjournaled revisions as candidates', () => {
@@ -201,13 +239,15 @@ test('revalidates all container references immediately before each image deletio
   assert.equal(summary.skippedCount, 1);
 });
 
-test('skips every Docker operation while the journal has a nonterminal deployment', async () => {
+test('skips every Docker operation while a submitted deployment may be building', async () => {
   const activeJournal = journal([...journal().records, {
     runId: 88,
     attempt: 1,
     sha: SHA_UNRELATED,
-    phase: 'authorized',
+    phase: 'submitted',
     updatedAt: '2026-10-14T00:00:00.000Z',
+    submittedAt: '2026-10-14T00:00:00.000Z',
+    deploymentId: 'deployment-12345678',
   }]);
   const commands = [];
   const summary = await runMaintenance({
@@ -227,6 +267,46 @@ test('skips every Docker operation while the journal has a nonterminal deploymen
     imageTagsRemoved: 0,
     skippedCount: 1,
   });
+});
+
+test('authorized and pinned SHAs stay protected while low-storage maintenance can recover space', async () => {
+  const completedExtra = record(SHA_EXTRA, '2026-10-09T00:00:00.000Z');
+  const authorizedSha = SHA_OLD;
+  for (const phase of ['authorized', 'pinned']) {
+    const activeRecord = {
+      ...record(authorizedSha, '2026-10-14T00:00:00.000Z', phase),
+      runId: 123456,
+    };
+    const activeJournal = journal([...journal().records, completedExtra, activeRecord]);
+    const plan = planImageCleanup(activeJournal, [
+      ...images(),
+      { Repository: APP_REPOSITORY, Tag: SHA_EXTRA, ID: IMAGE_EXTRA_ID },
+    ], noContainers(), LOW_FREE_BYTES);
+    assert.equal(plan.physicalBuildCount, 0);
+    assert.ok(plan.protectedShas.includes(authorizedSha));
+    assert.deepEqual(plan.candidates.map((candidate) => candidate.sha), [SHA_EXTRA]);
+  }
+
+  const activeJournal = journal([
+    ...journal().records,
+    completedExtra,
+    { ...record(authorizedSha, '2026-10-14T00:00:00.000Z', 'authorized'), runId: 123456 },
+  ]);
+  const commands = [];
+  let freeReads = 0;
+  const summary = await runMaintenance({
+    apply: true,
+    readJournal: async () => activeJournal,
+    getAvailableBytes: async () => [7 * GIB, 9 * GIB, 9 * GIB, 13 * GIB][Math.min(freeReads++, 3)],
+    getImages: async () => [...images(), { Repository: APP_REPOSITORY, Tag: SHA_EXTRA, ID: IMAGE_EXTRA_ID }],
+    getContainers: async () => noContainers(),
+    runDocker: async (args) => { commands.push(args); return { stdout: '' }; },
+  });
+  assert.deepEqual(commands, [
+    ['builder', 'prune', '--all', '--force'],
+    ['image', 'rm', '--no-prune', `${APP_REPOSITORY}:${SHA_EXTRA}`],
+  ]);
+  assert.equal(summary.imageTagsRemoved, 1);
 });
 
 test('requires finite nonnegative storage values before planning or applying cleanup', async () => {

@@ -24,6 +24,9 @@ const BUILDER_PRUNE_TIMEOUT_MS = 180_000;
 const IMAGE_REMOVE_TIMEOUT_MS = 30_000;
 const execFile = promisify(execFileCallback);
 const NONTERMINAL_PHASES = new Set(['authorized', 'pinned', 'submitting', 'uncertain', 'submitted']);
+const PHYSICAL_BUILD_PHASES = new Set(['submitting', 'uncertain', 'submitted']);
+const CONTAINER_LIMIT = 1024;
+const CONTAINER_INSPECT_FORMAT = '{{printf "{\"Image\":%q,\"ImageID\":%q}" .Config.Image .Image}}';
 const TERMINAL_PHASES = new Set(['completed', 'failed', 'rejected', 'stale']);
 const SHA_PATTERN = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/iu;
 const IMAGE_TAG_PATTERN = /^[a-f0-9]{40}$/iu;
@@ -140,6 +143,7 @@ export function planImageCleanup(journalValue, imagesValue, containersValue, ava
   const images = imageRows(imagesValue);
   const containers = containerRows(containersValue);
   const nonterminal = journal.records.filter((record) => NONTERMINAL_PHASES.has(record.phase));
+  const physicalBuildCount = journal.records.filter((record) => PHYSICAL_BUILD_PHASES.has(record.phase)).length;
   const completed = journal.records
     .filter((record) => record.phase === 'completed')
     .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt));
@@ -157,7 +161,7 @@ export function planImageCleanup(journalValue, imagesValue, containersValue, ava
   const containerReferences = new Set(containers.flatMap((container) => container.references));
   const lowStorage = available < CLEANUP_THRESHOLD_BYTES;
   const candidates = [];
-  if (lowStorage && nonterminal.length === 0) {
+  if (lowStorage && physicalBuildCount === 0) {
     for (const image of images) {
       if (image.repository !== APP_IMAGE_REPOSITORY || !IMAGE_TAG_PATTERN.test(image.tag)) continue;
       const sha = image.tag.toLowerCase();
@@ -177,6 +181,7 @@ export function planImageCleanup(journalValue, imagesValue, containersValue, ava
   return {
     lowStorage,
     nonterminalCount: nonterminal.length,
+    physicalBuildCount,
     completedCount: completedShas.size,
     protectedCompletedCount: latestCompletedShas.length,
     protectedShas: [...protectedShas].sort(),
@@ -200,7 +205,7 @@ async function assertNoSymlinkDirectories(path, expectedUid) {
     if (metadata.isSymbolicLink() || !metadata.isDirectory()) reject('unsafe_path');
   }
   const directory = await lstat(absolute).catch(() => undefined);
-  if (!directory || !directory.isDirectory() || directory.uid !== expectedUid || (directory.mode & 0o077) !== 0) {
+  if (!directory || !directory.isDirectory() || directory.uid !== expectedUid || (directory.mode & 0o7777) !== 0o700) {
     reject('unsafe_directory');
   }
 }
@@ -256,7 +261,7 @@ export async function withExclusiveLock(lockPath, operation, expectedUid = 0) {
   try {
     const existing = await lstat(lockPath);
     if (existing.isSymbolicLink() || !existing.isFile() || existing.uid !== expectedUid
-        || (existing.mode & 0o077) !== 0 || existing.nlink !== 1) reject('lock_unsafe');
+        || (existing.mode & 0o7777) !== 0o600 || existing.nlink !== 1) reject('lock_unsafe');
     reject('lock_busy');
   } catch (error) {
     if (error instanceof StorageMaintenanceError) throw error;
@@ -268,13 +273,16 @@ export async function withExclusiveLock(lockPath, operation, expectedUid = 0) {
   try {
     handle = await open(lockPath, 'wx', 0o600);
     identity = await handle.stat();
-    if (!identity.isFile() || identity.uid !== expectedUid || (identity.mode & 0o077) !== 0 || identity.nlink !== 1) {
+    if (!identity.isFile() || identity.uid !== expectedUid || (identity.mode & 0o7777) !== 0o600 || identity.nlink !== 1) {
       reject('lock_unsafe');
     }
   } catch (error) {
     await handle?.close().catch(() => undefined);
     if (identity) {
-      await unlink(lockPath).catch(() => undefined);
+      const current = await lstat(lockPath).catch(() => undefined);
+      if (current?.isFile() && current.dev === identity.dev && current.ino === identity.ino) {
+        await unlink(lockPath).catch(() => undefined);
+      }
     }
     if (error instanceof StorageMaintenanceError) throw error;
     if (isObject(error) && error.code === 'EEXIST') reject('lock_busy');
@@ -292,7 +300,7 @@ export async function withExclusiveLock(lockPath, operation, expectedUid = 0) {
       reject('lock_release_failed');
     }
     if (!identity || !current.isFile() || current.dev !== identity.dev || current.ino !== identity.ino
-        || current.uid !== expectedUid || current.nlink !== 1) reject('lock_release_failed');
+        || current.uid !== expectedUid || (current.mode & 0o7777) !== 0o600 || current.nlink !== 1) reject('lock_release_failed');
     await unlink(lockPath).catch(() => reject('lock_release_failed'));
   }
 }
@@ -326,9 +334,32 @@ function parseJsonLines(text, mapRow) {
   });
 }
 
-async function listContainers() {
-  const result = await dockerCommand(['container', 'ls', '--all', '--no-trunc', '--format', '{{json .}}']);
-  return parseJsonLines(result.stdout, (row) => row);
+function parseContainerIds(text) {
+  if (typeof text !== 'string' || Buffer.byteLength(text, 'utf8') > MAX_DOCKER_OUTPUT_BYTES) reject('docker_output_invalid');
+  const ids = text.split('\n').filter((line) => line.length > 0);
+  if (ids.length > CONTAINER_LIMIT || ids.some((id) => !/^[a-f0-9]{64}$/iu.test(id))) reject('docker_output_invalid');
+  return ids.map((id) => id.toLowerCase());
+}
+
+function parseContainerInspection(text, expectedCount) {
+  const rows = parseJsonLines(text, (row) => {
+    if (!isObject(row) || Object.keys(row).length !== 2
+        || typeof row.Image !== 'string' || row.Image.length === 0 || row.Image.length > 512
+        || typeof row.ImageID !== 'string' || !IMAGE_ID_PATTERN.test(row.ImageID)) reject('docker_output_invalid');
+    return { Image: row.Image, ImageID: row.ImageID.toLowerCase() };
+  });
+  if (rows.length !== expectedCount || rows.length > CONTAINER_LIMIT) reject('docker_output_invalid');
+  return rows;
+}
+
+export async function collectContainerImageReferences(runDocker = dockerCommand) {
+  const listed = await runDocker(['container', 'ls', '--all', '--no-trunc', '--quiet'], { timeoutMs: DOCKER_LIST_TIMEOUT_MS });
+  const ids = parseContainerIds(listed.stdout);
+  if (ids.length === 0) return [];
+  const inspected = await runDocker(['container', 'inspect', '--format', CONTAINER_INSPECT_FORMAT, ...ids], {
+    timeoutMs: DOCKER_LIST_TIMEOUT_MS,
+  });
+  return parseContainerInspection(inspected.stdout, ids.length);
 }
 
 async function listImages() {
@@ -355,14 +386,14 @@ export async function runMaintenance({
   withLock = (operation) => operation(),
   readJournal = () => readControllerJournal(),
   getAvailableBytes = () => availableStorageBytes(),
-  getContainers = () => listContainers(),
+  getContainers = () => collectContainerImageReferences(),
   getImages = () => listImages(),
   runDocker = dockerCommand,
 }) {
   return withLock(async () => {
     let journal = validateControllerJournal(await readJournal());
     let freeBytes = await readBytes(getAvailableBytes);
-    if (journal.records.some((record) => NONTERMINAL_PHASES.has(record.phase))) {
+    if (journal.records.some((record) => PHYSICAL_BUILD_PHASES.has(record.phase))) {
       return buildSummary({ freeBytes, skippedCount: 1 });
     }
     if (freeBytes >= CLEANUP_THRESHOLD_BYTES) return buildSummary({ freeBytes });
@@ -373,7 +404,7 @@ export async function runMaintenance({
       builderPruneRuns += 1;
       journal = validateControllerJournal(await readJournal());
       freeBytes = await readBytes(getAvailableBytes);
-      if (journal.records.some((record) => NONTERMINAL_PHASES.has(record.phase))) {
+      if (journal.records.some((record) => PHYSICAL_BUILD_PHASES.has(record.phase))) {
         return buildSummary({ freeBytes, builderPruneRuns, skippedCount: 1 });
       }
       if (freeBytes >= CLEANUP_THRESHOLD_BYTES) return buildSummary({ freeBytes, builderPruneRuns });
@@ -391,7 +422,7 @@ export async function runMaintenance({
       const expected = pending.get(reference);
       pending.delete(reference);
       journal = validateControllerJournal(await readJournal());
-      if (journal.records.some((record) => NONTERMINAL_PHASES.has(record.phase))) {
+      if (journal.records.some((record) => PHYSICAL_BUILD_PHASES.has(record.phase))) {
         skippedCount += pending.size + 1;
         break;
       }

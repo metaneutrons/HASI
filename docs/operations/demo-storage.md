@@ -9,8 +9,10 @@ fails or is invalid. Those waiting states remain retryable.
 host as root. It requires the root-owned, mode `0700` state directory and a
 root-owned, mode `0600` version-1 controller journal. It rejects symlinked
 inputs and holds an exclusive lock at
-`/var/lib/hasi-deploy/storage-maintenance.lock`. The Docker CLI path and
-commands are fixed. The app image repository is exactly
+`/var/lib/hasi-deploy/storage-maintenance.lock`. The controller takes the same
+lock around each complete cycle and releases it before polling, so an idle
+`authorized` or `pinned` record cannot prevent storage recovery.
+The Docker CLI path and commands are fixed. The app image repository is exactly
 `tjzdwweelb3zhjtfpgzvjs8k`; tags must be full 40-character Git SHAs.
 
 Run it without arguments first. The default is a dry run, and stdout contains
@@ -18,13 +20,16 @@ only a JSON summary of byte and operation counts. With free space below 12 GiB,
 `--apply` prunes unused Docker builder cache first, with a 180-second timeout.
 If space remains below 12 GiB, it can remove old completed app image tags with
 `docker image rm --no-prune`. Before each removal it reloads the controller
-journal and all container image references, including stopped containers.
+journal and every stopped or running container's configured image reference and
+actual image ID.
 
 The compatible floor revision
 `b53701abe4b5cd0bb51c3ef1f67ad7ca8a76d4cf`, the latest two completed
-revisions, every container image reference, and all nonterminal journal SHAs
-are protected. Any nonterminal deployment record skips maintenance entirely.
-The tool does not remove volumes, networks, containers, or images from other
+revisions, every container image reference and image ID, and all nonterminal
+journal SHAs are protected. Records in `submitting`, `uncertain`, or `submitted`
+skip cleanup while a physical build may be active; `authorized` and `pinned`
+records allow maintenance with their SHAs protected. The tool does not remove
+volumes, networks, containers, or images from other
 repositories. Docker command output is bounded and never printed.
 
 If maintenance cannot restore 12 GiB of headroom, stop the deployment
