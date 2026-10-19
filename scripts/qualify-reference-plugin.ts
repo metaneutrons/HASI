@@ -63,10 +63,23 @@ function asRecord(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function qualificationGitEnvironment(): NodeJS.ProcessEnv {
+  const environment: NodeJS.ProcessEnv = { PATH: process.env.PATH ?? '' };
+  for (const name of ['HOME', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'LC_ALL', 'LC_CTYPE', 'LC_MESSAGES']) {
+    const value = process.env[name];
+    if (value !== undefined) environment[name] = value;
+  }
+  environment.GIT_TERMINAL_PROMPT = '0';
+  environment.GIT_CONFIG_NOSYSTEM = '1';
+  environment.GIT_CONFIG_GLOBAL = '/dev/null';
+  return environment;
+}
+
 function runLocalCommand(command: string, args: readonly string[], cwd: string): string {
   try {
     return execFileSync(command, [...args], {
       cwd,
+      env: qualificationGitEnvironment(),
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 60_000,
