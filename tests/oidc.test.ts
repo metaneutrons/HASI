@@ -5,7 +5,7 @@ import type { Persona } from '../apps/api/src/identity.js';
 import { createApi } from '../apps/api/src/index.js';
 import { PluginRegistry } from '../apps/api/src/registry.js';
 import { isAllowedOidcReturnTo, OidcAuthenticationError, OidcIdentityProvider, type OidcIdentityProviderOptions } from '../apps/api/src/oidc.js';
-import { startTestIdp, type TestIdpServer, type TestIdpTokenOverrides } from '../apps/api/src/test-idp.js';
+import { startTestIdp, type TestIdpRequiredClaim, type TestIdpServer, type TestIdpTokenOverrides } from '../apps/api/src/test-idp.js';
 
 const CLIENT_ID = 'hasi-oidc-tests';
 const REDIRECT_URI = 'http://127.0.0.1:43210/api/oidc/callback';
@@ -30,6 +30,7 @@ interface Harness {
 
 async function createHarness(options: {
   tokenOverrides?: TestIdpTokenOverrides;
+  omitClaim?: TestIdpRequiredClaim;
   clock?: () => number;
   store?: JsonStore;
   sessionLifetimeMs?: number;
@@ -48,6 +49,7 @@ async function createHarness(options: {
     ...(options.port !== undefined ? { port: options.port } : {}),
     ...(options.clock ? { clock: options.clock } : {}),
     ...(options.tokenOverrides ? { tokenOverrides: options.tokenOverrides } : {}),
+    ...(options.omitClaim ? { omitClaim: options.omitClaim } : {}),
   });
   const store = options.store ?? new MemoryJsonStore(`oidc-test-${randomUUID()}`);
   const requests: URLSearchParams[] = [];
@@ -285,6 +287,16 @@ describe('OIDC authorization-code identity boundary', () => {
     const callback = await authorize(harness.provider);
     await expect(harness.provider.completeAuthorization(callback)).rejects.toThrow(OidcAuthenticationError);
   });
+
+  it.each(['iss', 'sub', 'aud', 'exp', 'iat', 'nonce'] satisfies TestIdpRequiredClaim[])(
+    'rejects a signed ID token missing required %s claim',
+    async omitClaim => {
+      const harness = await createHarness({ omitClaim });
+      activeIdps.push(harness.idp);
+      const callback = await authorize(harness.provider);
+      await expect(harness.provider.completeAuthorization(callback)).rejects.toThrow(OidcAuthenticationError);
+    },
+  );
 
   const invalidTimeCases: [string, TestIdpTokenOverrides][] = [
     ['expired', { issuedAt: Math.floor(Date.now() / 1000) - 3_000, expiresAt: Math.floor(Date.now() / 1000) - 2_900 }],

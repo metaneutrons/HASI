@@ -51,7 +51,8 @@ The M3 candidate adds signed source-export ingestion, permission-aware hybrid
 retrieval, incident expiry, source revisions, protected retained context and
 reviewed MediaWiki/BlueSpice or HTML acquisition adapters; see the
 [M3 implementation evidence](../verification/2026-10-18/m3-knowledge-pilot.md).
-[PR #78](https://github.com/metaneutrons/HASI/pull/78) remains unmerged.
+[PR #78](https://github.com/metaneutrons/HASI/pull/78) merged as `b815fa4`
+after qualified-head and exact-main CI.
 The synthetic HTML path is deployed from application commit `d05252f`; its
 [verification record](../verification/2026-10-18/service-it-portal.md) covers
 271 served Service-IT articles, MCP acquisition, source redirects and network

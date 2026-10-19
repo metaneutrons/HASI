@@ -54,7 +54,7 @@ database have been retired. [PR #82](https://github.com/metaneutrons/HASI/pull/8
 merged the private CI-qualified source controller and native Dockerfile app.
 Main `9378a1d` passed CI and was automatically built and handed over with active
 synthetic state and the shared budget preserved. [#79](https://github.com/metaneutrons/HASI/issues/79)
-owns final readback of the documentation-only update; regular rolling delivery,
+records the completed final readback of the documentation-only update; regular rolling delivery,
 restart replay fencing and immutable-image rollback/rollforward were exercised;
 [deployment evidence](../verification/2026-10-18/coolify-main-deployment.md)
 records exact identities. The initial cutover and database
@@ -72,14 +72,14 @@ Anny tenant behavior, protected-data approval and final go/no-go are reserved fo
 M8 [#80](https://github.com/metaneutrons/HASI/issues/80); mock evidence does not
 qualify that milestone.
 
-The failed offline reference-plugin packaging check is a bounded repair in the
-PR #78 candidate and remains separate from full P6 qualification. The current
+The earlier failed offline reference-plugin packaging check was repaired in
+merged PR #78 and remains separate from full P6 qualification. The current
 repair explicitly prepares dependencies online, then builds the package with
 the frozen lockfile in offline mode; local verification also denies all network
 access. It reports fixed sanitized
 error categories and does not bypass lockfile enforcement. [Local verification](../verification/2026-10-18/reference-plugin-offline.md)
-records that repair evidence; PR #78 still needs exact-head CI before merge. A
-passing package check resolves this reported blocker only, not P6-A1–A4.
+records that repair evidence; exact-head and exact-main CI subsequently passed.
+The package check resolves this reported blocker only, not P6-A1–A4.
 
 The synthetic Service-IT HTML path is deployed from application commit
 `d05252f`; [the verification record](../verification/2026-10-18/service-it-portal.md)
@@ -93,8 +93,10 @@ complete all remaining technical cases.
 
 The accepted model registry/routing work in #32–#34 is reused. DeepInfra with
 DeepSeek-V4.1-Flash is the requested next provider after the synthetic
-Service-IT demo; provider contract, model compatibility and credential
-readiness remain unverified. Track this bounded additive work in [#81](https://github.com/metaneutrons/HASI/issues/81) against
+Service-IT demo. [PR #85](https://github.com/metaneutrons/HASI/pull/85) adds the
+exact-model registry, secret reference, UI/wire schema and pricing; credential
+custody and read-only model discovery are verified. Deployed inference and tool
+qualification remain separate from configuration and mock transport tests. Track this bounded additive work in [#81](https://github.com/metaneutrons/HASI/issues/81) against
 [DI-A1–DI-A4](model-provider-routing.md#deepinfra-follow-up), before final M6
 comparison, without reopening accepted #32–#34. Real SSO, source ACLs, delegated
 anny rights, live writes and institutional model approval remain M8 criteria.

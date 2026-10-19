@@ -13,6 +13,8 @@ export interface TestIdpTokenOverrides {
   expiresAt?: number;
 }
 
+export type TestIdpRequiredClaim = 'iss' | 'sub' | 'aud' | 'exp' | 'iat' | 'nonce';
+
 export interface TestIdpOptions {
   /** Must be explicitly set to test. This server cannot be started in development or production. */
   mode: 'development' | 'test' | 'production';
@@ -23,6 +25,8 @@ export interface TestIdpOptions {
   host?: '127.0.0.1' | '::1';
   clock?: () => number;
   tokenOverrides?: TestIdpTokenOverrides;
+  /** Test-only server fixture control for signing an ID token without one required claim. */
+  omitClaim?: TestIdpRequiredClaim;
 }
 
 export interface TestIdpServer {
@@ -182,15 +186,16 @@ export async function startTestIdp(options: TestIdpOptions): Promise<TestIdpServ
       record.used = true;
       const issuedAt = Math.floor(clock() / 1000);
       const overrides = options.tokenOverrides ?? {};
-      const idToken = await new SignJWT({ nonce: overrides.nonce ?? record.nonce })
-        .setProtectedHeader({ alg: 'RS256', kid: keyId, typ: 'JWT' })
-        .setIssuer(overrides.issuer ?? issuer)
-        .setAudience(overrides.audience ?? record.clientId)
-        .setSubject(record.subject)
-        .setIssuedAt(overrides.issuedAt ?? issuedAt)
-        .setExpirationTime(overrides.expiresAt ?? (issuedAt + 300))
-        .sign(privateKey);
-      respond(response, 200, { access_token: randomBytes(24).toString('base64url'), token_type: 'Bearer', expires_in: 300, id_token: idToken });
+      const omittedClaim = options.omitClaim;
+      let idToken = new SignJWT(omittedClaim === 'nonce' ? {} : { nonce: overrides.nonce ?? record.nonce })
+        .setProtectedHeader({ alg: 'RS256', kid: keyId, typ: 'JWT' });
+      if (omittedClaim !== 'iss') idToken = idToken.setIssuer(overrides.issuer ?? issuer);
+      if (omittedClaim !== 'aud') idToken = idToken.setAudience(overrides.audience ?? record.clientId);
+      if (omittedClaim !== 'sub') idToken = idToken.setSubject(record.subject);
+      if (omittedClaim !== 'iat') idToken = idToken.setIssuedAt(overrides.issuedAt ?? issuedAt);
+      if (omittedClaim !== 'exp') idToken = idToken.setExpirationTime(overrides.expiresAt ?? (issuedAt + 300));
+      const signedIdToken = await idToken.sign(privateKey);
+      respond(response, 200, { access_token: randomBytes(24).toString('base64url'), token_type: 'Bearer', expires_in: 300, id_token: signedIdToken });
       return;
     }
     respond(response, 404, { error: 'not_found' });
