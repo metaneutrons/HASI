@@ -242,13 +242,14 @@ describe('signed plugin release admission', () => {
       noNewPrivileges: true,
       privileged: false,
       network: { mode: 'internal', name: 'hasi-plugin-net', internal: true },
-      publishedPort: { hostAddress: '127.0.0.1', hostPort: 43121, containerPort: 3000, protocol: 'tcp' },
+      ingress: { hostAddress: '127.0.0.1', hostPort: 43121, containerPort: 3000, protocol: 'tcp' },
       args: [],
       environment: [],
       mounts: [],
       devices: [],
     });
     expect(Object.isFrozen(policy)).toBe(true);
+    expect(buildPluginContainerLaunchPolicy(release, { network: { mode: 'none' } }).ingress).toBeNull();
     expect(() => buildPluginContainerLaunchPolicy({ ...release, image: 'registry.example.test/hasi/other@sha256:' + IMAGE_DIGEST }, { network: { mode: 'none' } } as never)).toThrow(PluginArtifactError);
     expect(() => buildPluginContainerLaunchPolicy(release, { network: { mode: 'internal', name: 'host' }, hostPort: 43121 })).toThrow(PluginArtifactError);
   });

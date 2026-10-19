@@ -59,9 +59,11 @@ path, not a record of an institutional deployment.
 
 Use one durable `PluginRouteController` namespace across API/operator replicas.
 Its atomic route record contains the active deployment, immutable release digest,
-configuration revision and terminal operation fences. The Docker resolver checks
-managed labels, exact image/release, isolation settings, loopback published port
-and health before returning an endpoint. It rechecks the route before forwarding.
+configuration revision and terminal operation fences. The operator-local Docker
+resolver checks the active candidate/relay pair, exact image/release, isolation
+settings, actual network membership and health. The candidate stays unpublished;
+only the paired relay may have the exact effective `127.0.0.1` port mapping.
+The resolver rechecks both containers and the route before forwarding.
 
 Start `createPluginDeploymentGateway` before the registry connects managed
 plugins. The gateway has its own loopback-only listener, no browser session state
@@ -85,6 +87,54 @@ while settings and route revisions disagree. Missing synchronization does not
 fall back to the old worker/configuration. All replica instances must use the
 same durable settings and route stores. Keep operator deployment controls outside
 the public API.
+
+### Operator-local Docker container composition
+
+`createDockerPluginDriver` is an explicit operator-local composition. It requires
+`enabled: true`, `deploymentTarget: "operator-local"`, an absolute Docker socket
+path, a server-owned `ownerId`, `allowedInternalNetworks`, the distinct required
+`relayNetwork`, an operator-owned routing controller and a server-side secret
+resolver. It refuses Vercel and demo-mode processes. This driver is not enabled
+by the public demo or the standalone JSON production entrypoint; trusted
+application wiring must provide these options. Never give the Docker socket to
+a plugin container or public administrator.
+
+The operator provisions an empty internal bridge for each deployment generation
+and includes its name in `allowedInternalNetworks`. The requested name in the
+launch policy must be an exact member of that list. Internal networks must be
+Docker `bridge` networks with `Internal=true`, IPv6 disabled and
+`com.docker.network.bridge.gateway_mode_ipv4=isolated`. Both the internal bridge
+and the distinct normal bridge named by `relayNetwork` must carry
+`hasi.managed-by=hasi-docker-plugin-driver-v2` and
+`hasi.owner=<ownerId>` labels. The relay bridge must have `Internal=false` and
+is reserved for platform relay containers for that owner. The driver inspects
+actual settings and membership, rejects an occupied generation bridge, and
+requires the internal bridge to contain only its candidate and paired relay.
+Labels do not replace Docker inspection.
+
+For an internal launch, `PluginContainerLaunchPolicy.ingress` records
+`hostAddress: "127.0.0.1"`, the host ingress port and the plugin service port.
+The candidate container receives no host port binding. The relay is pinned to
+program SHA-256
+`1ffeaa642833ada48edba7c581ed78e480db370cda216d3f7756cfbe99b3c5cc` and image
+`docker.io/library/node@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5`.
+That image must already be cached locally: the driver verifies its exact local
+digest and does not pull images. Relay inspection permits the pinned Node image's
+standard `PATH`, `NODE_VERSION` and `YARN_VERSION` plus exactly the assigned
+target address, target port and listen port. It rejects other environment
+entries; no plugin secret or custody reference reaches the relay. A relay image
+or program change requires fresh compatibility qualification.
+
+The packaged reference plugin passed the local macOS/Colima qualifier and a
+Linux amd64 Docker 29.9.1 paired-driver qualifier, with one native MCP read and
+a successful driver health check on each. Both runs verified an unpublished
+candidate, loopback-only relay publication, a successful normal-network
+public-health control and denied public health from the isolated plugin, then
+restored their owned container inventory. Integrated production gateway traffic,
+update/recovery/rollback, independent artifact distribution and full P5/P6
+acceptance remain open. See the [qualification summary](../verification/2026-10-19/plugin-relay-feasibility.md),
+[paired-driver record](../verification/2026-10-19/plugin-paired-driver.md) and
+[sanitized Linux report](../verification/2026-10-19/plugin-paired-linux-result.json).
 
 ## Credentials and model context
 
@@ -140,9 +190,12 @@ whether it succeeded. Disconnected or revoked accounts cannot use old receipts
 to regain access. Retained chat text is not an execution authorization.
 
 The separate Next.js/two-API identity/session topology has a runnable synthetic
-qualification below. Isolated worker execution, deployment routing/recovery,
-integrated model-budget behavior and automated browser journeys remain technical
-M2 work. Native assistive-technology and institutional end-to-end acceptance is M8.
+qualification below. Local Docker qualification covers the paired container
+and native MCP path on macOS/Colima and Linux amd64 Docker 29.9.1. Production
+gateway integration, deployment update/recovery, independent artifact
+distribution, integrated model-budget behavior and automated browser journeys
+remain technical M2 work. Native assistive-technology and institutional
+end-to-end acceptance is M8.
 
 ## Content-free operational events
 

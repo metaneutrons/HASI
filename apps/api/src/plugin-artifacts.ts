@@ -224,7 +224,7 @@ export interface PluginContainerLaunchPolicy {
   readonly startupTimeoutMs: number;
   readonly shutdownTimeoutMs: number;
   readonly network: { readonly mode: 'none' } | { readonly mode: 'internal'; readonly name: string; readonly internal: true };
-  readonly publishedPort: { readonly hostAddress: '127.0.0.1'; readonly hostPort: number; readonly containerPort: number; readonly protocol: 'tcp' } | null;
+  readonly ingress: { readonly hostAddress: '127.0.0.1'; readonly hostPort: number; readonly containerPort: number; readonly protocol: 'tcp' } | null;
   readonly args: readonly [];
   readonly environment: readonly [];
   readonly mounts: readonly [];
@@ -255,7 +255,7 @@ export function buildPluginContainerLaunchPolicy(release: VerifiedPluginRelease,
   const input = parsed.data;
   const internalNetwork = input.network.mode === 'internal';
   if ((internalNetwork && input.hostPort === undefined) || (!internalNetwork && input.hostPort !== undefined)) {
-    throw new PluginArtifactError('An internal network requires a published port; network-none forbids port publication.');
+    throw new PluginArtifactError('An internal network requires relay loopback ingress; network-none forbids ingress.');
   }
   if (input.network.mode === 'internal' && ['bridge', 'default', 'host', 'none'].includes(input.network.name)) {
     throw new PluginArtifactError('Plugin network must be an operator-defined isolated network.');
@@ -265,9 +265,9 @@ export function buildPluginContainerLaunchPolicy(release: VerifiedPluginRelease,
   const network = input.network.mode === 'internal'
     ? Object.freeze({ mode: 'internal' as const, name: input.network.name, internal: true as const })
     : Object.freeze({ mode: 'none' as const });
-  let publishedPort: PluginContainerLaunchPolicy['publishedPort'] = null;
+  let ingress: PluginContainerLaunchPolicy['ingress'] = null;
   if (internalNetwork && input.hostPort !== undefined) {
-    publishedPort = Object.freeze({ hostAddress: '127.0.0.1', hostPort: input.hostPort, containerPort: input.containerPort ?? 3000, protocol: 'tcp' });
+    ingress = Object.freeze({ hostAddress: '127.0.0.1', hostPort: input.hostPort, containerPort: input.containerPort ?? 3000, protocol: 'tcp' });
   }
 
   return Object.freeze({
@@ -287,7 +287,7 @@ export function buildPluginContainerLaunchPolicy(release: VerifiedPluginRelease,
     startupTimeoutMs: input.startupTimeoutMs ?? DEFAULT_STARTUP_TIMEOUT_MS,
     shutdownTimeoutMs: input.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS,
     network,
-    publishedPort,
+    ingress,
     args: EMPTY_LIST,
     environment: EMPTY_LIST,
     mounts: EMPTY_LIST,

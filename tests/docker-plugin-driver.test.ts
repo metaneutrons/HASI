@@ -1,4 +1,4 @@
-import { generateKeyPairSync, sign } from 'node:crypto';
+import { createHash, generateKeyPairSync, sign } from 'node:crypto';
 import { MemoryJsonStore } from '@hasi/state';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -19,10 +19,13 @@ import {
   type DockerPluginRoutingController,
 } from '../apps/api/src/docker-plugin-driver.js';
 import { PluginRouteController } from '../apps/api/src/plugin-route-controller.js';
+import { DOCKER_PLUGIN_MANAGED_VALUE, PLUGIN_RELAY_IMAGE } from '../apps/api/src/docker-plugin-relay.js';
 
 const IMAGE_DIGEST = 'a'.repeat(64);
 const MANIFEST_DIGEST = 'b'.repeat(64);
 const CONTAINER_ID = 'c'.repeat(64);
+const RELAY_ID = 'd'.repeat(64);
+const BASE_ENV = ['PATH=/usr/local/bin:/usr/bin:/bin', 'NODE_VERSION=24.21.0'];
 const keys = generateKeyPairSync('ed25519');
 const approval: PublisherApproval = {
   publisherId: 'hasi-publisher',
@@ -74,73 +77,157 @@ function response(statusCode: number, body: unknown = null): DockerEngineRespons
   return { statusCode, body };
 }
 
+interface FakeContainer {
+  readonly id: string;
+  readonly name: string;
+  readonly body: Record<string, unknown>;
+  running: boolean;
+}
+
 class FakeDockerEngine implements DockerEngineTransport {
   readonly requests: DockerEngineRequest[] = [];
+  readonly containers = new Map<string, FakeContainer>();
+  readonly removedIds: string[] = [];
   imageRepoDigests: string[] = [unsignedRelease().image];
+  relayImageRepoDigests: string[] = [PLUGIN_RELAY_IMAGE];
   imageVolumes: unknown = null;
   daemonSecurityOptions: string[] = ['name=seccomp,profile=builtin'];
   networkInternal = true;
+  networkIsolated = true;
   inspectedLabels: Record<string, string> | undefined;
   running = true;
   privileged = false;
   securityOptions: string[] | undefined;
   missingContainer = false;
+  missingRelay = false;
   createFailure: 'transport' | 'server' | undefined;
+  loseCreateReplyFor: 'candidate' | 'relay' | undefined;
+  loseStartReplyFor: 'candidate' | 'relay' | undefined;
+  mutateRelay: ((inspection: Record<string, unknown>) => void) | undefined;
+  mutateCandidate: ((inspection: Record<string, unknown>) => void) | undefined;
   createdBody: Record<string, unknown> | undefined;
+  createdRelayBody: Record<string, unknown> | undefined;
   stopCount = 0;
   deleteCount = 0;
 
-  request(input: DockerEngineRequest): Promise<DockerEngineResponse> {
-    this.requests.push(input);
-    if (input.path.startsWith('/images/')) {
-      return Promise.resolve(response(200, { RepoDigests: this.imageRepoDigests, Config: { Volumes: this.imageVolumes } }));
-    }
-    if (input.path.startsWith('/networks/')) {
-      return Promise.resolve(response(200, { Name: 'hasi-plugin-net', Internal: this.networkInternal, Containers: {} }));
-    }
-    if (input.path === '/info') return Promise.resolve(response(200, { SecurityOptions: this.daemonSecurityOptions }));
-    if (input.method === 'POST' && input.path.startsWith('/containers/create?')) {
-      if (this.createFailure === 'transport') return Promise.reject(new Error('private docker socket error'));
-      if (this.createFailure === 'server') return Promise.resolve(response(500, { message: 'private daemon failure' }));
-      this.createdBody = record(input.body);
-      return Promise.resolve(response(201, { Id: CONTAINER_ID }));
-    }
-    if (input.method === 'POST' && input.path === `/containers/${CONTAINER_ID}/start`) return Promise.resolve(response(204));
-    if (input.method === 'GET' && input.path === `/containers/${CONTAINER_ID}/json`) {
-      if (this.missingContainer) return Promise.resolve(response(404));
-      const created = this.createdBody;
-      if (!created) return Promise.resolve(response(404));
-      const hostConfig = record(created.HostConfig);
-      const config = {
+  private absent(container: FakeContainer): boolean {
+    return record(container.body.Labels)['hasi.role'] === 'candidate' ? this.missingContainer : this.missingRelay;
+  }
+
+  private inspection(container: FakeContainer): Record<string, unknown> {
+    const relay = record(container.body.Labels)['hasi.role'] === 'relay';
+    const created = container.body;
+    const hostConfig = record(created.HostConfig);
+    const active = container.running && (relay || this.running);
+    const configuredNetworks = created.NetworkingConfig ? Object.keys(record(record(created.NetworkingConfig).EndpointsConfig)) : [String(hostConfig.NetworkMode)];
+    const networks = Object.fromEntries(configuredNetworks.map(name => [name, {
+      IPAddress: active ? (name === 'hasi-relay-net' ? '172.29.0.2' : relay ? '172.28.0.3' : '172.28.0.2') : '',
+      GlobalIPv6Address: '',
+    }]));
+    const exposed = record(created.ExposedPorts ?? {});
+    const bindings = record(hostConfig.PortBindings ?? {});
+    const inspected: Record<string, unknown> = {
+      Id: container.id,
+      Name: `/${container.name}`,
+      Config: {
         Image: created.Image,
         User: created.User,
-        Labels: this.inspectedLabels ?? created.Labels,
+        WorkingDir: created.WorkingDir ?? '',
+        Entrypoint: created.Entrypoint,
+        Cmd: created.Cmd,
+        Env: [...BASE_ENV, ...(created.Env as string[])],
+        Labels: !relay && this.inspectedLabels ? this.inspectedLabels : created.Labels,
         ExposedPorts: created.ExposedPorts,
         Volumes: null,
-      };
+      },
+      HostConfig: {
+        ...hostConfig,
+        Privileged: relay ? false : this.privileged,
+        ...(!relay && this.securityOptions ? { SecurityOpt: this.securityOptions } : {}),
+      },
+      NetworkSettings: {
+        Networks: networks,
+        Ports: Object.fromEntries(Object.keys(exposed).map(key => [key, active && bindings[key] ? bindings[key] : null])),
+      },
+      State: { Running: active },
+      Mounts: [],
+    };
+    if (relay) this.mutateRelay?.(inspected);
+    else this.mutateCandidate?.(inspected);
+    return inspected;
+  }
+
+  request(input: DockerEngineRequest): Promise<DockerEngineResponse> {
+    this.requests.push(input);
+    const url = new URL(input.path, 'http://docker.invalid');
+    const path = url.pathname;
+    if (path.startsWith('/images/')) {
+      const image = decodeURIComponent(path.slice('/images/'.length, -'/json'.length));
+      const relay = image === PLUGIN_RELAY_IMAGE;
+      return Promise.resolve(response(200, { RepoDigests: relay ? this.relayImageRepoDigests : this.imageRepoDigests, Config: { Volumes: relay ? null : this.imageVolumes, Env: BASE_ENV } }));
+    }
+    if (path.startsWith('/networks/')) {
+      const name = decodeURIComponent(path.slice('/networks/'.length));
+      const relay = name === 'hasi-relay-net';
+      const members = [...this.containers.values()].filter(item => !this.absent(item) && item.running && Object.hasOwn(record(this.inspection(item).NetworkSettings).Networks as object, name));
       return Promise.resolve(response(200, {
-        Config: config,
-        HostConfig: {
-          ...hostConfig,
-          Privileged: this.privileged,
-          ...(this.securityOptions ? { SecurityOpt: this.securityOptions } : {}),
-        },
-        State: { Running: this.running },
-        Mounts: [],
+        Name: name, Driver: 'bridge', Internal: relay ? false : this.networkInternal, EnableIPv6: false,
+        Labels: { 'hasi.owner': 'operator-1', 'hasi.managed-by': DOCKER_PLUGIN_MANAGED_VALUE },
+        Options: !relay && this.networkIsolated ? { 'com.docker.network.bridge.gateway_mode_ipv4': 'isolated' } : {},
+        Containers: Object.fromEntries(members.map(item => [item.id, {}])),
       }));
     }
-    if (input.method === 'POST' && input.path.startsWith(`/containers/${CONTAINER_ID}/stop`)) {
-      this.stopCount += 1;
-      return Promise.resolve(response(204));
+    if (path === '/info') return Promise.resolve(response(200, { SecurityOptions: this.daemonSecurityOptions }));
+    if (input.method === 'POST' && path === '/containers/create') {
+      const body = record(input.body);
+      const role = String(record(body.Labels)['hasi.role']);
+      if (role === 'candidate' && this.createFailure === 'transport') return Promise.reject(new Error('private docker socket error'));
+      if (role === 'candidate' && this.createFailure === 'server') return Promise.resolve(response(500, { message: 'private daemon failure' }));
+      const name = url.searchParams.get('name');
+      if (!name) throw new Error('Expected a named container.');
+      const first = role === 'candidate' ? !this.createdBody : !this.createdRelayBody;
+      const id = first ? (role === 'candidate' ? CONTAINER_ID : RELAY_ID) : createHash('sha256').update(name).digest('hex');
+      this.containers.set(id, { id, name, body, running: false });
+      if (role === 'candidate') this.createdBody = body;
+      else this.createdRelayBody = body;
+      if (this.loseCreateReplyFor === role) return Promise.reject(new Error('private reply lost after creation'));
+      return Promise.resolve(response(201, { Id: id }));
     }
-    if (input.method === 'DELETE' && input.path.startsWith(`/containers/${CONTAINER_ID}?`)) {
-      this.deleteCount += 1;
-      return Promise.resolve(response(204));
+    if (input.method === 'GET' && path === '/containers/json') {
+      const filters: unknown = JSON.parse(url.searchParams.get('filters') ?? '{}');
+      const wanted = record(filters).label as string[] | undefined;
+      const rows = [...this.containers.values()].filter(item => !this.absent(item)).map(item => ({
+        Id: item.id,
+        Labels: !this.inspectedLabels || record(item.body.Labels)['hasi.role'] === 'relay' ? item.body.Labels : this.inspectedLabels,
+        State: item.running ? 'running' : 'exited',
+      }));
+      return Promise.resolve(response(200, rows.filter(item => (wanted ?? []).every(filter => {
+        const position = filter.indexOf('=');
+        return record(item.Labels)[filter.slice(0, position)] === filter.slice(position + 1);
+      }))));
     }
-    if (input.method === 'GET' && input.path.startsWith('/containers/json?')) {
-      if (!this.createdBody) return Promise.resolve(response(200, []));
-      const labels = this.inspectedLabels ?? record(this.createdBody.Labels) as Record<string, string>;
-      return Promise.resolve(response(200, [{ Id: CONTAINER_ID, Labels: labels, State: this.running ? 'running' : 'exited' }]));
+    const match = /^\/containers\/([^/]+)(?:\/(json|start|stop))?$/u.exec(path);
+    if (match) {
+      const key = decodeURIComponent(match[1]!);
+      const container = this.containers.get(key) ?? [...this.containers.values()].find(item => item.name === key);
+      if (!container || this.absent(container)) return Promise.resolve(response(404));
+      if (input.method === 'GET' && match[2] === 'json') return Promise.resolve(response(200, this.inspection(container)));
+      if (input.method === 'POST' && match[2] === 'start') {
+        container.running = true;
+        if (this.loseStartReplyFor === record(container.body.Labels)['hasi.role']) return Promise.reject(new Error('private reply lost after start'));
+        return Promise.resolve(response(204));
+      }
+      if (input.method === 'POST' && match[2] === 'stop') {
+        container.running = false;
+        this.stopCount += 1;
+        return Promise.resolve(response(204));
+      }
+      if (input.method === 'DELETE' && !match[2]) {
+        this.containers.delete(container.id);
+        this.removedIds.push(container.id);
+        this.deleteCount += 1;
+        return Promise.resolve(response(204));
+      }
     }
     throw new Error(`Unexpected Docker Engine request: ${input.method} ${input.path}`);
   }
@@ -176,6 +263,7 @@ function driverOptions(engine: FakeDockerEngine, routing: DockerPluginRoutingCon
     socketPath: '/var/run/docker.sock',
     ownerId: 'operator-1',
     allowedInternalNetworks: ['hasi-plugin-net'],
+    relayNetwork: 'hasi-relay-net',
     routing,
     resolveSecret: () => 'only-in-engine-request',
     transport: engine,
@@ -243,11 +331,19 @@ describe('operator-local Docker plugin driver', () => {
       Mounts: [],
       Devices: [],
       DeviceRequests: [],
-      PortBindings: { '3000/tcp': [{ HostIp: '127.0.0.1', HostPort: '43121' }] },
     });
+    expect(hostConfig.PortBindings ?? {}).toEqual({});
+    const relayBody = record(engine.createdRelayBody);
+    expect(relayBody.Image).toBe(PLUGIN_RELAY_IMAGE);
+    expect(relayBody.Env).toEqual([
+      'HASI_RELAY_TARGET_ADDRESS=172.28.0.2', 'HASI_RELAY_TARGET_PORT=3000', 'HASI_RELAY_LISTEN_PORT=8080',
+    ]);
+    expect(JSON.stringify(relayBody)).not.toContain('only-in-engine-request');
+    expect(record(relayBody.HostConfig).PortBindings).toEqual({ '8080/tcp': [{ HostIp: '127.0.0.1', HostPort: '43121' }] });
+    expect(Object.keys(record(record(relayBody.NetworkingConfig).EndpointsConfig)).sort()).toEqual(['hasi-plugin-net', 'hasi-relay-net']);
     const labels = record(body.Labels);
     expect(labels).toMatchObject({
-      'hasi.managed-by': 'hasi-docker-plugin-driver-v1',
+      'hasi.managed-by': DOCKER_PLUGIN_MANAGED_VALUE,
       'hasi.owner': 'operator-1',
       'hasi.installation': 'installation-1',
       'hasi.plugin': 'weather',
@@ -481,6 +577,7 @@ describe('operator-local Docker plugin driver', () => {
     const endpoint = await driver.resolveActiveEndpoint({ installationId: 'installation-1' });
     expect(endpoint).toEqual({
       deploymentId: CONTAINER_ID,
+      relayDeploymentId: RELAY_ID,
       releaseDigest: release().releaseDigest,
       host: '127.0.0.1',
       port: 43121,
@@ -527,4 +624,133 @@ describe('operator-local Docker plugin driver', () => {
     const observation = await driver.reconcile({ installationId: 'installation-1', operationId: 'activation-route-integration' });
     expect(observation).toEqual({ activeDeploymentId: staged.deploymentId, stagedDeploymentId: null, routeOperationOutcome: 'committed' });
   });
+
+  it('removes the inactive relay before its candidate and repeats cleanup safely', async () => {
+    const engine = new FakeDockerEngine();
+    const driver = createDockerPluginDriver(driverOptions(engine, routingController().routing));
+    await driver.stage(stageInput());
+    const input = { installationId: 'installation-1', operationId: 'stage-operation-1', deploymentId: CONTAINER_ID };
+    await driver.discard(input);
+    expect(engine.removedIds).toEqual([RELAY_ID, CONTAINER_ID]);
+    await driver.discard(input);
+    expect(engine.removedIds).toEqual([RELAY_ID, CONTAINER_ID]);
+    expect(engine.containers.size).toBe(0);
+  });
+
+  it('identifies a candidate after loss of the create reply without creating it again', async () => {
+    const engine = new FakeDockerEngine();
+    engine.loseCreateReplyFor = 'candidate';
+    const driver = createDockerPluginDriver(driverOptions(engine, routingController().routing));
+    await expect(driver.stage(stageInput())).rejects.toMatchObject({ outcome: 'unknown' });
+    const before = engine.requests.length;
+    await expect(driver.reconcile({ installationId: 'installation-1', operationId: 'stage-operation-1' })).resolves.toMatchObject({ stagedDeploymentId: CONTAINER_ID });
+    expect(engine.requests.slice(before).every(item => item.method === 'GET')).toBe(true);
+    await expect(driver.check({ installationId: 'installation-1', deploymentId: CONTAINER_ID, releaseDigest: release().releaseDigest })).resolves.toBe(false);
+    await driver.discard({ installationId: 'installation-1', operationId: 'stage-operation-1', deploymentId: CONTAINER_ID });
+    expect(engine.removedIds).toEqual([CONTAINER_ID]);
+  });
+
+  it.each(['create', 'start'] as const)('reconciles a lost relay %s reply and cleans exactly that pair', async phase => {
+    const engine = new FakeDockerEngine();
+    if (phase === 'create') engine.loseCreateReplyFor = 'relay';
+    else engine.loseStartReplyFor = 'relay';
+    const driver = createDockerPluginDriver(driverOptions(engine, routingController().routing));
+    await expect(driver.stage(stageInput())).rejects.toMatchObject({ outcome: 'unknown' });
+    const before = engine.requests.length;
+    await expect(driver.reconcile({ installationId: 'installation-1', operationId: 'stage-operation-1' })).resolves.toMatchObject({ stagedDeploymentId: CONTAINER_ID });
+    expect(engine.requests.slice(before).every(item => item.method === 'GET')).toBe(true);
+    await expect(driver.check({ installationId: 'installation-1', deploymentId: CONTAINER_ID, releaseDigest: release().releaseDigest })).resolves.toBe(phase === 'start');
+    expect(engine.requests.filter(item => item.method === 'POST' && item.path.startsWith('/containers/create?'))).toHaveLength(2);
+    await driver.discard({ installationId: 'installation-1', operationId: 'stage-operation-1', deploymentId: CONTAINER_ID });
+    expect(engine.removedIds).toEqual([RELAY_ID, CONTAINER_ID]);
+  });
+
+  it('treats an absent relay as incomplete and never probes the requested host port', async () => {
+    const engine = new FakeDockerEngine();
+    const loopbackProbe = vi.fn(() => Promise.resolve(true));
+    const driver = createDockerPluginDriver(driverOptions(engine, routingController().routing, { loopbackProbe }));
+    await driver.stage(stageInput());
+    engine.missingRelay = true;
+    await expect(driver.check({ installationId: 'installation-1', deploymentId: CONTAINER_ID, releaseDigest: release().releaseDigest })).resolves.toBe(false);
+    expect(loopbackProbe).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['missing effective mapping', (body: Record<string, unknown>) => { record(body.NetworkSettings).Ports = { '8080/tcp': null }; }],
+    ['non-loopback effective mapping', (body: Record<string, unknown>) => { record(body.NetworkSettings).Ports = { '8080/tcp': [{ HostIp: '0.0.0.0', HostPort: '43121' }] }; }],
+    ['changed entrypoint', (body: Record<string, unknown>) => { record(body.Config).Entrypoint = ['node', '-e', 'process.exit(0)']; }],
+    ['foreign candidate', (body: Record<string, unknown>) => { record(record(body.Config).Labels)['hasi.candidate'] = 'e'.repeat(64); }],
+    ['extra credential', (body: Record<string, unknown>) => { (record(body.Config).Env as string[]).push('HASI_SECRET_EXTRA=private-relay-fixture'); }],
+    ['host PID namespace', (body: Record<string, unknown>) => { record(body.HostConfig).PidMode = 'host'; }],
+    ['extra network', (body: Record<string, unknown>) => { record(record(body.NetworkSettings).Networks).foreign = { IPAddress: '172.30.0.2' }; }],
+  ] as const)('rejects a relay with %s before host traffic or cleanup', async (_label, mutate) => {
+    const engine = new FakeDockerEngine();
+    const loopbackProbe = vi.fn(() => Promise.resolve(true));
+    const driver = createDockerPluginDriver(driverOptions(engine, routingController().routing, { loopbackProbe }));
+    await driver.stage(stageInput());
+    engine.mutateRelay = mutate;
+    const failure = await driver.check({ installationId: 'installation-1', deploymentId: CONTAINER_ID, releaseDigest: release().releaseDigest }).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(DockerPluginDriverError);
+    expect(String(failure)).not.toContain('private-relay-fixture');
+    expect(loopbackProbe).not.toHaveBeenCalled();
+    await expect(driver.discard({ installationId: 'installation-1', operationId: 'stage-operation-1', deploymentId: CONTAINER_ID })).rejects.toBeInstanceOf(DockerPluginDriverError);
+    expect(engine.removedIds).toEqual([]);
+  });
+
+  it('rejects an extra candidate network before checking the relay', async () => {
+    const engine = new FakeDockerEngine();
+    const loopbackProbe = vi.fn(() => Promise.resolve(true));
+    const driver = createDockerPluginDriver(driverOptions(engine, routingController().routing, { loopbackProbe }));
+    await driver.stage(stageInput());
+    engine.mutateCandidate = body => { record(record(body.NetworkSettings).Networks).foreign = { IPAddress: '172.30.0.2' }; };
+    await expect(driver.check({ installationId: 'installation-1', deploymentId: CONTAINER_ID, releaseDigest: release().releaseDigest })).rejects.toMatchObject({ outcome: 'unknown' });
+    expect(loopbackProbe).not.toHaveBeenCalled();
+  });
+
+  it('pins the relay identity as well as the candidate across endpoint reuse', async () => {
+    const engine = new FakeDockerEngine();
+    const route = routingController({ readActiveRoute: () => Promise.resolve({ deploymentId: CONTAINER_ID, releaseDigest: release().releaseDigest }) });
+    const driver = createDockerPluginDriver(driverOptions(engine, route.routing));
+    await driver.stage(stageInput());
+    const endpoint = await driver.resolveActiveEndpoint({ installationId: 'installation-1' });
+    expect(endpoint?.relayDeploymentId).toBe(RELAY_ID);
+    const priorRelay = engine.containers.get(RELAY_ID)!;
+    engine.containers.delete(RELAY_ID);
+    const replacementId = 'e'.repeat(64);
+    engine.containers.set(replacementId, { ...priorRelay, id: replacementId });
+    await expect(driver.assertActiveEndpoint({ installationId: 'installation-1', endpoint: endpoint! })).resolves.toBe(false);
+  });
+
+  it('retains an orphan relay as unknown instead of guessing deletion authority', async () => {
+    const engine = new FakeDockerEngine();
+    const driver = createDockerPluginDriver(driverOptions(engine, routingController().routing));
+    await driver.stage(stageInput());
+    engine.missingContainer = true;
+    await expect(driver.reconcile({ installationId: 'installation-1', operationId: 'stage-operation-1' })).rejects.toMatchObject({ outcome: 'unknown' });
+    await expect(driver.discard({ installationId: 'installation-1', operationId: 'stage-operation-1', deploymentId: CONTAINER_ID })).rejects.toMatchObject({ outcome: 'unknown' });
+    expect(engine.removedIds).toEqual([]);
+  });
+
+  it('rejects reuse of an occupied generation network before any new creation', async () => {
+    const engine = new FakeDockerEngine();
+    const driver = createDockerPluginDriver(driverOptions(engine, routingController().routing));
+    await driver.stage(stageInput());
+    const before = engine.requests.filter(item => item.method === 'POST').length;
+    await expect(driver.stage({ ...stageInput(), operationId: 'stage-next-generation' })).rejects.toMatchObject({ outcome: 'failed' });
+    expect(engine.requests.filter(item => item.method === 'POST')).toHaveLength(before);
+  });
+
+
+  it.each(['hasi.owner', 'hasi.installation', 'hasi.managed-by', 'hasi.operation'])('keeps a same-name orphan with changed %s unresolved despite list filtering', async label => {
+    const engine = new FakeDockerEngine();
+    const driver = createDockerPluginDriver(driverOptions(engine, routingController().routing));
+    await driver.stage(stageInput());
+    engine.missingContainer = true;
+    record(engine.createdRelayBody!.Labels)[label] = 'foreign-reserved-name';
+    await expect(driver.discard({ installationId: 'installation-1', operationId: 'stage-operation-1', deploymentId: CONTAINER_ID })).rejects.toMatchObject({ outcome: 'unknown' });
+    await expect(driver.reconcile({ installationId: 'installation-1', operationId: 'stage-operation-1' })).rejects.toMatchObject({ outcome: 'unknown' });
+    expect(engine.removedIds).toEqual([]);
+    expect(engine.containers.has(RELAY_ID)).toBe(true);
+  });
+
 });
