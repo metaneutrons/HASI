@@ -32,3 +32,11 @@ formatting. Source tests cover four-space code indentation, hard-break spaces,
 CRLF and trailing newlines. History tests verify source through the actual wire
 schema and rolling-budget helper. Focused tests, required CI and deployed browser
 observations are separate evidence; browser emulation does not qualify M8.
+
+Deployed browser checks at `9e11bae` verified exact source copying and pasting,
+the 4,000-character limit and oversized-paste draft preservation. At 320 and
+390 CSS pixels, the source dialog and copy menu stayed inside the viewport;
+Escape restored focus and End selected the final menu action. Browser inspection
+also found that Tailwind's reset suppressed list markers despite correct list
+elements. The follow-up explicitly restores unordered/ordered markers while
+retaining checkbox-list styling; its deployed visual check is a separate gate.
