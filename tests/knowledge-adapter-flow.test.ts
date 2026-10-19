@@ -1,5 +1,5 @@
 import { generateKeyPairSync, randomUUID } from 'node:crypto';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { digest, type ActorContext } from '@hasi/plugin-sdk';
 import { MemoryJsonStore } from '@hasi/state';
 import { createApi, createRegistryKnowledgeContexts, PluginRegistry } from '../apps/api/src/index.js';
@@ -226,5 +226,177 @@ describe('reviewed source adapters through signed knowledge MCP and host API', (
     for (let offset = 0; offset < wikiActions.length; offset += 4)
       expect(wikiActions.slice(offset, offset + 4)).toEqual(['paraminfo', 'query', 'parse', 'query']);
     expect(calls.every(call => !call.url.pathname.startsWith('/images/'))).toBe(true);
+  });
+
+  it('revokes incident contexts and citations on resolution and expiry, then recovers from a fresh signed snapshot', async () => {
+    let now = Date.parse('2026-10-19T10:00:00Z');
+    const sourceKeys = { service_it: generateKeyPairSync('ed25519'), intranet: generateKeyPairSync('ed25519') };
+    const pluginKeys = generateKeyPairSync('ed25519');
+    const contextKeys = generateKeyPairSync('ed25519');
+    const store = new MemoryJsonStore('incident-transition-' + randomUUID());
+    const subject = 'incident-reader';
+    const actor: ActorContext = { subject, permissions: ['knowledge:read'] };
+    const actors = new Map([[subject, actor]]);
+    const page: ContentAcquisitionPolicy['pages'][number] = {
+      id: 'svc-status', url: origins.service_it + '/messages/synthetic-network',
+      language: 'en', classification: 'public',
+      acl: { authenticated: false, groups: ['students'], subjects: [] },
+      incident: { status: 'active', validUntil: new Date(now + 5_000).toISOString() },
+    };
+    const policy: ContentAcquisitionPolicy = {
+      completeInventory: true,
+      validUntil: new Date(now + 30_000).toISOString(),
+      pages: [page],
+      subjects: [{ subject, groups: ['students'] }],
+    };
+    const policies: Record<KnowledgeSourceSystem, ContentAcquisitionPolicy> = {
+      service_it: policy,
+      intranet: { completeInventory: true, validUntil: new Date(now + 600_000).toISOString(), pages: [], subjects: [] },
+    };
+    const adapter = new WebContentAdapter({
+      origin: origins.service_it,
+      transport: { get: url => {
+        expect(url.href).toBe(page.url);
+        return Promise.resolve({ status: 200, contentType: 'text/html',
+          body: '<html lang="en"><head><title>Synthetic network incident</title></head><body><main><p>Fictional campus network incident status.</p></main></body></html>' });
+      } },
+      clock: () => new Date(now),
+    });
+    const acquired = await adapter.read({ url: page.url }, new AbortController().signal);
+    expect(acquired.requiresContentReview).toBe(true);
+    policy.pages = [{ ...page, reviews: { web: { digest: contentReviewDigest(acquired, page, 'incident-policy-v1') } } }];
+    const embedding = {
+      modelId: 'synthetic-incident-v1', dimensions: 3, allowedDataClasses: ['public', 'internal'] as const,
+      embedDocument: vi.fn((_text: string) => Promise.resolve([1, 0, 0])),
+      embedQuery: () => Promise.resolve([1, 0, 0]),
+    };
+    const producer = (sourceSystem: KnowledgeSourceSystem) => new ContentSnapshotProducer({
+      sourceSystem, origin: origins[sourceSystem], scope: 'incident-transition-producer',
+      policyRevision: 'incident-policy-v1', maxAgeMs: 600_000, policy: policies[sourceSystem],
+      adapter, store, embedding,
+      clock: () => new Date(now),
+      signSnapshot: snapshot => Promise.resolve(signContentSnapshot(snapshot, sourceKeys[sourceSystem].privateKey)),
+    });
+    const repository = new InstitutionalKnowledgeRepository({
+      store, scope: 'incident-transition-repository',
+      sources: (['service_it', 'intranet'] as const).map(sourceSystem => ({
+        sourceSystem, origin: origins[sourceSystem] + '/', publicKey: sourceKeys[sourceSystem].publicKey,
+        policyRevision: 'incident-policy-v1', maxAgeMs: 600_000,
+      })),
+      embedding, clock: () => now,
+    });
+    await repository.ingest('service_it', await producer('service_it').acquire(new AbortController().signal));
+    await repository.ingest('intranet', await producer('intranet').acquire(new AbortController().signal));
+
+    const plugin = createInstitutionalKnowledgePlugin({
+      repository, publicKey: pluginKeys.publicKey, serviceToken: 'synthetic-incident-token',
+      allowedHosts: [new URL(pluginOrigin).hostname],
+    });
+    cleanups.push(() => plugin.close());
+    const registry = new PluginRegistry(pluginKeys.privateKey, {
+      store, scope: 'incident-transition-registry',
+      resolveActor: candidate => Promise.resolve(actors.get(candidate)),
+      fetch: mcpTransport(plugin),
+    });
+    await registry.install({
+      endpoint: pluginOrigin + '/mcp', serviceToken: 'synthetic-incident-token',
+      expectedManifestDigest: digest(institutionalKnowledgeManifest), allowLoopback: false,
+    });
+    const contexts = createRegistryKnowledgeContexts({
+      registry, store, privateKey: contextKeys.privateKey, scope: 'incident-transition-contexts',
+      resolveActor: candidate => Promise.resolve(actors.get(candidate)),
+    });
+    const api = await createApi({ mode: 'test', registry, identity: identityFor(actors), store,
+      knowledgeContexts: contexts, knowledgeOriginalOrigins: origins });
+    cleanups.push(() => api.close());
+    const login = await api.inject({ method: 'POST', url: '/api/dev/login', headers, payload: { personaId: subject } });
+    expect(login.statusCode, login.body).toBe(200);
+    const sessionCookie = login.cookies.find(value => value.name === 'hasi-session');
+    if (!sessionCookie) throw new Error('Synthetic incident session cookie missing.');
+    const cookie = sessionCookie.name + '=' + sessionCookie.value;
+    const search = async () => {
+      const response = await api.inject({
+        method: 'POST', url: '/api/tools/call', headers: { ...headers, cookie },
+        payload: { pluginId: institutionalKnowledgeManifest.id, name: 'knowledge.search',
+          arguments: { query: 'synthetic network incident', sourceSystem: 'service_it', limit: 3 } },
+      });
+      expect(response.statusCode, response.body).toBe(200);
+      return response.json<{ documents: { id: string; citationId: string; revision: number;
+        incident?: { status: string; validUntil: string } }[]; contextId: string }>();
+    };
+    const resolve = async (contextId: string) => api.inject({
+      method: 'POST', url: '/api/knowledge/contexts/resolve', headers: { ...headers, cookie },
+      payload: { contextIds: [contextId] },
+    });
+    const original = async (revision: number) => api.inject({
+      url: '/api/knowledge/documents/svc-status-c1/original?revision=' + String(revision),
+      headers: { ...headers, cookie },
+    });
+
+    const active = await search();
+    expect(active.documents).toMatchObject([{
+      id: 'svc-status-c1', citationId: 'knowledge:service_it:svc-status-c1:1',
+      revision: 1, incident: { status: 'active' },
+    }]);
+    expect((await resolve(active.contextId)).json()).toMatchObject({
+      contexts: [{ status: 'valid', documents: [{ revision: 1, incident: { status: 'active' } }] }],
+    });
+
+    now += 1_000;
+    const resolvedUntil = new Date(now + 2_000).toISOString();
+    policy.pages = [{ ...policy.pages[0]!, incident: { status: 'resolved', validUntil: resolvedUntil } }];
+    const resolvedSnapshot = await producer('service_it').acquire(new AbortController().signal);
+    expect(resolvedSnapshot.snapshot.sequence).toBe(2);
+    expect(resolvedSnapshot.snapshot.documents[0]?.revision).toBe(2);
+    await repository.ingest('service_it', resolvedSnapshot);
+    const resolved = await search();
+    expect(resolved.documents).toMatchObject([{
+      id: 'svc-status-c1', citationId: 'knowledge:service_it:svc-status-c1:2',
+      revision: 2, incident: { status: 'resolved', validUntil: resolvedUntil },
+    }]);
+    expect((await resolve(active.contextId)).json()).toEqual({
+      contexts: [{ contextId: active.contextId, status: 'unavailable' }],
+    });
+    expect((await original(1)).statusCode).toBe(404);
+    expect(embedding.embedDocument).toHaveBeenCalledTimes(1);
+
+    now += 2_001;
+    await expect(repository.getDocument(actor, { documentId: 'svc-status-c1' }))
+      .rejects.toMatchObject({ code: 'document_unavailable' });
+    await expect(repository.search(actor, { query: 'synthetic network incident', sourceSystem: 'service_it', limit: 3 }))
+      .resolves.toMatchObject({ documents: [] });
+    expect((await resolve(resolved.contextId)).json()).toEqual({
+      contexts: [{ contextId: resolved.contextId, status: 'unavailable' }],
+    });
+    expect((await original(2)).statusCode).toBe(404);
+
+    now = Date.parse('2026-10-19T10:00:30.001Z');
+    await expect(repository.search(actor, { query: 'synthetic network incident', sourceSystem: 'service_it', limit: 3 }))
+      .rejects.toMatchObject({ code: 'source_unavailable' });
+    expect((await resolve(resolved.contextId)).json()).toEqual({
+      contexts: [{ contextId: resolved.contextId, status: 'unavailable' }],
+    });
+
+    policy.validUntil = new Date(now + 60_000).toISOString();
+    const recoveredUntil = new Date(now + 60_000).toISOString();
+    policy.pages = [{ ...policy.pages[0]!, incident: { status: 'active', validUntil: recoveredUntil } }];
+    const recoveredSnapshot = await producer('service_it').acquire(new AbortController().signal);
+    expect(recoveredSnapshot.snapshot.sequence).toBe(3);
+    expect(recoveredSnapshot.snapshot.documents[0]?.revision).toBe(3);
+    await repository.ingest('service_it', recoveredSnapshot);
+    const recovered = await search();
+    expect(recovered.documents).toMatchObject([{
+      id: 'svc-status-c1', citationId: 'knowledge:service_it:svc-status-c1:3',
+      revision: 3, incident: { status: 'active', validUntil: recoveredUntil },
+    }]);
+    expect((await resolve(active.contextId)).json()).toEqual({
+      contexts: [{ contextId: active.contextId, status: 'unavailable' }],
+    });
+    expect((await resolve(resolved.contextId)).json()).toEqual({
+      contexts: [{ contextId: resolved.contextId, status: 'unavailable' }],
+    });
+    expect((await original(2)).statusCode).toBe(404);
+    expect((await original(3)).headers.location).toBe(page.url);
+    expect(embedding.embedDocument).toHaveBeenCalledTimes(1);
   });
 });
