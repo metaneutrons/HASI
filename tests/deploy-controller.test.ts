@@ -1,10 +1,15 @@
+import { mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   controllerStep,
+  controllerStepWithStorageLock,
   parseGitSmartAdvertisement,
   parseOperatorConfig,
   selectTrustedRun,
   validateJournal,
+  withDeploymentStorageLock,
   verifySuccessfulJobs,
   type ControllerIo,
   type DeploymentJournal,
@@ -87,12 +92,18 @@ interface Harness {
   getJournal: () => DeploymentJournal;
   writes: DeploymentJournal[];
   setMainSequence: (values: string[]) => void;
+  setStorageSequence: (values: (number | Error)[]) => void;
+  storageReads: () => number;
+  journalReads: () => number;
 }
 
 function harness(handler?: (request: Harness['calls'][number], index: number) => Promise<Response> | Response): Harness {
   let journal: DeploymentJournal = { version: 1, records: [] };
   let mainSequence = [SHA];
   let mainReads = 0;
+  let storageSequence: (number | Error)[] = [16 * 1024 ** 3];
+  let storageReads = 0;
+  let journalReads = 0;
   const writes: DeploymentJournal[] = [];
   const calls: Harness['calls'] = [];
   const fakeFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
@@ -134,11 +145,20 @@ function harness(handler?: (request: Harness['calls'][number], index: number) =>
   return {
     io: {
       fetch: fakeFetch,
-      readJournal: () => Promise.resolve(structuredClone(journal)),
+      readJournal: () => {
+        journalReads += 1;
+        return Promise.resolve(structuredClone(journal));
+      },
       writeJournal: (value) => {
         journal = structuredClone(value);
         writes.push(structuredClone(value));
         return Promise.resolve();
+      },
+      availableStorageBytes: () => {
+        const value = storageSequence[Math.min(storageReads, storageSequence.length - 1)];
+        storageReads += 1;
+        if (value instanceof Error) return Promise.reject(value);
+        return Promise.resolve(value ?? Number.NaN);
       },
       now: () => new Date('2026-10-18T12:00:00.000Z'),
     },
@@ -146,10 +166,100 @@ function harness(handler?: (request: Harness['calls'][number], index: number) =>
     getJournal: () => structuredClone(journal),
     writes,
     setMainSequence(values) { mainSequence = values; mainReads = 0; },
+    setStorageSequence(values) { storageSequence = values; storageReads = 0; },
+    storageReads: () => storageReads,
+    journalReads: () => journalReads,
   };
 }
 
 describe('Coolify deployment controller gates', () => {
+  it('waits without reading or writing the journal when maintenance holds the shared lock', async () => {
+    const test = harness();
+    if (typeof process.getuid !== 'function') throw new Error('POSIX identity is required for storage lock qualification.');
+    const uid = process.getuid();
+    const directory = await mkdtemp(join(await realpath(tmpdir()), 'hasi-controller-lock-'));
+    const lockPath = join(directory, 'storage-maintenance.lock');
+    try {
+      await withDeploymentStorageLock(async () => {
+        expect(await controllerStepWithStorageLock({ applicationUuid: APP_UUID }, TOKEN, test.io, lockPath, uid))
+          .toEqual({ kind: 'waiting', reason: 'storage_maintenance' });
+        expect(test.journalReads()).toBe(0);
+        expect(test.writes).toEqual([]);
+        expect(test.calls).toEqual([]);
+      }, lockPath, uid);
+      expect(test.journalReads()).toBe(0);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('fails closed on a stale or unsafe lock file instead of stealing it', async () => {
+    if (typeof process.getuid !== 'function') throw new Error('POSIX identity is required for storage lock qualification.');
+    const uid = process.getuid();
+    const directory = await mkdtemp(join(await realpath(tmpdir()), 'hasi-controller-stale-lock-'));
+    const stalePath = join(directory, 'stale.lock');
+    const symlinkPath = join(directory, 'unsafe.lock');
+    try {
+      await writeFile(stalePath, 'stale', { mode: 0o600 });
+      await expect(withDeploymentStorageLock(() => Promise.resolve('must not run'), stalePath, uid))
+        .rejects.toThrow('storage_lock_busy');
+      expect(await readFile(stalePath, 'utf8')).toBe('stale');
+      await symlink(join(directory, 'missing'), symlinkPath);
+      await expect(withDeploymentStorageLock(() => Promise.resolve('must not run'), symlinkPath, uid))
+        .rejects.toThrow('storage_lock_unsafe');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('waits on low storage before the first Coolify write and keeps authorization retryable', async () => {
+    const test = harness();
+    test.setStorageSequence([8 * 1024 ** 3 - 1]);
+
+    expect(await controllerStep({ applicationUuid: APP_UUID }, TOKEN, test.io)).toEqual({ kind: 'waiting', reason: 'storage_low' });
+    expect(test.storageReads()).toBe(1);
+    expect(test.calls.some((call) => call.method === 'PATCH' || call.url.endsWith('/api/v1/deploy'))).toBe(false);
+    expect(test.getJournal().records.at(0)).toMatchObject({ phase: 'authorized' });
+  });
+
+  it('accepts exactly 8 GiB of available storage at both mutation gates', async () => {
+    const test = harness();
+    test.setStorageSequence([8 * 1024 ** 3, 8 * 1024 ** 3]);
+
+    expect(await controllerStep({ applicationUuid: APP_UUID }, TOKEN, test.io)).toEqual({ kind: 'submitted', reason: 'coolify_accepted' });
+    expect(test.storageReads()).toBe(2);
+    expect(test.calls.some((call) => call.method === 'PATCH')).toBe(true);
+    expect(test.calls.some((call) => call.url.endsWith('/api/v1/deploy'))).toBe(true);
+  });
+
+  it('waits on storage failure, non-finite, and negative readings without terminal rejection', async () => {
+    const invalidReadings: (number | Error)[] = [
+      new Error('private statfs details'),
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      -1,
+    ];
+
+    for (const reading of invalidReadings) {
+      const test = harness();
+      test.setStorageSequence([reading]);
+      expect(await controllerStep({ applicationUuid: APP_UUID }, TOKEN, test.io)).toEqual({ kind: 'waiting', reason: 'storage_unavailable' });
+      expect(test.calls.some((call) => call.method === 'PATCH' || call.url.endsWith('/api/v1/deploy'))).toBe(false);
+      expect(test.getJournal().records.at(0)).toMatchObject({ phase: 'authorized' });
+    }
+  });
+
+  it('checks storage again before POST and leaves a pinned record retryable when it falls low', async () => {
+    const test = harness();
+    test.setStorageSequence([16 * 1024 ** 3, 7 * 1024 ** 3]);
+
+    expect(await controllerStep({ applicationUuid: APP_UUID }, TOKEN, test.io)).toEqual({ kind: 'waiting', reason: 'storage_low' });
+    expect(test.storageReads()).toBe(2);
+    expect(test.calls.some((call) => call.method === 'PATCH')).toBe(true);
+    expect(test.calls.some((call) => call.url.endsWith('/api/v1/deploy'))).toBe(false);
+    expect(test.getJournal().records.at(0)).toMatchObject({ phase: 'pinned' });
+  });
+
   it('parses the exact main ref from a bounded Git smart advertisement', () => {
     expect(parseGitSmartAdvertisement(gitAdvertisement())).toBe(SHA);
     expect(() => parseGitSmartAdvertisement(gitAdvertisement().slice(0, -4))).toThrow('git_advertisement_invalid');

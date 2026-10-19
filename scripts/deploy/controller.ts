@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { lstat, open, readFile, rename, unlink } from 'node:fs/promises';
+import { lstat, open, readFile, realpath, rename, statfs, unlink } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -22,10 +22,12 @@ const MAX_HEALTH_CHECKS = 10;
 // The Coolify host shares this controller's clock; allow only timestamp precision and a small clock drift.
 const MAX_COOLIFY_CLOCK_SKEW_MS = 1_000;
 const MAX_JOURNAL_BYTES = 1_000_000;
+const MIN_AVAILABLE_STORAGE_BYTES = 8 * 1024 ** 3;
 const MAX_RECORDS = 4096;
 const TOKEN_PATH = '/run/secrets/coolify-token';
 const CONFIG_PATH = '/etc/hasi/deploy-config.json';
 const JOURNAL_PATH = '/var/lib/hasi-deploy/state.json';
+const STORAGE_MAINTENANCE_LOCK_PATH = '/var/lib/hasi-deploy/storage-maintenance.lock';
 
 const REQUIRED_JOBS = new Set([
   'CI Success',
@@ -66,6 +68,7 @@ export interface ControllerIo {
   fetch: typeof fetch;
   readJournal: () => Promise<DeploymentJournal>;
   writeJournal: (journal: DeploymentJournal) => Promise<void>;
+  availableStorageBytes: () => Promise<number>;
   now: () => Date;
 }
 
@@ -178,6 +181,22 @@ function nowText(io: ControllerIo): string {
   const value = io.now();
   if (!(value instanceof Date) || !Number.isFinite(value.getTime())) fail('clock_invalid');
   return value.toISOString();
+}
+
+async function storageGate(io: ControllerIo): Promise<StepResult | undefined> {
+  let availableBytes: number;
+  try {
+    availableBytes = await io.availableStorageBytes();
+  } catch {
+    return { kind: 'waiting', reason: 'storage_unavailable' };
+  }
+  if (!Number.isFinite(availableBytes) || availableBytes < 0) {
+    return { kind: 'waiting', reason: 'storage_unavailable' };
+  }
+  if (availableBytes < MIN_AVAILABLE_STORAGE_BYTES) {
+    return { kind: 'waiting', reason: 'storage_low' };
+  }
+  return undefined;
 }
 
 async function saveRecord(
@@ -633,6 +652,8 @@ async function submit(
     const next = await saveRecord(journal, record, { phase: 'stale', failure: 'main_moved' }, io);
     return { journal: next, result: { kind: 'stale', reason: 'main_moved' } };
   }
+  const storageResult = await storageGate(io);
+  if (storageResult) return { journal, result: storageResult };
   const submitting = await saveRecord(journal, record, { phase: 'submitting', failure: undefined }, io);
   const currentRecord = submitting.records.find((item) => recordKey(item) === recordKey(record));
   if (!currentRecord) fail('journal_invalid');
@@ -682,6 +703,8 @@ async function pinAndSubmit(
     const next = await saveRecord(journal, record, { phase: 'stale', failure: 'main_moved' }, io);
     return { journal: next, result: { kind: 'stale', reason: 'main_moved' } };
   }
+  const storageResult = await storageGate(io);
+  if (storageResult) return { journal, result: storageResult };
   let patch: { status: number };
   try {
     patch = await coolifyRequest(
@@ -840,6 +863,94 @@ export async function controllerStep(
   return (await pinAndSubmit(config, token, io, authorizedJournal, authorizedRecord)).result;
 }
 
+function storageLockCode(error: unknown): string | undefined {
+  return error instanceof ControllerError ? error.code : undefined;
+}
+
+export async function withDeploymentStorageLock<T>(
+  operation: () => Promise<T> | T,
+  path = STORAGE_MAINTENANCE_LOCK_PATH,
+  expectedUid = 0,
+): Promise<T> {
+  if (!path.startsWith('/') || !Number.isSafeInteger(expectedUid) || expectedUid < 0) fail('storage_lock_unsafe');
+  const lockPath = resolve(path);
+  const directory = dirname(lockPath);
+  let directoryMetadata;
+  try {
+    directoryMetadata = await lstat(directory);
+    if (await realpath(directory) !== directory) fail('storage_lock_unsafe');
+  } catch (error) {
+    if (error instanceof ControllerError) throw error;
+    fail('storage_lock_unavailable');
+  }
+  if (!directoryMetadata.isDirectory() || directoryMetadata.uid !== expectedUid
+      || (directoryMetadata.mode & 0o7777) !== 0o700) fail('storage_lock_unsafe');
+
+  try {
+    const existing = await lstat(lockPath);
+    if (!existing.isFile() || existing.uid !== expectedUid || (existing.mode & 0o7777) !== 0o600 || existing.nlink !== 1) {
+      fail('storage_lock_unsafe');
+    }
+    fail('storage_lock_busy');
+  } catch (error) {
+    if (error instanceof ControllerError) throw error;
+    if (!isObject(error) || error.code !== 'ENOENT') fail('storage_lock_unavailable');
+  }
+
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  let identity: Awaited<ReturnType<Awaited<ReturnType<typeof open>>['stat']>> | undefined;
+  try {
+    handle = await open(lockPath, 'wx', 0o600);
+    identity = await handle.stat();
+    if (!identity.isFile() || identity.uid !== expectedUid || (identity.mode & 0o7777) !== 0o600 || identity.nlink !== 1) {
+      fail('storage_lock_unsafe');
+    }
+  } catch (error) {
+    await handle?.close().catch(() => undefined);
+    if (identity) {
+      const current = await lstat(lockPath).catch(() => undefined);
+      if (current?.isFile() && current.dev === identity.dev && current.ino === identity.ino) {
+        await unlink(lockPath).catch(() => undefined);
+      }
+    }
+    if (error instanceof ControllerError) throw error;
+    if (isObject(error) && error.code === 'EEXIST') fail('storage_lock_busy');
+    fail('storage_lock_unavailable');
+  }
+
+  try {
+    return await operation();
+  } finally {
+    await handle.close().catch(() => undefined);
+    let current;
+    try {
+      current = await lstat(lockPath);
+    } catch {
+      fail('storage_lock_release_failed');
+    }
+    if (!current.isFile() || current.dev !== identity.dev || current.ino !== identity.ino
+        || current.uid !== expectedUid || (current.mode & 0o7777) !== 0o600 || current.nlink !== 1) {
+      fail('storage_lock_release_failed');
+    }
+    await unlink(lockPath).catch(() => fail('storage_lock_release_failed'));
+  }
+}
+
+export async function controllerStepWithStorageLock(
+  config: ControllerConfig,
+  token: string,
+  io: ControllerIo,
+  path = STORAGE_MAINTENANCE_LOCK_PATH,
+  expectedUid = 0,
+): Promise<StepResult> {
+  try {
+    return await withDeploymentStorageLock(() => controllerStep(config, token, io), path, expectedUid);
+  } catch (error) {
+    if (storageLockCode(error) === 'storage_lock_busy') return { kind: 'waiting', reason: 'storage_maintenance' };
+    throw error;
+  }
+}
+
 function assertRootDirectory(path: string): Promise<void> {
   return lstat(path).then((metadata) => {
     if (!metadata.isDirectory() || metadata.uid !== 0 || (metadata.mode & 0o077) !== 0) fail('journal_permissions');
@@ -944,12 +1055,16 @@ async function runCli(): Promise<void> {
     fetch,
     readJournal: () => readDurableJournal(),
     writeJournal: (journal) => writeDurableJournal(journal),
+    availableStorageBytes: async () => {
+      const stats = await statfs(dirname(JOURNAL_PATH), { bigint: true });
+      return Number(stats.bavail * stats.bsize);
+    },
     now: () => new Date(),
   };
   let continuing = true;
   while (continuing) {
     try {
-      const result = await controllerStep(config, token, io);
+      const result = await controllerStepWithStorageLock(config, token, io);
       process.stdout.write(`deployment controller: ${result.kind} (${result.reason})\n`);
       if (result.kind === 'failed' || result.kind === 'uncertain' || result.kind === 'rejected') process.exitCode = 1;
     } catch (error) {

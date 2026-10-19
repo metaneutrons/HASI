@@ -51,6 +51,8 @@ jobs:
         run: pnpm exec lefthook validate
       - name: Probe release metadata and publication gates
         run: node --test scripts/release/*.test.mjs
+      - name: Probe offline operational safeguards
+        run: node --test scripts/operations/*.node-test.mjs
       - run: pnpm typecheck
       # This explicit network step verifies and materializes the pinned public
       # anny schema used by client contract tests. Tests themselves do not fetch.
