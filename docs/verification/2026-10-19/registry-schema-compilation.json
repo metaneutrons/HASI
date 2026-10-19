@@ -1,0 +1,98 @@
+{
+  "scope": "isolated compiler microbenchmark; not API performance or authorization acceptance",
+  "implementationBaseline": "c4c55efc9506b8bbfc273101baff80b20c2d3cfb",
+  "probeSha256": "dbe668e4131fee3c669f9bce50a7f9626c6b9f24df0b7dc7e93d8a2ab31f3c7c",
+  "method": "Three paired trials per Node major;100 freshly cloned instances of the actual knowledge.search output schema; accept valid synthetic document and reject extra-field output each iteration; cached mode includes schema-content hashing",
+  "runs": [
+    {
+      "node": "v26.11.1",
+      "platform": "darwin",
+      "arch": "arm64",
+      "networkCalls": 0,
+      "schemaDigest": "8b1fc80fd076e1c2b934310f1bca9459d75a6c5c98cbeac3d8d8b0bcd3908e11",
+      "rows": [
+        {
+          "trial": 1,
+          "mode": "fresh-object",
+          "iterations": 100,
+          "elapsedMs": 196.94
+        },
+        {
+          "trial": 1,
+          "mode": "content-cached",
+          "iterations": 100,
+          "elapsedMs": 6.75
+        },
+        {
+          "trial": 2,
+          "mode": "fresh-object",
+          "iterations": 100,
+          "elapsedMs": 108.65
+        },
+        {
+          "trial": 2,
+          "mode": "content-cached",
+          "iterations": 100,
+          "elapsedMs": 6.42
+        },
+        {
+          "trial": 3,
+          "mode": "fresh-object",
+          "iterations": 100,
+          "elapsedMs": 103.83
+        },
+        {
+          "trial": 3,
+          "mode": "content-cached",
+          "iterations": 100,
+          "elapsedMs": 5.95
+        }
+      ]
+    },
+    {
+      "node": "v24.21.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "networkCalls": 0,
+      "schemaDigest": "8b1fc80fd076e1c2b934310f1bca9459d75a6c5c98cbeac3d8d8b0bcd3908e11",
+      "rows": [
+        {
+          "trial": 1,
+          "mode": "fresh-object",
+          "iterations": 100,
+          "elapsedMs": 218.55
+        },
+        {
+          "trial": 1,
+          "mode": "content-cached",
+          "iterations": 100,
+          "elapsedMs": 9.24
+        },
+        {
+          "trial": 2,
+          "mode": "fresh-object",
+          "iterations": 100,
+          "elapsedMs": 128.59
+        },
+        {
+          "trial": 2,
+          "mode": "content-cached",
+          "iterations": 100,
+          "elapsedMs": 7.98
+        },
+        {
+          "trial": 3,
+          "mode": "fresh-object",
+          "iterations": 100,
+          "elapsedMs": 118.03
+        },
+        {
+          "trial": 3,
+          "mode": "content-cached",
+          "iterations": 100,
+          "elapsedMs": 7.1
+        }
+      ]
+    }
+  ]
+}
