@@ -700,9 +700,10 @@ export class PluginRegistry {
   }
   async refreshAll(): Promise<void> {
     // A worker outage/withdrawn route must not prevent unrelated sources from working.
-    // Connected managed sources resume only after fresh private authority succeeds.
+    // Every replica adopts approved connections from signed shared state. Installation
+    // still verifies the pinned manifest and current configuration/managed authority.
     for (const source of this.catalogSources.values()) {
-      if (this.managedContracts.has(source.id) && !this.installed.has(source.id)) {
+      if (this.store && !this.installed.has(source.id)) {
         try { if (await this.sourceConnected(source.id)) await this.install(source.registration); } catch { /* Keep this source unavailable. */ }
       }
     }
