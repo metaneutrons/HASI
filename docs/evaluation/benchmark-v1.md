@@ -157,6 +157,11 @@ not executable quality judgments. The bounded TypeScript runner validates and
 projects inputs to an explicitly injected offline transport; it does not score
 fixture responses as model quality. See the [smoke corpus evidence](../verification/2026-10-19/evaluation-smoke-corpus.md).
 
+The [typed workflow-observation contract](workflow-observations.md) adds a
+separately registered server observer and per-run correlation for explicit
+fixture trace assertions. This is harness plumbing; it does not turn draft
+fixture events into observed application effects or promote cases to gold.
+
 ## Three evaluation layers
 
 | Layer | Inputs held fixed | What the result measures |

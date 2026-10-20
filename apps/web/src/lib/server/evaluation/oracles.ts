@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { boundedEvaluationJsonObjectSchema, preflightEvaluationJson } from "./case-schema";
 import type { EvaluationModelInput } from "./input-projection";
+import { evaluationWorkflowEventSchema, digestEvaluationWorkflowObservation, type EvaluationWorkflowObservation } from "./workflow-observations";
 
 const MAX_ORACLE_BYTES = 256 * 1024;
 const MAX_ORACLE_NODES = 12_000;
@@ -22,6 +23,11 @@ const toolProposalSchema = z.strictObject({
 });
 
 const assertionSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    id: assertionIdSchema,
+    kind: z.literal("workflow_trace_exact"),
+    events: z.array(evaluationWorkflowEventSchema).max(100),
+  }),
   z.strictObject({
     id: assertionIdSchema,
     kind: z.literal("text_contains"),
@@ -107,6 +113,7 @@ export interface EvaluationOracleAssessment {
   kind: "deterministic_fixture_oracle";
   scope: "synthetic_offline_fixture_only";
   oracleDigestSha256: string;
+  workflowObservationDigestSha256?: string;
   status: "passed" | "failed";
   assertions: EvaluationOracleAssertionResult[];
 }
@@ -187,14 +194,15 @@ function result(
 }
 
 /**
- * Applies only literal and exact-identity checks. This function evaluates the
- * parsed transport response and the exact authorized model projection; it
- * never invokes or executes proposed tools.
+ * Applies literal/exact-identity checks and optional host-observed workflow
+ * traces. Model text and proposed calls never establish a confirmation/effect.
+ * This function never invokes or executes proposed tools.
  */
 export function assessEvaluationOracle(
   oracle: EvaluationOracleSpecification,
   response: EvaluationOracleResponse,
   modelInput: EvaluationModelInput,
+  workflowObservation?: EvaluationWorkflowObservation,
 ): EvaluationOracleAssessment {
   const authorizedCitationKeys = new Set(modelInput.evidence.map(citationKey));
   const actualCitationKeys = response.citations.map(citationKey);
@@ -208,6 +216,14 @@ export function assessEvaluationOracle(
 
   for (const assertion of oracle.assertions) {
     switch (assertion.kind) {
+      case "workflow_trace_exact":
+        assertionResults.push(result(
+          assertion.id,
+          assertion.kind,
+          workflowObservation !== undefined
+            && canonicalJson(workflowObservation.events) === canonicalJson(assertion.events),
+        ));
+        break;
       case "text_contains":
         assertionResults.push(result(assertion.id, assertion.kind, response.text.includes(assertion.text)));
         break;
@@ -258,6 +274,7 @@ export function assessEvaluationOracle(
       .update("hasi-evaluation-oracle-v1\0")
       .update(canonicalJson(oracle))
       .digest("hex"),
+    ...(workflowObservation ? { workflowObservationDigestSha256: digestEvaluationWorkflowObservation(workflowObservation) } : {}),
     status: assertionResults.every((assertion) => assertion.status === "passed") ? "passed" : "failed",
     assertions: assertionResults,
   };
