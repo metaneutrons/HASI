@@ -13,6 +13,7 @@ import {
 } from "./chat-sessions";
 import { modelProfileIdSchema, type ModelProfileId } from "./chat-contract";
 import { LiveRoomAvailability } from "./live-room-availability";
+import { forwardProposalStatus, proposalPresentation, sameProposalDetails } from "./proposal-presentation";
 
 type StorageLike = Pick<Storage, "getItem" | "setItem">;
 export interface ProtectedWorkspaceResult {
@@ -81,8 +82,19 @@ function preserveDrafts(remote: ChatWorkspace, local: ChatWorkspace, ownerId: st
 
 function compatibleOwnProjection(before: ChatSnapshot, approved: ChatSnapshot): boolean {
   const approvedMessages = new Map(approved.messages.map(message => [message.id, message]));
+  const progressed = new Set<string>();
   const messages = before.messages.map(message => {
     const projected = approvedMessages.get(message.id);
+    if (message.role === "assistant" && message.proposal && projected?.proposal
+      && projected.tool === "Aktion · Aktueller Beleg" && projected.text === proposalPresentation(projected.proposal).summary
+      && sameProposalDetails(message.proposal, projected.proposal)
+      && forwardProposalStatus(message.proposal.status, projected.proposal.status)) {
+      const remaining = (value: typeof message) => Object.fromEntries(Object.entries(value).filter(([key]) => !["proposal", "text", "tool"].includes(key)));
+      if (JSON.stringify(remaining(message)) === JSON.stringify(remaining(projected))) {
+        if (projected.proposal.status !== "pending") progressed.add(message.proposal.id);
+        return projected;
+      }
+    }
     if (message.role !== "assistant" || !message.rooms || !projected?.rooms
       || message.evidence || message.sources || message.proposal || message.bookings
       || message.rooms.length !== projected.rooms.length) return message;
@@ -95,7 +107,9 @@ function compatibleOwnProjection(before: ChatSnapshot, approved: ChatSnapshot): 
     });
     return sameTargets ? projected : message;
   });
-  return JSON.stringify({ ...before, input: "", messages }) === JSON.stringify({ ...approved, input: "" });
+  const activeProposal = before.activeProposal && approved.activeProposal === null && progressed.has(before.activeProposal)
+    ? null : before.activeProposal;
+  return JSON.stringify({ ...before, activeProposal, input: "", messages }) === JSON.stringify({ ...approved, input: "" });
 }
 
 function reconcileOwnSave(remote: ChatWorkspace, submitted: ChatWorkspace, current: ChatWorkspace): ChatWorkspace | undefined {
@@ -166,8 +180,8 @@ export function createChatWorkspaceStore(
     const previous = new Map(view.workspace.sessions.map(session => [session.id, session.snapshot]));
     const sessionEpochs = Object.fromEntries(normalized.sessions.map(session => {
       const before = previous.get(session.id);
-      // Own-save historical room formatting must not abort a confirmation.
-      // Source/metadata/history changes are never covered by this exception.
+      // Authorized own-save formatting/status progress must not abort a confirmation.
+      // Revocation, changed action details/history and status reversal still remount.
       const sameAuthorizedContent = retainBusyFormatting && view.busy[session.id] && before
         && compatibleOwnProjection(before, session.snapshot);
       const remount = bumpAccessEpoch && !sameAuthorizedContent

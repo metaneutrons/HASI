@@ -1,6 +1,7 @@
 import { formatDateTime, formatTime } from "./api";
 import type { ChatMessage } from "./chat-sessions";
 import { knowledgeDocumentHref } from "./knowledge";
+import { proposalPresentation } from "./proposal-presentation";
 
 export function bookingStatusLabel(status: string) {
   switch (status.toLowerCase()) {
@@ -18,12 +19,12 @@ const intervalText = (start: string, end: string) => `${formatDateTime(start)} b
 
 /** Return the exact Markdown source for clipboard and source-view use. */
 export function chatMessageMarkdownSource(message: ChatMessage): string {
-  return message.text;
+  return message.proposal ? proposalPresentation(message.proposal).summary : message.text;
 }
 
 /** Explicit content only: never serialize message metadata, tool arguments or UI controls. */
 export function chatMessageCopyText(message: ChatMessage, origin: string): string {
-  const sections = [message.text];
+  const sections = [chatMessageMarkdownSource(message)];
   for (const { resource, checked, intervals } of message.rooms ?? []) {
     sections.push([
       resource.name,
@@ -46,11 +47,12 @@ export function chatMessageCopyText(message: ChatMessage, origin: string): strin
   if (message.proposal) {
     const proposal = message.proposal;
     sections.push([
-      proposal.action === "cancel_booking" ? "Stornierungsvorschlag" : "Buchungsvorschlag",
+      proposal.status !== "pending" ? proposalPresentation(proposal).label
+        : proposal.action === "execute_tool" ? "Aktionsvorschlag" : proposal.action === "cancel_booking" ? "Stornierungsvorschlag" : "Buchungsvorschlag",
       proposal.resourceName,
-      intervalText(proposal.startDate, proposal.endDate),
-      proposal.status === "pending" ? "Bestätigung erforderlich" : "Vorschlag abgeschlossen oder ersetzt",
-    ].join("\n"));
+      proposal.action === "execute_tool" ? "" : intervalText(proposal.startDate, proposal.endDate),
+      proposal.status === "pending" ? "Bestätigung erforderlich" : "",
+    ].filter(Boolean).join("\n"));
   }
   for (const booking of message.bookings ?? []) {
     sections.push(`${booking.resourceName}\n${intervalText(booking.startDate, booking.endDate)}\n${bookingStatusLabel(booking.status)}`);
