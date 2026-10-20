@@ -7,6 +7,7 @@ import {
   type PluginConfigurationDefinition,
 } from './configuration.js';
 import { presentationSchema, type PluginPresentation } from './presentation.js';
+import { MANAGED_STATE_MCP_VERSION, type ManagedStateDeclaration } from './managed-state-contract.js';
 
 export type ActorClaimScalar = string | number | boolean | null;
 export type ActorClaimValue = ActorClaimScalar | string[];
@@ -65,12 +66,13 @@ export interface PluginManifestV2 {
   description: string;
   version: string;
   apiVersion: '2.0.0';
-  mcpVersion: '2026-07-28';
+  mcpVersion: '2026-07-28' | typeof MANAGED_STATE_MCP_VERSION;
   tools: ToolDefinitionV2[];
   configuration?: PluginConfigurationDefinition;
   secrets?: PluginSecretRequirement[];
   identity?: PluginIdentityDeclaration;
   presentations?: PluginPresentation[];
+  managedState?: ManagedStateDeclaration;
 }
 
 export type PluginManifest = PluginManifestV1 | PluginManifestV2;
@@ -205,6 +207,16 @@ const commonManifestShape = {
   mcpVersion: z.literal('2026-07-28'),
 };
 
+const managedStateSchema = z.strictObject({
+  schemaVersion: z.number().int().min(1).max(1_000_000),
+  accountIdentity: z.discriminatedUnion('kind', [
+    z.strictObject({ kind: z.literal('subject') }),
+    z.strictObject({ kind: z.literal('customerId') }),
+    z.strictObject({ kind: z.literal('claim'), name: actorClaimName }),
+  ]),
+  applicationSchema: jsonSchemaObject,
+});
+
 const manifestVersion1ObjectSchema = z
   .object({
     manifestVersion: z.literal(1),
@@ -221,16 +233,28 @@ const manifestVersion2ObjectSchema = z
   .object({
     manifestVersion: z.literal(2),
     ...commonManifestShape,
+    mcpVersion: z.enum(['2026-07-28', MANAGED_STATE_MCP_VERSION]),
     apiVersion: z.literal('2.0.0'),
     tools: z.array(toolDefinitionV2Schema).max(64),
     configuration: configurationDefinitionSchema.optional(),
     secrets: z.array(secretRequirementSchema).max(32).optional(),
     identity: identitySchema.optional(),
     presentations: z.array(presentationSchema).max(32).optional(),
+    managedState: managedStateSchema.optional(),
   })
   .strict()
   .superRefine((manifest, context) => {
     addUniqueToolNameIssues(manifest.tools, context);
+    if (manifest.managedState && manifest.mcpVersion !== MANAGED_STATE_MCP_VERSION) {
+      context.addIssue({ code: 'custom', path: ['managedState'], message: 'managed state requires the explicit bidirectional MCP profile' });
+    }
+    if (!manifest.managedState && manifest.mcpVersion === MANAGED_STATE_MCP_VERSION) {
+      context.addIssue({ code: 'custom', path: ['managedState'], message: 'bidirectional state profile requires an approved state declaration' });
+    }
+    if (manifest.managedState?.accountIdentity.kind === 'claim'
+      && !manifest.identity?.claims.includes(manifest.managedState.accountIdentity.name)) {
+      context.addIssue({ code: 'custom', path: ['managedState', 'accountIdentity'], message: 'state account claim must be explicitly declared' });
+    }
 
     const secrets = manifest.secrets ?? [];
     const secretNames = new Set<string>();
@@ -289,6 +313,10 @@ export function projectActorContext(actor: ActorContext, manifest: PluginManifes
   if (manifest.manifestVersion === 1 && manifest.id === 'de.hsh.hasi.anny') {
     if (actor.customerId !== undefined) projected.customerId = actor.customerId;
     if (actor.resourceIds !== undefined) projected.resourceIds = [...actor.resourceIds];
+  }
+
+  if (manifest.manifestVersion === 2 && manifest.managedState?.accountIdentity.kind === 'customerId' && actor.customerId !== undefined) {
+    projected.customerId = actor.customerId;
   }
 
   if (manifest.manifestVersion === 2 && actor.claims && manifest.identity) {

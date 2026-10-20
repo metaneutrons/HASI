@@ -1,20 +1,24 @@
-import { createHash, timingSafeEqual, type KeyObject } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual, type KeyObject } from 'node:crypto';
 import { Transform } from 'node:stream';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import type { AnySchema, ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { createMcpFastifyApp } from '@modelcontextprotocol/fastify';
-import { toNodeHandler } from '@modelcontextprotocol/node';
+import { NodeStreamableHTTPServerTransport, toNodeHandler } from '@modelcontextprotocol/node';
 import {
   createMcpHandler,
   fromJsonSchema,
   McpServer,
+  parseJSONRPCMessage,
+  type AuthInfo,
   type JsonSchemaType,
   type JsonSchemaValidator,
+  type ServerContext,
   type jsonSchemaValidator,
 } from '@modelcontextprotocol/server';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { z } from 'zod';
 import { canonicalJson, digest, parseJsonRecord } from './canonical-json.js';
 import { verifyInvocationTokenClaims, type VerifiedInvocation, type InvocationContext } from './invocation.js';
 import {
@@ -25,23 +29,39 @@ import {
   type ToolDefinitionV2,
 } from './manifest.js';
 import type { PluginPresentation } from './presentation.js';
-import type { ExecutionJournal, ExecutionBinding } from './execution-journal.js';
+import { ExecutionJournal, type ExecutionBinding, type ExecutionStore } from './execution-journal.js';
+import { createManagedStateClient } from './managed-state-client.js';
+import {
+  MANAGED_STATE_METHODS,
+  MANAGED_STATE_MCP_VERSION,
+  managedStateValidator,
+  managedStateActionStatusParams,
+  managedStateActionStatusResult,
+} from './managed-state-contract.js';
 
 const MAX_REQUEST_BYTES = 64 * 1_024;
 const MAX_OUTPUT_BYTES = 64 * 1_024;
 const MAX_CONTENT_LENGTH = /^\d+$/;
 const OUTPUT_SUMMARY = 'Tool result is available in structuredContent.';
 const MAX_APP_RESOURCE_BYTES = 1_024 * 1_024;
+const MAX_MANAGED_STATE_SESSIONS = 16;
+const MANAGED_STATE_SESSION_TTL_MS = 60_000;
+const MANAGED_STATE_REVERSE_TIMEOUT_MS = 5_000;
 
 export type PluginToolHandler = (
   args: Record<string, unknown>,
   actor: ActorContext,
   context?: InvocationContext,
+  services?: PluginInvocationServices,
 ) => Promise<Record<string, unknown>>;
+
+export interface PluginInvocationServices {
+  state: ExecutionStore;
+}
 
 export interface CreatePluginServerOptions {
   executionJournal?: ExecutionJournal;
-  reconcileExecution?: (binding: Readonly<ExecutionBinding>, actor: ActorContext) => Promise<Record<string, unknown> | undefined>;
+  reconcileExecution?: (binding: Readonly<ExecutionBinding>, actor: ActorContext, services?: PluginInvocationServices) => Promise<Record<string, unknown> | undefined>;
   manifest: PluginManifest;
   publicKey: KeyObject;
   serviceToken: string;
@@ -55,6 +75,21 @@ export interface CreatePluginServerOptions {
 interface ToolCallBinding {
   tool: string;
   args: Record<string, unknown>;
+}
+
+interface BoundInvocation {
+  invocation: VerifiedInvocation;
+  method: string;
+  tool: string;
+}
+
+interface ManagedStateSession {
+  id: string;
+  server: McpServer;
+  transport: NodeStreamableHTTPServerTransport;
+  initialized: boolean;
+  closing: boolean;
+  timer?: ReturnType<typeof setTimeout>;
 }
 
 interface PreparedTool {
@@ -91,10 +126,15 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
 
   const manifestJson = canonicalJson(options.manifest);
   const manifest = parsePluginManifest(JSON.parse(manifestJson) as unknown);
-  if (process.env.NODE_ENV === 'production' && manifest.tools.some(tool => tool.effect === 'execute') && !options.consumeInvocation) {
+  const managedStateEnabled = manifest.manifestVersion === 2 && manifest.managedState !== undefined;
+  if (manifest.manifestVersion === 2 && manifest.managedState) managedStateValidator(manifest.managedState.applicationSchema);
+  if (managedStateEnabled && (options.executionJournal !== undefined || options.consumeInvocation !== undefined)) {
+    throw new TypeError('Managed state cannot be combined with process-local or external execution state options.');
+  }
+  if (process.env.NODE_ENV === 'production' && !managedStateEnabled && manifest.tools.some(tool => tool.effect === 'execute') && !options.consumeInvocation) {
     throw new Error('Production execution requires a shared durable invocation replay guard.');
   }
-  if (process.env.NODE_ENV === 'production' && manifest.tools.some(tool => tool.effect === 'execute') && !options.executionJournal) {
+  if (process.env.NODE_ENV === 'production' && !managedStateEnabled && manifest.tools.some(tool => tool.effect === 'execute') && !options.executionJournal) {
     throw new Error('Production execution requires a shared durable execution journal.');
   }
   const appResources = validateAppResources(manifest, options.appResources);
@@ -164,6 +204,7 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
   }
 
   const replayGuard = new InvocationReplayGuard();
+  const invocationByAuthInfo = new WeakMap<AuthInfo, BoundInvocation>();
   const app = createMcpFastifyApp(options.allowedHosts ? { allowedHosts: options.allowedHosts } : {});
   app.setErrorHandler((error, _request, reply) => {
     const errorStatus = getStatusCode(error);
@@ -211,8 +252,16 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
   app.get('/.well-known/hasi-plugin.json', async (_request, reply) => reply.send(manifest));
   app.get('/health', () => ({ status: 'ok' }));
 
+  const managedSessions = managedStateEnabled ? new Map<string, ManagedStateSession>() : undefined;
+  if (managedSessions) {
+    app.addHook('onClose', async () => {
+      await Promise.allSettled([...managedSessions.keys()].map(sessionId => closeManagedSession(sessionId)));
+    });
+  }
+
   // This host-only status endpoint never invokes an execution handler.
   app.post('/hasi/actions/status', async (request, reply) => {
+    if (managedStateEnabled) return reply.code(404).send({ error: 'Not found' });
     if (!options.executionJournal || !hasServiceBearer(request.headers.authorization, options.serviceToken)) return reply.code(401).send({ error: 'Unauthorized' });
     try {
       const body = parseJsonRecord(request.body);
@@ -242,6 +291,8 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
     if (!hasServiceBearer(request.headers.authorization, options.serviceToken)) {
       return reply.code(401).send({ error: 'Unauthorized' });
     }
+
+    if (managedSessions) return handleManagedStateRequest(request, reply);
 
     let callBinding: ToolCallBinding | undefined;
     let invocation: VerifiedInvocation | undefined;
@@ -290,11 +341,337 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
 
   return app;
 
+  function touchManagedSession(session: ManagedStateSession): void {
+    if (session.timer) clearTimeout(session.timer);
+    session.timer = setTimeout(() => {
+      void closeManagedSession(session.id);
+    }, MANAGED_STATE_SESSION_TTL_MS);
+    session.timer.unref();
+  }
+
+  async function closeManagedSession(sessionId: string): Promise<void> {
+    const session = managedSessions?.get(sessionId);
+    if (!session || session.closing) return;
+    session.closing = true;
+    managedSessions?.delete(sessionId);
+    if (session.timer) clearTimeout(session.timer);
+    try {
+      await session.server.close();
+    } catch {
+      // Shutdown and expiry cleanup must continue even if a transport is already closed.
+    }
+  }
+
+  async function createManagedSession(): Promise<ManagedStateSession> {
+    if (!managedSessions) throw new Error('Managed state sessions are disabled');
+    if (managedSessions.size >= MAX_MANAGED_STATE_SESSIONS) throw new Error('Managed state session limit reached');
+
+    const sessionId = randomUUID();
+    const sessionServer = buildMcpServer(undefined, undefined);
+    const transport = new NodeStreamableHTTPServerTransport({
+      sessionIdGenerator: () => sessionId,
+      supportedProtocolVersions: [MANAGED_STATE_MCP_VERSION],
+      onsessioninitialized: (initializedId) => {
+        if (initializedId !== sessionId) throw new Error('Unexpected managed state session identifier');
+        const session = managedSessions.get(sessionId);
+        if (!session) throw new Error('Managed state session is unavailable');
+        session.initialized = true;
+        touchManagedSession(session);
+      },
+      onsessionclosed: async (closedId) => {
+        if (closedId === sessionId) await closeManagedSession(sessionId);
+      },
+    });
+    const session: ManagedStateSession = {
+      id: sessionId,
+      server: sessionServer,
+      transport,
+      initialized: false,
+      closing: false,
+    };
+    managedSessions.set(sessionId, session);
+    transport.onclose = () => {
+      void closeManagedSession(sessionId);
+    };
+    touchManagedSession(session);
+    try {
+      await sessionServer.connect(transport);
+      return session;
+    } catch (error) {
+      await closeManagedSession(sessionId);
+      throw error;
+    }
+  }
+
+  async function handleManagedStateRequest(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    if (!managedSessions) {
+      await reply.code(404).send({ error: 'Not found' });
+      return;
+    }
+    if (request.method !== 'POST' && request.method !== 'GET' && request.method !== 'DELETE') {
+      await reply.code(405).send({ error: 'Method not allowed' });
+      return;
+    }
+
+    const rawSessionHeader = request.headers['mcp-session-id'];
+    if (rawSessionHeader !== undefined && typeof rawSessionHeader !== 'string') {
+      await reply.code(400).send({ error: 'Invalid session request' });
+      return;
+    }
+    const sessionId = rawSessionHeader;
+    const protocolHeader = request.headers['mcp-protocol-version'];
+    if (protocolHeader !== undefined && typeof protocolHeader !== 'string') {
+      await reply.code(400).send({ error: 'Invalid session request' });
+      return;
+    }
+
+    if (request.method === 'POST') {
+      if (Array.isArray(request.body)) {
+        await reply.code(400).send({ error: 'Batch requests are not supported' });
+        return;
+      }
+      let message: unknown;
+      try {
+        message = parseJSONRPCMessage(request.body);
+      } catch {
+        await reply.code(400).send({ error: 'Invalid MCP request' });
+        return;
+      }
+      if (!isRecord(message)) {
+        await reply.code(400).send({ error: 'Invalid MCP request' });
+        return;
+      }
+      const rpcMethod = typeof message.method === 'string' ? message.method : undefined;
+
+      if (rpcMethod === 'initialize') {
+        if (sessionId !== undefined || (protocolHeader !== undefined && protocolHeader !== MANAGED_STATE_MCP_VERSION)) {
+          await reply.code(400).send({ error: 'Invalid initialization request' });
+          return;
+        }
+        if (!isRecord(message.params) || message.params.protocolVersion !== MANAGED_STATE_MCP_VERSION) {
+          await reply.code(400).send({ error: 'Unsupported protocol version' });
+          return;
+        }
+        if (managedSessions.size >= MAX_MANAGED_STATE_SESSIONS) {
+          await reply.code(503).send({ error: 'Managed state session limit reached' });
+          return;
+        }
+        let newSession: ManagedStateSession;
+        try {
+          newSession = await createManagedSession();
+        } catch {
+          await reply.code(503).send({ error: 'Managed state session unavailable' });
+          return;
+        }
+        const authInfo = createServiceAuthInfo(options.serviceToken);
+        const rawRequest = Object.assign(request.raw, {
+          method: request.method,
+          auth: authInfo,
+        }) as unknown as Parameters<NodeStreamableHTTPServerTransport['handleRequest']>[0];
+        reply.hijack();
+        try {
+          await newSession.transport.handleRequest(rawRequest, reply.raw, request.body);
+        } catch {
+          await closeManagedSession(newSession.id);
+          if (!reply.raw.headersSent) {
+            reply.raw.writeHead(500, { 'content-type': 'application/json' });
+            reply.raw.end(JSON.stringify({ error: 'MCP request failed' }));
+          }
+        }
+        return;
+      }
+
+      if (!sessionId || protocolHeader !== MANAGED_STATE_MCP_VERSION) {
+        await reply.code(400).send({ error: 'A managed state session is required' });
+        return;
+      }
+      const session = managedSessions.get(sessionId);
+      if (!session || !session.initialized || session.closing) {
+        await reply.code(404).send({ error: 'Session not found' });
+        return;
+      }
+
+      let boundInvocation: BoundInvocation | undefined;
+      if (rpcMethod === 'tools/call') {
+        const call = extractToolCall(message);
+        if (!call) {
+          await reply.code(400).send({ error: 'Invalid tool request' });
+          return;
+        }
+        const preparedTool = preparedTools.get(call.tool);
+        if (!preparedTool) {
+          await reply.code(404).send({ error: 'Unknown tool' });
+          return;
+        }
+        const token = request.headers['x-hasi-invocation'];
+        if (typeof token !== 'string' || token.length === 0) {
+          await reply.code(401).send({ error: 'Unauthorized' });
+          return;
+        }
+        let invocation: VerifiedInvocation;
+        try {
+          invocation = await verifyInvocationTokenClaims(token, {
+            pluginId: manifest.id,
+            pluginVersion: manifest.version,
+            tool: call.tool,
+            args: call.args,
+          }, options.publicKey);
+        } catch {
+          await reply.code(401).send({ error: 'Unauthorized' });
+          return;
+        }
+        if (!invocation.context || !(options.acceptedInstallationIds ?? [manifest.id]).includes(invocation.context.installationId)) {
+          await reply.code(401).send({ error: 'Unauthorized' });
+          return;
+        }
+        if (!hasRequiredPermissions(invocation.actor, preparedTool.definition)) {
+          await reply.code(403).send({ error: 'Forbidden' });
+          return;
+        }
+        boundInvocation = { invocation, method: rpcMethod, tool: call.tool };
+      } else if (rpcMethod === MANAGED_STATE_METHODS.actionStatus) {
+        const parsedParams = managedStateActionStatusParams.safeParse(message.params);
+        if (!parsedParams.success) {
+          await reply.code(400).send({ error: 'Invalid status request' });
+          return;
+        }
+        const token = request.headers['x-hasi-invocation'];
+        if (typeof token !== 'string' || token.length === 0) {
+          await reply.code(401).send({ error: 'Unauthorized' });
+          return;
+        }
+        let invocation: VerifiedInvocation;
+        try {
+          invocation = await verifyInvocationTokenClaims(token, {
+            pluginId: manifest.id,
+            pluginVersion: manifest.version,
+            tool: '__hasi.action_status',
+            args: parsedParams.data,
+          }, options.publicKey);
+        } catch {
+          await reply.code(401).send({ error: 'Unauthorized' });
+          return;
+        }
+        if (!invocation.context || !(options.acceptedInstallationIds ?? [manifest.id]).includes(invocation.context.installationId)) {
+          await reply.code(401).send({ error: 'Unauthorized' });
+          return;
+        }
+        boundInvocation = { invocation, method: rpcMethod, tool: '__hasi.action_status' };
+      }
+
+      const authInfo = createServiceAuthInfo(options.serviceToken);
+      if (boundInvocation) invocationByAuthInfo.set(authInfo, boundInvocation);
+      touchManagedSession(session);
+      const rawRequest = Object.assign(request.raw, {
+        method: request.method,
+        auth: authInfo,
+      }) as unknown as Parameters<NodeStreamableHTTPServerTransport['handleRequest']>[0];
+      reply.hijack();
+      try {
+        await session.transport.handleRequest(rawRequest, reply.raw, request.body);
+      } catch {
+        if (!reply.raw.headersSent) {
+          reply.raw.writeHead(500, { 'content-type': 'application/json' });
+          reply.raw.end(JSON.stringify({ error: 'MCP request failed' }));
+        }
+      }
+      return;
+    }
+
+    if (!sessionId || protocolHeader !== MANAGED_STATE_MCP_VERSION) {
+      await reply.code(400).send({ error: 'A managed state session is required' });
+      return;
+    }
+    const session = managedSessions.get(sessionId);
+    if (!session || !session.initialized || session.closing) {
+      await reply.code(404).send({ error: 'Session not found' });
+      return;
+    }
+    touchManagedSession(session);
+    const authInfo = createServiceAuthInfo(options.serviceToken);
+    const rawRequest = Object.assign(request.raw, {
+      method: request.method,
+      auth: authInfo,
+    }) as unknown as Parameters<NodeStreamableHTTPServerTransport['handleRequest']>[0];
+    reply.hijack();
+    try {
+      await session.transport.handleRequest(rawRequest, reply.raw);
+    } catch {
+      if (!reply.raw.headersSent) {
+        reply.raw.writeHead(500, { 'content-type': 'application/json' });
+        reply.raw.end(JSON.stringify({ error: 'MCP request failed' }));
+      }
+    }
+  }
+
   function buildMcpServer(
     verifiedInvocation: VerifiedInvocation | undefined,
     call: ToolCallBinding | undefined,
   ): McpServer {
-    const server = new McpServer({ name: manifest.id, version: manifest.version });
+    const server = new McpServer(
+      { name: manifest.id, version: manifest.version },
+      managedStateEnabled ? { supportedProtocolVersions: [MANAGED_STATE_MCP_VERSION] } : undefined,
+    );
+    if (managedStateEnabled) {
+      server.server.setRequestHandler(
+        MANAGED_STATE_METHODS.actionStatus,
+        { params: managedStateActionStatusParams, result: managedStateActionStatusResult },
+        (params, context) => shieldManagedStatus(async () => {
+          const authInfo = context.http?.authInfo;
+          const bound = authInfo ? invocationByAuthInfo.get(authInfo) : undefined;
+          const invocation = bound?.invocation;
+          const invocationContext = invocation?.context;
+          const target = preparedTools.get(params.tool);
+          if (
+            !invocation ||
+            bound.method !== MANAGED_STATE_METHODS.actionStatus ||
+            bound.tool !== '__hasi.action_status' ||
+            digest(params) !== invocation.argsHash ||
+            !invocationContext ||
+            target?.definition.effect !== 'execute' ||
+            invocationContext.executionId !== params.executionId ||
+            !(options.acceptedInstallationIds ?? [manifest.id]).includes(invocationContext.installationId) ||
+            !hasRequiredPermissions(invocation.actor, target.definition)
+          ) {
+            throw new Error('Invalid action status authority');
+          }
+
+          const stateClient = createManagedStateClient(
+            (method, stateParams) => context.mcpReq.send(
+              { method, params: stateParams },
+              z.unknown(),
+              { timeout: MANAGED_STATE_REVERSE_TIMEOUT_MS },
+            ),
+            invocation.jti,
+          );
+          if (!await stateClient.consumeInvocation()) throw new Error('Invocation already used');
+
+          const binding: ExecutionBinding = {
+            subject: invocation.actor.subject,
+            installationId: invocationContext.installationId,
+            executionId: params.executionId,
+            tool: params.tool,
+            argsHash: params.argsHash,
+            configurationRevision: invocationContext.configurationRevision,
+          };
+          const journal = new ExecutionJournal(stateClient.journalStore, manifest.id);
+          const reconcileExecution = options.reconcileExecution;
+          const result = reconcileExecution
+            ? await journal.reconcile(binding, async () => {
+              const candidate = await reconcileExecution(
+                Object.freeze(binding),
+                invocation.actor,
+                { state: stateClient.applicationStore },
+              );
+              if (candidate !== undefined && !target.validateOutput(candidate)) throw new Error('Invalid reconciliation output');
+              return candidate;
+            })
+            : await journal.status(binding);
+          if (result.status === 'confirmed' && !target.validateOutput(result.result)) throw new Error('Invalid receipt');
+          return result;
+        }),
+      );
+    }
     if (manifest.manifestVersion === 2) {
       for (const presentation of manifest.presentations ?? []) {
         const html = appResources.get(presentation.resourceUri);
@@ -317,33 +694,59 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
           idempotentHint: definition.effect === 'read',
         },
       };
-      const callback = async (args: Record<string, unknown>) => {
+      const callback = async (args: Record<string, unknown>, context: ServerContext) => {
+        const bound = managedStateEnabled && context.http?.authInfo
+          ? invocationByAuthInfo.get(context.http.authInfo)
+          : undefined;
+        const currentInvocation = managedStateEnabled ? bound?.invocation : verifiedInvocation;
+        const currentTool = managedStateEnabled ? bound?.tool : call?.tool;
         if (
-          !verifiedInvocation ||
-          call?.tool !== definition.name ||
-          digest(args) !== verifiedInvocation.argsHash
+          !currentInvocation ||
+          currentTool !== definition.name ||
+          (managedStateEnabled && bound?.method !== 'tools/call') ||
+          digest(args) !== currentInvocation.argsHash
         ) {
           throw new Error('Invalid invocation');
         }
-        if (!hasRequiredPermissions(verifiedInvocation.actor, definition)) {
+        if (!hasRequiredPermissions(currentInvocation.actor, definition)) {
           throw new Error('Forbidden');
         }
-        if (!await (options.consumeInvocation ? options.consumeInvocation(verifiedInvocation.jti, verifiedInvocation.expiresAt) : replayGuard.consume(verifiedInvocation.jti, verifiedInvocation.expiresAt))) {
+
+        const stateClient = managedStateEnabled
+          ? createManagedStateClient(
+            (method, stateParams) => context.mcpReq.send(
+              { method, params: stateParams },
+              z.unknown(),
+              { timeout: MANAGED_STATE_REVERSE_TIMEOUT_MS },
+            ),
+            currentInvocation.jti,
+          )
+          : undefined;
+        if (stateClient) {
+          if (!await stateClient.consumeInvocation()) throw new Error('Invocation already used');
+        } else if (!await (options.consumeInvocation
+          ? options.consumeInvocation(currentInvocation.jti, currentInvocation.expiresAt)
+          : replayGuard.consume(currentInvocation.jti, currentInvocation.expiresAt))) {
           throw new Error('Invocation already used');
         }
 
         try {
           const invoke = async () => {
-            const value = await handler(args, verifiedInvocation.actor, verifiedInvocation.context);
+            const value = stateClient
+              ? await handler(args, currentInvocation.actor, currentInvocation.context, { state: stateClient.applicationStore })
+              : await handler(args, currentInvocation.actor, currentInvocation.context);
             if (!preparedTool.validateOutput(value)) throw new Error('Invalid execution output');
             return value;
           };
           let output: Record<string, unknown>;
-          if (definition.effect === 'execute' && options.executionJournal) {
-            const context = verifiedInvocation.context;
-            if (!context?.executionId) throw new Error('Missing execution identity');
-            const binding: ExecutionBinding = { subject: verifiedInvocation.actor.subject, installationId: context.installationId, executionId: context.executionId, tool: definition.name, argsHash: verifiedInvocation.argsHash, configurationRevision: context.configurationRevision };
-            output = await options.executionJournal.execute(binding, invoke);
+          const journal = stateClient
+            ? new ExecutionJournal(stateClient.journalStore, manifest.id)
+            : options.executionJournal;
+          if (definition.effect === 'execute' && journal) {
+            const invocationContext = currentInvocation.context;
+            if (!invocationContext?.executionId) throw new Error('Missing execution identity');
+            const binding: ExecutionBinding = { subject: currentInvocation.actor.subject, installationId: invocationContext.installationId, executionId: invocationContext.executionId, tool: definition.name, argsHash: currentInvocation.argsHash, configurationRevision: invocationContext.configurationRevision };
+            output = await journal.execute(binding, invoke);
           } else output = await invoke();
           const outputJson = canonicalJson(output);
           const normalizedOutput = parseJsonRecord(JSON.parse(outputJson) as unknown, 'handler output');
@@ -385,6 +788,11 @@ export function createPluginServer(options: CreatePluginServerOptions): FastifyI
     }
     return server;
   }
+}
+
+async function shieldManagedStatus<T>(operation: () => Promise<T>): Promise<T> {
+  try { return await operation(); }
+  catch { throw new Error('Action status unavailable'); }
 }
 
 function validateAppResources(
@@ -482,6 +890,14 @@ function hasServiceBearer(authorization: string | undefined, serviceToken: strin
   const suppliedBytes = Buffer.from(suppliedToken, 'utf8');
   const expectedBytes = Buffer.from(serviceToken, 'utf8');
   return suppliedBytes.length === expectedBytes.length && timingSafeEqual(suppliedBytes, expectedBytes);
+}
+
+function createServiceAuthInfo(serviceToken: string): AuthInfo {
+  return {
+    token: serviceToken,
+    clientId: 'hasi-plugin-service',
+    scopes: ['mcp'],
+  };
 }
 
 function extractToolCall(body: unknown): ToolCallBinding | undefined | false {

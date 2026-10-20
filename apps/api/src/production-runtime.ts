@@ -1,6 +1,6 @@
 import { createHash, createPublicKey, sign, verify, timingSafeEqual, type KeyObject } from 'node:crypto';
 import { actorContextSchema, digest } from '@hasi/plugin-sdk';
-import { MemoryJsonStore, type JsonStore } from '@hasi/state';
+import { MemoryJsonStore, type JsonStore, type StateFence } from '@hasi/state';
 import { z } from 'zod';
 import { createRegistryKnowledgeContexts } from './knowledge-context-runtime.js';
 import { createApi, type ApiOptions } from './index.js';
@@ -29,15 +29,20 @@ export class ProductionAuthorityDirectory {
   private readonly publicKey: KeyObject;
   constructor(private readonly store: JsonStore, private readonly privateKey: KeyObject, private readonly scope: string) { this.publicKey = createPublicKey(privateKey); }
   private key(subject: string) { return `authority:v1:${createHash('sha256').update(subject).digest('hex')}`; }
-  async resolve(subject: string): Promise<Persona | undefined> {
-    const record = await this.store.read(this.key(subject));
+  usesStateStore(store: JsonStore): boolean { return this.store === store; }
+  async resolveSnapshot(subject: string): Promise<{ persona: Persona; fence: StateFence } | undefined> {
+    const key = this.key(subject);
+    const record = await this.store.read(key);
     if (!record) return undefined;
     const envelope = z.strictObject({ authority: authoritySchema.nullable(), signature: z.string().max(128) }).parse(record.value);
     if (!verify(null, Buffer.from(digest({ subject, scope: this.scope, authority: envelope.authority })), this.publicKey, Buffer.from(envelope.signature, 'base64url'))) throw new Error('Invalid authority record signature');
     if (!envelope.authority) return undefined;
     const value = envelope.authority;
     if (value.id !== subject || value.actor.subject !== subject) throw new Error('Invalid authority binding');
-    return value;
+    return { persona: value, fence: { key, revision: record.revision } };
+  }
+  async resolve(subject: string): Promise<Persona | undefined> {
+    return (await this.resolveSnapshot(subject))?.persona;
   }
   async replace(subject: string, revision: string | null, authority: Persona | null) {
     if (authority && (authority.id !== subject || authority.actor.subject !== subject)) throw new Error('Invalid authority binding');
@@ -100,6 +105,7 @@ export async function createProductionRuntime(options: ProductionRuntimeOptions)
       scope: options.scope,
       envelopeResults: true,
       resolveActor: async subject => (await directory.resolve(subject))?.actor,
+      resolveActorSnapshot: async subject => { const snapshot = await directory.resolveSnapshot(subject); return snapshot ? { actor: snapshot.persona.actor, fence: snapshot.fence } : undefined; },
       ...(gatewayOrigin ? { operatorManagedLoopbackOrigin: gatewayOrigin } : {}),
       ...(options.accounts ? { accounts: options.accounts } : {}),
       ...(options.deploymentBindings ? { deploymentBindings: options.deploymentBindings } : {}),

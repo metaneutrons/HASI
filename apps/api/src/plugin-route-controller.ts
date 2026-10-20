@@ -1,5 +1,5 @@
 import { digest } from '@hasi/plugin-sdk';
-import type { JsonStore } from '@hasi/state';
+import type { JsonStore, StateFence } from '@hasi/state';
 import { z } from 'zod';
 import { DeploymentDriverError, type DeploymentObservation } from './plugin-artifacts.js';
 import type { DockerPluginRoutingController } from './docker-plugin-driver.js';
@@ -100,6 +100,8 @@ export class PluginRouteController implements DockerPluginRoutingController {
     this.keyPrefix = `hasi:plugin-route:v1:${digest(options.scope)}:`;
   }
 
+  usesStateStore(store: JsonStore): boolean { return this.options.store === store; }
+
   private key(installationId: string): string {
     if (!validOpaqueId(installationId)) throw new PluginRouteControllerError('failed');
     return `${this.keyPrefix}${digest([this.options.ownerId, installationId])}`;
@@ -109,15 +111,16 @@ export class PluginRouteController implements DockerPluginRoutingController {
     if (!validOpaqueId(ownerId) || ownerId !== this.options.ownerId) throw new PluginRouteControllerError('failed');
   }
 
-  private async readState(installationId: string): Promise<{ readonly revision: string; readonly state: RouteState }> {
+  private async readState(installationId: string): Promise<{ readonly key: string; readonly revision: string; readonly state: RouteState }> {
+    const key = this.key(installationId);
     let entry: Awaited<ReturnType<JsonStore['read']>>;
     try {
-      entry = await this.options.store.read(this.key(installationId));
+      entry = await this.options.store.read(key);
     } catch {
       throw new PluginRouteControllerError('unknown');
     }
     if (!entry) throw new PluginRouteControllerError('unknown');
-    return { revision: entry.revision, state: parseRouteState(entry.value, this.options.ownerId, installationId) };
+    return { key, revision: entry.revision, state: parseRouteState(entry.value, this.options.ownerId, installationId) };
   }
 
   /** Initializes the operator-owned route before the installation is exposed. */
@@ -196,8 +199,13 @@ export class PluginRouteController implements DockerPluginRoutingController {
 
   /** Reads the route snapshot for an operator-owned installation. */
   async read(input: { readonly ownerId: string; readonly installationId: string }): Promise<PluginRouteSnapshot> {
+    return (await this.authoritySnapshot(input)).route;
+  }
+
+  async authoritySnapshot(input: { readonly ownerId: string; readonly installationId: string }): Promise<{ route: PluginRouteSnapshot; fence: StateFence }> {
     this.assertOwner(input.ownerId);
-    return snapshot((await this.readState(input.installationId)).state);
+    const { key, revision, state } = await this.readState(input.installationId);
+    return { route: snapshot(state), fence: { key, revision } };
   }
 
   async resolveActiveDeploymentId(input: { readonly ownerId: string; readonly installationId: string }): Promise<string | null> {

@@ -189,6 +189,12 @@ back through the existing admin UI. This mode requires a local Unix Docker
 socket and the approved base image already present; it never pulls images.
 Its reference containers use in-memory state, so this mode does not qualify
 state preservation across container replacement or external artifact publication.
+The optional [managed-state SDK profile](docs/architecture/managed-plugin-state.md)
+now connects invocation-bound application state and execution receipts over the
+existing MCP connection. Registry/gateway/SDK tests cover compatible version
+switches, rollback, account isolation and lost-acknowledgment recovery, including
+PostgreSQL. The current managed browser fixture has not yet enabled this profile;
+its container replacement and complete product journey still require qualification.
 See the [managed browser runtime](docs/verification/2026-10-20/managed-browser-runtime.md)
 for isolation, commands, cleanup and the bounded browser observations.
 The report records current findings and incomplete journeys; starting the fixture

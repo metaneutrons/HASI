@@ -1024,6 +1024,7 @@ async function main(): Promise<Record<string, unknown>> {
       store, scope, envelopeResults: true,
       operatorManagedLoopbackOrigin: gatewayOrigin,
       resolveActor: async subject => (await authority.resolve(subject))?.actor,
+      resolveActorSnapshot: async subject => { const snapshot = await authority.resolveSnapshot(subject); return snapshot ? { actor: snapshot.persona.actor, fence: snapshot.fence } : undefined; },
       deploymentBindings: new Map([[installationId, binding]]),
       managedContracts: new Map([[installationId, { initialManifest: v1.manifest, read: () => contractClient.read(installationId) }]]),
       fetch: countedFetch,

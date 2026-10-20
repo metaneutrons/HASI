@@ -368,7 +368,8 @@ async function apiChild(path: string): Promise<void> {
       managedContracts: new Map([[REFERENCE_ID, { initialManifest: config.referenceManifest, read: () => contracts.read(REFERENCE_ID) }]]),
     } : {}),
     defaultSourcePolicy: { sourceId: 'synthetic-journey', revision: '1', dataClasses: ['synthetic_demo'] },
-    resolveActor: async subject => (await resolveUser(subject))?.actor });
+    resolveActor: async subject => (await resolveUser(subject))?.actor,
+    ...(authority ? { resolveActorSnapshot: async (subject: string) => { const snapshot = await authority.resolveSnapshot(subject); return snapshot ? { actor: snapshot.persona.actor, fence: snapshot.fence } : undefined; } } : {}) });
   await registry.install({ endpoint: 'http://127.0.0.1:4101/mcp', serviceToken: config.annyToken, expectedManifestDigest: digest(annyManifest), allowLoopback: true });
   await registry.install({ endpoint: 'http://127.0.0.1:4103/mcp', serviceToken: config.knowledgeToken, expectedManifestDigest: digest(knowledgeManifest), allowLoopback: true });
   const knowledgeContexts = createRegistryKnowledgeContexts({ registry, store, privateKey, scope: config.scope, resolveActor: async subject => (await resolveUser(subject))?.actor });

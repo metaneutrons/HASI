@@ -1,6 +1,6 @@
 import { createPublicKey } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { createReferenceState } from './state.js';
+import { createManagedReferenceState, createReferenceState } from './state.js';
 
 if (process.env.HASI_REFERENCE_PLUGIN_TEST_MODE !== '1') {
   throw new Error('The reference plugin is available only in explicit local test mode.');
@@ -19,38 +19,58 @@ if (!serviceToken || !publicKeyPem || !Number.isInteger(port) || port < 1 || por
 const sdk = await import(new URL('../vendor/plugin-sdk/dist/index.js', import.meta.url).href);
 const { createPluginServer, ExecutionJournal } = sdk;
 const manifest = JSON.parse(await readFile(new URL('./manifest.json', import.meta.url), 'utf8'));
+const managedStateEnabled = manifest.manifestVersion === 2 && manifest.managedState !== undefined;
 const installationId = process.env.HASI_PLUGIN_INSTALLATION_ID ?? manifest.id;
 if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(installationId)) {
   throw new Error('The reference plugin installation binding is invalid.');
 }
-const state = createReferenceState(process.env.HASI_REFERENCE_STATE_FILE ?? ':memory:');
+const state = managedStateEnabled ? undefined : createReferenceState(process.env.HASI_REFERENCE_STATE_FILE ?? ':memory:');
 let sourceUnavailable = false;
 let loseNextExecutionAck = false;
 let shuttingDown = false;
+function requireManagedState(services) {
+  if (!services?.state) throw new Error('Managed reference state is unavailable.');
+  return createManagedReferenceState(services.state);
+}
+
 const server = createPluginServer({
-  executionJournal: new ExecutionJournal(state.executionStore, 'local-reference-test'),
-  consumeInvocation: (jti, expiresAt) => state.consumeInvocation(jti, expiresAt),
-  reconcileExecution: async (binding, actor) => {
+  ...(!managedStateEnabled ? {
+    executionJournal: new ExecutionJournal(state.executionStore, 'local-reference-test'),
+    consumeInvocation: (jti, expiresAt) => state.consumeInvocation(jti, expiresAt),
+  } : {}),
+  reconcileExecution: async (binding, actor, services) => {
     if (sourceUnavailable) throw new Error('Reference source unavailable');
-    return state.resolve(binding, actor);
+    return managedStateEnabled
+      ? requireManagedState(services).resolve(binding, actor)
+      : state.resolve(binding, actor);
   },
   manifest,
   acceptedInstallationIds: [installationId],
   publicKey: createPublicKey(publicKeyPem),
   serviceToken,
   handlers: {
-    read_status: async (_arguments, actor, context) => ({
-      label: context?.configuration.label,
-      account: typeof actor.claims?.['reference.account'] === 'string' ? actor.claims['reference.account'] : 'unscoped',
-      version: manifest.version,
-      actionCount: await state.count(context?.installationId ?? installationId, actor),
-    }),
+    read_status: async (_arguments, actor, context, services) => {
+      if (managedStateEnabled) {
+        return {
+          label: context?.configuration.label,
+          account: typeof actor.claims?.['reference.account'] === 'string' ? actor.claims['reference.account'] : 'unscoped',
+          version: manifest.version,
+          actionCount: await requireManagedState(services).count(context?.installationId ?? installationId, actor),
+        };
+      }
+      return {
+        label: context?.configuration.label,
+        account: typeof actor.claims?.['reference.account'] === 'string' ? actor.claims['reference.account'] : 'unscoped',
+        version: manifest.version,
+        actionCount: await state.count(context?.installationId ?? installationId, actor),
+      };
+    },
     prepare_mark: (_arguments, _actor, context) => {
       const label = context?.configuration.label;
       if (typeof label !== 'string') throw new Error('The public label is not configured.');
       return Promise.resolve({ draft: { executionTool: 'execute_mark', arguments: { label }, resourceName: label } });
     },
-    execute_mark: async (arguments_, actor, context) => {
+    execute_mark: async (arguments_, actor, context, services) => {
       if (!context?.executionId) throw new Error('Missing execution context');
       if (sourceUnavailable) throw new Error('Reference source unavailable');
       const binding = {
@@ -61,7 +81,8 @@ const server = createPluginServer({
         argsHash: sdk.digest(arguments_),
         configurationRevision: context.configurationRevision,
       };
-      const result = await state.mark(binding, arguments_, actor);
+      const referenceState = managedStateEnabled ? requireManagedState(services) : state;
+      const result = await referenceState.mark(binding, arguments_, actor);
       if (loseNextExecutionAck) {
         loseNextExecutionAck = false;
         throw new Error('Reference execution acknowledgement lost');
@@ -70,7 +91,7 @@ const server = createPluginServer({
     },
   },
 });
-server.addHook('onClose', async () => state.close());
+if (state) server.addHook('onClose', async () => state.close());
 server.get('/healthz', async () => ({ status: 'ok' }));
 
 const commandNames = new Set(['lose-next-execution-ack', 'source-unavailable', 'source-available', 'stats']);
@@ -88,7 +109,9 @@ process.on('message', (message) => {
     event: 'reference-command-applied',
     commandId: message.commandId,
     command: message.command,
-    ...(message.command === 'stats' ? { stats: state.stats() } : {}),
+    ...(message.command === 'stats' ? {
+      stats: managedStateEnabled ? { available: false, mode: 'managed' } : state.stats(),
+    } : {}),
   };
   if (process.connected) process.send?.(acknowledgement);
 });

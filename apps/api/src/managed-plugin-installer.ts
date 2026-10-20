@@ -1,6 +1,6 @@
 import { createPublicKey, sign, verify, type KeyObject } from 'node:crypto';
 import { z } from 'zod';
-import { digest, manifestSchema, type PluginManifest } from '@hasi/plugin-sdk';
+import { digest, manifestSchema, managedStateValidator, type PluginManifest } from '@hasi/plugin-sdk';
 import { managedPluginCommandSchema, type ManagedPluginCommand, type ManagedPluginCommandResult, type ManagedPluginView } from '@hasi/plugin-sdk/deployment-admin';
 import type { JsonStore } from '@hasi/state';
 import { buildPluginContainerLaunchPolicy, PluginDeploymentCoordinator, verifyPluginRelease, type DeploymentDriver, type PluginContainerLaunchOptions, type PluginDeploymentSnapshot, type PluginReleaseIdentity, type PublisherApprovalResolver, type VerifiedPluginRelease, type LogicalSecretAssignment } from './plugin-artifacts.js';
@@ -97,6 +97,7 @@ export class ManagedPluginInstaller implements ManagedPluginAdmin {
         });
         if (verified.pluginId !== entry.pluginId || item.manifest.id !== entry.pluginId
           || verified.version !== item.manifest.version || verified.manifestDigest !== digest(item.manifest)) throw new ManagedPluginInstallerError();
+        if (item.manifest.manifestVersion === 2 && item.manifest.managedState) managedStateValidator(item.manifest.managedState.applicationSchema);
         buildPluginContainerLaunchPolicy(verified, item.launch);
         return approval.revoked ? [] : [{ ...item, verified }];
       });
@@ -262,6 +263,13 @@ export class ManagedPluginInstaller implements ManagedPluginAdmin {
     const requireRelease = async (releaseDigest: string | undefined) => {
       const release = entry.releases.find(item => item.verified.releaseDigest === releaseDigest);
       if (release?.verified.configSchemaVersion !== state.configurationSchemaVersion || !await this.options.secretsAuthorized(id, release.secretAssignments) || !(await this.configuration(id, releaseDigest)).ready) throw new ManagedPluginInstallerError();
+      const current = entry.releases.find(item => item.verified.releaseDigest === state.current?.releaseDigest);
+      const stateContract = (manifest: PluginManifest) => manifest.manifestVersion === 2 ? manifest.managedState ?? null : null;
+      // This version supports unchanged state contracts only. A release label or
+      // restore-plan identifier is not a state migration implementation.
+      if (state.current && !current) throw new ManagedPluginInstallerError();
+      if (current && (current.manifest.mcpVersion !== release.manifest.mcpVersion
+        || digest(stateContract(current.manifest)) !== digest(stateContract(release.manifest)))) throw new ManagedPluginInstallerError();
       return release;
     };
     switch (command.operation) {
