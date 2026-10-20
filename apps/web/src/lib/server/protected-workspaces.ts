@@ -11,6 +11,8 @@ import {
   type ChatWorkspace,
 } from "../chat-sessions";
 import type { NativeHistoryAccess, NativeHistoryResolver } from "./native-history";
+import { actionReferenceKey, actionReferencesSchema, retainedActionReferences, updatedActionReferences,
+  UNAVAILABLE_ANSWER, type ActionHistoryReference } from "./action-history-references";
 import { createHostDialogueSigner } from "./host-dialogue";
 import { proposalPresentation } from "../proposal-presentation";
 import { compactPluginToolResult, MODEL_PLUGIN_TOOL_NAME } from "../plugin-tools";
@@ -30,7 +32,6 @@ const MAX_CONTEXTS_PER_SESSION = 32;
 const MAX_CONTEXT_DOCUMENTS = 5;
 const MAX_CONTEXT_DOCUMENT_BYTES = 64 * 1024;
 const WORKSPACE_KEY_INFO = "hasi-protected-chat-workspace-v1";
-const UNAVAILABLE_ANSWER = "Diese frühere Antwort ist nicht mehr verfügbar. Bitte stelle die Frage erneut.";
 const UNAVAILABLE_SOURCES = "Diese frühere Quellenkarte ist nicht mehr verfügbar. Bitte suche erneut.";
 const UNAVAILABLE_PLUGIN_RESULT = "Dieses frühere Plugin-Ergebnis ist nicht mehr verfügbar. Bitte frage erneut.";
 
@@ -41,6 +42,7 @@ const storedWorkspaceSchema = z.strictObject({
   issuedAt: z.number().int().nonnegative(),
   expiresAt: z.number().int().positive(),
   workspace: z.unknown(),
+  actionReferences: actionReferencesSchema.optional(),
   signature: z.string().regex(/^[A-Za-z0-9_-]{43}$/u),
 });
 type SafeResolvedContext = ResolvedKnowledgeContext & { documents: KnowledgeDocument[] };
@@ -192,17 +194,30 @@ function verifiedPluginToolResults(
 }
 
 function sanitizeDisplayMessages(
+  sessionId: string,
   messages: readonly ChatMessage[],
   history: readonly WireMessage[],
   contexts: ReadonlyMap<string, SafeResolvedContext>,
   pluginResults: ReadonlyMap<string, PluginResultContext>,
   native: NativeHistoryAccess,
+  actionReferences: ReadonlyMap<string, ActionHistoryReference>,
   verifyHost: (message: ChatMessage) => ChatMessage | undefined,
 ): ChatMessage[] {
   const validWireMessages = validModelWireMessages(history);
   return messages.map((message) => {
     if (message.role === "user") {
       return { id: message.id, role: "user", text: message.text,
+        ...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }) };
+    }
+
+    const reference = actionReferences.get(actionReferenceKey(sessionId, message.id));
+    if (reference) {
+      const current = native.proposals.get(reference.proposalId);
+      if (!current) return unavailableMessage(message);
+      // Account renewal can restore a freshly authorized receipt, never its old consent.
+      const proposal = reference.readOnly && current.status === "pending" ? { ...current, status: "invalidated" as const } : current;
+      return { id: message.id, role: "assistant", proposal, tool: "Aktion · Aktueller Beleg",
+        text: proposalPresentation(proposal).summary,
         ...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }) };
     }
 
@@ -331,11 +346,15 @@ export class ProtectedWorkspaceStore {
         throw new TypeError("Invalid expected revision.");
       }
       const parsed = parseChatWorkspace(value, this.options.ownerId);
-      const workspace = await this.sanitize(parsed);
+      const current = await this.options.store.read(this.storageKey());
+      if ((current?.revision ?? null) !== expectedRevision) throw new ProtectedWorkspaceConflict(await this.load());
+      const previous = current ? this.parseStored(current.value) : undefined;
+      const sanitized = await this.sanitize(parsed, previous?.actionReferences ?? []);
       const issuedAt = this.clock();
       const expiresAt = issuedAt + WORKSPACE_RETENTION_MS;
       if (!Number.isSafeInteger(issuedAt) || issuedAt < 0 || !Number.isSafeInteger(expiresAt)) throw new ProtectedWorkspaceError();
-      const envelope = this.sign({ version: 1, ownerId: this.options.ownerId, scope: this.options.scope, issuedAt, expiresAt, workspace });
+      const envelope = this.sign({ version: 1, ownerId: this.options.ownerId, scope: this.options.scope, issuedAt, expiresAt,
+        ...sanitized });
       const committed = await this.options.store.compareAndSet(this.storageKey(), expectedRevision, envelope, expiresAt);
       if (!committed) throw new ProtectedWorkspaceConflict(await this.load());
       return await this.load();
@@ -370,6 +389,7 @@ export class ProtectedWorkspaceStore {
         issuedAt: record.issuedAt,
         expiresAt: record.expiresAt,
         workspace: record.workspace,
+        ...(record.actionReferences === undefined ? {} : { actionReferences: record.actionReferences }),
       }), "base64url");
       return actual.length === expected.length && timingSafeEqual(actual, expected);
     } catch {
@@ -380,35 +400,46 @@ export class ProtectedWorkspaceStore {
   private async loadCurrent(attempt: number): Promise<ProtectedWorkspaceSnapshot> {
     const stored = await this.options.store.read(this.storageKey());
     if (!stored) return { revision: null, workspace: createChatWorkspace(this.options.ownerId) };
-    const raw = safeRecord(stored.value);
-    const parsed = storedWorkspaceSchema.safeParse(raw);
+    const record = this.parseStored(stored.value);
+    const workspace = parseChatWorkspace(record.workspace, this.options.ownerId);
+    const sanitized = await this.sanitize(workspace, record.actionReferences ?? []);
+    if (canonicalJson(sanitized.workspace) === canonicalJson(workspace)
+      && canonicalJson(sanitized.actionReferences) === canonicalJson(record.actionReferences ?? [])) {
+      return { revision: stored.revision, workspace: sanitized.workspace };
+    }
+
+    // Persist the fail-closed rewrite with the original expiry. Recovery keeps
+    // opaque action locations only, never revoked display text or model context.
+    const rewritten = this.sign({
+      version: record.version,
+      ownerId: record.ownerId,
+      scope: record.scope,
+      issuedAt: record.issuedAt,
+      expiresAt: record.expiresAt,
+      ...sanitized,
+    });
+    if (attempt >= 2) throw new ProtectedWorkspaceError();
+    const committed = await this.options.store.compareAndSet(this.storageKey(), stored.revision, rewritten, record.expiresAt);
+    if (!committed) return this.loadCurrent(attempt + 1);
+    return this.loadCurrent(attempt + 1);
+  }
+
+  private parseStored(value: unknown): z.infer<typeof storedWorkspaceSchema> {
+    const parsed = storedWorkspaceSchema.safeParse(safeRecord(value));
     const now = this.clock();
     if (!parsed.success || parsed.data.ownerId !== this.options.ownerId || parsed.data.scope !== this.options.scope
       || parsed.data.expiresAt <= now || parsed.data.issuedAt > now
       || parsed.data.expiresAt - parsed.data.issuedAt > WORKSPACE_RETENTION_MS
       || !this.verify(parsed.data)) throw new ProtectedWorkspaceError();
-    const workspace = parseChatWorkspace(parsed.data.workspace, this.options.ownerId);
-    const sanitized = await this.sanitize(workspace);
-    if (canonicalJson(sanitized) === canonicalJson(workspace)) return { revision: stored.revision, workspace: sanitized };
-
-    // Persist the fail-closed rewrite with the original expiry. A later GET
-    // must not recover revoked derived text from the old signed envelope.
-    const rewritten = this.sign({
-      version: parsed.data.version,
-      ownerId: parsed.data.ownerId,
-      scope: parsed.data.scope,
-      issuedAt: parsed.data.issuedAt,
-      expiresAt: parsed.data.expiresAt,
-      workspace: sanitized,
-    });
-    if (attempt >= 2) throw new ProtectedWorkspaceError();
-    const committed = await this.options.store.compareAndSet(this.storageKey(), stored.revision, rewritten, parsed.data.expiresAt);
-    if (!committed) return this.loadCurrent(attempt + 1);
-    return this.loadCurrent(attempt + 1);
+    return parsed.data;
   }
 
-  private async sanitize(workspace: ChatWorkspace): Promise<ChatWorkspace> {
+  private async sanitize(workspace: ChatWorkspace, priorReferences: readonly ActionHistoryReference[]): Promise<{
+    workspace: ChatWorkspace; actionReferences: ActionHistoryReference[];
+  }> {
     const sessions = [];
+    const references = retainedActionReferences(workspace, priorReferences);
+    const referenceMap = new Map(references.map(reference => [actionReferenceKey(reference.sessionId, reference.messageId), reference]));
     let native: NativeHistoryAccess = { resources: [], bookings: [], proposals: new Map() };
     let authority: string | undefined;
     if (this.options.authority) {
@@ -419,7 +450,7 @@ export class ProtectedWorkspaceStore {
       }
     }
     if (!this.options.authority || authority) {
-      try { native = await this.options.resolveNative?.(workspace) ?? native; } catch { /* Fail closed. */ }
+      try { native = await this.options.resolveNative?.(workspace, [...new Set(references.map(reference => reference.proposalId))]) ?? native; } catch { /* Fail closed. */ }
     }
     for (const session of workspace.sessions) {
       const snapshot = session.snapshot;
@@ -475,7 +506,7 @@ export class ProtectedWorkspaceStore {
         snapshot: {
           ...snapshot,
           history,
-          messages: sanitizeDisplayMessages(snapshot.messages, history, resolved, matchedPluginResults, native, message => {
+          messages: sanitizeDisplayMessages(session.id, snapshot.messages, history, resolved, matchedPluginResults, native, referenceMap, message => {
             // A display receipt never carries model/source/action authority. The
             // server reconstructs any candidate cards from its current catalogue.
             if (message.evidence || message.sources || message.sourceContextId || message.proposal || message.bookings
@@ -491,7 +522,9 @@ export class ProtectedWorkspaceStore {
               ...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }) };
           }),
           chosenRoom: native.resources.find(resource => resource.id === snapshot.chosenRoom?.id) ?? null,
-          activeProposal: snapshot.activeProposal && native.proposals.has(snapshot.activeProposal) ? snapshot.activeProposal : null,
+          activeProposal: snapshot.activeProposal && native.proposals.has(snapshot.activeProposal)
+            && !references.some(reference => reference.readOnly && reference.proposalId === snapshot.activeProposal)
+            ? snapshot.activeProposal : null,
         },
       });
     }
@@ -499,6 +532,7 @@ export class ProtectedWorkspaceStore {
       // If authority moved while rebuilding cards/sources, do not return a mixed snapshot.
       if (await this.options.authority() !== authority) throw new ProtectedWorkspaceError();
     }
-    return parseChatWorkspace({ ...workspace, sessions }, this.options.ownerId);
+    const sanitized = parseChatWorkspace({ ...workspace, sessions }, this.options.ownerId);
+    return { workspace: sanitized, actionReferences: updatedActionReferences(sanitized, references) };
   }
 }

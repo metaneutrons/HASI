@@ -114,6 +114,7 @@ for (const storage of ['memory', ...(databaseUrl ? ['postgres'] : [])]) {
       return (await response.json() as { proposal: { id: string } }).proposal.id;
     }
 
+    // Includes a real 10 s cooldown; HTTP/MCP work needs a separate finite functional deadline.
     it('recovers committed create and cancel after source reply loss without replaying either write', async () => {
       await login('owner'); await login('foreign');
       const id = await proposal('owner');
@@ -155,7 +156,7 @@ for (const storage of ['memory', ...(databaseUrl ? ['postgres'] : [])]) {
       expect(await resolved.json()).toMatchObject({ bookingId: created.bookingId, status: 'cancelled', proposal: { status: 'confirmed' } });
       expect((await request('owner', `/api/proposals/${cancellationId}/confirm`, {})).status).toBe(200);
       expect(mutations).toBe(initialMutations + 2);
-    });
+    }, 60_000);
 
     it('makes no source write when personal eligibility is revoked after preparing a booking', async () => {
       await login('revoked');

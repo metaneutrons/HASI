@@ -1,0 +1,151 @@
+{
+  "date": "2026-10-20",
+  "baselineCodeRevision": "8c7bcd48b051acf0531a285491cebcc57fbda3a4",
+  "sourceDigests": {
+    "apps/api/src/index.ts": "fe3c9ee2051746764c85498f6494be71a244138fd798b766bcf87b9335275c3c",
+    "apps/web/src/components/plugin-account-consent.tsx": "f5d1d270390b23f2c94389a768b295885742079a45c241a5bddd379e820432fe",
+    "apps/web/src/lib/server/action-history-references.ts": "2265d20d8632af66c5d0343bc785302ee169eeeaa3c3bbdc39ab8b125e7ae0c5",
+    "apps/web/src/lib/server/native-history.ts": "491b9efe35a85b73b7266885d42798b218fcc491730242de42eba434530c28d4",
+    "apps/web/src/lib/server/protected-workspaces.ts": "93fdf754a0062162c63cbe217ac58cc82d34390ccd151844705f72e9f789993d",
+    "apps/web/tests/action-history-recovery.test.ts": "637cdfab6cb710f6073cad7c715b03ec230b3a01dc593149fd43ca527a4c4315",
+    "apps/web/tests/native-history.test.ts": "dd8b425d57152f60d6d049f9e0994155ff15e64c68c3ed18b9310f8d7d2db7e9",
+    "tests/action-reconciliation.test.ts": "e481fe3feb28962d7ac4297337bd769e9e3db179fdb750d85df5576f09a96aaf",
+    "tests/anny-source-reconciliation.test.ts": "936ee2fdd3220466830bd9f96ff3fc8cee287f7df81d0a0f3b79b9abb42ed3a0",
+    "packages/state/tests/model-budget.test.ts": "5a25a104fcf8d24d6a6ce241cb130bdee75283efa8c9b735daa72b84666da2aa"
+  },
+  "scope": "Local synthetic action-history recovery; not full M2/P6/M7 acceptance",
+  "validation": {
+    "postgresCoverage": {
+      "passed": 1374,
+      "skipped": 1,
+      "files": 151,
+      "statements": 81.0,
+      "branches": 77.87,
+      "functions": 88.24,
+      "lines": 88.51,
+      "qualificationNote": "Prior full run passed before the additional bounds case. Two subsequent default-parallel runs failed with test/readiness timeouts under local load; a maxWorkers=2 coverage run also hit timeouts and was interrupted (exit 130). These attempts are not accepted as full qualification."
+    },
+    "lint": "pass after fixing test fixture lint",
+    "rootAndWebTypes": "pass",
+    "productionWebBuild": "pass",
+    "oldStoreCounterprobe": {
+      "isolatedCopyOf": "8c7bcd48b051acf0531a285491cebcc57fbda3a4:apps/web/src/lib/server/protected-workspaces.ts",
+      "case": "recovers confirmed as confirmed without activating or executing it",
+      "exitCode": 1,
+      "observed": "expected undefined to be confirmed",
+      "currentCode": "pass"
+    },
+    "corePendingCounterprobe": {
+      "before": "three projection cases returned pending instead of invalidated",
+      "after": "10 focused API tests passed"
+    },
+    "independentReview": "No scoped finding; 31 focused tests passed before fixture-clock and duplicate-case strengthening",
+    "freshMixedOwnSaveReproduction": {
+      "result": "pass",
+      "topology": "ProtectedWorkspaceStore + createChatWorkspaceStore",
+      "inputs": [
+        "prior invalidated generic receipt",
+        "prior confirmed receipt",
+        "new pending preparation"
+      ],
+      "observed": [
+        "persistence saved",
+        "all three cards canonical",
+        "new proposal remains active"
+      ],
+      "scope": "independent bounded in-process reproduction, not a browser run"
+    },
+    "timeoutFollowUp": {
+      "command": "vitest run packages/state/tests/model-budget.test.ts tests/anny-source-reconciliation.test.ts tests/server-demo.test.ts tests/plugin-route-controller.test.ts tests/knowledge-adapter-flow.test.ts tests/plugin-catalog-replica-api.test.ts --maxWorkers=2",
+      "coverage": false,
+      "postgres": true,
+      "passed": 55,
+      "files": 6,
+      "exitCode": 0,
+      "durationSeconds": 38.16
+    },
+    "functionalDeadlineQualification": {
+      "cases": [
+        "source reply-loss reconciliation with real10.01s cooldown",
+        "exhaustive2048window unknown-budget accounting"
+      ],
+      "previousPerCaseDeadlineMs": 15000,
+      "perCaseDeadlineMs": 60000,
+      "defaultDeadlineChanged": false,
+      "inputsAndAssertionsChanged": false,
+      "applicationLatencyCriteriaChanged": false,
+      "focusedTests": {
+        "passed": 17,
+        "files": 2,
+        "postgres": true,
+        "exitCode": 0,
+        "durationSeconds": 26.48
+      },
+      "independentReview": "No blocker: all inputs, mutation-count assertions, real cooldown and immediate429 countercheck retained.",
+      "rejectedExperiment": "Global Date.now advancement made two recovery assertions return outcome_unknown; discarded. No clock mocking remains."
+    },
+    "mandatoryPushAttempts": [
+      {
+        "workers": "default",
+        "passed": 1372,
+        "failedTimeouts": 3,
+        "skipped": 1,
+        "exitCode": 1
+      },
+      {
+        "workers": 2,
+        "passed": 1373,
+        "failedTimeouts": 2,
+        "skipped": 1,
+        "exitCode": 1
+      }
+    ]
+  },
+  "firstJoinedFixture": {
+    "referenceArtifactDigest": "701c711f2ffd1a5eb22365f1467c8b1780ce1c5db0b6e42e6e727229af7f542c",
+    "topology": "local TestIdP, two API replicas, independent SQLite-backed reference plugin, deterministic local model",
+    "observedJourneys": [
+      "lost confirmed HTTP reply -> unknown -> account expiry removes card and preserves draft -> renewal reconstructs unknown -> explicit reconciliation confirms without replay",
+      "pending proposal -> renewal without intermediate denied load -> invalidated; initial SPA return left controls visible until periodic refresh",
+      "final full-document return -> fresh initial protected load -> confirmed/invalidated/invalidated cards; preserved draft and zero enabled confirmation buttons",
+      "SDK acknowledgement loss -> unknown -> account expiry and independent process restart -> zero visible cards/target while denied -> fresh renewal -> recovered unknown -> explicit reconciliation confirms without replay"
+    ],
+    "checkpointStatsBeforeFifthPrepare": {
+      "localModelCalls": 4,
+      "realProviderCalls": 0,
+      "businessEffects": 2,
+      "executeHttpRequests": 2,
+      "droppedConfirmedReplies": 1,
+      "journalRows": 2,
+      "sourceRows": 2
+    },
+    "finalVisibleReceiptStates": [
+      "confirmed",
+      "invalidated",
+      "invalidated",
+      "confirmed"
+    ],
+    "draftAfterRecovery": "Endg\u00fcltiger Wiederherstellungsentwurf.",
+    "qualificationLimits": [
+      "One consent state expired while the run was paused; rejected, cancelled and restarted with fresh state.",
+      "A fifth preparation was attempted near the fixture 30-minute deadline. Autosave hid cards as services stopped; confirmation was not completed and no final statistics were captured. This is not a passed fresh-follow-up case.",
+      "The fixture exited 0 with ownedProcessesStopped true and callerOwnedTestDatabaseRetained true. Its temporary evidence directory was removed by normal cleanup.",
+      "No physical devices, real providers, institutional rights or managed update/rollback qualified."
+    ]
+  },
+  "freshFollowUpFixture": {
+    "status": "not qualified",
+    "setup": "Synthetic Test-Administration, reference installation/configuration/account connection completed; first composer prompt was not submitted.",
+    "localModelCalls": 0,
+    "businessEffects": 0,
+    "executeHttpRequests": 0,
+    "realProviderCalls": 0,
+    "cleanup": {
+      "exitCode": 0,
+      "ownedProcessesStopped": true,
+      "callerOwnedTestDatabaseRetained": true
+    },
+    "privateMetadataArtifactSha256": "5fcf5aa28574429ac8101a2d9f5a99fb3ba94ea26e7541b8ac7717f9ff3b304e",
+    "remaining": "Normal prepare/confirm after renewal with historic invalidated cards still needs a completed joined browser qualification. The bounded in-process mixed save and Core fresh-confirm cases pass; setup alone is not a browser pass."
+  }
+}
