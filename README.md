@@ -163,7 +163,9 @@ a private SQLite file across process and artifact restarts. Explicit terminal
 controls inject a lost confirmed HTTP reply, an unknown SDK acknowledgement or a
 source outage; these controls are unavailable to models and HTTP clients.
 The report records current findings and incomplete journeys; starting the fixture
-does not establish M2/P6 acceptance.
+does not establish M2/P6 acceptance. The [protected action-history follow-up](docs/verification/2026-10-20/plugin-action-history.md)
+records the overlapping-save correction and bounded multi-turn browser checks;
+account-expiry recovery and complete product qualification remain open.
 
 ## Verify changes
 

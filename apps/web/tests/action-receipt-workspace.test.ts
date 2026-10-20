@@ -148,4 +148,52 @@ describe("authority-backed action receipts and busy autosave", () => {
     if (changed) expect(f.store.getSnapshot().sessionEpochs[f.id] ?? 0).toBeGreaterThan(epoch);
     else expect(f.store.getSnapshot().sessionEpochs[f.id] ?? 0).toBe(epoch);
   });
+
+  it.each([false, true])("keeps cosmetic model projection separate from changed action authority during an overlapping save (changed=%s)", async changed => {
+    const seed: ChatProposal = { ...proposal(), action: "execute_tool", pluginId: "reference-plugin",
+      toolName: "reference.prepare", title: "Preparation label", executionTool: "reference.execute",
+      executionTitle: "Execute action", arguments: { target: "authorized-target" } };
+    const f = await fixture(seed);
+    const epoch = f.store.getSnapshot().sessionEpochs[f.id] ?? 0;
+    let release = () => { /* assigned below */ };
+    f.delay(new Promise<void>(resolve => { release = resolve; }));
+    f.set({ ...seed, status: "outcome_unknown", toolName: seed.executionTool, title: seed.executionTitle ?? "Aktion",
+      arguments: { target: changed ? "different-target" : "authorized-target" } });
+    f.store.updateConversation(f.id, { ...f.snapshot(), interrupted: true,
+      messages: [{ ...required(f.snapshot().messages[0]), model: "Synthetic model label" }] }, true);
+    await vi.advanceTimersByTimeAsync(200);
+    f.store.create();
+    const newChat = f.store.getSnapshot().workspace.activeId;
+    expect(newChat).not.toBe(f.id);
+    f.store.updateDraft(newChat, "Draft in the next conversation");
+    release();
+    await vi.advanceTimersByTimeAsync(1_000);
+    if (changed) {
+      expect(f.store.getSnapshot().sessionEpochs[f.id] ?? 0).toBeGreaterThan(epoch);
+      const replaced = required(f.snapshot().messages[0]);
+      expect(replaced.model).toBeUndefined();
+      expect(f.snapshot().activeProposal).toBeNull();
+      expect(replaced.text).not.toBe("Untrusted preparation text");
+      if (replaced.proposal?.action === "execute_tool") {
+        expect(replaced.proposal.arguments).toEqual({ target: "different-target" });
+        expect(replaced.text).toBe(proposalPresentation(replaced.proposal).summary);
+      } else {
+        expect(replaced.proposal).toBeUndefined();
+        expect(replaced.text).toBe("Diese frühere Antwort ist nicht mehr verfügbar. Bitte stelle die Frage erneut.");
+      }
+      return;
+    }
+    expect(f.store.getSnapshot().sessionEpochs[f.id] ?? 0).toBe(epoch);
+    expect(f.store.getSnapshot().protectedPersistence?.state).toBe("saved");
+    expect(f.store.getSnapshot().workspace.activeId).toBe(newChat);
+    expect(f.store.getSnapshot().workspace.sessions).toHaveLength(2);
+    const actionSession = required(f.store.getSnapshot().workspace.sessions.find(session => session.id === f.id));
+    const receipt = required(actionSession.snapshot.messages[0]);
+    expect(receipt.model).toBeUndefined();
+    expect(receipt.proposal?.status).toBe("outcome_unknown");
+    expect(receipt.text).toBe(proposalPresentation(required(receipt.proposal)).summary);
+    expect(f.store.getSnapshot().workspace.sessions.find(session => session.id === newChat)?.snapshot.input).toBe("Draft in the next conversation");
+    expect(JSON.stringify(await f.service.load())).not.toContain("Synthetic model label");
+  });
+
 });
