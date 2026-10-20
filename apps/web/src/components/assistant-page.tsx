@@ -1095,7 +1095,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
                     <p>{compactPluginToolResult(pluginProposal.arguments, 800)}</p>
                     {pluginProposal.status === "pending" && <small>Vorbereitet durch: {pluginProposalView.preparationTitle} · Gültig bis {formatTime(pluginProposal.expiresAt)} Uhr</small>}
                     {pluginProposal.status === "pending" && <button className="button button--primary button--wide" data-proposal-confirm type="button" disabled={busy || activeProposal !== pluginProposal.id} onClick={() => { void confirm(pluginProposal); }}>
-                      {activeProposal === pluginProposal.id ? pluginProposalView.confirmLabel : "Vorschlag abgeschlossen oder ersetzt"}
+                      {activeProposal === pluginProposal.id ? pluginProposalView.confirmLabel : "Vor Bestätigung erneut prüfen"}
                       <Check size={16} aria-hidden="true" />
                     </button>}
                   </div>}
@@ -1107,7 +1107,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
                     {message.proposal.action === "cancel_booking" && message.proposal.status === "pending" && <p>Diese bestehende Buchung wird erst nach deiner Bestätigung storniert.</p>}
                     {message.proposal.status === "pending" && <small>Gültig bis {formatTime(message.proposal.expiresAt)} Uhr · Testumgebung</small>}
                     {message.proposal.status === "pending" && <button className="button button--primary button--wide" data-proposal-confirm type="button" disabled={busy || activeProposal !== message.proposal.id} onClick={() => { if (message.proposal) void confirm(message.proposal); }}>
-                      {activeProposal === message.proposal.id ? message.proposal.action === "cancel_booking" ? "Stornierung bestätigen" : "Buchung bestätigen" : message.proposal.action === "cancel_booking" ? "Stornierungsvorschlag abgeschlossen oder ersetzt" : "Vorschlag abgeschlossen oder ersetzt"}
+                      {activeProposal === message.proposal.id ? message.proposal.action === "cancel_booking" ? "Stornierung bestätigen" : "Buchung bestätigen" : "Vor Bestätigung erneut prüfen"}
                       <Check size={16} aria-hidden="true" />
                     </button>}
                   </div>}
