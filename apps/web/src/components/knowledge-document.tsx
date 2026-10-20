@@ -38,7 +38,9 @@ function DocumentReader({ documentId, revision, origin }: { documentId: string; 
   const [activeDocument, setActiveDocument] = useState<KnowledgeDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sourceDetailsOpen, setSourceDetailsOpen] = useState(false);
   const readerRef = useRef<HTMLElement>(null);
+  const restoreDetailsFocus = useRef(false);
   const [revalidationHeight, setRevalidationHeight] = useState<number | null>(null);
 
   useEffect(() => {
@@ -52,6 +54,7 @@ function DocumentReader({ documentId, revision, origin }: { documentId: string; 
       // Remove stale content during the rights check without collapsing the
       // reader and resetting the browser's current scroll position.
       setRevalidationHeight(readerRef.current?.getBoundingClientRect().height ?? null);
+      restoreDetailsFocus.current = readerRef.current?.querySelector(".knowledge-source-details > summary") === window.document.activeElement;
       setActiveDocument(null);
       setError(null);
       setLoading(true);
@@ -71,6 +74,7 @@ function DocumentReader({ documentId, revision, origin }: { documentId: string; 
         setActiveDocument(parsed);
       } catch {
         if (!requestCanUpdate(mounted, controller)) return;
+        restoreDetailsFocus.current = false;
         setError(UNAVAILABLE_MESSAGE);
       } finally {
         if (requestCanUpdate(mounted, controller) && activeController === controller) {
@@ -99,15 +103,22 @@ function DocumentReader({ documentId, revision, origin }: { documentId: string; 
     };
   }, [documentId, revision]);
 
+  useEffect(() => {
+    if (!activeDocument || !restoreDetailsFocus.current) return;
+    restoreDetailsFocus.current = false;
+    if (window.document.activeElement !== window.document.body) return;
+    readerRef.current?.querySelector<HTMLElement>(".knowledge-source-details > summary")?.focus({ preventScroll: true });
+  }, [activeDocument]);
+
   return <section ref={readerRef} className="knowledge-reader" aria-label="Wissensdokument" aria-busy={loading} style={{ overflowAnchor: "none", ...(loading && revalidationHeight !== null ? { minHeight: revalidationHeight } : {}) }}>
     <Link className="knowledge-back" href={knowledgeChatReturnHref(origin)}><ArrowLeft size={18} aria-hidden="true" /> {origin ? "Zurück zur Nachricht" : "Zum Chat"}</Link>
     {error ? <p className="knowledge-reader__status knowledge-reader__status--error" role="alert">{error}</p>
       : !activeDocument ? <p className="knowledge-reader__status" role="status">{loading ? "Dokument und Zugriffsrecht werden geprüft …" : UNAVAILABLE_MESSAGE}</p>
-        : <DocumentArticle document={activeDocument} />}
+        : <DocumentArticle document={activeDocument} detailsOpen={sourceDetailsOpen} onDetailsChange={setSourceDetailsOpen} />}
   </section>;
 }
 
-function DocumentArticle({ document }: { document: KnowledgeDocument }) {
+function DocumentArticle({ document, detailsOpen, onDetailsChange }: { document: KnowledgeDocument; detailsOpen: boolean; onDetailsChange: (open: boolean) => void }) {
   const synthetic = document.synthetic;
   const english = document.language === "en";
   const incident = document.incident;
@@ -127,20 +138,7 @@ function DocumentArticle({ document }: { document: KnowledgeDocument }) {
     </dl>
     <h1>{document.title}</h1>
 
-    {synthetic && <p className="knowledge-disclaimer">Dieser Text ist vollständig synthetisch. Er beschreibt keine tatsächlichen HsH-Dienste, Fristen oder Verfahren.</p>}
-    <dl className="knowledge-reader__facts knowledge-reader__facts--dates">
-      <div>
-        <dt>{document.acquisition ? (english ? "Indexed" : "Im Index aktualisiert") : (english ? "Updated" : "Aktualisiert")}</dt>
-        <dd><time dateTime={document.updatedAt}>{formatKnowledgeDate(document.updatedAt, document.language)}</time></dd>
-      </div>
-      <div>
-        <dt>{english ? "Retrieved" : "Abgerufen"}</dt>
-        <dd><time dateTime={document.fetchedAt}>{formatKnowledgeDate(document.fetchedAt, document.language)}</time></dd>
-      </div>
-    </dl>
-    {document.acquisition && <p className="knowledge-disclaimer">{english ? "Source updated: " : "Stand der Quelle: "}{document.acquisition.sourceUpdatedAt
-      ? <time dateTime={document.acquisition.sourceUpdatedAt}>{formatKnowledgeDate(document.acquisition.sourceUpdatedAt, document.language)}</time>
-      : (english ? "not provided by the source" : "von der Quelle nicht angegeben")}</p>}
+    {synthetic && <p className="knowledge-disclaimer">Synthetisches Beispiel. Keine Anleitung für echte HsH-Dienste.</p>}
     {incident && <aside className={`knowledge-reader__incident knowledge-reader__incident--${incident.status}`}>
       <strong>{incident.status === "active"
         ? (english ? "Active incident" : "Aktuelle Störung")
@@ -163,7 +161,24 @@ function DocumentArticle({ document }: { document: KnowledgeDocument }) {
     </section>}
 
     <footer>
-      <details className="knowledge-source-details"><summary>Quellendetails</summary><span>Quellenkennung</span><code>{document.citationId}</code></details>
+      <details className="knowledge-source-details" open={detailsOpen} onToggle={event => { onDetailsChange(event.currentTarget.open); }}>
+        <summary>Quellendetails</summary>
+        {synthetic && <p className="knowledge-disclaimer">Dieser Text ist vollständig synthetisch. Er beschreibt keine tatsächlichen HsH-Dienste, Fristen oder Verfahren.</p>}
+        <dl className="knowledge-reader__facts knowledge-reader__facts--dates">
+          <div>
+            <dt>{document.acquisition ? (english ? "Indexed" : "Im Index aktualisiert") : (english ? "Updated" : "Aktualisiert")}</dt>
+            <dd><time dateTime={document.updatedAt}>{formatKnowledgeDate(document.updatedAt, document.language)}</time></dd>
+          </div>
+          <div>
+            <dt>{english ? "Retrieved" : "Abgerufen"}</dt>
+            <dd><time dateTime={document.fetchedAt}>{formatKnowledgeDate(document.fetchedAt, document.language)}</time></dd>
+          </div>
+        </dl>
+        {document.acquisition && <p className="knowledge-disclaimer">{english ? "Source updated: " : "Stand der Quelle: "}{document.acquisition.sourceUpdatedAt
+          ? <time dateTime={document.acquisition.sourceUpdatedAt}>{formatKnowledgeDate(document.acquisition.sourceUpdatedAt, document.language)}</time>
+          : (english ? "not provided by the source" : "von der Quelle nicht angegeben")}</p>}
+        <span>Quellenkennung</span><code>{document.citationId}</code>
+      </details>
       {originalHref && <a className="knowledge-reader__original" href={originalHref} target="_blank" rel="noopener noreferrer">
         <ExternalLink size={16} aria-hidden="true" /> {english ? "Open authorized original" : "Autorisierte Originalquelle öffnen"}
       </a>}
