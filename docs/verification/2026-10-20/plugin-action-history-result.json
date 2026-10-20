@@ -1,0 +1,57 @@
+{
+  "date": "2026-10-20",
+  "baseline": "60e09d9f5f8403254d72998af2c81fafe0ef4199",
+  "syntheticOnly": true,
+  "realProviderCalls": 0,
+  "implementationSources": {
+    "apps/web/src/components/assistant-page.tsx": "c8e888f1075030220cb8ea479f6b2d2c07dfb08ce4e01a918d91f20402ef632a",
+    "apps/web/src/lib/chat-workspace-store.ts": "82fbcc66cf12b2b7cae22b582218f33c3ede63d970c471542b153155f77108b9",
+    "apps/web/tests/action-receipt-workspace.test.ts": "0551f40f2dd8f38600aca07317d06626e1b6ec7c7a72f92e34c5378f29ec1edd"
+  },
+  "referenceArtifacts": [
+    {
+      "pluginVersion": "1.0.0",
+      "sourceSha": "ee20a58d1dae8a3e5bb0e3c2e87103c24db53304",
+      "manifestDigest": "01038ec93bce8c02af0b3918911735348839ffe5a72b01de317c27d388851611",
+      "artifactSha256": "701c711f2ffd1a5eb22365f1467c8b1780ce1c5db0b6e42e6e727229af7f542c"
+    },
+    {
+      "pluginVersion": "1.0.1",
+      "sourceSha": "cc462a5d9d6076cb728a571d0020b8037ef82dde",
+      "manifestDigest": "0a50a7c4fd3ad3e3a25d8bab1c2d4366cfd302c3a2b3b64b6a7db8d6fed0806b",
+      "artifactSha256": "6f9f3a53cbf674ed45911699bb20ccfb6b5fcaf8aa8a9cf4d4b1b772d7e3d65d"
+    }
+  ],
+  "regression": {
+    "oldCodeRejectedValidCosmeticProjection": true,
+    "fixedCodePreservesNewChatAndDraft": true,
+    "changedTargetStillFenced": true,
+    "unverifiedHistoryStillRemoved": true
+  },
+  "browser": {
+    "earlierCandidateFoundUnsignedContextNotice": true,
+    "finalConversationConfirmedCardsVisible": 2,
+    "redactedTextVisible": false,
+    "authorityErrorVisible": false,
+    "interruptionVisible": false,
+    "newDraftSurvivedNavigation": true,
+    "confirmedCardsSurvivedReload": true,
+    "wholeFixtureModelCallsIncludingEarlierCandidate": 4,
+    "wholeFixtureExecuteRequests": 3,
+    "wholeFixtureBusinessEffects": 3,
+    "wholeFixtureSourceRows": 3,
+    "wholeFixtureJournalRows": 3,
+    "wholeFixtureDroppedConfirmedReplies": 1,
+    "finalFlowLostSdkAcknowledgementRecoveredAfterRestart": true,
+    "ownedCleanupExitCode": 0,
+    "callerDatabaseRetained": true
+  },
+  "limitations": {
+    "expiryRenewalRecoveryAccepted": false,
+    "managedPendingActionUpdateRollbackAccepted": false,
+    "fullMobileKeyboardLatencyAccepted": false,
+    "M2Accepted": false,
+    "M6Accepted": false,
+    "M7Accepted": false
+  }
+}

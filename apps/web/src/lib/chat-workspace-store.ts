@@ -102,7 +102,12 @@ function compatibleOwnProjection(before: ChatSnapshot, approved: ChatSnapshot): 
       && projected.tool === "Aktion · Aktueller Beleg" && projected.text === proposalPresentation(projected.proposal).summary
       && sameProposalDetails(message.proposal, projected.proposal)
       && forwardProposalStatus(message.proposal.status, projected.proposal.status)) {
-      const remaining = (value: typeof message) => Object.fromEntries(Object.entries(value).filter(([key]) => !["proposal", "text", "tool"].includes(key)));
+      // Generic action cards are reconstructed by the host, not model answers.
+      // Discard cosmetic model attribution with the rest of their presentation;
+      // every action-defining value and all other message fields still match.
+      const presentationFields = message.proposal.action === "execute_tool"
+        ? ["proposal", "text", "tool", "model"] : ["proposal", "text", "tool"];
+      const remaining = (value: typeof message) => Object.fromEntries(Object.entries(value).filter(([key]) => !presentationFields.includes(key)));
       if (JSON.stringify(remaining(message)) === JSON.stringify(remaining(projected))) {
         if (projected.proposal.status !== "pending") progressed.add(message.proposal.id);
         return projected;

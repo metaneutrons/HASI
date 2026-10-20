@@ -453,7 +453,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         const actualLabel = `${modelProviderName(reply.profile.provider)} · ${reply.profile.label}`;
         setFallbackLabel(reply.profile.id !== profileId ? actualLabel : null);
         if (reply.routingToken) routingToken.current = reply.routingToken;
-        if (reply.contextNotice) add({ role: "assistant", text: reply.contextNotice, tool: "Quellenrechte" });
+        if (reply.contextNotice) setInputNotice(reply.contextNotice);
         history.current.push(reply.message);
         if (reply.message.content.trim()) add({
           role: "assistant",
@@ -493,7 +493,6 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
                   text: `Der Vorschlag „${proposal.title}“ ist vorbereitet. Prüfe die angegebenen Daten; erst die gesonderte Bestätigung auf dieser Karte führt die Aktion aus.`,
                   tool: `Plugin · ${proposal.title}`,
                   proposal,
-                  model: actualLabel,
                 });
                 setActiveProposal(proposal.id);
                 actionableResult = true;
@@ -774,7 +773,6 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   async function confirmPluginProposal(proposal: PluginToolProposal) {
     const presentation = pluginToolProposalPresentation(proposal);
     const actionName = presentation.actionTitle;
-    const toolLabel = `Plugin · ${presentation.confirmLabel}`;
     if (activeProposal !== proposal.id || !start(`Plugin · ${presentation.confirmLabel}`)) return;
     let executionAttempted = false;
     const action = `Ich bestätige die angezeigte Aktion „${actionName}“ über die Schaltfläche.`;
@@ -797,7 +795,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
           : authoritative?.status === "confirmed"
             ? "Diese Aktion wurde bereits abgeschlossen."
             : "Der Vorschlag stimmt nicht mehr mit dem gespeicherten Stand überein oder ist nicht mehr offen. Bereite ihn erneut vor.";
-        addActionResult({ text: statusText, tool: toolLabel });
+        setInputNotice(statusText);
         return;
       }
       const rawResult = await postForChat<unknown>(`${proposalUrl}/confirm`, {}, () => { executionAttempted = true; });
@@ -811,7 +809,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         const text = confirmed?.status === "outcome_unknown"
           ? "Der Dienst konnte den Ausgang der Aktion nicht eindeutig bestätigen. Prüfe den aktuellen Stand, bevor du einen weiteren Vorschlag erstellst."
           : "Die Antwort stimmt nicht eindeutig mit der angezeigten Aktion überein. Prüfe den aktuellen Stand, bevor du erneut vorgehst.";
-        addActionResult({ text, tool: toolLabel });
+        setInputNotice(text);
       }
     } catch (cause) {
       const detail = cause instanceof Error ? cause.message : "Der Dienst hat nicht geantwortet.";
@@ -834,7 +832,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
           : disposition === "retry_preflight"
             ? `Der Vorschlag konnte vorab nicht geprüft werden und bleibt offen. Du kannst es erneut versuchen. ${detail}`
             : `Der Vorschlag konnte nicht vorab geprüft werden; eine Ausführung wurde nicht angefordert. ${detail}`;
-      addActionResult({ text, tool: toolLabel });
+      setInputNotice(text);
     } finally {
       await finish();
     }
