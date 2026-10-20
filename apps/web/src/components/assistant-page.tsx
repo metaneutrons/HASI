@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, MessageCircle, PanelLeft, Plus, Search, Sparkles, X } from "lucide-react";
+import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, MessageCircle, PanelLeft, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
+import { HasiIcon } from "@/components/hasi-icon";
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject, type SyntheticEvent } from "react";
 import { apiRequest, formatDateTime, formatTime } from "@/lib/api";
 import { classifyIntent, matchingResources, mergeRoomRequest, missingRoomDetails, requestStartDate, roomRequestSummary, workplaceGroupQuestion, workplaceOfficeTypeCounts, workplaceRefinementQuestion, type RoomRequest } from "@/lib/chat-demo";
@@ -957,7 +958,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         {!offline && <PersonalConnectionNotice />}
         {messages.length === 0 ? (
           <div className="chat-welcome">
-            <span className="chat-orb" aria-hidden="true"><Sparkles size={30} strokeWidth={1.3} /></span>
+            <span className="chat-orb" aria-hidden="true"><HasiIcon size={36} /></span>
             <p className="chat-greeting">Hallo {name}.</p>
             <h1>Was kann ich <br /><span>für dich tun?</span></h1>
             <p className="chat-intro">Eine Frage, ein Vorhaben, dein nächster Schritt.<br className="chat-desktop-break" /> Dein Hochschulalltag beginnt mit einem Gespräch.</p>
@@ -971,7 +972,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
               const serviceConnection = message.serviceConnection;
               return (
               <article key={message.id} className={`chat-message chat-message--${message.role}`} aria-label={message.role === "user" ? "Du" : "HASI"}>
-                <span className="chat-speaker">{message.role === "user" ? "Du" : <><Sparkles size={14} aria-hidden="true" /> HASI {message.model && <small>{message.model}</small>}</>}</span>
+                <span className="chat-speaker">{message.role === "user" ? "Du" : <><HasiIcon size={18} /> HASI {message.model && <small>{message.model}</small>}</>}</span>
                 <div className="chat-message-meta">{message.timestamp ? <time className="chat-message-time" dateTime={message.timestamp.createdAt} title="Servereingang · Europe/Berlin">{formatMessageTime(message.timestamp.createdAt)}</time> : <span className="chat-message-time">Zeitpunkt unbekannt</span>}<ChatMessageCopy message={message} /></div>
                 <div className="chat-message-body">
                   {message.tool && <span className="chat-tool-label"><Check size={13} aria-hidden="true" /> {message.tool}</span>}

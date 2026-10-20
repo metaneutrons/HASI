@@ -1,12 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="280" viewBox="0 0 1200 280" role="img" aria-labelledby="title desc">
-  <title id="title">HASI — Hochschule Hannover</title>
-  <desc id="desc">Das HASI-Markenzeichen der Hochschule Hannover mit dem Wortbild hasi.</desc>
-  <g transform="translate(170 76) scale(4)" fill="none" stroke="#d17a53" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d="M7 9.25A3.25 3.25 0 0 1 10.25 6h11.5A3.25 3.25 0 0 1 25 9.25v13.5A3.25 3.25 0 0 1 21.75 26h-11.5A3.25 3.25 0 0 1 7 22.75V9.25Z" />
-    <path d="M12 20V12m8 8v-4.2a3.8 3.8 0 0 0-7.6 0V20m-1.1-4h8" />
-    <circle cx="22.3" cy="9.7" r="2.2" fill="#d17a53" stroke="none" />
-  </g>
-  <text x="338" y="166" fill="#f1f0ec" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', sans-serif" font-size="96" font-weight="680" letter-spacing="-0.075em">hasi</text>
-  <path d="M625 89v102" stroke="#3a3f39" stroke-width="2" />
-  <text x="674" y="151" fill="#aeb1a9" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', sans-serif" font-size="30" font-weight="500" letter-spacing="0.075em">HOCHSCHULE HANNOVER</text>
+  <title id="title">HASI product identity</title>
+  <desc id="desc">The HASI dialogue mark and lowercase wordmark. Hochschule Hannover is shown separately as institutional attribution.</desc>
+  <g transform="translate(156 76) scale(1.3)" fill="none" stroke="#d17a53" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M27 14h39c11 0 18 7 18 18v25c0 11-7 18-18 18H49L31 89V75h-4C16 75 9 68 9 57V32c0-11 7-18 18-18Z" />
+  <path d="M32 61V25m0 24c0-8 5-13 13-13s13 5 13 14v11" />
+</g>
+  <text x="322" y="166" fill="#f1f0ec" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Display&quot;, &quot;SF Pro Text&quot;, &quot;Segoe UI&quot;, sans-serif" font-size="96" font-weight="680" letter-spacing="-0.075em">hasi</text>
+  <path d="M604 89v102" stroke="#3a3f39" stroke-width="2" />
+  <text x="650" y="151" fill="#aeb1a9" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Display&quot;, &quot;SF Pro Text&quot;, &quot;Segoe UI&quot;, sans-serif" font-size="28" font-weight="500" letter-spacing="0.075em">HOCHSCHULE HANNOVER</text>
 </svg>

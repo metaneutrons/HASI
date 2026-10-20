@@ -14,7 +14,7 @@
   },
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1 --port ${PORT:-3001}",
-    "build": "pnpm --filter @hasi/demo-runtime... run build && node --conditions=react-server --import tsx scripts/initialize-model-budget.ts --if-enabled && next build",
+    "build": "node --import tsx scripts/generate-brand-assets.ts --check && pnpm --filter @hasi/demo-runtime... run build && node --conditions=react-server --import tsx scripts/initialize-model-budget.ts --if-enabled && next build",
     "start": "next start --hostname 127.0.0.1 --port ${PORT:-3001}",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit"

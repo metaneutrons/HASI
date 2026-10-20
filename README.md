@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hasi-hero-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="docs/assets/hasi-hero-light.svg">
-    <img src="docs/assets/hasi-hero-light.svg" alt="hasi — Hochschule Hannover" width="1100">
+    <img src="docs/assets/hasi-hero-light.svg" alt="HASI dialog mark and wordmark; institution: Hochschule Hannover" width="1100">
   </picture>
 </h1>
 
@@ -16,6 +16,8 @@
 
 <p align="center"><strong>A chat-first campus assistant prototype.</strong><br>
 Ask questions, find rooms and prepare a simulated booking in one conversation.</p>
+
+The HASI dialog mark is a product identity; the institution is attributed separately. UI, chat headers, social preview and Apple icon share the geometry in `apps/web/src/lib/hasi-brand.ts`. README and favicon SVGs are generated from that source with `pnpm brand:generate`; `pnpm brand:check` verifies them and also runs before a web build.
 
 ## What works today
 
