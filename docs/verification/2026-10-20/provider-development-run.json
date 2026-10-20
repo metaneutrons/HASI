@@ -1,0 +1,319 @@
+{
+  "summary": {
+    "operatorDispatchId": "d1bf4bc2-c736-4362-bfd2-fb17cf9e5b44",
+    "runnerRunId": "f497fd19-7c92-4973-883a-175f4c7903bd",
+    "reportSha256": "8fab31cc28f3e019971bdc19c6fac1b2ee478ef664bfa5abb53250ea34d31876",
+    "startedAt": "2026-10-20T16:37:37.263Z",
+    "finishedAt": "2026-10-20T16:47:49.733Z",
+    "profiles": [
+      {
+        "profile": "groq-oss-120b",
+        "runs": 7,
+        "httpAttempts": 7,
+        "knownUsageRuns": 7,
+        "inputTokens": 10026,
+        "outputTokens": 852,
+        "estimatedCostUsd": 0.0020151,
+        "pricingBasis": [
+          "published"
+        ],
+        "latencyMedianMs": 645.91,
+        "latencyRangeMs": [
+          470.15,
+          731.44
+        ],
+        "literalOraclePassed": 6,
+        "failures": [
+          {
+            "case": "intra-02",
+            "assertions": [
+              "current-source-cited"
+            ]
+          }
+        ]
+      },
+      {
+        "profile": "groq-oss-20b",
+        "runs": 7,
+        "httpAttempts": 7,
+        "knownUsageRuns": 7,
+        "inputTokens": 10026,
+        "outputTokens": 770,
+        "estimatedCostUsd": 0.00098295,
+        "pricingBasis": [
+          "published"
+        ],
+        "latencyMedianMs": 557.27,
+        "latencyRangeMs": [
+          263.39,
+          746.84
+        ],
+        "literalOraclePassed": 7,
+        "failures": []
+      },
+      {
+        "profile": "groq-qwen-3.8-27b",
+        "runs": 7,
+        "httpAttempts": 7,
+        "knownUsageRuns": 7,
+        "inputTokens": 9919,
+        "outputTokens": 822,
+        "estimatedCostUsd": 0.0112232,
+        "pricingBasis": [
+          "published"
+        ],
+        "latencyMedianMs": 471.14,
+        "latencyRangeMs": [
+          441.04,
+          691.08
+        ],
+        "literalOraclePassed": 6,
+        "failures": [
+          {
+            "case": "sit-01",
+            "assertions": [
+              "current-source-cited"
+            ]
+          }
+        ]
+      },
+      {
+        "profile": "gwdg-qwen3-30b",
+        "runs": 7,
+        "httpAttempts": 7,
+        "knownUsageRuns": 7,
+        "inputTokens": 11783,
+        "outputTokens": 1168,
+        "estimatedCostUsd": 0.0140984,
+        "pricingBasis": [
+          "operator_estimate"
+        ],
+        "latencyMedianMs": 2552.3,
+        "latencyRangeMs": [
+          884.49,
+          9955.67
+        ],
+        "literalOraclePassed": 6,
+        "failures": [
+          {
+            "case": "sit-03",
+            "assertions": [
+              "current-source-cited"
+            ]
+          }
+        ]
+      },
+      {
+        "profile": "deepinfra-deepseek-v4.1-flash",
+        "runs": 7,
+        "httpAttempts": 7,
+        "knownUsageRuns": 7,
+        "inputTokens": 11648,
+        "outputTokens": 1011,
+        "estimatedCostUsd": 0.0029362,
+        "pricingBasis": [
+          "published"
+        ],
+        "latencyMedianMs": 2534.81,
+        "latencyRangeMs": [
+          1464.19,
+          14633.25
+        ],
+        "literalOraclePassed": 7,
+        "failures": []
+      }
+    ],
+    "knownEstimatedTotalUsd": 0.03125585,
+    "providerCalls": 35,
+    "limitations": [
+      "draft development corpus",
+      "answer-only fixed evidence; no tool execution",
+      "literal citation presence only; semantic quality requires human review",
+      "not gold, blind comparison or M6 acceptance",
+      "cache and resolved alias versions unknown"
+    ]
+  },
+  "configuration": {
+    "configurationDigestSha256": "70627c5be0361af8f4b3a625ae30e3010ad2c8b31506a27e58556102831d22ce",
+    "profiles": [
+      {
+        "id": "groq-oss-120b",
+        "provider": "groq",
+        "modelId": "openai/gpt-oss-120b",
+        "parameters": {
+          "temperature": 0.2,
+          "maxOutputTokens": 1536,
+          "timeoutMs": 20000,
+          "reasoningEffort": "low"
+        },
+        "capabilities": {
+          "tools": true
+        },
+        "allowedDataClasses": [
+          "synthetic_demo"
+        ],
+        "endpoint": {
+          "adapter": "groq",
+          "baseURL": "https://api.groq.com/openai/v1",
+          "api": "chat-completions"
+        },
+        "pricing": {
+          "provider": "groq",
+          "baseURL": "https://api.groq.com/openai/v1",
+          "modelId": "openai/gpt-oss-120b",
+          "inputMicroUsdPerMillion": 150000,
+          "outputMicroUsdPerMillion": 600000,
+          "basis": "published"
+        }
+      },
+      {
+        "id": "groq-oss-20b",
+        "provider": "groq",
+        "modelId": "openai/gpt-oss-20b",
+        "parameters": {
+          "temperature": 0.2,
+          "maxOutputTokens": 1536,
+          "timeoutMs": 20000,
+          "reasoningEffort": "low"
+        },
+        "capabilities": {
+          "tools": true
+        },
+        "allowedDataClasses": [
+          "synthetic_demo"
+        ],
+        "endpoint": {
+          "adapter": "groq",
+          "baseURL": "https://api.groq.com/openai/v1",
+          "api": "chat-completions"
+        },
+        "pricing": {
+          "provider": "groq",
+          "baseURL": "https://api.groq.com/openai/v1",
+          "modelId": "openai/gpt-oss-20b",
+          "inputMicroUsdPerMillion": 75000,
+          "outputMicroUsdPerMillion": 300000,
+          "basis": "published"
+        }
+      },
+      {
+        "id": "groq-qwen-3.8-27b",
+        "provider": "groq",
+        "modelId": "qwen/qwen3.8-27b",
+        "parameters": {
+          "temperature": 0.2,
+          "maxOutputTokens": 1536,
+          "timeoutMs": 20000,
+          "reasoningEffort": "none"
+        },
+        "capabilities": {
+          "tools": true
+        },
+        "allowedDataClasses": [
+          "synthetic_demo"
+        ],
+        "endpoint": {
+          "adapter": "groq",
+          "baseURL": "https://api.groq.com/openai/v1",
+          "api": "chat-completions"
+        },
+        "pricing": {
+          "provider": "groq",
+          "baseURL": "https://api.groq.com/openai/v1",
+          "modelId": "qwen/qwen3.8-27b",
+          "inputMicroUsdPerMillion": 800000,
+          "outputMicroUsdPerMillion": 4000000,
+          "basis": "published"
+        }
+      },
+      {
+        "id": "gwdg-qwen3-30b",
+        "provider": "gwdg",
+        "modelId": "qwen3-30b-a3b-instruct-2507",
+        "parameters": {
+          "temperature": 0.2,
+          "maxOutputTokens": 1536,
+          "timeoutMs": 45000
+        },
+        "capabilities": {
+          "tools": true
+        },
+        "allowedDataClasses": [
+          "synthetic_demo"
+        ],
+        "endpoint": {
+          "adapter": "openai-compatible",
+          "baseURL": "https://chat-ai.academiccloud.de/v1",
+          "api": "chat-completions"
+        },
+        "pricing": {
+          "provider": "gwdg",
+          "baseURL": "https://chat-ai.academiccloud.de/v1",
+          "modelId": "qwen3-30b-a3b-instruct-2507",
+          "inputMicroUsdPerMillion": 800000,
+          "outputMicroUsdPerMillion": 4000000,
+          "basis": "operator_estimate"
+        }
+      },
+      {
+        "id": "deepinfra-deepseek-v4.1-flash",
+        "provider": "deepinfra",
+        "modelId": "deepseek-ai/DeepSeek-V4.1-Flash",
+        "parameters": {
+          "temperature": 1,
+          "maxOutputTokens": 1536,
+          "timeoutMs": 45000
+        },
+        "capabilities": {
+          "tools": true
+        },
+        "allowedDataClasses": [
+          "synthetic_demo"
+        ],
+        "endpoint": {
+          "adapter": "openai-compatible",
+          "baseURL": "https://api.deepinfra.com/v1/openai",
+          "api": "chat-completions"
+        },
+        "pricing": {
+          "provider": "deepinfra",
+          "baseURL": "https://api.deepinfra.com/v1/openai",
+          "modelId": "deepseek-ai/DeepSeek-V4.1-Flash",
+          "inputMicroUsdPerMillion": 200000,
+          "outputMicroUsdPerMillion": 600000,
+          "basis": "published"
+        }
+      }
+    ],
+    "toolExecution": false,
+    "region": "not_observed",
+    "sourceRevision": "e15f88111e40ba60fcc82aa2ecd17a6eb19cc6a6"
+  },
+  "postRunSharedBudget": {
+    "servingRevision": "e15f88111e40ba60fcc82aa2ecd17a6eb19cc6a6",
+    "operatorImageId": "sha256:ca35c36f0332835888a4ba47462da7407621ea05b483a895d800692826b1db2e",
+    "operatorAndServingLedgerFingerprintMatch": true,
+    "budgetUnchanged": true,
+    "snapshot": {
+      "initialized": true,
+      "windowStart": 1792454400000,
+      "windowEnd": 1792540800000,
+      "inputTokensUsed": 102083,
+      "outputTokensUsed": 6984,
+      "microUsdUsed": 109618,
+      "inputTokenLimit": 1250000,
+      "outputTokenLimit": 250000,
+      "microUsdLimit": 1000000,
+      "reservationsInWindow": 43,
+      "unresolvedReservations": 1,
+      "unknownUsageReservations": 1,
+      "archivedUnknown": {
+        "microUsd": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "reservations": 0
+      }
+    },
+    "providerCalls": 0
+  }
+}
