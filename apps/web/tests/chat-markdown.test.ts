@@ -188,4 +188,56 @@ describe("chat Markdown renderer", () => {
     expect(html).not.toMatch(/<script|<img|<iframe|onerror=|javascript:|user:pass|tracker\.example/u);
     expect(html).toContain("<a href=\"https://safe.example/path\" target=\"_blank\" rel=\"noopener noreferrer\">safe</a>");
   });
+
+  it("lists only actually rendered authorized references below the answer, without duplicates", () => {
+    const unused = { ...citation, id: "svc-002", citationId: "knowledge:service_it:svc-002:1", title: "Unused result", number: 2 };
+    const origin = { sessionId: "6ba7b810-9dad-41d1-80b4-00c04fd430c8", messageId: "6ba7b810-9dad-41d1-80b4-00c04fd430c9" };
+    const html = renderToStaticMarkup(createElement(ChatMarkdown, {
+      source: `First ${token}, again ${token}.`, citations: [unused, citation], origin, showSources: true,
+    }));
+    expect(html.indexOf("Quellen dieser Antwort")).toBeGreaterThan(html.indexOf("again"));
+    expect(html).toContain('<ul class="');
+    expect(html).toContain('aria-label="Quellen dieser Antwort"');
+    expect(html).toContain('>[1] Demo: WLAN<br/>\n<small>Service IT · Demo · Fassung 1</small></a>');
+    expect(html).not.toContain("Unused result");
+    expect(html).not.toContain("svc-002");
+    expect((html.match(/href="\/sources\/svc-001\?revision=1&amp;chat=/gu) ?? []).length).toBe(3);
+    expect((html.match(/<li>/gu) ?? []).length).toBe(1);
+    expect(html).not.toContain('target="_blank"');
+  });
+
+  it("does not promote code, authored links, HTML, unavailable or GFM autolink tokens into answer references", () => {
+    const html = renderToStaticMarkup(createElement(ChatMarkdown, {
+      source: [
+        `\`${token}\``, "", "```text", token, "```", "",
+        `[${token}](https://example.org)`, "",
+        `https://example.org/${token}`, "",
+        `<div>\n${token}\n</div>`, "",
+        "[knowledge:service_it:svc-001:2]",
+      ].join("\n"), citations: [citation], showSources: true,
+    }));
+    expect(html).not.toContain("Quellen dieser Antwort");
+    expect(html).not.toContain('href="/sources/');
+    expect(html).toContain('aria-label="Quelle nicht zugeordnet"');
+  });
+
+  it("keeps the source list opt-in and omits it without a matching authorization map", () => {
+    const noList = renderToStaticMarkup(createElement(ChatMarkdown, { source: token, citations: [citation] }));
+    const noProof = renderToStaticMarkup(createElement(ChatMarkdown, { source: token, showSources: true }));
+    expect(noList).not.toContain("Quellen dieser Antwort");
+    expect(noProof).not.toContain("Quellen dieser Antwort");
+    expect(noProof).not.toContain('<a');
+  });
+
+  it("uses first-citation order in the appendix even when mappings have another order", () => {
+    const second = { ...citation, id: "svc-002", citationId: "knowledge:service_it:svc-002:1", title: "Second source", number: 2 };
+    const html = renderToStaticMarkup(createElement(ChatMarkdown, {
+      source: `| Source |\n| --- |\n| [${second.citationId}] |\n\nThen ${token}.`,
+      citations: [citation, second], showSources: true,
+    }));
+    const appendix = html.slice(html.indexOf('aria-label="Quellen dieser Antwort"'));
+    expect(appendix).toContain('>[2] Second source');
+    expect(appendix.indexOf('>[2] Second source')).toBeLessThan(appendix.indexOf('>[1] Demo: WLAN'));
+    expect((appendix.match(/<li>/gu) ?? []).length).toBe(2);
+  });
 });
