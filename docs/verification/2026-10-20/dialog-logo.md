@@ -57,3 +57,12 @@ admitted through `.dockerignore` and copied into the build stage; no other
 documentation, captures, research or credentials are admitted. The failure is
 retained as evidence, not described as a successful deployment. The follow-up
 pull request records runtime-image qualification and final automatic delivery.
+
+A scratch-stage export of the actual Docker context additionally verifies that
+its complete `docs/` file list is exactly the light and dark hero SVGs. Parent
+directory exceptions alone admit descendants in Docker patterns, so explicit
+child exclusions retain the narrow file allowlist. Rebuilding the complete
+runtime image with this final context policy succeeds with the same runtime
+image config digest. The running standalone image serves a byte-identical
+favicon plus the 180×180 Apple and 1200×630 Open Graph PNGs, without supplied
+provider credentials; the owned probe container is removed afterward.

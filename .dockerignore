@@ -18,7 +18,9 @@
 !scripts
 !scripts/**
 !docs
+docs/**
 !docs/assets
+docs/assets/**
 !docs/assets/hasi-hero-light.svg
 !docs/assets/hasi-hero-dark.svg
 
