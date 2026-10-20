@@ -13,6 +13,7 @@ COPY apps ./apps
 COPY packages ./packages
 COPY fixtures ./fixtures
 COPY scripts ./scripts
+COPY docs/assets/hasi-hero-light.svg docs/assets/hasi-hero-dark.svg ./docs/assets/
 
 RUN pnpm install --frozen-lockfile
 

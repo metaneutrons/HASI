@@ -17,6 +17,12 @@
 !fixtures/**
 !scripts
 !scripts/**
+!docs
+docs/**
+!docs/assets
+docs/assets/**
+!docs/assets/hasi-hero-light.svg
+!docs/assets/hasi-hero-dark.svg
 
 # Re-exclude local credentials, generated files, caches and non-build data even
 # beneath the directories re-included above.

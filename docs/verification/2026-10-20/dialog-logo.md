@@ -40,3 +40,29 @@ CI and deployment outcome. This visual change does not qualify an entire
 application or milestone. An existing protected Dialog-Demo greeting was
 redacted on autosave during inspection; that separate chat-history finding
 belongs to M2 and is not repaired by this identity change.
+
+## Container packaging follow-up
+
+PR #130 merged as `c2a4bba97f69dc99dc93807c31c9a99b400d33d6` after
+head/main CI passed, but Coolify deployment `ztw0rwgdjxl8td9xgguu9gdo`
+failed and the previous healthy application remained live. The new generator
+check needs the two README SVGs; the existing allowlisted Docker context and
+Dockerfile did not include them. This missing input was overlooked in the
+initial local Next-only build qualification.
+
+An actual Docker build using the previous Dockerfile reproduces exit 1 at the
+brand check and names both missing README assets. The corrected build stage
+succeeds in the pinned Node 24 Linux container. Only these two SVG files are
+admitted through `.dockerignore` and copied into the build stage; no other
+documentation, captures, research or credentials are admitted. The failure is
+retained as evidence, not described as a successful deployment. The follow-up
+pull request records runtime-image qualification and final automatic delivery.
+
+A scratch-stage export of the actual Docker context additionally verifies that
+its complete `docs/` file list is exactly the light and dark hero SVGs. Parent
+directory exceptions alone admit descendants in Docker patterns, so explicit
+child exclusions retain the narrow file allowlist. Rebuilding the complete
+runtime image with this final context policy succeeds with the same runtime
+image config digest. The running standalone image serves a byte-identical
+favicon plus the 180×180 Apple and 1200×630 Open Graph PNGs, without supplied
+provider credentials; the owned probe container is removed afterward.
