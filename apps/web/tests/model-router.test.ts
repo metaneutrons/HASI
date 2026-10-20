@@ -1777,3 +1777,37 @@ it("does not carry unrelated Anny schemas into a new clear knowledge question", 
   const sent = providerRequest(provider.calls[0]?.init);
   expect(providerToolNames(sent)).toEqual(["knowledge_search"]);
 });
+
+it("projects old native cycles out of a VPN turn and includes only host-resolved action status", async () => {
+  const proposalId = randomUUID();
+  const provider = fakeProvider(completion({ content: "VPN diagnostic answer" }));
+  const messages: ChatRequest["messages"] = [
+    { role: "user", content: "Ein Büro morgen in 1J" },
+    { role: "assistant", content: "", toolCalls: [{ id: "old-proposal", name: "anny_propose_booking", arguments: { resourceId: "desk", startDate: "2030-01-01T10:00:00Z", endDate: "2030-01-01T12:00:00Z" } }] },
+    { role: "tool", toolCallId: "old-proposal", name: "anny_propose_booking", content: JSON.stringify({ proposal: { id: proposalId, status: "pending", resourceName: "OLD_ROOM_PREVIEW" } }) },
+    { role: "user", content: "Mein VPN funktioniert nicht" },
+  ];
+  await runModelStep({ ...request(), proposalIds: [proposalId], messages }, {
+    env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW,
+    actionContext: [{ id: proposalId, status: "invalidated" }],
+    messageTimes: [NOW.toISOString(), null, null, NOW.toISOString()],
+  });
+  expect(provider.calls).toHaveLength(1);
+  const body = providerBodyText(requiredValue(provider.calls[0], "call").init);
+  expect(body).not.toContain("OLD_ROOM_PREVIEW");
+  const sent = providerRequest(requiredValue(provider.calls[0], "call").init);
+  expect(requiredMessages(sent).some(message => message.tool_calls?.length)).toBe(false);
+  expect(body).toContain(proposalId);
+  expect(body).toContain("invalidated");
+  expect(body).toContain("Mein VPN funktioniert nicht");
+  expect(messageContent(sent, 0)).toContain(`"position":2,"role":"user","serverReceivedAt":"${NOW.toISOString()}"`);
+  expect(JSON.stringify(messages[2])).toContain("OLD_ROOM_PREVIEW");
+});
+
+it("rejects client action statuses, duplicate or oversized action lookup lists", () => {
+  const proposalId = randomUUID();
+  expect(chatRequestSchema.safeParse({ ...request(), proposalIds: [proposalId] }).success).toBe(true);
+  expect(chatRequestSchema.safeParse({ ...request(), proposalIds: [proposalId, proposalId] }).success).toBe(false);
+  expect(chatRequestSchema.safeParse({ ...request(), proposalIds: Array.from({ length: 9 }, () => randomUUID()) }).success).toBe(false);
+  expect(chatRequestSchema.safeParse({ ...request(), actionContext: [{ id: proposalId, status: "confirmed" }] }).success).toBe(false);
+});

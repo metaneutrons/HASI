@@ -1,5 +1,7 @@
 "use client";
 
+import { asksForActionControls, currentActionControls } from "@/lib/chat-action-guidance";
+
 import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, MessageCircle, PanelLeft, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { HasiIcon } from "@/components/hasi-icon";
@@ -65,6 +67,17 @@ function canRequestCancellation(booking: Booking, now = Date.now()) {
 
 function roomIdentityKey(resource: Resource) {
   return `${resource.serviceId}:${resource.id}`;
+}
+
+/** Keep the explicit confirmation inside the chat viewport, including tall previews. */
+function revealProposalCard(container: HTMLDivElement, card: HTMLDivElement) {
+  const frame = container.getBoundingClientRect();
+  const preview = card.getBoundingClientRect();
+  const button = card.querySelector<HTMLButtonElement>("button[data-proposal-confirm]:not(:disabled)");
+  const offset = button && preview.height > container.clientHeight - 32
+    ? button.getBoundingClientRect().bottom - frame.bottom + 16
+    : preview.top - frame.top - 16;
+  container.scrollTo({ top: container.scrollTop + offset, behavior: "instant" });
 }
 
 const pluginAppsEnabled = process.env.NEXT_PUBLIC_HASI_PLUGIN_APPS === "1";
@@ -178,7 +191,8 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     };
   }, [active, composerFocus, sessionId]);
   const proposalCards = useRef(new Map<string, HTMLDivElement>());
-  const pendingProposalFocus = useRef<{ id: string; confirmation: boolean } | null>(null);
+  const actionHelpLocation = useRef<string | null>(null);
+  const pendingProposalFocus = useRef<{ id: string; confirmation: boolean; requested?: boolean } | null>(null);
   const inputId = useId();
   const messageClock = useRef<ReturnType<typeof createChatMessageClock> | null>(null);
   messageClock.current ??= createChatMessageClock(events => postForChat("/api/chat/timestamps", { messages: events }));
@@ -242,22 +256,13 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   }, [messages, input, profileId, request, roomContext, chosenRoom, activeResult, activeProposal, interrupted, busy, messagesTruncated, sessionId, onSnapshot]);
 
   useEffect(() => {
-    if (busy || !pendingProposalFocus.current) return;
-    const requested = pendingProposalFocus.current;
-    pendingProposalFocus.current = null;
-    const card = proposalCards.current.get(requested.id);
-    // Disabled/removed confirmation buttons lose focus. Restore it after the
-    // final render without interrupting a task switch or a user's newer focus.
-    if (!active || !card?.isConnected || !card.getClientRects().length || card.ownerDocument.activeElement !== card.ownerDocument.body) return;
-    const buttons = card.querySelectorAll<HTMLButtonElement>('button[data-proposal-confirm]');
-    const confirmation = buttons.length === 1 ? buttons.item(0) : null;
-    const target = requested.confirmation && confirmation && !confirmation.disabled ? confirmation : card;
-    target.focus({ preventScroll: true });
-  }, [active, busy, messages]);
-
-  useEffect(() => {
     const element = scroller.current;
     if (!active || !element) return;
+    const helpCard = actionHelpLocation.current ? proposalCards.current.get(actionHelpLocation.current) : undefined;
+    if (!busy && helpCard?.isConnected) {
+      revealProposalCard(element, helpCard);
+      return;
+    }
     const origin = knowledgeReturnLocation(window.location);
     if (origin?.sessionId === sessionId) {
       const message = element.ownerDocument.getElementById(`chat-${sessionId}-message-${origin.messageId}`);
@@ -271,6 +276,24 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     }
     element.scrollTo({ top: latestMessage || busy ? element.scrollHeight : 0, behavior: "instant" });
   }, [latestMessage, busy, active, sessionId]);
+
+  // Explicit action help takes scroll priority over following the newest message.
+  useEffect(() => {
+    if (busy || !pendingProposalFocus.current) return;
+    const requested = pendingProposalFocus.current;
+    pendingProposalFocus.current = null;
+    const card = proposalCards.current.get(requested.id);
+    // Disabled/removed confirmation buttons lose focus. Restore it after the
+    // final render without interrupting a task switch or a user's newer focus.
+    if (!active || !card?.isConnected || !card.getClientRects().length || !requested.requested && card.ownerDocument.activeElement !== card.ownerDocument.body) return;
+    const buttons = card.querySelectorAll<HTMLButtonElement>('button[data-proposal-confirm]');
+    const confirmation = buttons.length === 1 ? buttons.item(0) : null;
+    const target = requested.confirmation && confirmation && !confirmation.disabled ? confirmation : card;
+    const container = scroller.current;
+    if (requested.requested && container) revealProposalCard(container, card);
+    target.focus({ preventScroll: true });
+  }, [active, busy, messages]);
+
 
   async function requestForChat<T>(path: string, init: RequestInit = {}, onRequestStart?: () => void): Promise<T> {
     const signal = pendingRequest.current?.signal;
@@ -337,8 +360,8 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     return timestamps;
   }
 
-  function add(message: Omit<Message, "id">, messageId = id()) {
-    if (offline && message.role === "user") appendHistory(message.role, message.text, messageId);
+  function add(message: Omit<Message, "id">, messageId = id(), modelInput = true) {
+    if (modelInput && offline && message.role === "user") appendHistory(message.role, message.text, messageId);
     remember({ id: messageId, role: message.role, content: message.text, ...(message.timestamp ? { timestamp: message.timestamp } : {}) });
     if (messages.length >= 200) setMessagesTruncated(true);
     setMessages((previous) => [...previous.slice(-199), { ...message, id: messageId }]);
@@ -380,6 +403,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   function start(label: string) {
     if (lock.current) return false;
     lock.current = true;
+    actionHelpLocation.current = null;
     pendingRequest.current = new AbortController();
     setInterrupted(false);
     setBusy(true);
@@ -461,7 +485,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         await stampMessages();
         const response = await fetch("/api/chat", {
           method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ profileId, conversationId: sessionId, ...(routingToken.current ? { routingToken: routingToken.current } : {}), messages: history.current }), signal: controller.signal,
+          body: JSON.stringify({ profileId, conversationId: sessionId, ...(routingToken.current ? { routingToken: routingToken.current } : {}), proposalIds: [...new Set(messages.flatMap(message => message.proposal ? [message.proposal.id] : []))].slice(-8), messages: history.current }), signal: controller.signal,
         });
         const payload: unknown = await response.json().catch(() => ({ error: "Der Chat-Dienst ist gerade nicht erreichbar. Bitte versuche es später erneut." }));
         if (!response.ok) {
@@ -612,6 +636,26 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     setActiveProposal(null);
     try {
       await stampMessages();
+      const priorProposal = messages.findLast(message => message.proposal)?.proposal;
+      if (priorProposal && asksForActionControls(trimmed)) {
+        try {
+          const response = await requestForChat<unknown>(`/api/proposals/${encodeURIComponent(priorProposal.id)}`);
+          const controls = currentActionControls(priorProposal, response);
+          if (!controls) {
+            setInputNotice("Der Vorschlag hat sich geändert. Die frühere Karte kann nicht bestätigt werden; bereite einen neuen Vorschlag vor.");
+          } else {
+            const { proposal: current, confirmable } = controls;
+            updateProposalStatus(current.id, current.status);
+            setActiveProposal(confirmable ? current.id : null);
+            actionHelpLocation.current = current.id;
+            pendingProposalFocus.current = { id: current.id, confirmation: confirmable, requested: true };
+          }
+        } catch {
+          setInputNotice("Der aktuelle Aktionsstatus konnte nicht geprüft werden. Das beweist weder Erfolg noch Misserfolg. Prüfe den Status, bevor du die Aktion erneut vorbereitest.");
+        }
+        await hostNotice("action_controls_guidance");
+        return;
+      }
       if (/^(ja|ok(?:ay)?|bestätigen|buche(?:n)?|mach das)[.!\s]*$/i.test(trimmed) && pendingProposal) {
         setActiveProposal(pendingProposal);
         await hostNotice("confirmation_guidance");
@@ -802,8 +846,8 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     if (activeProposal !== proposal.id || !start(`Plugin · ${presentation.confirmLabel}`)) return;
     let executionAttempted = false;
     const action = `Ich bestätige die angezeigte Aktion „${actionName}“ über die Schaltfläche.`;
-    const eventId = add({ role: "user", text: action });
-    if (!offline) appendHistory("user", action, eventId);
+    // A UI attempt is visible, but is not a model statement of action success.
+    add({ role: "user", text: action }, id(), false);
     try {
       await stampMessages();
       const proposalUrl = `/api/proposals/${encodeURIComponent(proposal.id)}`;
@@ -875,8 +919,8 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     const action = cancellation
       ? `Ich bestätige die Stornierung der angezeigten Buchung für ${proposal.resourceName}, ${formatDateTime(proposal.startDate)} bis ${formatTime(proposal.endDate)} Uhr über die Schaltfläche.`
       : `Ich bestätige den angezeigten Buchungsvorschlag für ${proposal.resourceName}, ${formatDateTime(proposal.startDate)} bis ${formatTime(proposal.endDate)} Uhr über die Schaltfläche.`;
-    const eventId = add({ role: "user", text: action });
-    if (!offline) appendHistory("user", action, eventId);
+    // A UI attempt is visible, but is not a model statement of action success.
+    add({ role: "user", text: action }, id(), false);
     try {
       await stampMessages();
       const proposalUrl = `/api/proposals/${encodeURIComponent(proposal.id)}`;

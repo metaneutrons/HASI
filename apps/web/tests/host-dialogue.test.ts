@@ -556,3 +556,16 @@ describe("host dialogue endpoint", () => {
     expect(empty.resources).not.toHaveBeenCalled();
   });
 });
+
+it("issues only fixed display guidance for action controls and rejects client status claims", async () => {
+  const dependencies = baseDialogueDependencies();
+  const response = await handleHostDialoguePost(makeRequest({ kind: "static", conversationId: CONVERSATION_ID, code: "action_controls_guidance" }), dependencies);
+  expect(response.status).toBe(200);
+  const body = await response.json() as { message: HostDialogueMessage };
+  expect(body.message.text).toBe(staticHostDialogue.action_controls_guidance);
+  expect(body.message.hostDialogue.code).toBe("action_controls_guidance");
+  expect(dependencies.resources).not.toHaveBeenCalled();
+  expect(dependencies.bookingsEmpty).not.toHaveBeenCalled();
+  const forged = await handleHostDialoguePost(makeRequest({ kind: "static", conversationId: CONVERSATION_ID, code: "action_controls_guidance", status: "confirmed" }), dependencies);
+  expect(forged.status).toBe(400);
+});

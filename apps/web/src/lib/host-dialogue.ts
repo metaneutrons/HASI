@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const hostDialogueCodeSchema = z.enum([
-  "greeting", "capabilities", "request_retry", "confirmation_guidance", "bookings_empty",
+  "greeting", "capabilities", "request_retry", "confirmation_guidance", "action_controls_guidance", "bookings_empty",
   "room_group", "room_invalid", "room_refine", "room_unknown_office", "room_empty", "room_details",
 ]);
 export type HostDialogueCode = z.infer<typeof hostDialogueCodeSchema>;
@@ -28,6 +28,7 @@ export const staticHostDialogue = {
   greeting: "Hallo. Was möchtest du erledigen? Ich kann Räume suchen, Buchungen vorbereiten und deine Reservierungen anzeigen.",
   capabilities: "Ich kann in dieser Dialog-Demo Räume suchen und buchen sowie deine Buchungen anzeigen. Schreib zum Beispiel: „Morgen um 14 Uhr einen Raum für vier Personen für eine Stunde.“ Zu IT- und Intranet-Fragen kann ich außerdem freigegebene Quellen suchen.",
   request_retry: "Bitte versuche die Anfrage erneut. Bei einer begonnenen Buchung oder Stornierung prüfe zuerst den Aktionsstatus, bevor du eine neue Aktion vorbereitest.",
+  action_controls_guidance: "Buchen und Stornieren geht direkt hier in HASI. Prüfe die Vorschlagskarte und bestätige die Aktion dort. Ist die Bestätigung nicht mehr verfügbar, prüfe mit „Aktionsstatus prüfen“ den Stand. Bei einem abgelaufenen oder geänderten Vorschlag brauchst du einen neuen Vorschlag; bei unklarem Ausgang darf die Aktion nicht erneut ausgelöst werden.",
   confirmation_guidance: "Prüfe die Angaben auf der Vorschlagskarte und bestätige die Aktion dort ausdrücklich. Eine Chatnachricht ersetzt diese Bestätigung nicht.",
 } as const;
 export type StaticHostDialogueCode = keyof typeof staticHostDialogue;

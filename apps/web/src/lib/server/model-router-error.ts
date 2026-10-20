@@ -9,6 +9,7 @@ export type ModelRouterErrorCode =
   | "tools_unavailable"
   | "required_tools_unavailable"
   | "context_unavailable"
+  | "action_context_changed"
   | "budget_exhausted"
   | "budget_unavailable"
   | "budget_unpriced"

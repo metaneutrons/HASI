@@ -81,6 +81,9 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
     console.warn("HASI model request failed", JSON.stringify(cause instanceof ModelRouterError
       ? { code: cause.code, providerStatus: cause.providerStatus, ...(cause.diagnostics && Object.keys(cause.diagnostics).length ? { diagnostics: cause.diagnostics } : {}), ...(cause.rateLimits && Object.keys(cause.rateLimits).length ? { rateLimits: cause.rateLimits } : {}) }
       : { code: "unexpected_provider_failure" }));
+    if (cause instanceof ModelRouterError && cause.code === "action_context_changed") {
+      return error("Der Aktionsstatus hat sich während der Anfrage geändert oder ist nicht mehr prüfbar. Die Antwort wird deshalb nicht angezeigt. Prüfe zuerst „Aktionsstatus prüfen“ an der Vorschlagskarte; löse die Aktion nicht erneut aus.", 409);
+    }
     if (cause instanceof ModelRouterError && cause.code === "context_unavailable") {
       return error("Die Quellenrechte oder Dokumentfassungen haben sich geändert oder können nicht geprüft werden. Bitte suche erneut. Eine Antwort ohne aktuelle Quellenfreigabe wird nicht angezeigt.", 409);
     }

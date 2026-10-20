@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { modelToolContent, retainedAnnyResultIndices } from "../src/lib/chat-tool-context";
+import { modelToolContent, retainedAnnyResultIndices, projectNativeToolHistory } from "../src/lib/chat-tool-context";
 import type { WireMessage } from "../src/lib/chat-contract";
 import { required } from "./test-utils";
 
@@ -75,4 +75,53 @@ describe("provider-only tool context projection", () => {
     expect(projected).not.toContain("HOST_ONLY_SOURCE");
     expect(modelToolContent(dynamic, false)).toBe('{"historyDetailsOmitted":true,"requiresFreshRead":true}');
   });
+});
+
+describe("native history scope at a topic switch", () => {
+  it("removes native call/result pairs but retains knowledge, dynamic tools and text in a mixed batch", () => {
+    const history: WireMessage[] = [
+      { role: "user", content: "Morgen 10–12 in 1J" },
+      { role: "assistant", content: "Historical text", toolCalls: [
+        { id: "native", name: "anny_propose_booking", arguments: { resourceId: "r1", startDate: "2030-01-01T10:00:00Z", endDate: "2030-01-01T12:00:00Z" } },
+        { id: "external", name: "hasi_0123456789abcdef01234567", arguments: {} },
+        { id: "source", name: "knowledge_search", arguments: { query: "vpn" } },
+      ] },
+      { role: "tool", toolCallId: "native", name: "anny_propose_booking", content: "OLD_PENDING_ACTION" },
+      { role: "tool", toolCallId: "external", name: "hasi_0123456789abcdef01234567", content: "EXTERNAL_RESULT" },
+      { role: "tool", toolCallId: "source", name: "knowledge_search", content: "CURRENT_SOURCE" },
+      { role: "user", content: "Mein VPN funktioniert nicht" },
+    ];
+    const before = JSON.stringify(history);
+    const projected = projectNativeToolHistory(history, false);
+    expect(projected).toHaveLength(5);
+    expect(projected[1]).toMatchObject({ role: "assistant", content: "Historical text", toolCalls: [{ id: "external" }, { id: "source" }] });
+    expect(JSON.stringify(projected)).not.toContain("OLD_PENDING_ACTION");
+    expect(projected.at(-1)).toEqual(history.at(-1));
+    expect(JSON.stringify(history)).toBe(before);
+    expect(projectNativeToolHistory(history, true)).toEqual(projected);
+  });
+
+  it("omits empty native-only assistant messages and keeps ordinary assistant prose", () => {
+    const history: WireMessage[] = [
+      { role: "assistant", content: "", toolCalls: [{ id: "c1", name: "anny_list_my_bookings", arguments: {} }] },
+      { role: "tool", toolCallId: "c1", name: "anny_list_my_bookings", content: "old" },
+      { role: "assistant", content: "Text remains", toolCalls: [{ id: "c2", name: "anny_list_my_bookings", arguments: {} }] },
+      { role: "tool", toolCallId: "c2", name: "anny_list_my_bookings", content: "old" },
+    ];
+    expect(projectNativeToolHistory(history, false)).toEqual([{ role: "assistant", content: "Text remains" }]);
+  });
+});
+
+it("keeps room discovery and current-turn proposal cycles while omitting only historical proposal receipts", () => {
+  const search: WireMessage[] = [
+    { role: "user", content: "Ein Büro" },
+    { role: "assistant", content: "", toolCalls: [{ id: "search", name: "anny_search_resources", arguments: {} }] },
+    { role: "tool", toolCallId: "search", name: "anny_search_resources", content: "discovery" },
+    { role: "user", content: "Bereite es vor" },
+    { role: "assistant", content: "", toolCalls: [{ id: "proposal", name: "anny_propose_booking", arguments: {} }] },
+    { role: "tool", toolCallId: "proposal", name: "anny_propose_booking", content: "new proposal" },
+  ];
+  expect(projectNativeToolHistory(search, true)).toEqual(search);
+  const next = [...search, { role: "user" as const, content: "Ist es gebucht?" }];
+  expect(projectNativeToolHistory(next, true)).toEqual([...search.slice(0, 4), next.at(-1)]);
 });
