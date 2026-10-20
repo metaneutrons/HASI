@@ -1,3 +1,4 @@
+import { hostDialogueReceiptSchema, type HostDialogueReceipt } from "./host-dialogue";
 import { actionPreviewSchema, type ActionPreview } from "./action-preview";
 import { z } from "zod";
 import {
@@ -55,6 +56,7 @@ export interface ChatMessage {
   sources?: KnowledgeDocument[];
   sourceContextId?: string;
   evidence?: KnowledgeEvidence;
+  hostDialogue?: HostDialogueReceipt;
   proposal?: ChatProposal;
   bookings?: Booking[];
   confirmed?: boolean;
@@ -207,6 +209,7 @@ const chatMessageSchema = z.strictObject({
   sources: z.array(knowledgeDocumentSchema).max(5).optional(),
   sourceContextId: z.uuid().optional(),
   evidence: knowledgeEvidenceSchema.optional(),
+  hostDialogue: hostDialogueReceiptSchema.optional(),
   proposal: z.union([proposalSchema, pluginToolProposalSchema]).optional(),
   bookings: z.array(bookingSchema).max(10).optional(),
   confirmed: z.boolean().optional(),
@@ -215,7 +218,7 @@ const chatMessageSchema = z.strictObject({
   serviceConnection: z.strictObject({ installationId: z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/u), label: plainTextSchema(200), requestId: z.uuid() }).optional(),
 });
 
-const roomRequestSchema = z.strictObject({
+export const roomRequestSchema = z.strictObject({
   kind: z.enum(['workplace', 'meeting_room', 'lecture_hall', 'room']).optional(),
   officeType: z.enum(["single", "shared", "any"]).optional(),
   date: plainTextSchema(32).optional(),
@@ -433,7 +436,7 @@ function activeProposalIsUsable(
   );
 }
 
-function normalizeRoomRequest(request: z.infer<typeof roomRequestSchema>): RoomRequest {
+export function normalizeRoomRequest(request: z.infer<typeof roomRequestSchema>): RoomRequest {
   return {
     ...(request.kind === undefined ? {} : { kind: request.kind }),
     ...(request.officeType === undefined ? {} : { officeType: request.officeType }),
@@ -512,6 +515,7 @@ function normalizeChatMessage(message: z.infer<typeof chatMessageSchema>): ChatM
     ...(message.sources === undefined ? {} : { sources: message.sources }),
     ...(message.sourceContextId === undefined ? {} : { sourceContextId: message.sourceContextId }),
     ...(message.evidence === undefined ? {} : { evidence: message.evidence }),
+    ...(message.hostDialogue === undefined ? {} : { hostDialogue: message.hostDialogue }),
     ...(proposal === undefined ? {} : { proposal }),
     ...(message.bookings === undefined ? {} : { bookings: message.bookings }),
     ...(message.confirmed === undefined ? {} : { confirmed: message.confirmed }),

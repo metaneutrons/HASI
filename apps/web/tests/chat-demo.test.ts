@@ -382,6 +382,7 @@ describe("bounded German chat demo parser", () => {
     expect(classifyIntent("meine Buchungen anzeigen", false)).toBe("bookings");
     expect(classifyIntent("Wie richte ich eduroam ein?", false)).toBe("knowledge");
     expect(classifyIntent("Guten Morgen", false)).toBe("greeting");
+    expect(classifyIntent("Hallo HASI!", false)).toBe("greeting");
     expect(classifyIntent("morgen um 14 Uhr", true)).toBe("rooms");
     expect(classifyIntent("mit Beamer", true)).toBe("rooms");
     expect(classifyIntent("Erkläre mir das Intranet", true)).toBe("knowledge");

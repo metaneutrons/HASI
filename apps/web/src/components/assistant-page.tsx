@@ -5,7 +5,10 @@ import Link from "next/link";
 import { HasiIcon } from "@/components/hasi-icon";
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject, type SyntheticEvent } from "react";
 import { apiRequest, formatDateTime, formatTime } from "@/lib/api";
-import { classifyIntent, matchingResources, mergeRoomRequest, missingRoomDetails, requestStartDate, roomRequestSummary, workplaceGroupQuestion, workplaceOfficeTypeCounts, workplaceRefinementQuestion, type RoomRequest } from "@/lib/chat-demo";
+import { classifyIntent, mergeRoomRequest, requestStartDate, roomRequestSummary, type RoomRequest } from "@/lib/chat-demo";
+import { hostDialogueMessageSchema, staticHostDialogue, type HostDialogueMessage, type StaticHostDialogueCode } from "@/lib/host-dialogue";
+import { planRoomDialogue } from "@/lib/room-dialogue";
+import { parseRoomDialogueResponse } from "@/lib/host-dialogue-client";
 import type { Booking, Resource, TimeInterval, User } from "@/lib/types";
 import { useChatWorkspaceStore } from "@/components/chat-sidebar-context";
 import { useSession } from "@/components/session-provider";
@@ -114,6 +117,7 @@ function ChatWorkspace({ user }: { user: User }) {
 interface ConversationProps { composerFocus: RefObject<Map<string, ComposerSelection>>; sessionId: string; ownerId: string; name: string; initial: ChatSnapshot; active: boolean; configuration: ModelConfiguration; onSnapshot: (id: string, snapshot: ChatSnapshot, busy: boolean) => void; onDraft: (id: string, input: string) => void; onNewChat: () => void; newChatDisabled: boolean; onShowHistory: () => void }
 
 function Conversation({ composerFocus, sessionId, ownerId, name, initial, active, configuration, onSnapshot, onDraft, onNewChat, newChatDisabled, onShowHistory }: ConversationProps) {
+  const { mode } = useSession();
   const [messages, setMessages] = useState<Message[]>(initial.messages);
   const [input, setInput] = useState(initial.input);
   const [inputNotice, setInputNotice] = useState("");
@@ -306,7 +310,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   }
 
   function add(message: Omit<Message, "id">, messageId = id()) {
-    if (offline) appendHistory(message.role, message.text, messageId);
+    if (offline && message.role === "user") appendHistory(message.role, message.text, messageId);
     remember({ id: messageId, role: message.role, content: message.text, ...(message.timestamp ? { timestamp: message.timestamp } : {}) });
     if (messages.length >= 200) setMessagesTruncated(true);
     setMessages((previous) => [...previous.slice(-199), { ...message, id: messageId }]);
@@ -314,8 +318,27 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   }
 
   function addActionResult(message: Omit<Message, "id" | "role">) {
-    if (!offline) appendHistory("assistant", message.text);
+    // Host action UI is separate from model/source evidence.
     return add({ ...message, role: "assistant" });
+  }
+
+  function addHostMessage(message: HostDialogueMessage, resources: Resource[] = []) {
+    const { id, ...content } = message;
+    return add({ ...content, tool: "HASI · Dialoghinweis",
+      ...(resources.length ? { rooms: resources.map(resource => ({ resource, intervals: [], checked: false })) } : {}) }, id);
+  }
+
+  async function hostNotice(code: StaticHostDialogueCode) {
+    if (mode !== "oidc") return add({ role: "assistant", text: staticHostDialogue[code], tool: "HASI · Dialoghinweis" });
+    try {
+      const result = await postForChat<{ message: unknown }>("/api/chat/dialogue", { kind: "static", conversationId: sessionId, code });
+      const message = hostDialogueMessageSchema.parse(result.message);
+      if (message.hostDialogue.code !== code) throw new Error("Dialoghinweis passt nicht zur Anfrage.");
+      return addHostMessage(message);
+    } catch {
+      if (alive.current) setInputNotice("Der Dialoghinweis konnte nicht gespeichert werden. Bitte prüfe deine Verbindung und versuche die Anfrage erneut. Bei einer begonnenen Aktion prüfe zuerst den Aktionsstatus.");
+      return undefined;
+    }
   }
 
   function updateProposalStatus(proposalId: string, status: Proposal["status"]) {
@@ -505,48 +528,28 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   }
 
   async function searchRooms(next: RoomRequest, selected: Resource | null) {
-    const clarification = workplaceGroupQuestion(next);
-    if (clarification) { add({ role: 'assistant', text: clarification }); return; }
-    const missing = missingRoomDetails(next);
-    const invalid = Object.values(next).some((value) => value === "__invalid__" || (typeof value === "number" && value <= 0) || (Array.isArray(value) && value.includes("__invalid__")));
-    if (invalid) {
-      add({ role: "assistant", text: `Diese Angaben sind für die Dialog-Demo nicht eindeutig. Bitte präzisiere: ${missing.join(", ") || "Ausstattung oder Suchbegriff"}. Du kannst mit „neue Raumsuche“ auch von vorn beginnen.` });
-      return;
-    }
     setActivity("anny · Räume suchen");
-    const result = await requestForChat<{ resources: Resource[] }>("/api/resources");
-    const matches = matchingResources(result.resources, next).filter((resource) => !selected || resource.id === selected.id);
-    const refinement = selected ? null : workplaceRefinementQuestion(matches, next);
-    if (refinement) {
-      add({ role: "assistant", tool: "anny · Raumsuche", text: refinement.question });
-      return;
+    let response: ReturnType<typeof parseRoomDialogueResponse>;
+    if (mode === "oidc") {
+      response = parseRoomDialogueResponse(await postForChat<unknown>("/api/chat/dialogue", {
+        kind: "rooms", conversationId: sessionId, request: next,
+        ...(selected ? { selectedResourceId: selected.id } : {}),
+      }));
+    } else {
+      const preliminary = planRoomDialogue(next, [], selected?.id);
+      const catalog = preliminary.catalogDependent ? (await requestForChat<{ resources: Resource[] }>("/api/resources")).resources : [];
+      response = { plan: planRoomDialogue(next, catalog, selected?.id) };
     }
-    if (next.kind === "workplace" && next.officeType && next.officeType !== "any" && matches.length === 0) {
-      const unfilteredRequest = { ...next };
-      delete unfilteredRequest.officeType;
-      const unfiltered = matchingResources(result.resources, unfilteredRequest);
-      const unknown = workplaceOfficeTypeCounts(unfiltered).unknown;
-      if (unknown > 0) {
-        const requestedName = next.officeType === "single" ? "Einzelbüro/1er-Büro" : "geteiltes/2er-/3er-Büro";
-        add({
-          role: "assistant",
-          tool: "anny · Raumsuche",
-          text: `Kein Arbeitsplatz-Treffer ist ausdrücklich als ${requestedName} dokumentiert. Bei ${String(unknown)} weiteren Treffern ist der Bürotyp nicht dokumentiert; daraus folgt nicht, dass es dort keine passenden Büros gibt. Verfügbarkeit wurde nicht geprüft.`,
-        });
-        return;
-      }
-    }
-    const resources = matches.slice(0, 8);
-    if (!resources.length) {
-      add({ role: "assistant", tool: "anny · Raumsuche", text: "Für diese Anforderungen finde ich in den zugänglichen Testdaten keinen Raum. Du kannst eine neue Raumsuche beginnen und die Anforderungen ändern." });
+    const { plan, message } = response;
+    const resources = plan.resources;
+    if (!plan.needsAvailability) {
+      const resultId = message ? addHostMessage(message, resources) : add({ role: "assistant", text: plan.text,
+        tool: "HASI · Dialoghinweis", ...(resources.length ? { rooms: resources.map(resource => ({ resource, intervals: [], checked: false })) } : {}) });
+      setActiveResult(resources.length ? resultId : null);
       return;
     }
     const startDate = requestStartDate(next);
-    if (missing.length || !startDate || !next.durationMinutes) {
-      const resultId = add({ role: "assistant", tool: "anny · Ressourcen suchen", text: `${selected ? `Wir planen mit ${selected.name}.` : `${String(matches.length)} passende ${next.kind === 'workplace' ? 'Arbeitsplätze' : 'Ressourcen'} gefunden.${matches.length > resources.length ? ' Ich zeige die ersten acht; mit einem Büronamen oder Standort kannst du eingrenzen.' : ''}`} Für die Verfügbarkeitsprüfung brauche ich noch: ${missing.join(", ") || "ein gültiges Datum und eine gültige Startzeit"}. Antworte einfach hier im Chat, zum Beispiel „morgen um 14 Uhr für eine Stunde“.`, rooms: resources.map((resource) => ({ resource, intervals: [], checked: false })) });
-      setActiveResult(resultId);
-      return;
-    }
+    if (!startDate || !next.durationMinutes) throw new Error("Bitte präzisiere Datum, Uhrzeit und Dauer.");
     setActivity("anny · Verfügbarkeit prüfen");
     const requestedEndDate = new Date(Date.parse(startDate) + next.durationMinutes * 60_000).toISOString();
     const options = await Promise.all(resources.map(async (resource) => {
@@ -576,16 +579,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       await stampMessages();
       if (/^(ja|ok(?:ay)?|bestätigen|buche(?:n)?|mach das)[.!\s]*$/i.test(trimmed) && pendingProposal) {
         setActiveProposal(pendingProposal);
-        const proposal = messages.find((message) => message.proposal?.id === pendingProposal)?.proposal;
-        const text = proposal?.action === "execute_tool"
-          ? `Bitte prüfe „${pluginToolProposalPresentation(proposal).actionTitle}“ auf der Vorschlagskarte und bestätige die Aktion dort ausdrücklich.`
-          : proposal?.action === "cancel_booking"
-          ? "Bitte prüfe die Buchung im Stornierungsvorschlag und nutze dort „Stornierung bestätigen“. Erst dieser Schritt löst die Stornierung aus."
-          : "Bitte prüfe Raum und Zeitraum im Buchungsvorschlag und nutze dort „Buchung bestätigen“. Erst dieser Schritt löst die Buchung aus.";
-        if (!offline) {
-          appendHistory("assistant", text);
-        }
-        add({ role: "assistant", text });
+        await hostNotice("confirmation_guidance");
         return;
       }
       if (!offline) {
@@ -624,8 +618,11 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         await runModel();
         return;
       }
+      const received = history.current.find(message => message.id === eventId)?.timestamp;
+      if (!received) throw new Error("Der Anfragezeitpunkt konnte nicht bestätigt werden. Bitte versuche es erneut.");
+      const requestTime = new Date(received.createdAt);
       const cancellationIntent = /\b(?:storn\w*|kündig\w*|cancel\w*|annull\w*)\b/iu.test(trimmed);
-      const refinedRequest = roomContext && request.kind === "workplace" ? mergeRoomRequest(trimmed, request) : null;
+      const refinedRequest = roomContext && request.kind === "workplace" ? mergeRoomRequest(trimmed, request, requestTime) : null;
       const officeRefinementReply = refinedRequest !== null
         && refinedRequest.officeType !== request.officeType
         && refinedRequest.officeType !== undefined;
@@ -636,7 +633,12 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         const text = cancellationIntent
           ? result.bookings.length ? "Hier sind deine eigenen Buchungen. Bei einer aktiven zukünftigen Buchung kannst du eine Stornierung beginnen; ausgeführt wird sie erst nach Prüfung und Bestätigung auf der Vorschlagskarte." : "Du hast in der Testumgebung keine eigenen Buchungen, die du stornieren kannst."
           : result.bookings.length ? "Hier sind deine Buchungen aus der Testumgebung." : "Du hast in der Testumgebung noch keine Testbuchungen. Soll ich einen Raum für dich suchen?";
-        add({ role: "assistant", tool: "anny · Eigene Buchungen", text, bookings: result.bookings });
+        if (result.bookings.length === 0 && mode === "oidc") {
+          const empty = await postForChat<{ message: unknown }>("/api/chat/dialogue", { kind: "bookings_empty", conversationId: sessionId });
+          const message = hostDialogueMessageSchema.parse(empty.message);
+          if (message.hostDialogue.code !== "bookings_empty") throw new Error("Unerwarteter Buchungshinweis.");
+          addHostMessage(message);
+        } else add({ role: "assistant", tool: "anny · Eigene Buchungen", text, bookings: result.bookings });
         setRoomContext(false);
       } else if (intent === "knowledge") {
         setRoomContext(false);
@@ -645,7 +647,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         add({ role: "assistant", text: result.documents.length ? "Diese synthetischen Dokumente passen zu deiner Frage. In der Dialog-Demo kannst du die Quellen lesen; für eine formulierte Antwort wähle ein Sprachmodell." : "Keine passenden, für dein Testkonto freigegebenen Demoquellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents });
       } else if (intent === "rooms") {
         const reset = !roomContext || /(?:neue|andere)\s+(?:raum)?suche|(?:anderen|neuen)\s+raum|von vorne/i.test(trimmed);
-        const next = mergeRoomRequest(trimmed, reset ? {} : request);
+        const next = mergeRoomRequest(trimmed, reset ? {} : request, requestTime);
         const selected = reset || next.query !== request.query ? null : chosenRoom;
         if (!selected) setChosenRoom(null);
         updateRequest(next);
@@ -653,10 +655,11 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         await searchRooms(next, selected);
       } else {
         setRoomContext(false);
-        add({ role: "assistant", text: intent === "greeting" ? `Hallo ${name}. Was möchtest du erledigen? Ich kann in dieser Demo Räume suchen, Buchungen vorbereiten und deine Reservierungen anzeigen.` : "Ich kann in dieser Dialog-Demo Räume suchen und buchen sowie deine Buchungen anzeigen. Schreib zum Beispiel: „Morgen um 14 Uhr einen Raum für vier Personen für eine Stunde.“ Zu IT- und Intranet-Fragen kann ich außerdem synthetische Demoquellen suchen." });
+        await hostNotice(intent === "greeting" ? "greeting" : "capabilities");
       }
     } catch (cause) {
-      add({ role: "assistant", text: cause instanceof Error ? cause.message : "Die Anfrage konnte nicht abgeschlossen werden. Bitte versuche es erneut." });
+      setInputNotice(cause instanceof Error ? cause.message : "Die Anfrage konnte nicht abgeschlossen werden. Bitte versuche es erneut.");
+      await hostNotice("request_retry");
     } finally {
       await finish();
     }
