@@ -20,7 +20,7 @@ describe("native history reconstruction", () => {
   it("only GETs pinned authenticated read paths and refetches on each workspace read", async () => {
     const core = vi.mocked(protectedCoreRequest).mockImplementation(path => Promise.resolve(Response.json(path === "/api/resources" ? { resources: [resource], _hasi: {} } : { bookings: [booking] })));
     const resolve = productionNativeHistoryResolver(request);
-    expect(await resolve(workspace())).toEqual({ resources: [resource], bookings: [booking], proposals: new Map() });
+    expect(await resolve(workspace())).toEqual({ resources: [resource], resourcesAvailable: true, bookings: [booking], proposals: new Map() });
     expect(core.mock.calls.map(([path, original, method]) => [path, original === request, method])).toEqual([
       ["/api/resources", true, "GET"], ["/api/bookings", true, "GET"],
     ]);

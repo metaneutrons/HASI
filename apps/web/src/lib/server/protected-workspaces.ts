@@ -11,6 +11,7 @@ import {
   type ChatWorkspace,
 } from "../chat-sessions";
 import type { NativeHistoryAccess, NativeHistoryResolver } from "./native-history";
+import { createHostDialogueSigner } from "./host-dialogue";
 import { proposalPresentation } from "../proposal-presentation";
 import { knowledgeDocumentSchema, type KnowledgeDocument } from "../knowledge";
 import type { KnowledgeEvidence, WireMessage } from "../chat-contract";
@@ -156,6 +157,7 @@ function sanitizeDisplayMessages(
   history: readonly WireMessage[],
   contexts: ReadonlyMap<string, SafeResolvedContext>,
   native: NativeHistoryAccess,
+  verifyHost: (message: ChatMessage) => ChatMessage | undefined,
 ): ChatMessage[] {
   const validWireMessages = validModelWireMessages(history);
   return messages.map((message) => {
@@ -164,6 +166,7 @@ function sanitizeDisplayMessages(
         ...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }) };
     }
 
+    if (message.hostDialogue !== undefined) return verifyHost(message) ?? unavailableMessage(message);
     const contextId = message.sourceContextId;
     if (message.sources !== undefined || contextId !== undefined) {
       const context = contextId ? contexts.get(contextId) : undefined;
@@ -239,6 +242,7 @@ export class ProtectedWorkspaceStore {
   private readonly clock: () => number;
   private readonly signer: ReturnType<typeof createKnowledgeEvidence>;
   private readonly key: Buffer;
+  private readonly hostSigner: ReturnType<typeof createHostDialogueSigner>;
 
   constructor(private readonly options: ProtectedWorkspaceOptions) {
     if (!options.ownerId || options.ownerId.length > 256 || !options.scope || options.scope.length > 512 || !options.secret) {
@@ -246,6 +250,7 @@ export class ProtectedWorkspaceStore {
     }
     this.clock = options.clock ?? Date.now;
     this.signer = createKnowledgeEvidence(options.secret, options.scope, this.clock);
+    this.hostSigner = createHostDialogueSigner(options.secret, options.scope, this.clock);
     this.key = Buffer.from(hkdfSync(
       "sha256",
       Buffer.from(options.secret, "utf8"),
@@ -396,7 +401,21 @@ export class ProtectedWorkspaceStore {
         snapshot: {
           ...snapshot,
           history,
-          messages: sanitizeDisplayMessages(snapshot.messages, history, resolved, native),
+          messages: sanitizeDisplayMessages(snapshot.messages, history, resolved, native, message => {
+            // A display receipt never carries model/source/action authority. The
+            // server reconstructs any candidate cards from its current catalogue.
+            if (message.evidence || message.sources || message.sourceContextId || message.proposal || message.bookings
+              || message.confirmed || message.model || message.serviceConnection) return undefined;
+            const verified = this.hostSigner.verify(session.id, { id: message.id, role: message.role, text: message.text,
+              hostDialogue: message.hostDialogue }, { authorityDigest: authority ?? "", resources: native.resources,
+              ...(native.resourcesAvailable === undefined ? {} : { resourcesAvailable: native.resourcesAvailable }) });
+            if (!verified) return undefined;
+            const rooms = verified.hostDialogue.resourceIds.map(id => native.resources.find(resource => resource.id === id));
+            if (rooms.some(resource => !resource)) return undefined;
+            return { ...verified, tool: "HASI · Dialoghinweis",
+              ...(rooms.length ? { rooms: rooms.flatMap(resource => resource ? [{ resource, intervals: [], checked: false }] : []) } : {}),
+              ...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }) };
+          }),
           chosenRoom: native.resources.find(resource => resource.id === snapshot.chosenRoom?.id) ?? null,
           activeProposal: snapshot.activeProposal && native.proposals.has(snapshot.activeProposal) ? snapshot.activeProposal : null,
         },

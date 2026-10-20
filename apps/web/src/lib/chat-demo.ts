@@ -385,6 +385,7 @@ function parseQuery(text: string): string | undefined {
   let residual = text;
   const patterns = [
     /\b(?:neue|andere)\s+(?:raum)?suche\b/giu,
+    /\b(?:ist|sind)\s+(?:(?:mir|uns)\s+)?(?:egal|gleich)\b/giu,
     new RegExp(OFFICE_TYPE_QUERY_PATTERN.source, OFFICE_TYPE_QUERY_PATTERN.flags),
     /\b(?:\d+|ein(?:e|en|em|er)?|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s+(?:arbeitsplätz(?:e|en)|arbeitsplaetz(?:e|en)|schreibtisch(?:e|en)|desks?)\b/giu,
     /\b(?:arbeitsplätz(?:e|en)?|arbeitsplatz|schreibtisch(?:e|en)?|büros?|bueros?|büroraum|büroräume|bueroraum|bueroraeume|flex[-\s]?büros?|flex[-\s]?bueros?|desks?|besprechungsräum(?:e|en)|besprechungsraum|meetingräum(?:e|en)|meetingraum|hörsäle|hörsaal|hoersaele|hoersaal)\b/giu,
@@ -422,7 +423,7 @@ function parseOfficeType(text: string): OfficeType | undefined {
   const single = matchesUnnegated(normalized, SINGLE_OFFICE_PATTERN);
   const shared = matchesUnnegated(normalized, SHARED_OFFICE_PATTERN);
   const any = matchesUnnegated(normalized, ANY_OFFICE_PATTERN);
-  if (any && !single && !shared) return "any";
+  if (any && single === shared) return "any";
   if (single === shared) return undefined;
   return single ? "single" : "shared";
 }
@@ -490,7 +491,7 @@ export function classifyIntent(text: string, hasRoomContext: boolean): "rooms" |
   const knowledgeTerms = /\b(?:eduroam|wlan|vpn|intranet|service[-\s]*it|it[-\s]*service|passwort|multifaktor|mfa|account|zugangsdaten|softwareportal|zeiterfassung|urlaub|fortbildung|bibliothek|campuscard)\b/iu;
   if (knowledgeTerms.test(normalized)) return "knowledge";
 
-  const greetingOnly = /^(?:(?:hallo|hi|hey|guten\s+(?:morgen|tag|abend)|moin|servus|gruss\s+gott)[!,.:;\s]*)+$/iu.test(normalized);
+  const greetingOnly = /^(?:(?:hallo|hi|hey|guten\s+(?:morgen|tag|abend)|moin|servus|gruss\s+gott)[!,.:;\s]*)+(?:hasi[!,.:;\s]*)?$/iu.test(normalized);
   if (greetingOnly) return "greeting";
 
   if (hasRoomContext) {
