@@ -44,6 +44,13 @@ and Markdown hard breaks survive sending and storage. Messages are limited to
 4,000 characters; an oversized paste is rejected without truncating the draft.
 Raw HTML and remote images are not rendered or fetched.
 
+Knowledge answers show numbered source links matching their cards, with title,
+source and revision. Links open the authorized reader in the same tab; **Zurück
+zur Nachricht** and browser Back restore the originating chat/message and draft.
+Unmatched source tokens are marked as unassigned; IDs remain in collapsed reader
+details and the original Markdown source. Evidence selection never grants source
+access. See [the bounded UX checks](docs/verification/2026-10-20/knowledge-link-ux.md).
+
 ## Run locally
 
 Requires Node.js 24 or 26 and pnpm 12.11.2.

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { WorkspaceShell } from "@/components/app-shell";
 import { KnowledgeDocumentPage } from "@/components/knowledge-document";
 import { knowledgeDocumentId } from "@/lib/knowledge";
+import { knowledgeOrigin } from "@/lib/knowledge-navigation";
 
 export default async function SourcePage({
   params,
@@ -19,5 +20,6 @@ export default async function SourcePage({
   const revision = revisionValue === undefined ? undefined : Number(revisionValue);
   if (revision !== undefined && !Number.isSafeInteger(revision)) notFound();
 
-  return <WorkspaceShell><KnowledgeDocumentPage documentId={result.data} {...(revision === undefined ? {} : { revision })} /></WorkspaceShell>;
+  const origin = knowledgeOrigin(query.chat, query.message);
+  return <WorkspaceShell><KnowledgeDocumentPage documentId={result.data} {...(revision === undefined ? {} : { revision })} {...(origin ? { origin } : {})} /></WorkspaceShell>;
 }

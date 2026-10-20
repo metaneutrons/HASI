@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-20",
+  "scope": "Local synthetic knowledge-link presentation and return navigation; not full M2/M7 or real-device acceptance",
+  "sourceDigests": {
+    "apps/web/src/lib/chat-knowledge-citations.ts": "46f6c5424c1440975caa30b3b100343d45bc7b391a56b435d4d8078609ae73fe",
+    "apps/web/src/lib/knowledge-citations.ts": "af3afe27a6337c3fb30a11bc3e5953299ed5f4abaad34af6af3b20607658158e",
+    "apps/web/src/lib/knowledge-navigation.ts": "1f01b08c544bfb6ed9f50ea41143c4a7fef9418dacf46a1b28db6f2baebdca33",
+    "apps/web/src/components/chat-markdown.tsx": "461e62215fab2ca6afa855850a14b044f1007b36a7a8fceb57db53fe422201c9",
+    "apps/web/src/components/chat-markdown.module.css": "25e8d99a66c98986c45a872cbf138fba324d5487ad86bccb22f4569b11c85761",
+    "apps/web/src/components/assistant-page.tsx": "c2b6befd12a34c2d2dd408edbf45c8bff3d1b79dd80077dd169e4f1123002b73",
+    "apps/web/src/components/knowledge-document.tsx": "36e9b44afeef320cb800e225b94eaf41b8da18ff9df29ec48e0a6f35fc69c5b8",
+    "apps/web/src/app/sources/[id]/page.tsx": "b0a80ca252563b630a9e7430ad2f542fe6b99e0724e61c93151bd463a1740e34",
+    "apps/web/src/app/globals.css": "460251bd668c23964c7309c4bf49c25936d1bd3a68e8f71dc5402e16f21fa67e",
+    "apps/web/tests/chat-markdown.test.ts": "32f1a32066d63d02e074f71c91a161ea48fcd3d85a06b60874299ff6a78686a6",
+    "apps/web/tests/knowledge-citations.test.ts": "13839dc31eff376bfcf44484f18700c670acefb1825b7930901ebbe691cc021e",
+    "apps/web/tests/chat-knowledge-citations.test.ts": "ed978be37740f51c5d14b0177a6d579ad0fe91299315f44430c7de512a9f1b1a",
+    "apps/web/tests/knowledge-navigation.test.ts": "e93f49f0bbd95d30e1a49d494bbc6b80424c7d3b12240cc8b24165a49f273ce4"
+  },
+  "screenshots": {
+    "docs/verification/2026-10-20/assets/knowledge-links-390-dark.jpg": "34b19116490ef67af577d4e0cf05aed213b23427f1f89987d260b19de054fdeb",
+    "docs/verification/2026-10-20/assets/knowledge-reader-320-light.jpg": "d341431783f7e9b535642224ca18e8a085a9225958afd44948ca6a98b243dc60"
+  },
+  "validation": {
+    "focusedTests": {
+      "passed": 26,
+      "files": 6,
+      "exitCode": 0
+    },
+    "webLint": "pass",
+    "rootAndWebTypes": "pass",
+    "productionWebBuild": "pass",
+    "realProviderCalls": 0,
+    "independentReview": "No blocker in bounded source review; browser observations were not independently repeated."
+  },
+  "browser": {
+    "environment": "loopback local multi-process prototype, synthetic employee persona, explicit offline Dialog-Demo; in-app desktop browser viewport overrides",
+    "chat390Dark": {
+      "horizontalOverflow": false,
+      "cardWidths": [
+        358,
+        358,
+        358
+      ],
+      "cardHeights": [
+        78,
+        99,
+        78
+      ],
+      "newTabTargets": false,
+      "opaqueCitationIdsInCards": false
+    },
+    "reader320Light": {
+      "horizontalOverflow": false,
+      "readerWidth": 320,
+      "sourceDetailsInitiallyCollapsed": true
+    },
+    "navigation": [
+      "source card -> same-tab revision-specific reader",
+      "reader return -> same conversation and focused source message",
+      "browser Back -> same focused source message and retained unsent draft"
+    ],
+    "counterprobe": {
+      "input": "revision=999999 for the otherwise valid source route",
+      "observed": "unavailable message, zero visible document bodies, return-to-message still available"
+    },
+    "cleanup": {
+      "viewportOverride": "reset",
+      "theme": "restored to initial dark",
+      "agentCreatedTab": "closed",
+      "localLauncherExitCode": 0,
+      "loopbackListeners": "none after stop"
+    }
+  },
+  "limitations": [
+    "Inline generated citations are covered by server-rendered component positive/counter tests, not a live-provider conversation in this browser journey.",
+    "Coarse-pointer inline targets are implemented as real44px boxes; no physical touch-device qualification.",
+    "Current document authorization/revision and protected-history revalidation remain server-owned and unchanged.",
+    "Full current-candidate CI/merge/deployment and local UI<=200ms qualification remain separate.",
+    "The browser journey preceded the final guard that preserves focus when a user has already focused another control during route loading; exact-candidate CI remains required."
+  ]
+}
