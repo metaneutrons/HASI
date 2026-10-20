@@ -22,6 +22,12 @@ import { DemoPluginAccountAdapter } from '../packages/demo-runtime/src/plugin-ac
 import { packageReferencePlugin, ReferencePackagingCommandError, type ReferencePluginArtifactEvidence } from './package-reference-plugin.js';
 import { startJourneyModel } from './plugin-journey-model.js';
 import { startJourneyReferenceProxy } from './plugin-journey-proxy.js';
+import { ProductionAuthorityDirectory } from '../apps/api/src/production-runtime.js';
+import { PluginSettingsStore } from '../apps/api/src/plugin-settings.js';
+import { PluginRouteController } from '../apps/api/src/plugin-route-controller.js';
+import { PluginDeploymentBinding } from '../apps/api/src/plugin-deployment-binding.js';
+import { createManagedPluginContractClient, createManagedPluginRpcClient } from '../apps/api/src/managed-plugin-rpc.js';
+import { startManagedJourneyRuntime } from './managed-plugin-journey-runtime.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = fileURLToPath(import.meta.url);
@@ -42,6 +48,7 @@ interface ApiConfiguration {
   referenceToken: string;
   referencePort: number;
   referenceManifest: PluginManifestV2;
+  managed?: { ownerId: string; rpcOrigin: string; gatewayOrigin: string };
 }
 
 /** Never accept a production, remote or silently defaulted database for this fixture. */
@@ -153,7 +160,7 @@ export async function revokeReferenceProvider(apis: ChildProcess[]): Promise<voi
 }
 
 function cleanEnvironment(): NodeJS.ProcessEnv {
-  return Object.fromEntries(['PATH', 'HOME', 'TMPDIR', 'LANG', 'npm_config_store_dir'].flatMap(name => process.env[name] ? [[name, process.env[name]]] : []));
+  return Object.fromEntries(['PATH', 'HOME', 'XDG_CONFIG_HOME', 'TMPDIR', 'LANG', 'npm_config_store_dir'].flatMap(name => process.env[name] ? [[name, process.env[name]]] : []));
 }
 
 const referenceCommandSchema = z.enum(['lose-next-execution-ack', 'source-unavailable', 'source-available', 'stats']);
@@ -268,6 +275,8 @@ async function artifacts(directory: string): Promise<{ manifest: PluginManifestV
   const manifest = manifestSchema.parse(JSON.parse(await readFile(join(source, 'src/manifest.json'), 'utf8'))) as PluginManifestV2;
   const releases: { directory: string; sourceSha: string; evidence: ReferencePluginArtifactEvidence }[] = [];
   for (const version of ['1.0.0', '1.0.1']) {
+    const metadata = JSON.parse(await readFile(join(source, 'package.json'), 'utf8')) as Record<string, unknown>;
+    await writeFile(join(source, 'package.json'), `${JSON.stringify({ ...metadata, version }, null, 2)}\n`);
     await writeFile(join(source, 'src/manifest.json'), `${JSON.stringify({ ...manifest, version }, null, 2)}\n`);
     localCommand('git', ['add', 'package.json', 'README.md', 'src'], source);
     localCommand('git', ['-c', 'user.name=HASI local qualification', '-c', 'user.email=qualification@example.test', 'commit', '--quiet', '-m', `test: prepare independent reference ${version}`], source);
@@ -279,19 +288,13 @@ async function artifacts(directory: string): Promise<{ manifest: PluginManifestV
   return { manifest, releases };
 }
 
-async function apiChild(path: string): Promise<void> {
-  const connectionString = journeyDatabaseUrl(process.env);
-  const config = JSON.parse(await readFile(path, 'utf8')) as ApiConfiguration;
-  z.uuid().parse(config.scope);
-  if (!Number.isInteger(config.port) || config.port < 1024 || config.port > 65535 || !/^http:\/\/127\.0\.0\.1:\d+$/u.test(config.issuer)) throw new Error('Invalid local fixture configuration.');
-  const privateKey = createPrivateKey(await readFile(config.privateKeyPath));
-  const store = new PostgresJsonStore(`journey:${config.scope}`, { poolConfig: { connectionString, max: 4 } });
-  await store.initialize();
+/** The same declared TestIdP subjects seed API and installer authority. */
+export function journeyPersonas(issuer: string): Map<string, Persona> {
   const users = new Map<string, Persona>();
   for (const role of ['admin', 'student'] as const) {
     const template = personas.find(persona => persona.id === role);
     if (!template) throw new Error('Synthetic persona missing.');
-    const subject = stableOidcSubject(config.issuer, `journey-${role}`);
+    const subject = stableOidcSubject(issuer, `journey-${role}`);
     const user = structuredClone(template);
     user.id = subject; user.actor.subject = subject; user.displayName = `Test-IdP · ${role === 'admin' ? 'Administration' : 'Studentin'}`;
     user.actor.resourceIds = hshDemoCatalog.resources.slice(0, role === 'admin' ? undefined : 6).map(resource => resource.id);
@@ -299,12 +302,39 @@ async function apiChild(path: string): Promise<void> {
     user.actor = withDemoPluginClaims(user.actor);
     users.set(subject, user);
   }
+  return users;
+}
+
+/** Only the trusted local launcher constructs these private managed origins. */
+export function journeyManagedConfiguration(value: unknown): ApiConfiguration['managed'] {
+  if (value === undefined) return undefined;
+  const origin = z.url().refine(raw => {
+    const url = new URL(raw); const port = Number(url.port);
+    return url.protocol === 'http:' && url.hostname === '127.0.0.1' && url.origin === raw
+      && Number.isInteger(port) && port >= 1024 && port <= 65535;
+  });
+  return z.strictObject({ ownerId: z.string().regex(/^managed-journey-[a-f0-9]{12}$/u), rpcOrigin: origin, gatewayOrigin: origin })
+    .refine(v => v.rpcOrigin !== v.gatewayOrigin).parse(value);
+}
+
+async function apiChild(path: string): Promise<void> {
+  const connectionString = journeyDatabaseUrl(process.env);
+  const config = JSON.parse(await readFile(path, 'utf8')) as ApiConfiguration;
+  z.uuid().parse(config.scope);
+  if (!Number.isInteger(config.port) || config.port < 1024 || config.port > 65535 || !/^http:\/\/127\.0\.0\.1:\d+$/u.test(config.issuer)) throw new Error('Invalid local fixture configuration.');
+  const privateKey = createPrivateKey(await readFile(config.privateKeyPath));
+  const managed = journeyManagedConfiguration(config.managed);
+  const store = new PostgresJsonStore(`${managed ? 'production' : 'journey'}:${config.scope}`, { poolConfig: { connectionString, max: 4 } });
+  await store.initialize();
+  const users = journeyPersonas(config.issuer);
+  const authority = managed ? new ProductionAuthorityDirectory(store, privateKey, config.scope) : undefined;
+  const resolveUser = (subject: string) => authority ? authority.resolve(subject) : Promise.resolve(users.get(subject));
   const identity = new OidcIdentityProvider({ mode: 'test', issuer: config.issuer, clientId: 'hasi-plugin-journey', redirectUri: `${WEB_ORIGIN}/api/auth/callback`, store,
-    mapIdentity: ({ issuer, subject }) => {
-      const user = users.get(stableOidcSubject(issuer, subject));
+    mapIdentity: async ({ issuer, subject }) => {
+      const user = await resolveUser(stableOidcSubject(issuer, subject));
       if (!user) throw new Error('Undeclared synthetic identity.');
       return structuredClone(user);
-    }, resolveAuthority: subject => Promise.resolve(users.get(subject)) });
+    }, resolveAuthority: resolveUser });
   const offsets = new Map<string, number>();
   const accounts = new Map<string, PluginAccountService>();
   const adminSubject = stableOidcSubject(config.issuer, 'journey-admin');
@@ -325,20 +355,32 @@ async function apiChild(path: string): Promise<void> {
       : demoAdapter;
     accounts.set(installationId, new PluginAccountService({ mode: 'test', privateKey, store, scope: config.scope, installationId, adapter, clock }));
   }
+  const settings = new PluginSettingsStore(privateKey, store, config.scope);
+  const routes = managed ? new PluginRouteController({ store, scope: config.scope, ownerId: managed.ownerId }) : undefined;
+  const binding = managed && routes ? new PluginDeploymentBinding({ routes, ownerId: managed.ownerId,
+    readAuthoritativeRevision: async id => (await settings.read(id, config.referenceManifest)).activeRevision }) : undefined;
+  const contracts = managed ? createManagedPluginContractClient({ origin: managed.rpcOrigin, privateKey, scope: config.scope }) : undefined;
+  const managedAdmin = managed ? createManagedPluginRpcClient({ origin: managed.rpcOrigin, privateKey, scope: config.scope }) : undefined;
   const registry = new PluginRegistry(privateKey, { store, scope: config.scope, accounts, envelopeResults: true,
+    ...(managed && binding && contracts ? {
+      operatorManagedLoopbackOrigin: managed.gatewayOrigin,
+      deploymentBindings: new Map([[REFERENCE_ID, binding]]),
+      managedContracts: new Map([[REFERENCE_ID, { initialManifest: config.referenceManifest, read: () => contracts.read(REFERENCE_ID) }]]),
+    } : {}),
     defaultSourcePolicy: { sourceId: 'synthetic-journey', revision: '1', dataClasses: ['synthetic_demo'] },
-    resolveActor: subject => Promise.resolve(users.get(subject)?.actor) });
+    resolveActor: async subject => (await resolveUser(subject))?.actor });
   await registry.install({ endpoint: 'http://127.0.0.1:4101/mcp', serviceToken: config.annyToken, expectedManifestDigest: digest(annyManifest), allowLoopback: true });
   await registry.install({ endpoint: 'http://127.0.0.1:4103/mcp', serviceToken: config.knowledgeToken, expectedManifestDigest: digest(knowledgeManifest), allowLoopback: true });
-  const knowledgeContexts = createRegistryKnowledgeContexts({ registry, store, privateKey, scope: config.scope, resolveActor: subject => Promise.resolve(users.get(subject)?.actor) });
+  const knowledgeContexts = createRegistryKnowledgeContexts({ registry, store, privateKey, scope: config.scope, resolveActor: async subject => (await resolveUser(subject))?.actor });
   const app = await createApi({ mode: 'development', registry, identity, store, knowledgeContexts, origin: WEB_ORIGIN, allowedHosts: ['127.0.0.1'],
+    ...(managedAdmin ? { managedPlugins: managedAdmin } : {}),
     pluginCatalog: [{ id: REFERENCE_ID, label: 'Unabhängiges Referenz-Plugin · synthetisch', registration: {
-      instanceId: REFERENCE_ID, endpoint: `http://127.0.0.1:${String(config.referencePort)}/mcp`, serviceToken: config.referenceToken,
-      expectedManifestDigest: digest(config.referenceManifest), allowLoopback: true,
+      instanceId: REFERENCE_ID, endpoint: managed ? `${managed.gatewayOrigin}/api/plugin-deployments/${REFERENCE_ID}/mcp` : `http://127.0.0.1:${String(config.referencePort)}/mcp`, serviceToken: config.referenceToken,
+      expectedManifestDigest: digest(config.referenceManifest), allowLoopback: !managed,
       sourcePolicy: { sourceId: 'synthetic-reference', revision: '1', dataClasses: ['synthetic_demo'] },
     } }] });
   app.get('/health', () => ({ status: 'ok' }));
-  app.addHook('onClose', () => store.close());
+  app.addHook('onClose', async () => { await store.close(); });
   process.on('message', (message: unknown) => {
     if (typeof message !== 'object' || message === null || !('command' in message)) return;
     if (message.command === 'expire-anny' || message.command === 'expire-reference') {
@@ -395,7 +437,7 @@ async function protectedWebProbe(issuer: string): Promise<void> {
 }
 
 /** A held, explicit synthetic composition for actual browser qualification. */
-async function serve(): Promise<void> {
+async function serve(managedMode = false): Promise<void> {
   const connectionString = journeyDatabaseUrl(process.env);
   await assertJourneyEnvFilesAbsent();
   for (const port of [3001, 4100, 4101, 4102, 4103]) await available(port);
@@ -404,6 +446,8 @@ async function serve(): Promise<void> {
   const retiring = new WeakSet<ChildProcess>();
   const servers: Server[] = [];
   let referenceProxy: Awaited<ReturnType<typeof startJourneyReferenceProxy>> | undefined;
+  let managedRuntime: Awaited<ReturnType<typeof startManagedJourneyRuntime>> | undefined;
+  let managedCleanup: Awaited<ReturnType<NonNullable<typeof managedRuntime>['close']>> | undefined;
   let idp: Awaited<ReturnType<typeof startTestIdp>> | undefined;
   let model: Awaited<ReturnType<typeof startJourneyModel>> | undefined;
   let commands = Promise.resolve();
@@ -427,7 +471,7 @@ async function serve(): Promise<void> {
     console.info(JSON.stringify({ event: 'journey-preparing', syntheticOnly: true, realProviderCalls: false }));
     // Packaging is offline. Its subprocesses must not inherit operator credentials.
     const inherited = cleanEnvironment();
-    for (const name of Object.keys(process.env)) if (!(name in inherited) && !['TEST_DATABASE_URL', 'HASI_PLUGIN_JOURNEY'].includes(name)) Reflect.deleteProperty(process.env, name);
+    for (const name of Object.keys(process.env)) if (!(name in inherited) && !['TEST_DATABASE_URL', 'HASI_PLUGIN_JOURNEY', 'DOCKER_HOST'].includes(name)) Reflect.deleteProperty(process.env, name);
     stage = 'independent-artifacts';
     const packaged = await artifacts(directory);
     const first = packaged.releases[0];
@@ -460,13 +504,26 @@ async function serve(): Promise<void> {
       return started;
     };
     let activeRelease = first;
-    let reference = await startReference(activeRelease);
-    referenceProxy = await startJourneyReferenceProxy({ targetOrigin: `http://127.0.0.1:${String(referenceTargetPort)}` });
-    const referencePort = Number(new URL(referenceProxy.origin).port);
+    let reference: ChildProcess | undefined;
+    let referencePort: number;
+    if (!managedMode) {
+      reference = await startReference(activeRelease);
+      referenceProxy = await startJourneyReferenceProxy({ targetOrigin: `http://127.0.0.1:${String(referenceTargetPort)}` });
+      referencePort = Number(new URL(referenceProxy.origin).port);
+    } else referencePort = 0; // Replaced by the fixed managed gateway before API startup.
     stage = 'test-idp';
     idp = await startTestIdp({ mode: 'test', clientId: 'hasi-plugin-journey', redirectUri: `${WEB_ORIGIN}/api/auth/callback`,
       subjects: [{ subject: 'journey-admin', label: 'Test-Administration' }, { subject: 'journey-student', label: 'Test-Studentin' }] });
     const scope = randomUUID();
+    if (managedMode) {
+      stage = 'managed-worker';
+      managedRuntime = await startManagedJourneyRuntime({ directory, scope, databaseUrl: connectionString,
+        authorityPrivateKey: keys.privateKey, authorities: [...journeyPersonas(idp.issuer).values()],
+        transportToken: referenceToken, releases: packaged.releases,
+        onUnexpectedExit: () => { if (!stopping) { state.unexpectedExit = true; onSignal(); } },
+      });
+      referencePort = Number(new URL(managedRuntime.configuration.gatewayOrigin).port);
+    }
     const apiPorts: number[] = [];
     const apis: ChildProcess[] = [];
     stage = 'api-replicas';
@@ -474,7 +531,7 @@ async function serve(): Promise<void> {
       const port = await allocatePort(); apiPorts.push(port);
       const path = join(directory, `api-${String(port)}.json`);
       await writeFile(path, JSON.stringify({ scope, issuer: idp.issuer, privateKeyPath, port, annyToken, knowledgeToken,
-        referenceToken, referencePort, referenceManifest: packaged.manifest } satisfies ApiConfiguration), { mode: 0o600 });
+        referenceToken, referencePort, referenceManifest: packaged.manifest, ...(managedRuntime ? { managed: managedRuntime.configuration } : {}) } satisfies ApiConfiguration), { mode: 0o600 });
       const api = child(['--import', 'tsx', SCRIPT, '--api', path], { HASI_PLUGIN_JOURNEY: '1', TEST_DATABASE_URL: connectionString }, ROOT, true);
       apis.push(api); await ready(`http://127.0.0.1:${String(port)}/health`, api);
     }
@@ -506,19 +563,24 @@ async function serve(): Promise<void> {
     await ready(`${WEB_ORIGIN}/`, web);
     stage = 'protected-web-probe';
     await protectedWebProbe(idp.issuer);
+    const fixtureCommands = managedMode
+      ? ['expire-anny', 'expire-reference', 'revoke-reference', 'stats', 'quit']
+      : ['expire-anny', 'expire-reference', 'revoke-reference', 'reference-lose-ack', 'reference-source-unavailable', 'reference-source-available', 'reference-drop-reply', 'restart-reference', 'reference-v2', 'reference-v1', 'stats', 'quit'];
     const writeEvidence = async () => writeFile(join(directory, 'evidence.json'), JSON.stringify({ scope, webOrigin: WEB_ORIGIN, apiReplicas: 2, hostPid: process.pid,
-      apiPids: apis.map(process_ => process_.pid), referencePid: reference.pid, referenceVersion: activeRelease.evidence.pluginVersion,
-      persistentReferenceState: true, referenceProxy: referenceProxy?.stats(),
+      apiPids: apis.map(process_ => process_.pid), ...(reference ? { referencePid: reference.pid, referenceVersion: activeRelease.evidence.pluginVersion } : {}),
+      managed: managedRuntime ? await managedRuntime.snapshot() : undefined,
+      persistentReferenceState: !managedMode, referenceProxy: referenceProxy?.stats(),
       releases: packaged.releases.map(release => ({ sourceSha: release.sourceSha, ...release.evidence })) }, null, 2), { mode: 0o600 });
     await writeEvidence();
     console.info(JSON.stringify({ event: 'plugin-journey-ready', webOrigin: WEB_ORIGIN, evidence: join(directory, 'evidence.json'), apiReplicas: 2,
-      independentReferencePid: reference.pid, syntheticOnly: true, commands: ['expire-anny', 'expire-reference', 'revoke-reference', 'reference-lose-ack', 'reference-source-unavailable', 'reference-source-available', 'reference-drop-reply', 'restart-reference', 'reference-v2', 'reference-v1', 'stats', 'quit'] }));
+      ...(reference ? { independentReferencePid: reference.pid } : {}), managed: managedMode, syntheticOnly: true, commands: fixtureCommands }));
     stage = 'ready';
     input = createInterface({ input: process.stdin, terminal: false });
     input.on('line', line => {
       if (state.shutdownRequested) return;
       commands = commands.then(async () => {
         if (state.shutdownRequested) return;
+        if (!fixtureCommands.includes(line)) { console.info(JSON.stringify({ event: 'unknown-fixture-command' })); return; }
         if (line === 'quit') { onSignal(); return; }
         if (line === 'expire-anny' || line === 'expire-reference') {
           await advanceAccountClocks(apis, line);
@@ -528,6 +590,7 @@ async function serve(): Promise<void> {
           console.info(JSON.stringify({ event: 'reference-provider-revocation-applied', installationId: REFERENCE_ID, persona: 'admin', replicasAcknowledged: apis.length }));
         } else if (line === 'reference-lose-ack' || line === 'reference-source-unavailable' || line === 'reference-source-available') {
           const command = line === 'reference-lose-ack' ? 'lose-next-execution-ack' : line === 'reference-source-unavailable' ? 'source-unavailable' : 'source-available';
+          if (!reference) throw new Error('The direct reference control is unavailable.');
           await sendReferenceCommand(reference, command);
           console.info(JSON.stringify({ event: 'reference-control-applied', command }));
         } else if (line === 'reference-drop-reply') {
@@ -536,6 +599,7 @@ async function serve(): Promise<void> {
         } else if (line === 'restart-reference' || line === 'reference-v2' || line === 'reference-v1') {
           const nextRelease = line === 'restart-reference' ? activeRelease : packaged.releases[line === 'reference-v2' ? 1 : 0];
           if (!nextRelease) throw new Error('The independent reference release is unavailable.');
+          if (!reference) throw new Error('The direct reference process is unavailable.');
           retiring.add(reference);
           await stopJourneyChild(reference);
           if (reference.exitCode !== 0 || reference.signalCode !== null) throw new Error('Reference process did not stop gracefully.');
@@ -546,7 +610,8 @@ async function serve(): Promise<void> {
             stats: await sendReferenceCommand(reference, 'stats'), artifactDigest: activeRelease.evidence.artifactSha256 }));
         } else if (line === 'stats') {
           console.info(JSON.stringify({ event: 'synthetic-model-stats', calls: model?.calls(), resultObservations: model?.resultObservations(), realProviderCalls: 0,
-            reference: await sendReferenceCommand(reference, 'stats'), proxy: referenceProxy?.stats() }));
+            reference: reference ? await sendReferenceCommand(reference, 'stats') : undefined,
+            managed: managedRuntime ? await managedRuntime.snapshot() : undefined, proxy: referenceProxy?.stats() }));
           await writeEvidence();
         } else console.info(JSON.stringify({ event: 'unknown-fixture-command' }));
       }).catch(() => { if (!state.shutdownRequested) { state.unexpectedExit = true; onSignal(); } });
@@ -556,6 +621,7 @@ async function serve(): Promise<void> {
     if (state.unexpectedExit) throw new Error('A fixture child stopped unexpectedly.');
   } catch (error) {
     failure = error instanceof Error ? error : new Error('Synthetic fixture failed.');
+    if (typeof error === 'object' && error !== null && 'recoveryRequired' in error && error.recoveryRequired === true) state.cleanupFailed = true;
   } finally {
     stopping = true; state.shutdownRequested = true; clearTimeout(timer); input?.close();
     await commands;
@@ -564,16 +630,35 @@ async function serve(): Promise<void> {
       server.closeAllConnections(); server.close(error => { if (error) reject(error); else done(); });
     }))));
     results.push(...await Promise.allSettled([idp?.close(), model?.close(), referenceProxy?.close()]));
-    results.push(...await Promise.allSettled([rm(directory, { recursive: true, force: true })]));
-    state.cleanupFailed = results.some(result => result.status === 'rejected');
+    results.push(...await Promise.allSettled([managedRuntime?.close().then(result => { managedCleanup = result; })]));
+    state.cleanupFailed ||= results.some(result => result.status === 'rejected');
+    if (!state.cleanupFailed) {
+      try { await rm(directory, { recursive: true, force: true }); } catch { state.cleanupFailed = true; }
+    }
     for (const signal of ['SIGTERM', 'SIGINT'] as const) process.off(signal, onSignal);
-    console.info(JSON.stringify({ event: 'plugin-journey-stopped', ownedProcessesStopped: !state.cleanupFailed, callerOwnedTestDatabaseRetained: true }));
+    console.info(JSON.stringify({ event: 'plugin-journey-stopped', ownedProcessesStopped: !state.cleanupFailed, callerOwnedTestDatabaseRetained: true,
+      ...(managedCleanup ? { managedCleanup } : {}),
+      ...(state.cleanupFailed ? { recoveryDirectory: directory } : {}) }));
   }
   if (state.cleanupFailed) throw new Error('An owned fixture process or server did not stop.');
   if (failure) throw failure;
 }
 
+/** Docker mode is an explicit operator CLI choice, never a browser/plugin input. */
+export function journeyOperation(args: readonly string[]): { kind: 'serve'; managed: boolean } | { kind: 'api'; path: string } {
+  if (args.length === 0) return { kind: 'serve', managed: false };
+  if (args.length === 1 && args[0] === '--managed') return { kind: 'serve', managed: true };
+  if (args.length === 2 && args[0] === '--api' && args[1]) return { kind: 'api', path: args[1] };
+  throw new Error('Invalid synthetic journey operation.');
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const operation = process.argv[2] === '--api' ? apiChild(process.argv[3] ?? '') : serve();
-  await operation.catch((error: unknown) => { console.error(JSON.stringify({ event: 'synthetic-plugin-journey-failed', stage, operatorCredentialsUsed: false, productionStateUsed: false, ...(error instanceof ReferencePackagingCommandError ? { diagnostic: error.message } : {}) })); process.exitCode = 1; });
+  try {
+    const operation = journeyOperation(process.argv.slice(2));
+    await (operation.kind === 'api' ? apiChild(operation.path) : serve(operation.managed));
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'synthetic-plugin-journey-failed', stage, operatorCredentialsUsed: false, productionStateUsed: false,
+      ...(error instanceof ReferencePackagingCommandError ? { diagnostic: error.message } : {}) }));
+    process.exitCode = 1;
+  }
 }

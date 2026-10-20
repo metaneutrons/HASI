@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-manual-browser-observations",
+  "baseCommit": "1c14ed285263485f40b0020544c6c76e9c9115ad",
+  "startedAt": "2026-10-20T20:38:21.987909+00:00",
+  "harnessSources": [
+    {
+      "path": "scripts/serve-plugin-journey.ts",
+      "sha256": "9ad67242f52a34ff5cc97b98bc5455acac1107c8ab7fd97ebcdb8b4d120093a2"
+    },
+    {
+      "path": "scripts/managed-plugin-journey-runtime.ts",
+      "sha256": "ce699bb6ecb2b7f35f96be5356d1d5f63d97b13913fa29abcc841f76ed468f5d"
+    },
+    {
+      "path": "tests/plugin-journey-config.test.ts",
+      "sha256": "cbc6ae2277ac7d8f3ecce96e17fa97c679326ced2b581346c995c96460161ea5"
+    },
+    {
+      "path": "tests/managed-plugin-journey-runtime.test.ts",
+      "sha256": "7bdb9f822e260cd1ef620bba1a303c66c0ef2e369460a5dc110c15adb331a9b0"
+    }
+  ],
+  "sourceInputConsistencyVerified": true,
+  "apiReplicas": 2,
+  "releases": [
+    {
+      "id": "reference-v1",
+      "version": "1.0.0",
+      "sourceSha": "22ff8451bd271a3479333b90b57c579201b95853",
+      "artifactSha256": "701c711f2ffd1a5eb22365f1467c8b1780ce1c5db0b6e42e6e727229af7f542c",
+      "artifactManifestSha256": "c7183185150cec8a00824967cda03a902313881f4d361e694a3ba5a369c60143",
+      "manifestDigest": "01038ec93bce8c02af0b3918911735348839ffe5a72b01de317c27d388851611",
+      "manifestFileSha256": "3d59541a8d72207fc3214afa1db978bb6723ec68c943575b20f0bf7471ac4709",
+      "imageId": "sha256:85868bffb2869864e0543248212dbb86b638829f6d4d7603f850908835a9803c",
+      "imageReference": "localhost/hasi-reference-qualification@sha256:85868bffb2869864e0543248212dbb86b638829f6d4d7603f850908835a9803c",
+      "releaseDigest": "928982542219535d2628d510f4b2c0e72ad6c5beea8dc3894d519c20aa97acb3"
+    },
+    {
+      "id": "reference-v2",
+      "version": "1.0.1",
+      "sourceSha": "f84fe7d8ebc89d1c96138b99c4ea1cf257c5212a",
+      "artifactSha256": "6f9f3a53cbf674ed45911699bb20ccfb6b5fcaf8aa8a9cf4d4b1b772d7e3d65d",
+      "artifactManifestSha256": "28487fda5c48f20985543916e1ebed6b38c9d1b9d31a3298ddc6c0fe490c8d10",
+      "manifestDigest": "0a50a7c4fd3ad3e3a25d8bab1c2d4366cfd302c3a2b3b64b6a7db8d6fed0806b",
+      "manifestFileSha256": "00c75243b38250a4fa517bda85468dce8a4e3e1f497f6acbca5ee7466b2652ba",
+      "imageId": "sha256:9d2c0ecb1087c292161c6b1d47fb7f857fff457e66828fd92b24f126f6d6b1b8",
+      "imageReference": "localhost/hasi-reference-qualification@sha256:9d2c0ecb1087c292161c6b1d47fb7f857fff457e66828fd92b24f126f6d6b1b8",
+      "releaseDigest": "83743688d036ec5ecb9e5d8283ccaa4b118b531b8b20e9358090720b9aa5b1cf"
+    }
+  ],
+  "model": {
+    "syntheticCalls": 4,
+    "realProviderCalls": 0,
+    "resultObservations": {
+      "referenceReadResults": 1,
+      "omittedResults": 0,
+      "priorReferenceReadResults": 0,
+      "priorReferenceAnswers": 0,
+      "requestsWithPriorReferenceContext": 0
+    }
+  },
+  "observations": {
+    "adminDraftSaveActivate": true,
+    "v1StageReviewActivate": true,
+    "personalSyntheticConsent": true,
+    "v2StageReviewActivate": true,
+    "oldProposalRemovedAfterUpdate": true,
+    "staleHttpDenialObserved": false,
+    "freshV2BrowserConfirmation": true,
+    "sourceReportedActionCount": 1,
+    "sourceReportedVersion": "1.0.1",
+    "protectedHistorySurvivedReload": true,
+    "accountExpiryAcknowledgedByReplicas": 2,
+    "expiredResultAndAnswerRedacted": true,
+    "renewalPreservedDraft": true,
+    "oldReadResultRemainedRedactedAfterRenewal": true,
+    "renewalDisplayedConfirmedReceiptWithoutPendingConfirmation": true,
+    "adminRollbackToV1": true,
+    "studentAdminPageDenied": true,
+    "studentManagedAdminHttpStatus": 403,
+    "unsupportedManagedTerminalCommandRejected": true
+  },
+  "mobile": {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "documentWidth": 390,
+    "managedPanelWidth": 362,
+    "confirmation": {
+      "height": 46,
+      "top": 513.0703125,
+      "bottom": 559.0703125,
+      "frameTop": 106,
+      "frameBottom": 604
+    }
+  },
+  "cleanup": {
+    "workerStopped": true,
+    "routeWithdrawn": true,
+    "containersRemoved": 4,
+    "networksRemoved": 3,
+    "imagesRemoved": 2,
+    "databaseNamespaceRetained": true,
+    "recoveryMaterialRemoved": true,
+    "independentOwnedInventoryEmpty": true,
+    "fixturePortsClosed": true,
+    "outerOwnedDisposableDatabaseRemoved": true,
+    "outerIsolatedHomeRemoved": true
+  },
+  "limits": {
+    "persistentReferenceState": false,
+    "publishedExternalArtifact": false,
+    "productionCompositionBrowserAcceptance": false,
+    "physicalDeviceAcceptance": false,
+    "completeMobileAccessibilityMatrix": false,
+    "localUi200msMeasured": false,
+    "milestoneAcceptance": false
+  }
+}
