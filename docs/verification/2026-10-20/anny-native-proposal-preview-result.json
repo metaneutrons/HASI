@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-20",
+  "scope": "Native Anny UI prepare/persist/confirm regression; synthetic local demo only",
+  "baseRevision": "2980aa818db0a388a6cd8cd46e95feca7aaffea6",
+  "sourceDigests": {
+    "apps/web/src/components/assistant-page.tsx": "1e3138a640403701bb07b51e824afadb11ad9971e4a565ad5f2067ef451977c2",
+    "apps/web/src/lib/proposal-presentation.ts": "31dfb2e798db4b62d355b283cab0403ffa37546bc14e6df01b18aca2bd23b1c9",
+    "apps/web/tests/proposal-presentation.test.ts": "75e4387398625cd29570cab59dff8b92f746af69b61fc305025d6a9e6c7f01ee"
+  },
+  "oldCodeCounterprobe": {
+    "observed": "Fresh native preparation rendered a card; explicit confirm produced canonical proposal mismatch; bookings overview showed zero bookings."
+  },
+  "rejectedIntermediate": {
+    "observed": "Forwarding raw API proposal preserved preview but failed strict workspace persistence; replaced by existing whitelist/schema snapshot normalization."
+  },
+  "browser": {
+    "mode": "Isolated local multi-process synthetic employee, explicit offline Dialog-Demo; no provider configuration",
+    "request": "Tomorrow, 1J, single-person office, 10:00-12:00; chosen Max Planck 1J.1.02",
+    "journey": [
+      "Fresh native prepare displays canonical action/account/effect/consequences/costs",
+      "Reload before confirmation restores the complete proposal without storage warning",
+      "Explicit confirmation shows booking confirmed",
+      "Bookings overview shows exactly one booking",
+      "Own bookings in chat -> prepare cancellation -> separate explicit confirmation",
+      "Overview retains exactly one entry, now cancelled"
+    ],
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "workspaceErrorVisible": false
+    },
+    "cleanup": {
+      "viewport": "reset",
+      "agentTab": "closed",
+      "localLauncherExitCode": 0,
+      "listeners": "none on 3001,4100-4103 after stop"
+    }
+  },
+  "focusedTests": {
+    "passed": 35,
+    "files": 3,
+    "command": "pnpm exec vitest run apps/web/tests/proposal-presentation.test.ts apps/web/tests/anny-chat-tools.test.ts apps/web/tests/chat-sessions.test.ts"
+  },
+  "validation": {
+    "webTypes": "pass",
+    "affectedLint": "pass",
+    "independentReview": "No blocker in bounded read-only review; reviewer did not run tests/builds",
+    "providerCalls": 0,
+    "institutionalWrites": 0,
+    "productionWebBuild": "pass"
+  },
+  "screenshots": {
+    "docs/verification/2026-10-20/assets/hasi-native-booking-cancel-390.jpg": "513d6b8e23aded2bf6b7b2d8f1ac841d1e0e40ad0face27c15a5496f0500d498",
+    "docs/verification/2026-10-20/assets/hasi-native-cancellation-receipt-390.jpg": "674a6bbb128fd57441a5b20dd5f0f8cc9a34d35550a05747ede1a6e37708713a"
+  },
+  "limitations": [
+    "Browser run uses synthetic persona rather than protected OIDC renewal; fresh action after account renewal remains a separate M2 gate.",
+    "No live-provider intent/answer quality, managed update/rollback journey, physical-device/native AT or full M7 acceptance.",
+    "Mandatory full integration gate, exact-head CI, merge and deployment evidence are recorded in the implementation PR."
+  ]
+}

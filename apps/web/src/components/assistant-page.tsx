@@ -759,9 +759,10 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         : await tools().run("anny_propose_booking", args);
       if (!result.proposal) throw new Error("Es wurde kein Buchungsvorschlag zurückgegeben.");
       if (!offline && "output" in result) recordTool("anny_propose_booking", args, result.output);
-      const { id, resourceName, startDate, endDate, status, expiresAt } = result.proposal;
-      addActionResult({ text: "Der Buchungsvorschlag ist vorbereitet. Bitte prüfe die Angaben und bestätige die Buchung ausdrücklich.", tool: "anny · Buchungsvorschlag", proposal: { id, resourceName, startDate, endDate, status, expiresAt } });
-      setActiveProposal(result.proposal.id);
+      const proposal = readProposalSnapshot(result, result.proposal);
+      if (proposal?.action !== "book" || proposal.status !== "pending") throw new Error("Es wurde kein offener Buchungsvorschlag zurückgegeben.");
+      addActionResult({ text: "Der Buchungsvorschlag ist vorbereitet. Bitte prüfe die Angaben und bestätige die Buchung ausdrücklich.", tool: "anny · Buchungsvorschlag", proposal });
+      setActiveProposal(proposal.id);
     } catch (cause) { addActionResult({ text: cause instanceof Error ? cause.message : "Der Buchungsvorschlag konnte nicht erstellt werden." }); }
     finally { await finish(); }
   }

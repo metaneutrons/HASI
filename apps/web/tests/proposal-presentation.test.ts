@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ActionPreview } from "../src/lib/action-preview";
-import type { AnnyChatProposal, ChatProposal } from "../src/lib/chat-sessions";
+import { proposalSchema, type AnnyChatProposal, type ChatProposal } from "../src/lib/chat-sessions";
 import type { PluginToolProposal } from "../src/lib/plugin-tools";
 import {
   forwardProposalStatus,
@@ -68,6 +68,31 @@ describe("proposal receipt presentation and identity", () => {
       label: "Aktion bestätigt",
       bookingsLink: false,
     });
+  });
+
+  it("retains a prepared native preview through strict persistence and confirmation without retaining API-only fields", () => {
+    const prepared = annyProposal();
+    const response = { proposal: { ...prepared, pluginId: "hasi.anny", userId: "synthetic-employee",
+      arguments: { resourceId: "resource-1", serviceId: "service-1", startDate: prepared.startDate, endDate: prepared.endDate },
+      configurationRevision: 3 } };
+    const displayed = readProposalSnapshot(response, prepared, Date.parse(prepared.expiresAt) - 1);
+    expect(displayed).not.toBeNull();
+    const stored = proposalSchema.parse(JSON.parse(JSON.stringify(displayed)));
+    const persisted = readProposalSnapshot({ proposal: stored }, prepared, Date.parse(prepared.expiresAt) - 1);
+    if (persisted?.action !== "book") throw new Error("Expected a restored native booking proposal");
+    expect(persisted.preview).toEqual(preview);
+    expect(persisted.action).toBe("book");
+    expect(persisted).not.toHaveProperty("userId");
+    expect(persisted).not.toHaveProperty("arguments");
+    const authoritative = readProposalSnapshot(response, prepared, Date.parse(prepared.expiresAt) - 1);
+    if (!authoritative) throw new Error("Expected the authoritative booking proposal");
+    expect(sameProposalDetails(persisted, authoritative)).toBe(true);
+    // Reproduce the former UI projection: it must still be denied, not silently trusted.
+    const { preview: omittedPreview, action: omittedAction, ...incomplete } = persisted;
+    expect(omittedPreview).toEqual(preview);
+    expect(omittedAction).toBe("book");
+    expect(sameProposalDetails(incomplete, authoritative)).toBe(false);
+    expect(sameProposalDetails(persisted, { ...authoritative, preview: { ...preview, costs: "Changed fees" } })).toBe(false);
   });
 
   it("rejects malformed Anny snapshots and unknown statuses", () => {
