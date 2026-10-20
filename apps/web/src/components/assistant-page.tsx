@@ -2,7 +2,7 @@
 
 import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, MessageCircle, PanelLeft, Plus, Search, Sparkles, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type SyntheticEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject, type SyntheticEvent } from "react";
 import { apiRequest, formatDateTime, formatTime } from "@/lib/api";
 import { classifyIntent, matchingResources, mergeRoomRequest, missingRoomDetails, requestStartDate, roomRequestSummary, workplaceGroupQuestion, workplaceOfficeTypeCounts, workplaceRefinementQuestion, type RoomRequest } from "@/lib/chat-demo";
 import type { Booking, Resource, TimeInterval, User } from "@/lib/types";
@@ -32,6 +32,7 @@ import { PluginResultApp } from "@/components/plugin-result-app";
 import { boundedPluginToolResult, compactPluginToolResult, parsePluginProposal, parsePluginProposalSnapshot, parsePluginTools, pluginToolProposalPresentation, samePluginProposalSnapshot, type PluginToolDescriptor, type PluginToolProposal } from "@/lib/plugin-tools";
 
 interface ModelConfiguration { profiles: ModelProfile[]; userChoiceEnabled: boolean; defaultProfileId: ModelProfileId; loading: boolean; error: string | null }
+interface ComposerSelection { start: number; end: number; direction: HTMLTextAreaElement["selectionDirection"] }
 
 const suggestions = [
   { icon: Search, title: "Einen Raum finden", text: "Ich brauche morgen um 14 Uhr einen Raum für vier Personen für eine Stunde.", caption: "Gemeinsam planen und buchen" },
@@ -88,6 +89,7 @@ function ChatWorkspace({ user }: { user: User }) {
   const store = useChatWorkspaceStore();
   const view = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   const drawer = useRef<HTMLDialogElement>(null);
+  const composerFocus = useRef(new Map<string, ComposerSelection>());
   const [configuration, setConfiguration] = useState<ModelConfiguration>({ profiles: [], userChoiceEnabled: false, defaultProfileId: "groq-oss-120b", loading: true, error: null });
 
   useEffect(() => {
@@ -116,14 +118,14 @@ function ChatWorkspace({ user }: { user: User }) {
     <dialog className="chat-history-dialog" ref={drawer} id="chat-conversations-dialog" aria-label="Unterhaltungen" onClick={(event) => { if (event.target === event.currentTarget) drawer.current?.close(); }}><div className="chat-history-dialog-body"><ChatSessionList view={view} store={store} close={() => drawer.current?.close()} /></div></dialog>
     <div className="chat-conversations">
       {view.notice && <div className="chat-storage-notice" role="status"><span>{view.notice}</span><button className="icon-button" type="button" aria-label="Hinweis schließen" onClick={() => { store.dismissNotice(); }}><X size={16} /></button></div>}
-      {!configuration.loading && view.workspace.sessions.map((session) => <Conversation key={`${session.id}:${String(view.accessEpoch)}`} sessionId={session.id} ownerId={user.id} initial={session.snapshot} name={user.displayName.split(/\s|·/)[0] ?? ""} active={session.id === view.workspace.activeId} configuration={configuration} onSnapshot={(id, snapshot, busy) => { store.updateConversation(id, snapshot, busy); }} onDraft={(id, input) => { store.updateDraft(id, input); }} onNewChat={newChat} newChatDisabled={!canStartNewChat(view)} onShowHistory={() => drawer.current?.showModal()} />)}
+      {!configuration.loading && view.workspace.sessions.map((session) => <Conversation key={`${session.id}:${String(view.sessionEpochs[session.id] ?? 0)}`} composerFocus={composerFocus} sessionId={session.id} ownerId={user.id} initial={session.snapshot} name={user.displayName.split(/\s|·/)[0] ?? ""} active={session.id === view.workspace.activeId} configuration={configuration} onSnapshot={(id, snapshot, busy) => { store.updateConversation(id, snapshot, busy); }} onDraft={(id, input) => { store.updateDraft(id, input); }} onNewChat={newChat} newChatDisabled={!canStartNewChat(view)} onShowHistory={() => drawer.current?.showModal()} />)}
     </div>
   </section>;
 }
 
-interface ConversationProps { sessionId: string; ownerId: string; name: string; initial: ChatSnapshot; active: boolean; configuration: ModelConfiguration; onSnapshot: (id: string, snapshot: ChatSnapshot, busy: boolean) => void; onDraft: (id: string, input: string) => void; onNewChat: () => void; newChatDisabled: boolean; onShowHistory: () => void }
+interface ConversationProps { composerFocus: RefObject<Map<string, ComposerSelection>>; sessionId: string; ownerId: string; name: string; initial: ChatSnapshot; active: boolean; configuration: ModelConfiguration; onSnapshot: (id: string, snapshot: ChatSnapshot, busy: boolean) => void; onDraft: (id: string, input: string) => void; onNewChat: () => void; newChatDisabled: boolean; onShowHistory: () => void }
 
-function Conversation({ sessionId, ownerId, name, initial, active, configuration, onSnapshot, onDraft, onNewChat, newChatDisabled, onShowHistory }: ConversationProps) {
+function Conversation({ composerFocus, sessionId, ownerId, name, initial, active, configuration, onSnapshot, onDraft, onNewChat, newChatDisabled, onShowHistory }: ConversationProps) {
   const [messages, setMessages] = useState<Message[]>(initial.messages);
   const [input, setInput] = useState(initial.input);
   const [inputNotice, setInputNotice] = useState("");
@@ -149,6 +151,24 @@ function Conversation({ sessionId, ownerId, name, initial, active, configuration
   const pendingRequest = useRef<AbortController | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const element = composer.current;
+    const selections = composerFocus.current;
+    const selection = active ? selections.get(sessionId) : undefined;
+    if (active) selections.delete(sessionId);
+    if (active && element && selection && element.ownerDocument.activeElement === element.ownerDocument.body) {
+      element.focus({ preventScroll: true });
+      element.setSelectionRange(selection.start, selection.end, selection.direction);
+    }
+    return () => {
+      // Reauthorization may remount this conversation. Retain only selection,
+      // never content, and never steal focus from another control or account.
+      if (!active || !element) return;
+      if (element.ownerDocument.activeElement === element) {
+        selections.set(sessionId, { start: element.selectionStart, end: element.selectionEnd, direction: element.selectionDirection });
+      }
+    };
+  }, [active, composerFocus, sessionId]);
   const proposalCards = useRef(new Map<string, HTMLDivElement>());
   const pendingProposalFocus = useRef<{ id: string; confirmation: boolean } | null>(null);
   const inputId = useId();

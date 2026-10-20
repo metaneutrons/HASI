@@ -203,7 +203,10 @@ function sanitizeDisplayMessages(
             ...(room.requestedStartDate ? { requestedStartDate: room.requestedStartDate } : {}),
             ...(room.requestedEndDate ? { requestedEndDate: room.requestedEndDate } : {}) }] : [];
         });
-        return rooms.length ? { ...base, tool: "anny · Frühere Suchergebnisse", rooms,
+        // This bounded correlation ID only groups host UI cards and enables
+        // rechecking a selected resource. It is not model/tool/write authority.
+        return rooms.length ? { ...base, ...(message.interactionId ? { interactionId: message.interactionId } : {}),
+          tool: "anny · Frühere Suchergebnisse", rooms,
           text: "Aktuell freigegebene Ressourcen aus deiner früheren Suche. Prüfe die Verfügbarkeit erneut." }
           : unavailableMessage(message);
       }

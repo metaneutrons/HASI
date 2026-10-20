@@ -30,6 +30,9 @@ Ask questions, find rooms and prepare a simulated booking in one conversation.</
 
 The [public demo](https://hasi.metaneutrons.cc) uses a server-backed runtime and isolated synthetic state. On first use of anny, the chat offers an explicit test-account connection and continues the original request after confirmation; **Verbundene Dienste** also manages connections. HASI does not ask users to supply internal resource IDs to work around missing account access. Disconnecting removes tool access and invalidates pending confirmations; it does not undo an existing booking or delete chat history. Public-demo chat transcripts and profile settings stay in browser storage; the server stores workspace sessions, proposals, integration settings and simulated bookings. There is no live anny tenant, institutional knowledge source or real SSO connection.
 
+In protected OIDC chats, fresh room availability survives an own autosave as a short-lived display observation. It expires after 30 seconds (a pending action in that chat finishes first); reopening or refreshing history always requires a new availability check. Metadata and resource access are reauthorized by the server, and booking still requires its separate current-policy check and explicit confirmation. Other chats keep their drafts and running actions during synchronization.
+
+
 Messages support Markdown lists, tables, quotes, emphasis and code. Use the copy
 menu's **Markdown kopieren** for the unchanged message source, or **Quelltext
 anzeigen** to inspect it. Paste source directly into the composer; indentation

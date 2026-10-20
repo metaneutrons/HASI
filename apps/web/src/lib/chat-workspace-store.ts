@@ -12,6 +12,7 @@ import {
   type ChatWorkspace,
 } from "./chat-sessions";
 import { modelProfileIdSchema, type ModelProfileId } from "./chat-contract";
+import { LiveRoomAvailability } from "./live-room-availability";
 
 type StorageLike = Pick<Storage, "getItem" | "setItem">;
 export interface ProtectedWorkspaceResult {
@@ -35,6 +36,7 @@ interface View {
   busy: Readonly<Record<string, boolean>>;
   notice: string | null;
   accessEpoch: number;
+  sessionEpochs: Readonly<Record<string, number>>;
   protectedPersistence: ProtectedPersistenceState | null;
 }
 
@@ -77,6 +79,51 @@ function preserveDrafts(remote: ChatWorkspace, local: ChatWorkspace, ownerId: st
   return parseChatWorkspace({ version: 1, ownerId, activeId, sessions }, ownerId);
 }
 
+function compatibleOwnProjection(before: ChatSnapshot, approved: ChatSnapshot): boolean {
+  const approvedMessages = new Map(approved.messages.map(message => [message.id, message]));
+  const messages = before.messages.map(message => {
+    const projected = approvedMessages.get(message.id);
+    if (message.role !== "assistant" || !message.rooms || !projected?.rooms
+      || message.evidence || message.sources || message.proposal || message.bookings
+      || message.rooms.length !== projected.rooms.length) return message;
+    // Historical availability formatting alone does not revoke a live result.
+    // Every resource, its metadata and requested window must still match.
+    const sameTargets = message.rooms.every((room, index) => {
+      const current = projected.rooms?.[index];
+      return current && JSON.stringify(room.resource) === JSON.stringify(current.resource)
+        && room.requestedStartDate === current.requestedStartDate && room.requestedEndDate === current.requestedEndDate;
+    });
+    return sameTargets ? projected : message;
+  });
+  return JSON.stringify({ ...before, input: "", messages }) === JSON.stringify({ ...approved, input: "" });
+}
+
+function reconcileOwnSave(remote: ChatWorkspace, submitted: ChatWorkspace, current: ChatWorkspace): ChatWorkspace | undefined {
+  const previous = new Map(submitted.sessions.map(session => [session.id, session]));
+  const projected = new Map(remote.sessions.map(session => [session.id, session]));
+  const sessions = [];
+  for (const session of current.sessions) {
+    const before = previous.get(session.id);
+    if (!before) {
+      // Only an unsent chat has no protected result requiring a fresh write.
+      const snapshot = session.snapshot;
+      if (snapshot.messages.length || snapshot.history.length || snapshot.chosenRoom || snapshot.activeProposal || snapshot.activeResult) return undefined;
+      sessions.push(session);
+      continue;
+    }
+    const content = (snapshot: ChatSnapshot) => JSON.stringify({ ...snapshot, input: "" });
+    const approved = projected.get(session.id);
+    if (!approved) return undefined;
+    if (content(before.snapshot) !== content(session.snapshot)) {
+      return undefined;
+    }
+    // Drafts, local navigation and a rename/delete during the save do not
+    // authorize protected content; the server projection owns that content.
+    sessions.push({ ...session, snapshot: { ...approved.snapshot, input: session.snapshot.input } });
+  }
+  return { ...current, sessions };
+}
+
 /** Each mounted account owns one store; production can supply an in-memory writer and remote CAS. */
 export function createChatWorkspaceStore(
   ownerId: string,
@@ -89,6 +136,7 @@ export function createChatWorkspaceStore(
     busy: {},
     notice: loaded.notice,
     accessEpoch: 0,
+    sessionEpochs: {},
     protectedPersistence: protectedPersistence ? { state: "saved", message: null } : null,
   };
   let configuredDefault: ModelProfileId = "groq-oss-120b";
@@ -99,8 +147,11 @@ export function createChatWorkspaceStore(
   let remoteBlocked = false;
   let remoteGeneration = 0;
   let workspaceVersion = 0;
+  const liveAvailability = new LiveRoomAvailability();
+  let availabilityTimer: ReturnType<typeof setTimeout> | undefined;
   const listeners = new Set<() => void>();
   const emit = () => { listeners.forEach((listener) => { listener(); }); };
+  const saveGenerationIsCurrent = (generation: number) => !remoteBlocked && generation === remoteGeneration;
 
   function setPersistence(state: ProtectedPersistenceState["state"], message: string | null) {
     if (!view.protectedPersistence || (view.protectedPersistence.state === state && view.protectedPersistence.message === message)) return;
@@ -108,14 +159,26 @@ export function createChatWorkspaceStore(
     emit();
   }
 
-  function replaceWorkspace(workspace: ChatWorkspace, bumpAccessEpoch: boolean) {
+  function replaceWorkspace(workspace: ChatWorkspace, bumpAccessEpoch: boolean, retainBusyFormatting = false) {
     const normalized = parseChatWorkspace(workspace, ownerId);
     if (JSON.stringify(view.workspace) === JSON.stringify(normalized)) return false;
     workspaceVersion += 1;
+    const previous = new Map(view.workspace.sessions.map(session => [session.id, session.snapshot]));
+    const sessionEpochs = Object.fromEntries(normalized.sessions.map(session => {
+      const before = previous.get(session.id);
+      // Own-save historical room formatting must not abort a confirmation.
+      // Source/metadata/history changes are never covered by this exception.
+      const sameAuthorizedContent = retainBusyFormatting && view.busy[session.id] && before
+        && compatibleOwnProjection(before, session.snapshot);
+      const remount = bumpAccessEpoch && !sameAuthorizedContent
+        && JSON.stringify(before) !== JSON.stringify(session.snapshot);
+      return [session.id, (view.sessionEpochs[session.id] ?? 0) + (remount ? 1 : 0)];
+    }));
     view = {
       ...view,
       workspace: normalized,
       accessEpoch: bumpAccessEpoch ? view.accessEpoch + 1 : view.accessEpoch,
+      sessionEpochs,
     };
     saveChatWorkspace(normalized, storage);
     emit();
@@ -123,6 +186,8 @@ export function createChatWorkspaceStore(
   }
 
   function redactProtectedContent(message: string) {
+    clearTimeout(availabilityTimer);
+    liveAvailability.clear();
     if (protectedPersistence) {
       remoteGeneration += 1;
       remoteBlocked = true;
@@ -154,6 +219,8 @@ export function createChatWorkspaceStore(
   }
 
   function applyRemoteWorkspace(workspace: ChatWorkspace, revision: string | null, preserveLocalDrafts: boolean) {
+    clearTimeout(availabilityTimer);
+    liveAvailability.clear();
     const remote = parseChatWorkspace(workspace, ownerId);
     const next = preserveLocalDrafts ? preserveDrafts(remote, view.workspace, ownerId) : remote;
     remoteRevision = revision;
@@ -161,24 +228,49 @@ export function createChatWorkspaceStore(
     saveChatWorkspace(next, storage);
   }
 
-  function queueRemoteSave(snapshot: ChatWorkspace, version: number) {
+  function queueRemoteSave() {
     if (!protectedPersistence || remoteBlocked) return;
     remotePendingCount += 1;
     const generation = remoteGeneration;
     setPersistence("saving", "Geschützte Chats werden gespeichert …");
     remoteChain = remoteChain.then(async () => {
       try {
-        if (remoteBlocked || generation !== remoteGeneration) return;
-        const result = await protectedPersistence.save(snapshot, remoteRevision);
-        remoteRevision = result.revision;
-        const serverChanged = JSON.stringify(result.workspace) !== JSON.stringify(snapshot);
-        if (workspaceVersion === version && timer === undefined) {
-          const changed = replaceWorkspace(result.workspace, serverChanged);
-          if (changed && serverChanged) saveChatWorkspace(view.workspace, storage);
-        } else if (serverChanged) {
-          redactProtectedContent("Die Quellenfreigabe konnte nicht mit deinem aktuellen Chat abgeglichen werden. Geschützte Antworten wurden ausgeblendet.");
+        if (!saveGenerationIsCurrent(generation)) return;
+        // Earlier acknowledgements may have reauthorized/projected the view
+        // while this write waited. Never send a superseded queued snapshot.
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          const snapshot = view.workspace;
+          const version = workspaceVersion;
+          const result = await protectedPersistence.save(snapshot, remoteRevision);
+          if (!saveGenerationIsCurrent(generation)) return;
+          remoteRevision = result.revision;
+          const serverChanged = JSON.stringify(result.workspace) !== JSON.stringify(snapshot);
+          const projected = liveAvailability.apply(result.workspace, Date.now());
+          const reconciled = reconcileOwnSave(projected, snapshot, view.workspace);
+          if ((workspaceVersion === version && timer === undefined) || reconciled) {
+            // Only an acknowledgement covering this conversation can retain a
+            // short-lived observation intersected with authorized metadata.
+            const next = reconciled ?? projected;
+            const changed = replaceWorkspace(next, serverChanged, true);
+            if (changed && serverChanged) saveChatWorkspace(view.workspace, storage);
+            break;
+          }
+          const approvedById = new Map(projected.sessions.map(session => [session.id, session.snapshot]));
+          const unchangedAuthority = snapshot.sessions.every(session => {
+            const approved = approvedById.get(session.id);
+            return approved && compatibleOwnProjection(session.snapshot, approved);
+          });
+          // A concurrent reply is not covered by an older acknowledgement.
+          // Immediately qualify the latest view inside this serial operation;
+          // do not mark it saved or remount/abort an unrelated pending action.
+          // A real revoked baseline is hidden now, never deferred to a retry.
+          if (!unchangedAuthority || attempt === 2) {
+            redactProtectedContent("Die Quellenfreigabe konnte nicht mit deinem aktuellen Chat abgeglichen werden. Geschützte Antworten wurden ausgeblendet.");
+            break;
+          }
         }
       } catch (error) {
+        if (!saveGenerationIsCurrent(generation)) return;
         if (error instanceof RemoteWorkspaceConflict) {
           remoteGeneration += 1;
           remoteRevision = error.current.revision;
@@ -208,7 +300,7 @@ export function createChatWorkspaceStore(
       if (protectedPersistence) redactProtectedContent("Der geschützte Chat-Speicher ist nicht erreichbar. Geschützte Antworten wurden ausgeblendet.");
       return;
     }
-    queueRemoteSave(view.workspace, workspaceVersion);
+    queueRemoteSave();
   }
 
   function publish(workspace: ChatWorkspace, busy = view.busy) {
@@ -216,8 +308,21 @@ export function createChatWorkspaceStore(
     const changed = workspace !== view.workspace;
     view = { ...view, workspace, busy };
     if (changed) workspaceVersion += 1;
+    if (protectedPersistence) liveAvailability.capture(workspace, Date.now());
     emit();
     if (changed) { clearTimeout(timer); timer = setTimeout(flush, 180); }
+    expireAvailability();
+  }
+
+  function expireAvailability() {
+    clearTimeout(availabilityTimer);
+    availabilityTimer = undefined;
+    if (!protectedPersistence) return;
+    // Do not remount/abort a pending business action to update a display lease.
+    // The completion snapshot immediately expires it when the chat is idle.
+    replaceWorkspace(liveAvailability.expire(view.workspace, Date.now(), view.busy), true);
+    const next = liveAvailability.nextExpiry(Date.now());
+    if (next !== undefined) availabilityTimer = setTimeout(expireAvailability, Math.max(1, next - Date.now()));
   }
 
   function updateSnapshot(sessionId: string, snapshot: ChatSnapshot, busy: boolean, preserveCurrentDraft: boolean) {
