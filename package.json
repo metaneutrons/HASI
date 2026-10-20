@@ -26,7 +26,8 @@
     "knowledge:inspect": "tsx scripts/inspect-knowledge-content.ts",
     "brand:generate": "tsx apps/web/scripts/generate-brand-assets.ts",
     "brand:check": "tsx apps/web/scripts/generate-brand-assets.ts --check",
-    "journey:serve": "tsx scripts/serve-plugin-journey.ts"
+    "journey:serve": "tsx scripts/serve-plugin-journey.ts",
+    "evaluate:models": "node --conditions=react-server --import tsx apps/web/scripts/evaluate-models.ts"
   },
   "dependencies": {
     "@hasi/plugin-sdk": "workspace:*",

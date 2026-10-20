@@ -23,6 +23,9 @@ docs/**
 docs/assets/**
 !docs/assets/hasi-hero-light.svg
 !docs/assets/hasi-hero-dark.svg
+!docs/evaluation
+docs/evaluation/**
+!docs/evaluation/example-cases.json
 
 # Re-exclude local credentials, generated files, caches and non-build data even
 # beneath the directories re-included above.

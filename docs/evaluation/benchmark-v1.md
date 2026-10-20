@@ -165,6 +165,11 @@ variants. These are bounded application-control checks; they do not turn draft
 fixture events into observations, establish browser confirmation or promote
 cases to gold/model-quality results.
 
+The [provider-observation operator tool](provider-observations.md) adds a
+separate opt-in fixed-evidence path through the existing router and shared
+budget. Its tariff-based estimates and literal citation assertions are not
+semantic scores, gold labels or completed provider comparison results.
+
 ## Three evaluation layers
 
 | Layer | Inputs held fixed | What the result measures |
