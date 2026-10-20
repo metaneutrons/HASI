@@ -24,6 +24,32 @@ function reject(code) {
   throw new DemoHealthProbeError(code);
 }
 
+function validateOptions(options) {
+  if (options === undefined) return undefined;
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+    reject('invalid_arguments');
+  }
+
+  const keys = Object.keys(options);
+  if (keys.some((key) => key !== 'expectedRevision')) reject('invalid_arguments');
+
+  const { expectedRevision } = options;
+  if (expectedRevision !== undefined
+      && (typeof expectedRevision !== 'string' || !REVISION_PATTERN.test(expectedRevision))) {
+    reject('invalid_arguments');
+  }
+  return expectedRevision;
+}
+
+function parseCliArguments(args) {
+  if (args.length === 0) return {};
+  if (args.length !== 2 || args[0] !== '--expected-revision'
+      || !REVISION_PATTERN.test(args[1])) {
+    reject('invalid_arguments');
+  }
+  return { expectedRevision: args[1] };
+}
+
 function discardBody(response) {
   try {
     const cancellation = response.body?.cancel();
@@ -121,7 +147,8 @@ function parseHealthPayload(text) {
  * Probes only the fixed public readiness URL. The optional fetch implementation
  * is an offline-test seam; callers cannot choose a URL, headers or timeout.
  */
-export async function checkDemoHealth(fetchImplementation = globalThis.fetch) {
+export async function checkDemoHealth(fetchImplementation = globalThis.fetch, options = {}) {
+  const expectedRevision = validateOptions(options);
   if (typeof fetchImplementation !== 'function') reject('fetch_unavailable');
 
   let response;
@@ -145,7 +172,11 @@ export async function checkDemoHealth(fetchImplementation = globalThis.fetch) {
 
   const body = await readBoundedBody(response);
   if ('failure' in body) reject(body.failure);
-  return parseHealthPayload(body.text);
+  const result = parseHealthPayload(body.text);
+  if (expectedRevision !== undefined && result.revision !== expectedRevision) {
+    reject('revision_mismatch');
+  }
+  return result;
 }
 
 const isDirectExecution = process.argv[1] !== undefined
@@ -153,7 +184,8 @@ const isDirectExecution = process.argv[1] !== undefined
 
 if (isDirectExecution) {
   try {
-    process.stdout.write(`${JSON.stringify(await checkDemoHealth())}\n`);
+    const options = parseCliArguments(process.argv.slice(2));
+    process.stdout.write(`${JSON.stringify(await checkDemoHealth(globalThis.fetch, options))}\n`);
   } catch (error) {
     const code = error instanceof DemoHealthProbeError ? error.code : 'internal_failure';
     process.stderr.write(`demo-health failed: ${code}\n`);

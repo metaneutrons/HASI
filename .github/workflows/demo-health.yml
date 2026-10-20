@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '*/30 * * * *'
   workflow_dispatch:
+    inputs:
+      qualification_counterprobe:
+        description: Run the synthetic revision-mismatch counterprobe after the public probe succeeds.
+        required: false
+        type: boolean
+        default: false
   pull_request:
     paths:
       - '.github/workflows/demo-health.yml'
@@ -11,6 +17,7 @@ on:
       - 'scripts/operations/demo-health.node-test.mjs'
       - 'apps/web/src/app/api/health/route.ts'
       - 'docs/verification/2026-10-19/demo-health-monitor.md'
+      - 'docs/operations/demo-health-counterprobe.md'
   push:
     branches: [main]
     paths:
@@ -19,6 +26,7 @@ on:
       - 'scripts/operations/demo-health.node-test.mjs'
       - 'apps/web/src/app/api/health/route.ts'
       - 'docs/verification/2026-10-19/demo-health-monitor.md'
+      - 'docs/operations/demo-health-counterprobe.md'
 
 permissions:
   contents: read
@@ -53,3 +61,19 @@ jobs:
           node-version: '24'
       - name: Probe the fixed public readiness endpoint
         run: node scripts/operations/demo-health.mjs
+
+  qualification-counterprobe:
+    name: Qualification counterprobe (expected-revision mismatch)
+    needs: public-probe
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.qualification_counterprobe == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - name: Exercise the expected-revision mismatch path
+        run: node scripts/operations/demo-health.mjs --expected-revision 0000000000000000000000000000000000000000

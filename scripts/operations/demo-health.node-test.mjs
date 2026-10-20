@@ -7,18 +7,62 @@ import { checkDemoHealth } from './demo-health.mjs';
 
 const FIXED_URL = 'https://hasi.metaneutrons.cc/api/health';
 const READY_BODY = JSON.stringify({ status: 'ready', revision: 'a'.repeat(40) });
+const MONITOR_PATH = fileURLToPath(new URL('./demo-health.mjs', import.meta.url));
+
+function runCli(args, preload) {
+  return spawnSync(process.execPath, [
+    '--import', `data:text/javascript,${encodeURIComponent(preload)}`,
+    MONITOR_PATH,
+    ...args,
+  ], { encoding: 'utf8', env: {}, timeout: 5_000 });
+}
 
 test('the actual CLI exits nonzero with a sanitized synthetic failure', () => {
   const preload = 'globalThis.fetch = async () => new Response("private fixture body", { status: 503 });';
-  const result = spawnSync(process.execPath, [
-    '--import', `data:text/javascript,${encodeURIComponent(preload)}`,
-    fileURLToPath(new URL('./demo-health.mjs', import.meta.url)),
-  ], { encoding: 'utf8', env: {}, timeout: 5_000 });
+  const result = runCli([], preload);
   assert.equal(result.error, undefined);
   assert.equal(result.status, 1);
   assert.equal(result.signal, null);
   assert.equal(result.stdout, '');
   assert.equal(result.stderr, 'demo-health failed: http_status\n');
+});
+
+test('the actual CLI succeeds with and without an expected revision', () => {
+  const preload = `globalThis.fetch = async () => new Response(${JSON.stringify(READY_BODY)}, { status: 200 });`;
+  for (const args of [[], ['--expected-revision', 'a'.repeat(40)]]) {
+    const result = runCli(args, preload);
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0);
+    assert.equal(result.signal, null);
+    assert.equal(result.stdout, `${JSON.stringify({ status: 'ready', revision: 'a'.repeat(40) })}\n`);
+    assert.equal(result.stderr, '');
+  }
+});
+
+test('the actual CLI reports an expected-revision mismatch with a sanitized code', () => {
+  const preload = `globalThis.fetch = async () => new Response(${JSON.stringify(READY_BODY)}, { status: 200 });`;
+  const result = runCli(['--expected-revision', '0'.repeat(40)], preload);
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 1);
+  assert.equal(result.signal, null);
+  assert.equal(result.stdout, '');
+  assert.equal(result.stderr, 'demo-health failed: revision_mismatch\n');
+});
+
+test('the actual CLI rejects invalid and extra arguments before fetching', () => {
+  const preload = 'globalThis.fetch = async () => { process.stderr.write("fetch-called\\n"); return new Response("{}", { status: 200 }); };';
+  for (const args of [
+    ['--expected-revision', 'not-a-revision'],
+    ['--expected-revision', 'a'.repeat(40), '--unexpected'],
+    ['--unexpected'],
+  ]) {
+    const result = runCli(args, preload);
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 1);
+    assert.equal(result.signal, null);
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr, 'demo-health failed: invalid_arguments\n');
+  }
 });
 
 function assertSafeRequest(url, options) {
@@ -32,8 +76,8 @@ function assertSafeRequest(url, options) {
   assert.equal(Object.hasOwn(options, 'body'), false);
 }
 
-async function expectFailure(code, fetchImplementation) {
-  await assert.rejects(checkDemoHealth(fetchImplementation), (error) => {
+async function expectFailure(code, fetchImplementation, options) {
+  await assert.rejects(checkDemoHealth(fetchImplementation, options), (error) => {
     assert.equal(error.code, code);
     assert.equal(error.message, `Demo health check failed (${code}).`);
     return true;
@@ -53,6 +97,37 @@ test('accepts only the fixed public ready contract and returns minimal status', 
 
   assert.equal(calls, 1);
   assert.deepEqual(result, { status: 'ready', revision: 'a'.repeat(40) });
+});
+
+test('accepts a ready response matching the expected revision', async () => {
+  let calls = 0;
+  const result = await checkDemoHealth(async (url, options) => {
+    calls += 1;
+    assertSafeRequest(url, options);
+    return new Response(READY_BODY, { status: 200 });
+  }, { expectedRevision: 'a'.repeat(40) });
+
+  assert.equal(calls, 1);
+  assert.deepEqual(result, { status: 'ready', revision: 'a'.repeat(40) });
+});
+
+test('reports a sanitized mismatch after receiving a valid ready response', async () => {
+  let calls = 0;
+  await expectFailure('revision_mismatch', async (url, options) => {
+    calls += 1;
+    assertSafeRequest(url, options);
+    return new Response(READY_BODY, { status: 200 });
+  }, { expectedRevision: '0'.repeat(40) });
+  assert.equal(calls, 1);
+});
+
+test('rejects invalid expected revisions before invoking fetch', async () => {
+  let calls = 0;
+  await expectFailure('invalid_arguments', async () => {
+    calls += 1;
+    return new Response(READY_BODY, { status: 200 });
+  }, { expectedRevision: 'A'.repeat(40) });
+  assert.equal(calls, 0);
 });
 
 test('accepts an exact 8 KiB JSON body', async () => {
