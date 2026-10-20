@@ -61,6 +61,15 @@ describe("registry-backed plugin tools", () => {
     expect(compactPluginToolResult({ large: "x".repeat(2_000) }, 80)).toHaveLength(80);
   });
 
+  it("keeps escaped truncation previews inside the serialized result limit", () => {
+    for (const character of ['"', "\\", "x", "界"]) {
+      const result = boundedPluginToolResult(Object.fromEntries(Array.from({ length: 24 }, (_, index) => [String(index), character.repeat(1_200)])));
+      expect(result.truncated).toBe(true);
+      expect(JSON.stringify(result).length).toBeLessThanOrEqual(8_000);
+      expect(JSON.parse(JSON.stringify(result))).toEqual(result);
+    }
+  });
+
   it("shows and binds the immutable execute action separately from the preparation tool", () => {
     const tool = descriptor("example.plugin", "proposal.prepare", { title: "Vorschau prüfen" });
     const raw = {

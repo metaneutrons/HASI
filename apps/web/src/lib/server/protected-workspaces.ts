@@ -13,14 +13,17 @@ import {
 import type { NativeHistoryAccess, NativeHistoryResolver } from "./native-history";
 import { createHostDialogueSigner } from "./host-dialogue";
 import { proposalPresentation } from "../proposal-presentation";
+import { compactPluginToolResult, MODEL_PLUGIN_TOOL_NAME } from "../plugin-tools";
 import { knowledgeDocumentSchema, type KnowledgeDocument } from "../knowledge";
 import type { KnowledgeEvidence, WireMessage } from "../chat-contract";
 import {
   createKnowledgeEvidence,
   rebuildKnowledgeContext,
   type KnowledgeContextResolver,
+  type PluginResultContextResolver,
   type ResolvedKnowledgeContext,
 } from "./knowledge-evidence";
+import type { PluginResultContext } from "./plugin-result-context";
 
 const WORKSPACE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_CONTEXTS_PER_SESSION = 32;
@@ -29,6 +32,7 @@ const MAX_CONTEXT_DOCUMENT_BYTES = 64 * 1024;
 const WORKSPACE_KEY_INFO = "hasi-protected-chat-workspace-v1";
 const UNAVAILABLE_ANSWER = "Diese frühere Antwort ist nicht mehr verfügbar. Bitte stelle die Frage erneut.";
 const UNAVAILABLE_SOURCES = "Diese frühere Quellenkarte ist nicht mehr verfügbar. Bitte suche erneut.";
+const UNAVAILABLE_PLUGIN_RESULT = "Dieses frühere Plugin-Ergebnis ist nicht mehr verfügbar. Bitte frage erneut.";
 
 const storedWorkspaceSchema = z.strictObject({
   version: z.literal(1),
@@ -56,6 +60,7 @@ export interface ProtectedWorkspaceOptions {
   readonly clock?: () => number;
   readonly resolveNative?: NativeHistoryResolver;
   readonly authority?: () => Promise<string>;
+  readonly resolvePluginResults?: PluginResultContextResolver;
 }
 
 export class ProtectedWorkspaceError extends Error {
@@ -152,10 +157,45 @@ function validModelWireMessages(history: readonly WireMessage[]): Map<string, Si
   return result;
 }
 
+function verifiedPluginToolResults(
+  history: readonly WireMessage[],
+  conversationId: string,
+  authority: string | undefined,
+  signer: ReturnType<typeof createKnowledgeEvidence>,
+  contexts: ReadonlyMap<string, PluginResultContext>,
+): Map<string, PluginResultContext> {
+  const matched = new Map<string, PluginResultContext>();
+  const pending = new Map<string, NonNullable<SignedAssistantMessage["toolCalls"]>[number]>();
+  for (const message of history) {
+    if (message.role === "user") {
+      pending.clear();
+      continue;
+    }
+    if (message.role === "assistant") {
+      pending.clear();
+      if (signer.verify(conversationId, message, authority)) {
+        message.toolCalls?.forEach(call => pending.set(call.id, call));
+      }
+      continue;
+    }
+    const call = pending.get(message.toolCallId);
+    if (call?.name !== message.name) continue;
+    pending.delete(message.toolCallId);
+    if (!MODEL_PLUGIN_TOOL_NAME.test(message.name) || !message.toolContextId) continue;
+    const context = contexts.get(message.toolContextId);
+    if (context?.callId !== message.toolCallId) continue;
+    if (context.modelName !== message.name || canonicalJson(context.arguments) !== canonicalJson(call.arguments)
+      || message.content !== JSON.stringify(context.result)) continue;
+    matched.set(context.contextId, context);
+  }
+  return matched;
+}
+
 function sanitizeDisplayMessages(
   messages: readonly ChatMessage[],
   history: readonly WireMessage[],
   contexts: ReadonlyMap<string, SafeResolvedContext>,
+  pluginResults: ReadonlyMap<string, PluginResultContext>,
   native: NativeHistoryAccess,
   verifyHost: (message: ChatMessage) => ChatMessage | undefined,
 ): ChatMessage[] {
@@ -165,6 +205,23 @@ function sanitizeDisplayMessages(
       return { id: message.id, role: "user", text: message.text,
         ...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }) };
     }
+
+    if (message.pluginResultContextId !== undefined) {
+      const allowedFields = new Set(["id", "role", "text", "timestamp", "tool", "pluginResultContextId"]);
+      const context = pluginResults.get(message.pluginResultContextId);
+      if (!context || Object.keys(message).some(key => !allowedFields.has(key))) {
+        return unavailableMessage(message, UNAVAILABLE_PLUGIN_RESULT);
+      }
+      return {
+        id: message.id,
+        role: "assistant",
+        text: compactPluginToolResult(context.result),
+        tool: `Plugin · ${context.title}`,
+        pluginResultContextId: context.contextId,
+        ...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }),
+      };
+    }
+    if (message.text === UNAVAILABLE_PLUGIN_RESULT) return unavailableMessage(message, UNAVAILABLE_PLUGIN_RESULT);
 
     if (message.hostDialogue !== undefined) return verifyHost(message) ?? unavailableMessage(message);
     const contextId = message.sourceContextId;
@@ -368,6 +425,7 @@ export class ProtectedWorkspaceStore {
       const snapshot = session.snapshot;
       const contextIds = historyContextIds(snapshot.history, snapshot.messages);
       const resolved = new Map<string, SafeResolvedContext>();
+      const resolvedPluginResults = new Map<string, PluginResultContext>();
       if (contextIds.length <= MAX_CONTEXTS_PER_SESSION && contextIds.length > 0) {
         try {
           const returned = await this.options.resolve(contextIds);
@@ -391,17 +449,33 @@ export class ProtectedWorkspaceStore {
           this.signer,
           (requestedIds) => Promise.resolve(requestedIds.map((contextId) => resolved.get(contextId) ?? { contextId, status: "unavailable" })),
           authority,
+          this.options.resolvePluginResults && authority
+            ? async (conversationId, ids, currentAuthority) => {
+              const returned = await this.options.resolvePluginResults?.(conversationId, ids, currentAuthority) ?? [];
+              return returned.map(candidate => {
+                if (candidate.status !== "valid") return candidate;
+                const context = candidate.context;
+                if (candidate.contextId !== context.contextId || context.conversationId !== conversationId
+                  || context.authorityDigest !== currentAuthority || !ids.includes(candidate.contextId)) {
+                  return { contextId: candidate.contextId, status: "unavailable" as const };
+                }
+                resolvedPluginResults.set(candidate.contextId, context);
+                return candidate;
+              });
+            }
+            : undefined,
         );
         history = rebuilt.request.messages;
       } catch {
         history = safeHistoryFallback();
       }
+      const matchedPluginResults = verifiedPluginToolResults(history, session.id, authority, this.signer, resolvedPluginResults);
       sessions.push({
         ...session,
         snapshot: {
           ...snapshot,
           history,
-          messages: sanitizeDisplayMessages(snapshot.messages, history, resolved, native, message => {
+          messages: sanitizeDisplayMessages(snapshot.messages, history, resolved, matchedPluginResults, native, message => {
             // A display receipt never carries model/source/action authority. The
             // server reconstructs any candidate cards from its current catalogue.
             if (message.evidence || message.sources || message.sourceContextId || message.proposal || message.bookings

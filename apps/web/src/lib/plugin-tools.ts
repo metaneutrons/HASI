@@ -8,6 +8,11 @@ export const MAX_PLUGIN_TOOL_CONTEXT_BYTES = 32 * 1024;
 export const MAX_PLUGIN_TOOL_RESULT_CHARS = 8_000;
 export const MAX_PLUGIN_TOOL_DISPLAY_CHARS = 1_200;
 
+export const pluginResultReadResponseSchema = z.strictObject({
+  contextId: z.uuid(),
+  result: z.record(z.string(), z.unknown()),
+});
+
 const instanceIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u);
 const toolIdSchema = z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/u);
 const schemaObject = z.record(z.string(), z.unknown());
@@ -235,7 +240,14 @@ export function boundedPluginToolResult(value: unknown): Record<string, unknown>
   const result = isRecord(bounded) ? bounded : { value: bounded };
   let serialized = JSON.stringify(result);
   if (serialized.length > MAX_PLUGIN_TOOL_RESULT_CHARS) {
-    serialized = JSON.stringify({ truncated: true, preview: serialized.slice(0, MAX_PLUGIN_TOOL_RESULT_CHARS - 96) });
+    const source = serialized;
+    let lower = 0; let upper = MAX_PLUGIN_TOOL_RESULT_CHARS;
+    while (lower < upper) {
+      const middle = Math.ceil((lower + upper) / 2);
+      if (JSON.stringify({ truncated: true, preview: source.slice(0, middle) }).length <= MAX_PLUGIN_TOOL_RESULT_CHARS) lower = middle;
+      else upper = middle - 1;
+    }
+    serialized = JSON.stringify({ truncated: true, preview: source.slice(0, lower) });
   }
   try {
     const parsed: unknown = JSON.parse(serialized);
