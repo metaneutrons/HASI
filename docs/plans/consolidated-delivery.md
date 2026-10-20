@@ -1,6 +1,10 @@
 # HASI consolidated delivery plan
 
-Plan version: 7. API-performance sequencing decision: 2026-10-19. Fabian
+Plan version: 8. Roadmap extension: 2026-10-20. Fabian added HsH library
+catalogue search as a ninth post-MVP proposal under #55. This adds discovery
+scope only; it does not change M1–M8 acceptance, sequencing or issue granularity.
+
+V7 API-performance sequencing decision: 2026-10-19. Fabian
 explicitly deferred acceptance of the non-model API p95 ≤ 1,000 ms target at
 five concurrent users from M2/M7 to final **M8-A9**. The target and measurement
 method in the [performance contract](../architecture/technical-basis.md#demo-performance-targets)
@@ -19,7 +23,7 @@ Test-IdP, mocks, synthetic data and browser/device simulation. Required CI and
 technical operational exercises remain required. The earlier V3 changed only
 issue granularity and was adopted on 2026-10-18.
 
-Decision state: **V7 transfers only the 1-second API acceptance to M8-A9;
+Decision state: **V8 adds library catalogue discovery under #55; V7 transfers only the 1-second API acceptance to M8-A9;
 V6's local UI target remains in M2/M7; V5 retains
 the demo backup acceptance scope; V4 retains its
 qualification sequencing and final mobile-quality requirements.** Real iPhone/Safari, Android/Chrome,
@@ -39,8 +43,8 @@ Keep one executable dependency order without creating another backlog. HASI
 remains a chat-first, mobile-first university assistant. Intranet, Service-IT
 and anny remain mandatory for the institutional MVP. The retained V3 structure consolidates
 tracking records as follows: #47 is the unified delivery index, #49 owns M2 and
-the six P1–P6 qualification groups, and #55 retains all eight post-MVP
-proposals. Existing evidence and criteria move with their status; only the
+the six P1–P6 qualification groups, and #55 retains the original eight post-MVP
+proposals plus library catalogue search added in V8. Existing evidence and criteria move with their status; only the
 number of issue records changes.
 
 This document owns the cross-track sequence and the detailed plugin
@@ -126,8 +130,8 @@ The adopted V3 graph contains 13 primary tracking records: #17, #47–#55, and
 #79–#81. Their live open/accepted state belongs to the issues. #47 indexes the
 technical M1–M7 milestones, final institutional M8, and the related D1–D3,
 Coolify and provider tracks. #49 owns M2 plus the six separately evidenced P1–P6
-qualification groups. #55 retains all eight future integration proposals and
-their source-specific discovery gates. P1–P6, M1–M8, D3, #79, #81 and the future
+qualification groups. #55 retains nine future integration proposals, including V8 library catalogue
+search, and their source-specific discovery gates. P1–P6, M1–M8, D3, #79, #81 and the future
 roadmap require their own evidence before acceptance; the graph itself is not
 a completion decision.
 
@@ -147,7 +151,7 @@ never as completed work. All 37 issue records and their histories remain.
 | [#52](https://github.com/metaneutrons/HASI/issues/52) | M5 confirmed anny write/cancel/reconcile behavior | Follows M4 against mocks/reference contracts; actual tenant and vendor conformance remain M8 |
 | [#53](https://github.com/metaneutrons/HASI/issues/53) | M6 synthetic/offline model and adversarial evaluation | Formal evaluation before M7; BUD-A1 before paid runs; DI-A1–DI-A4 via #81 before final provider comparison; CACHE-A1 remains separate |
 | [#54](https://github.com/metaneutrons/HASI/issues/54) | M7 synthetic technical pilot and operations | M1–M6 technical gates, automated/browser/simulator UX, independent service-health monitoring and incident/rollback exercises; demo backup/restore is M8-A8 |
-| [#55](https://github.com/metaneutrons/HASI/issues/55) | Post-MVP roadmap and discovery register | Retains eight scoped proposals, source-specific next actions and reactivation gates; no connector is committed or implemented |
+| [#55](https://github.com/metaneutrons/HASI/issues/55) | Post-MVP roadmap and discovery register | Retains nine scoped proposals, source-specific next actions and reactivation gates; no connector is committed or implemented |
 | [#80](https://github.com/metaneutrons/HASI/issues/80) | M8 final institutional acceptance | After M1–M7; real identity, source rights, Anny tenant, protected-data approval and recorded go/no-go |
 | [#17](https://github.com/metaneutrons/HASI/issues/17) | D3 first actual container publication | Separately requested Release Please release; exact-tag amd64/arm64 and real publication evidence |
 | [#79](https://github.com/metaneutrons/HASI/issues/79) | CI-qualified source deployment to Coolify | Exact main SHA, state/budget preservation, authenticated trigger, health checks and rollback |
@@ -572,6 +576,13 @@ M8 acceptance. CACHE-A1 remains M6 work; this decision does not transfer the
 unproven Groq cache-hit requirement.
 
 ## Plan review and completion
+
+Roadmap extension, 2026-10-20: V8 adds read-only HsH library catalogue search
+under #55 and the [MVP future roadmap](hasi-mvp.md#hsh-library-catalogue-search).
+The catalogue product, supported interface and access contract remain discovery
+questions. The original eight V3 transfers below remain unchanged; the current
+register contains nine proposals. No connector, institutional approval or new
+MVP prerequisite is claimed by this addition.
 
 Unified sequencing update, 2026-10-18: v2 reconciled the issue graph with the
 Coolify cutover, source-deployment follow-up #79 and the decision to put

@@ -389,6 +389,32 @@ adapter, not an automatic university index. No service is commissioned or
 connector implemented. See [restricted web search](../architecture/restricted-web-search.md)
 for the provider comparison, URL/network policy and acceptance scenarios.
 
+### HsH library catalogue search
+
+Tracking: [#55](https://github.com/metaneutrons/HASI/issues/55). Added at
+Fabian's request on 2026-10-20; proposed post-MVP discovery, not implemented.
+
+Next action: Identify the HsH library's catalogue/discovery system, service
+owner and supported search interface. Establish the permitted metadata scope,
+authentication, licensing, query-processing and rate-limit contract before
+selecting an adapter. No particular product or API is assumed. Create a child
+issue only when a bounded contract, owner and implementation scope are agreed
+and active work is selected.
+
+Provide a configurable, independently versioned, read-only MCP plugin for
+search by title, author, keyword or ISBN. Return source-backed bibliographic
+metadata and stable links to the relevant catalogue records. Include holdings,
+locations and availability only where the source exposes them and the user may
+see them; never infer current availability from a bibliographic record or stale
+model knowledge. Restricted records and licensed content retain source-side
+access rules. Account access, loans, renewals and reservations require separate
+scope decisions; they are not implied by catalogue search.
+
+Before live integration, qualify synthetic cases for matching, ambiguous and
+empty searches, record links, unavailable source data and denied access. Missing
+or stale availability must be shown as unknown. Institutional source approval
+and actual-system conformance remain separate from a working mock.
+
 ### Examination-regulations knowledge base for all degree programmes
 
 V3 tracking: [#55](https://github.com/metaneutrons/HASI/issues/55); transfer source [#58](https://github.com/metaneutrons/HASI/issues/58), to close as `not_planned` after the successor preserves its complete status and evidence.
