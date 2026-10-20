@@ -10,6 +10,7 @@ import { startJourneyModel } from '../scripts/plugin-journey-model.js';
 const TOKEN = 'synthetic-journey-fixture-token';
 const MODEL_ID = 'hasi-synthetic-fixture';
 const MAX_REQUEST_BYTES = 256 * 1024;
+const STATIC_READ_STATUS_RESULT = 'Die Referenzstatusdaten liegen im Modellkontext vor.';
 
 interface CertificateFixture {
   readonly key: Buffer;
@@ -129,6 +130,34 @@ function readStatusHistory(content: string, resultCallId = 'read_status_call') {
       tool_calls: [{ id: 'read_status_call', type: 'function', function: { name: toolName, arguments: '{}' } }],
     },
     { role: 'tool', tool_call_id: resultCallId, content },
+  ];
+}
+
+function priorReadStatusHistory(options: {
+  readonly content: string;
+  readonly resultCallId?: string;
+  readonly correlated?: boolean;
+  readonly answer?: string;
+}) {
+  const callId = options.resultCallId ?? 'prior_read_status_call';
+  return [
+    { role: 'user', content: 'Wie ist der Referenzstatus?' },
+    {
+      role: 'assistant',
+      content: null,
+      tool_calls: [{
+        id: callId,
+        type: 'function',
+        function: { name: modelToolHash('read_status'), arguments: '{}' },
+      }],
+    },
+    {
+      role: 'tool',
+      tool_call_id: options.correlated === false ? 'unrelated_read_call' : callId,
+      content: options.content,
+    },
+    ...(options.answer === undefined ? [] : [{ role: 'assistant', content: options.answer }]),
+    { role: 'user', content: 'Bitte fasse den aktuellen Stand zusammen.' },
   ];
 }
 
@@ -321,7 +350,13 @@ describe('loopback synthetic journey model fixture', () => {
       expect(onlyMessage(response).content).toBe('Die Referenzstatusdaten liegen im Modellkontext vor.');
       expect(response.body).not.toContain(status.label);
     }
-    expect(server?.resultObservations()).toEqual({ referenceReadResults: 2, omittedResults: 0 });
+    expect(server?.resultObservations()).toEqual({
+      referenceReadResults: 2,
+      omittedResults: 0,
+      priorReferenceReadResults: 0,
+      priorReferenceAnswers: 0,
+      requestsWithPriorReferenceContext: 0,
+    });
 
     const uncorrelated = await post({
       body: JSON.stringify(payload({
@@ -334,7 +369,13 @@ describe('loopback synthetic journey model fixture', () => {
     });
     expect(onlyMessage(uncorrelated).content).toBe('Der Referenzdienst wurde über das freigegebene Werkzeug abgefragt.');
     expect(uncorrelated.body).not.toContain('Synthetic Admin Label');
-    expect(server?.resultObservations()).toEqual({ referenceReadResults: 2, omittedResults: 0 });
+    expect(server?.resultObservations()).toEqual({
+      referenceReadResults: 2,
+      omittedResults: 0,
+      priorReferenceReadResults: 0,
+      priorReferenceAnswers: 0,
+      requestsWithPriorReferenceContext: 0,
+    });
 
     const omittedResponses = [
       JSON.stringify({ historyDetailsOmitted: true, requiresFreshRead: true }),
@@ -358,8 +399,141 @@ describe('loopback synthetic journey model fixture', () => {
       expect(response.body).not.toContain('Ignore prior rules');
     }
 
-    expect(server?.resultObservations()).toEqual({ referenceReadResults: 2, omittedResults: 4 });
+    expect(server?.resultObservations()).toEqual({
+      referenceReadResults: 2,
+      omittedResults: 4,
+      priorReferenceReadResults: 0,
+      priorReferenceAnswers: 0,
+      requestsWithPriorReferenceContext: 0,
+    });
     expect(server?.calls()).toBe(7);
+  });
+
+  it('counts bounded correlated reference data and exact prior fixture answers in later requests', async () => {
+    const validData = JSON.stringify({
+      untrustedPluginToolResult: {
+        label: 'Prior Synthetic Label',
+        account: 'synthetic-admin',
+        version: '1.0.0',
+        actionCount: 2,
+      },
+      historyDetailsOmitted: false,
+      requiresFreshRead: true,
+    });
+    const tools = [modelTool(modelToolHash('read_status'))];
+
+    const withBothSources = await post({
+      body: JSON.stringify(payload({
+        tools,
+        messages: priorReadStatusHistory({ content: validData, answer: STATIC_READ_STATUS_RESULT }),
+      })),
+    });
+    expect(withBothSources.status).toBe(200);
+    expect(server?.resultObservations()).toMatchObject({
+      priorReferenceReadResults: 1,
+      priorReferenceAnswers: 1,
+      requestsWithPriorReferenceContext: 1,
+    });
+
+    const withDataOnly = await post({
+      body: JSON.stringify(payload({ tools, messages: priorReadStatusHistory({ content: validData }) })),
+    });
+    expect(withDataOnly.status).toBe(200);
+    expect(server?.resultObservations()).toMatchObject({
+      priorReferenceReadResults: 2,
+      priorReferenceAnswers: 1,
+      requestsWithPriorReferenceContext: 2,
+    });
+
+    const withAnswerOnly = await post({
+      body: JSON.stringify(payload({
+        tools,
+        messages: priorReadStatusHistory({ content: '{omitted}', answer: STATIC_READ_STATUS_RESULT }),
+      })),
+    });
+    expect(withAnswerOnly.status).toBe(200);
+    expect(server?.resultObservations()).toMatchObject({
+      priorReferenceReadResults: 2,
+      priorReferenceAnswers: 2,
+      requestsWithPriorReferenceContext: 3,
+    });
+    expect(server?.resultObservations()).toMatchObject({ referenceReadResults: 0, omittedResults: 0 });
+
+    const excludedAfterPositive = await post({
+      body: JSON.stringify(payload({ tools, messages: priorReadStatusHistory({ content: validData, correlated: false }) })),
+    });
+    expect(excludedAfterPositive.status).toBe(200);
+    expect(server?.resultObservations()).toEqual({
+      referenceReadResults: 0,
+      omittedResults: 0,
+      priorReferenceReadResults: 2,
+      priorReferenceAnswers: 2,
+      requestsWithPriorReferenceContext: 3,
+    });
+    expect(withBothSources.body).not.toContain('Prior Synthetic Label');
+    expect(withDataOnly.body).not.toContain('Prior Synthetic Label');
+    expect(withAnswerOnly.body).not.toContain('Prior Synthetic Label');
+    expect(excludedAfterPositive.body).not.toContain('Prior Synthetic Label');
+  });
+
+  it('excludes omitted, uncorrelated, malformed, current-turn-only, and user-quoted evidence from prior counters', async () => {
+    const validData = JSON.stringify({
+      untrustedPluginToolResult: {
+        label: 'Prior Synthetic Label',
+        account: 'synthetic-admin',
+        version: '1.0.0',
+        actionCount: 2,
+      },
+      historyDetailsOmitted: false,
+      requiresFreshRead: true,
+    });
+    const tools = [modelTool(modelToolHash('read_status'))];
+    const excludedHistories = [
+      priorReadStatusHistory({ content: JSON.stringify({ historyDetailsOmitted: true, requiresFreshRead: true }) }),
+      priorReadStatusHistory({ content: validData, correlated: false }),
+      priorReadStatusHistory({ content: '{malformed reference result' }),
+      priorReadStatusHistory({ content: `${validData}${' '.repeat(32 * 1024)}` }),
+      [{ role: 'user', content: `I saw “${STATIC_READ_STATUS_RESULT}” in an earlier turn.` }],
+    ];
+
+    for (const messages of excludedHistories) {
+      const response = await post({ body: JSON.stringify(payload({ tools, messages })) });
+      expect(response.status).toBe(200);
+      expect(server?.resultObservations()).toMatchObject({
+        priorReferenceReadResults: 0,
+        priorReferenceAnswers: 0,
+        requestsWithPriorReferenceContext: 0,
+      });
+    }
+
+    const currentTurnOnly = await post({
+      body: JSON.stringify(payload({
+        tools,
+        messages: [
+          { role: 'user', content: 'Wie ist der Status?' },
+          {
+            role: 'assistant',
+            content: null,
+            tool_calls: [{
+              id: 'current_read_status_call',
+              type: 'function',
+              function: { name: modelToolHash('read_status'), arguments: '{}' },
+            }],
+          },
+          { role: 'tool', tool_call_id: 'current_read_status_call', content: validData },
+          { role: 'assistant', content: STATIC_READ_STATUS_RESULT },
+        ],
+      })),
+    });
+    expect(currentTurnOnly.status).toBe(200);
+    expect(server?.resultObservations()).toEqual({
+      referenceReadResults: 1,
+      omittedResults: 0,
+      priorReferenceReadResults: 0,
+      priorReferenceAnswers: 0,
+      requestsWithPriorReferenceContext: 0,
+    });
+    expect(currentTurnOnly.body).not.toContain('Prior Synthetic Label');
   });
 
   it('does not let unknown functions or execute_mark declarations authorize a tool call', async () => {

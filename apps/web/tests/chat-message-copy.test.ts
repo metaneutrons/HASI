@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { chatMessageCopyText, chatMessageMarkdownSource } from "../src/lib/chat-message-copy";
 import type { ChatMessage } from "../src/lib/chat-sessions";
+import { knowledgeCitationFromDocument } from "../src/lib/knowledge-citations";
 
 const origin = "https://hasi.example";
 const message: ChatMessage = { id: "internal-message-id", role: "assistant", text: "Deine Ergebnisse.", model: "internal-model", interactionId: "internal-interaction" };
+const sourceDocument = {
+  updatedAt: "2026-10-16T00:00:00Z", fetchedAt: "2026-10-16T00:00:00Z",
+  authorityRevision: "a".repeat(64), corpusRevision: "b".repeat(64), dataClass: "synthetic_demo" as const,
+  images: [], id: "svc-001", title: "WLAN", citationId: "knowledge:service_it:svc-001:1",
+  sourceSystem: "service_it" as const, language: "de" as const, revision: 1, synthetic: true,
+  text: "Hidden retrieval context",
+};
+const citation = knowledgeCitationFromDocument(sourceDocument, 1);
+if (!citation) throw new Error("Expected a valid knowledge citation.");
 
 describe("message clipboard content", () => {
   it("returns exact Markdown source with leading, trailing and line-ending whitespace preserved", () => {
@@ -25,9 +35,54 @@ describe("message clipboard content", () => {
   });
 
   it("includes source citations and navigable document links, not hidden source text", () => {
-    const text = chatMessageCopyText({ ...message, sources: [{ updatedAt: "2026-10-16T00:00:00Z", fetchedAt: "2026-10-16T00:00:00Z", authorityRevision: "a".repeat(64), corpusRevision: "b".repeat(64), dataClass: "synthetic_demo", images: [], id: "svc-001", title: "WLAN", citationId: "knowledge:service_it:svc-001:1", sourceSystem: "service_it", language: "de", revision: 1, synthetic: true, text: "Hidden retrieval context" }] }, origin);
-    expect(text).toContain("WLAN\nknowledge:service_it:svc-001:1\nhttps://hasi.example/sources/svc-001?revision=1");
+    const text = chatMessageCopyText({ ...message, sources: [sourceDocument] }, origin);
+    expect(text).toContain("WLAN\nService IT · Demo · Fassung 1\nhttps://hasi.example/sources/svc-001?revision=1");
+    expect(text).not.toContain(sourceDocument.citationId);
     expect(text).not.toContain("Hidden retrieval context");
+  });
+
+  it("copies authorized citation tokens as readable same-origin links and ignores supplied hrefs", () => {
+    const source = `Die Anleitung erklärt den Zugang [${sourceDocument.citationId}].`;
+    const text = chatMessageCopyText({ ...message, text: source }, origin, [{ ...citation, href: "https://attacker.example/redirect" }]);
+    expect(text).toBe("Die Anleitung erklärt den Zugang [Quelle 1](https://hasi.example/sources/svc-001?revision=1).");
+    expect(text).not.toContain(sourceDocument.citationId);
+    expect(text).not.toContain("attacker.example");
+  });
+
+  it("replaces unmapped canonical citation tokens without linking or exposing their IDs", () => {
+    const unknown = "[knowledge:service_it:svc-other:2]";
+    const text = chatMessageCopyText({ ...message, text: `Prüfe die Quelle ${unknown}.` }, origin, [citation]);
+    expect(text).toBe("Prüfe die Quelle [Quelle nicht zugeordnet].");
+    expect(text).not.toContain(unknown);
+  });
+
+  it("leaves user-entered citation-looking text untouched", () => {
+    const typed = `[${sourceDocument.citationId}]`;
+    const text = chatMessageCopyText({ ...message, role: "user", text: typed }, origin, [citation]);
+    expect(text).toBe(typed);
+  });
+
+  it("keeps caller-assigned duplicate citation numbers in copied Markdown links", () => {
+    const second = knowledgeCitationFromDocument({
+      ...sourceDocument,
+      id: "svc-002", title: "VPN", citationId: "knowledge:service_it:svc-002:1", text: "Other hidden context",
+    }, 1);
+    if (!second) throw new Error("Expected a valid second knowledge citation.");
+    const text = chatMessageCopyText({ ...message, text: `[${sourceDocument.citationId}] and [${second.citationId}]` }, origin, [citation, second]);
+    expect(text).toBe("[Quelle 1](https://hasi.example/sources/svc-001?revision=1) and [Quelle 1](https://hasi.example/sources/svc-002?revision=1)");
+  });
+
+  it("does not copy source-card metadata from a citation that does not match the source revision", () => {
+    const wrongRevision = { ...citation, revision: 2, citationId: "knowledge:service_it:svc-001:2" };
+    const text = chatMessageCopyText({ ...message, sources: [sourceDocument] }, origin, [wrongRevision]);
+    expect(text).not.toContain("WLAN\nService IT");
+    expect(text).not.toContain(sourceDocument.citationId);
+  });
+
+  it("preserves raw Markdown source for the explicit source-view and Markdown-copy options", () => {
+    const raw = `Anleitung [${sourceDocument.citationId}]`;
+    expect(chatMessageMarkdownSource({ ...message, text: raw })).toBe(raw);
+    expect(chatMessageCopyText({ ...message, text: raw }, origin, [citation])).toBe("Anleitung [Quelle 1](https://hasi.example/sources/svc-001?revision=1)");
   });
 
   it("copies an authorized completed card as a receipt, without stale preparation text or internal IDs", () => {

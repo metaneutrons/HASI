@@ -119,6 +119,8 @@ function ChatWorkspace({ user }: { user: User }) {
     store.updateConversation(id, snapshot, busy);
   }, [store]);
 
+  if (store.hasAuthorityChange()) return <section className="chat-workspace" aria-label="Deine Chatverläufe"><p role="status">Kontorechte werden aktualisiert …</p></section>;
+
   return <section className="chat-workspace" aria-label="Deine Chatverläufe">
     <dialog className="chat-history-dialog" ref={drawer} id="chat-conversations-dialog" aria-label="Unterhaltungen" onClick={(event) => { if (event.target === event.currentTarget) drawer.current?.close(); }}><div className="chat-history-dialog-body"><ChatSessionList view={view} store={store} close={() => drawer.current?.close()} /></div></dialog>
     <div className="chat-conversations">
@@ -1011,7 +1013,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
               return (
               <article key={message.id} id={`chat-${sessionId}-message-${message.id}`} tabIndex={-1} className={`chat-message chat-message--${message.role}`} aria-label={message.role === "user" ? "Du" : "HASI"}>
                 <span className="chat-speaker">{message.role === "user" ? "Du" : <><HasiIcon size={18} /> HASI {message.model && <small>{message.model}</small>}</>}</span>
-                <div className="chat-message-meta">{message.timestamp ? <time className="chat-message-time" dateTime={message.timestamp.createdAt} title="Servereingang · Europe/Berlin">{formatMessageTime(message.timestamp.createdAt)}</time> : <span className="chat-message-time">Zeitpunkt unbekannt</span>}<ChatMessageCopy message={message} /></div>
+                <div className="chat-message-meta">{message.timestamp ? <time className="chat-message-time" dateTime={message.timestamp.createdAt} title="Servereingang · Europe/Berlin">{formatMessageTime(message.timestamp.createdAt)}</time> : <span className="chat-message-time">Zeitpunkt unbekannt</span>}<ChatMessageCopy message={message} citations={knowledgeCitations.answers.get(message.id) ?? knowledgeCitations.sourceCards.get(message.id) ?? []} /></div>
                 <div className="chat-message-body">
                   {message.tool && <span className="chat-tool-label"><Check size={13} aria-hidden="true" /> {message.tool}</span>}
                   <ChatMarkdown source={message.proposal ? proposalPresentation(message.proposal).summary : message.text} citations={knowledgeCitations.answers.get(message.id) ?? []} origin={{ sessionId, messageId: message.id }} onCitationOpen={() => { rememberSourceOrigin(message.id); }} />

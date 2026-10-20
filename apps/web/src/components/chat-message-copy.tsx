@@ -3,12 +3,13 @@
 import { Check, Code2, Copy, Eye } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { ChatMessage } from "@/lib/chat-sessions";
+import type { KnowledgeCitation } from "@/lib/knowledge-citations";
 import { chatMessageCopyText, chatMessageMarkdownSource } from "@/lib/chat-message-copy";
 import styles from "./chat-message-copy.module.css";
 
 type CopyStatus = "idle" | "copying" | "copied" | "failed";
 
-export function ChatMessageCopy({ message }: { message: ChatMessage }) {
+export function ChatMessageCopy({ message, citations }: { message: ChatMessage; citations?: readonly KnowledgeCitation[] }) {
   const [status, setStatus] = useState<CopyStatus>("idle");
   const [feedback, setFeedback] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -127,7 +128,7 @@ export function ChatMessageCopy({ message }: { message: ChatMessage }) {
       const next = event.relatedTarget as Node | null;
       if (next && !event.currentTarget.contains(next)) hideMenu();
     }}>
-      <button type="button" role="menuitem" tabIndex={-1} disabled={status === "copying"} onClick={() => { hideMenu(true); void copy(chatMessageCopyText(message, window.location.origin), "Nachricht kopiert"); }}><Copy size={16} aria-hidden="true" /><span>Nachricht und Ergebnisse kopieren</span></button>
+      <button type="button" role="menuitem" tabIndex={-1} disabled={status === "copying"} onClick={() => { hideMenu(true); void copy(chatMessageCopyText(message, window.location.origin, citations), "Nachricht kopiert"); }}><Copy size={16} aria-hidden="true" /><span>Nachricht und Ergebnisse kopieren</span></button>
       <button type="button" role="menuitem" tabIndex={-1} disabled={status === "copying"} onClick={() => { hideMenu(true); void copy(source, "Markdown kopiert"); }}><Code2 size={16} aria-hidden="true" /><span>Markdown kopieren</span></button>
       <button type="button" role="menuitem" tabIndex={-1} onClick={() => { hideMenu(); setSourceOpen(true); }}><Eye size={16} aria-hidden="true" /><span>Quelltext anzeigen</span></button>
     </div>
