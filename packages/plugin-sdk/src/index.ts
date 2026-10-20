@@ -3,9 +3,11 @@ export { ExecutionJournal, type ExecutionStore, type ExecutionBinding, type Exec
 export {
   createInvocationToken,
   verifyInvocationToken,
+  verifyInvocationTokenClaims,
   type CreateInvocationTokenParams,
   type InvocationBinding,
   type InvocationContext,
+  type VerifiedInvocation,
 } from './invocation.js';
 export {
   actorContextSchema,
@@ -49,4 +51,12 @@ export {
   type PluginPresentationCsp,
   type PluginPresentationInput,
 } from './presentation.js';
-export { createPluginServer, type CreatePluginServerOptions, type PluginToolHandler } from './server.js';
+export { createPluginServer, type CreatePluginServerOptions, type PluginToolHandler, type PluginInvocationServices } from './server.js';
+export {
+  MANAGED_STATE_MCP_VERSION, MANAGED_STATE_METHODS, managedStateValidator,
+  managedStateReadParams, managedStateCasParams, managedStateConsumeParams,
+  managedStateReadResult, managedStateCasResult, managedStateConsumeResult,
+  managedStateActionStatusParams, managedStateActionStatusResult,
+  type ManagedStateDeclaration,
+} from './managed-state-contract.js';
+export { createManagedStateClient, type ManagedStateClient, type ManagedStateRequestSender } from './managed-state-client.js';

@@ -310,6 +310,29 @@ describe('trusted managed installer', () => {
     await expect(f.service.list('admin')).rejects.toThrow();
     expect(f.stage).not.toHaveBeenCalled();
   });
+  it('keeps the active release usable when a signed candidate changes the managed state contract', async () => {
+    const f = await fixture();
+    await f.command('stage', { releaseId: 'a' }); await f.command('approve'); await f.command('activate');
+    const active = f.activeRoute('installation');
+    const original = structuredClone(f.catalog[0]!.releases[1]!);
+    const candidate = f.catalog[0]!.releases[1]!;
+    if (candidate.manifest.manifestVersion !== 2) throw new Error('Expected v2 fixture');
+    candidate.manifest.mcpVersion = '2025-11-25';
+    candidate.manifest.managedState = { schemaVersion: 1, accountIdentity: { kind: 'subject' }, applicationSchema: { type: 'object', properties: {}, additionalProperties: false } };
+    candidate.envelope.manifestDigest = digest(candidate.manifest);
+    const unsigned = { ...candidate.envelope } as Partial<typeof candidate.envelope>;
+    delete unsigned.signature;
+    candidate.envelope.signature = sign(null, pluginReleaseSigningBytes(unsigned), keys.privateKey).toString('base64url');
+    const blocked = await f.command('stage', { releaseId: 'b' });
+    expect(blocked.status).toBe('uncertain');
+    expect(blocked.view.current?.version).toBe('1.0.0');
+    expect(blocked.view.status).toBe('active');
+    expect(f.activeRoute('installation')).toBe(active);
+    expect(f.stage).toHaveBeenCalledTimes(1);
+    f.catalog[0]!.releases[1] = original;
+    expect((await f.command('stage', { releaseId: 'b' })).view.status).toBe('review-required');
+    expect(f.stage).toHaveBeenCalledTimes(2);
+  });
   it('rejects a catalog release with a configuration schema version outside the installation contract', async () => {
     const f = await fixture();
     f.catalog[0]!.releases[1] = release('b', '1.1.0', 2);

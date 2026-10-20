@@ -1,7 +1,7 @@
 import { createHash, createPublicKey, randomBytes, sign, verify, type KeyObject } from 'node:crypto';
 import { digest } from '@hasi/plugin-sdk';
 import type { ActorClaimValue } from '@hasi/plugin-sdk';
-import type { JsonStore } from '@hasi/state';
+import type { JsonStore, StateFence } from '@hasi/state';
 import { z } from 'zod';
 
 /**
@@ -294,6 +294,8 @@ export class PluginAccountService {
     this.adapterTimeoutMs = options.adapterTimeoutMs ?? DEFAULT_ADAPTER_TIMEOUT_MS;
     if (!Number.isSafeInteger(this.adapterTimeoutMs) || this.adapterTimeoutMs < 100 || this.adapterTimeoutMs > 30_000) throw new TypeError('Plugin account adapter timeout must be between 100 milliseconds and 30 seconds');
   }
+
+  usesStateStore(store: JsonStore): boolean { return this.options.store === store; }
 
   private now(): number {
     const now = this.clock();
@@ -702,6 +704,10 @@ export class PluginAccountService {
 
   /** Resolve fresh account rights. Any adapter outage or race denies access. */
   async resolveAuthority(subject: string): Promise<PluginAccountAuthority> {
+    return (await this.resolveAuthoritySnapshot(subject)).authority;
+  }
+
+  async resolveAuthoritySnapshot(subject: string): Promise<{ authority: PluginAccountAuthority; fence: StateFence }> {
     const status = await this.status(subject);
     if (status.status === 'unavailable') throw new PluginAccountError(503, 'account_authority_unavailable', 'Die persönliche Kontoberechtigung kann aktuell nicht geprüft werden.');
     if (status.status !== 'linked') throw new PluginAccountError(403, 'account_not_linked', 'Für diesen Dienst ist kein aktives persönliches Konto verbunden.');
@@ -714,15 +720,25 @@ export class PluginAccountService {
       throw new PluginAccountError(403, 'account_authority_changed', 'Die persönliche Kontoberechtigung ist abgelaufen oder wurde widerrufen.');
     }
     const normalizedExpiry = this.normalizeExpiry(inspection.expiresAt);
-    const latest = await this.readState(this.subjectDigest(subject));
+    const subjectDigest = this.subjectDigest(subject);
+    const key = this.accountKey(subjectDigest);
+    const stored = await this.options.store.read(key);
+    if (!stored) throw new PluginAccountError(409, 'account_authority_changed', 'Die persönliche Kontoberechtigung wurde parallel geändert. Bitte lade den Status neu.');
+    const latest = this.verifyState(stored.value, subjectDigest);
     if (latest.status !== 'linked' || latest.authorityRevision !== status.authorityRevision || latest.adapterAuthorityRevision !== inspection.authorityRevision || latest.expiresAt !== normalizedExpiry) {
       throw new PluginAccountError(409, 'account_authority_changed', 'Die persönliche Kontoberechtigung wurde parallel geändert. Bitte lade den Status neu.');
     }
+    if (latest.expiresAt !== null && Date.parse(latest.expiresAt) <= this.now()) {
+      throw new PluginAccountError(403, 'account_authority_changed', 'Die persönliche Kontoberechtigung ist abgelaufen oder wurde widerrufen.');
+    }
     return {
-      installationId: this.options.installationId,
-      authorityRevision: latest.authorityRevision,
-      expiresAt: latest.expiresAt,
-      projection: normalizeProjection(inspection.projection),
+      authority: {
+        installationId: this.options.installationId,
+        authorityRevision: latest.authorityRevision,
+        expiresAt: latest.expiresAt,
+        projection: normalizeProjection(inspection.projection),
+      },
+      fence: { key, revision: stored.revision },
     };
   }
 

@@ -1,5 +1,5 @@
 import { request } from 'node:http';
-import { digest, manifestSchema, type PluginManifest } from '@hasi/plugin-sdk';
+import { digest, manifestSchema, managedStateValidator, type PluginManifest } from '@hasi/plugin-sdk';
 import type { DockerPluginDriver } from './docker-plugin-driver.js';
 import type { ManagedPluginInstallerOptions } from './managed-plugin-installer.js';
 
@@ -20,6 +20,7 @@ export function createManagedPluginPreflight(options: {
       if (endpoint?.host !== '127.0.0.1') return false;
       const received = await options.useServiceCredential(input.installationId, credential => fetchManifest(endpoint.port, credential));
       const manifest = manifestSchema.parse(received);
+      if (manifest.manifestVersion === 2 && manifest.managedState) managedStateValidator(manifest.managedState.applicationSchema);
       if (!sameManifest(manifest, input.manifest) || digest(manifest) !== input.release.manifestDigest) return false;
       // Inspect again after I/O; a switched/restarted/active/foreign pair does
       // not inherit the preflight result from the previous endpoint.

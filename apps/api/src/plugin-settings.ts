@@ -1,7 +1,7 @@
 import { createPublicKey, sign, verify, type KeyObject } from 'node:crypto';
 import { z } from 'zod';
 import { digest, validateConfiguration, type PluginManifest } from '@hasi/plugin-sdk';
-import { updateJson, type JsonStore } from '@hasi/state';
+import { updateJson, type JsonStore, type StateFence } from '@hasi/state';
 
 const configuration = z.record(z.string(), z.unknown());
 const snapshot = z.strictObject({ values: configuration, disabledTools: z.array(z.string()).max(64) });
@@ -28,6 +28,8 @@ export class PluginSettingsStore {
     this.publicKey = createPublicKey(privateKey);
   }
 
+  usesStateStore(store: JsonStore): boolean { return this.store === store; }
+
   private key(instanceId: string) { return `plugin-settings:v1:${digest({ scope: this.scope, instanceId })}`; }
   private initial(instanceId: string, manifest: PluginManifest): SettingsState {
     return { version: 1, instanceId, scope: this.scope, revision: 0, activeRevision: 0, manifestDigest: configurationContract(manifest), active: { values: {}, disabledTools: [] }, draft: { values: {}, disabledTools: [] }, audit: [] };
@@ -45,6 +47,22 @@ export class PluginSettingsStore {
   async read(instanceId: string, manifest: PluginManifest) {
     const record = await this.store.read(this.key(instanceId));
     return record ? this.verified(record.value, instanceId) : this.initial(instanceId, manifest);
+  }
+  async authoritySnapshot(instanceId: string, _manifest: PluginManifest): Promise<{ state: SettingsState; fence: StateFence }> {
+    const key = this.key(instanceId);
+    const record = await this.store.read(key);
+    if (!record) throw new PluginSettingsError(409, 'Die Plugin-Konfiguration wurde noch nicht initialisiert.');
+    return { state: this.verified(record.value, instanceId), fence: { key, revision: record.revision } };
+  }
+  async persistInitial(instanceId: string, manifest: PluginManifest): Promise<{ state: SettingsState; fence: StateFence }> {
+    const key = this.key(instanceId);
+    const current = await this.store.read(key);
+    if (current) return { state: this.verified(current.value, instanceId), fence: { key, revision: current.revision } };
+
+    await this.store.compareAndSet(key, null, this.signed(this.initial(instanceId, manifest)));
+    const persisted = await this.store.read(key);
+    if (!persisted) throw new PluginSettingsError(409, 'Die Plugin-Konfiguration konnte nicht initialisiert werden.');
+    return { state: this.verified(persisted.value, instanceId), fence: { key, revision: persisted.revision } };
   }
   private validate(manifest: PluginManifest, values: Record<string, unknown>, disabledTools: readonly string[]) {
     const schema = manifest.manifestVersion === 2 ? manifest.configuration?.schema : undefined;

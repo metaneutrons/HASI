@@ -19,7 +19,10 @@ V1 contracts retain their original manifest shape/digest. Their compatibility
 adapters keep the existing Anny identity and knowledge audience behavior.
 Additional installation IDs require v2: v1 cannot distinguish installation
 audiences. V2 uses `manifestVersion: 2`, `apiVersion: "2.0.0"`, and the existing
-MCP protocol `2026-07-28`. Compatible updates preserve configuration/identity,
+MCP protocol `2026-07-28` by default. The optional
+[invocation-scoped managed state profile](managed-plugin-state.md) explicitly
+pins a bidirectional sessionful transport; it does not change other plugins.
+Compatible updates preserve configuration/identity/state declarations,
 tool schemas/effects/permissions/visibility and UI contracts. Contract changes
 require renewed operator approval; an available version is not automatically
 installed or activated. Old transcripts remain readable. Legacy pending

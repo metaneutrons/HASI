@@ -1,4 +1,5 @@
 import type { PluginRouteController, PluginRouteSnapshot } from './plugin-route-controller.js';
+import type { JsonStore, StateFence } from '@hasi/state';
 
 const MAX_SYNC_ATTEMPTS = 16;
 
@@ -6,7 +7,8 @@ export type ActiveConfigurationRevisionReader = (installationId: string) => Prom
 
 export interface PluginDeploymentBindingOptions {
   /** Shared durable route authority used by the deployment driver. */
-  readonly routes: Pick<PluginRouteController, 'read' | 'updateConfigurationRevision'>;
+  readonly routes: Pick<PluginRouteController, 'read' | 'updateConfigurationRevision'>
+    & Partial<Pick<PluginRouteController, 'authoritySnapshot' | 'usesStateStore'>>;
   /** Operator identity accepted by the route controller. */
   readonly ownerId: string;
   /** Must read the active revision from the authoritative settings store. */
@@ -120,5 +122,14 @@ export class PluginDeploymentBinding {
     if (before !== after || String(before) !== expected || route.configurationRevision !== expected) {
       throw new PluginDeploymentBindingError();
     }
+  }
+
+  /** Host-only durable route revision; never exposed to plugin or browser input. */
+  async stateAuthority(installationId: string, expectedRevision: number, store: JsonStore): Promise<{ route: PluginRouteSnapshot; fence: StateFence }> {
+    if (!this.options.routes.usesStateStore?.(store) || !this.options.routes.authoritySnapshot) throw new PluginDeploymentBindingError('Managed state and route authority must share storage.');
+    const snapshot = await this.options.routes.authoritySnapshot({ ownerId: this.options.ownerId, installationId });
+    if (snapshot.route.configurationRevision !== configurationRevision(expectedRevision)
+      || await this.activeRevision(installationId) !== expectedRevision) throw new PluginDeploymentBindingError();
+    return snapshot;
   }
 }

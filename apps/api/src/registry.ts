@@ -3,8 +3,8 @@ import { Client, SdkHttpError, StreamableHTTPClientTransport } from '@modelconte
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { valid, major, gt } from 'semver';
-import { MemoryJsonStore, updateJson, type JsonStore } from '@hasi/state';
-import { createInvocationToken, digest, manifestSchema, projectActorContext, type ActorContext, type PluginManifest, type ToolDefinitionV2 } from '@hasi/plugin-sdk';
+import { MemoryJsonStore, updateJson, type JsonStore, type FencedJsonStore, type StateFence } from '@hasi/state';
+import { createInvocationToken, verifyInvocationTokenClaims, digest, manifestSchema, projectActorContext, MANAGED_STATE_METHODS, managedStateValidator, managedStateActionStatusResult, type ActorContext, type PluginManifest, type ToolDefinitionV2, type ExecutionBinding } from '@hasi/plugin-sdk';
 import { z } from 'zod';
 import { PluginSettingsStore } from './plugin-settings.js';
 import { createPluginFetch, type PluginFetch } from './network-policy.js';
@@ -15,6 +15,7 @@ import type { PluginDeploymentBinding } from './plugin-deployment-binding.js';
 import { managedPluginRuntimeContractSchema, type ManagedPluginRuntimeContract } from './managed-plugin-contract.js';
 import { ProposalBindingGuard } from './proposal-binding-guard.js';
 import type { ProposalRetentionUntil } from './proposal-invalidation.js';
+import { ManagedPluginStateSession } from './managed-plugin-state.js';
 
 export class RequestError extends Error {
   constructor(public readonly status: number, message: string) { super(message); }
@@ -65,6 +66,8 @@ export interface PluginConnectionTestResult {
 export interface PluginRegistryOptions {
   /** Current host authority; production composition must resolve this independently of caller snapshots. */
   resolveActor?: (subject: string) => Promise<ActorContext | undefined>;
+  /** Same-read verified durable subject authority, required by managed state. */
+  resolveActorSnapshot?: (subject: string) => Promise<{ actor: ActorContext; fence: StateFence } | undefined>;
   deploymentBindings?: ReadonlyMap<string, PluginDeploymentBinding>;
   managedContracts?: ReadonlyMap<string, ManagedPluginContractSource>;
   accounts?: ReadonlyMap<string, PluginAccountService>;
@@ -154,7 +157,9 @@ export function compatibleUpdate(current: PluginManifest, candidate: PluginManif
   if (candidate.id !== current.id) return false;
   if (!valid(candidate.version) || !valid(current.version) || major(candidate.version) !== major(current.version) || !gt(candidate.version, current.version)) return false;
   const contract = (manifest: PluginManifest) => ({ manifestVersion: manifest.manifestVersion, apiVersion: manifest.apiVersion, tools: manifest.tools.map(tool => ({ name: tool.name, inputSchema: tool.inputSchema, outputSchema: tool.outputSchema, effect: tool.effect, requiredPermissions: [...tool.requiredPermissions].sort(), ...('visibility' in tool ? { visibility: tool.visibility ?? null } : {}), ...('presentationId' in tool ? { presentationId: tool.presentationId ?? null } : {}), ...('resultSemantics' in tool ? { resultSemantics: tool.resultSemantics ?? null } : {}) })).sort((a,b) => a.name.localeCompare(b.name)), ...(manifest.manifestVersion === 2 ? { configuration: manifest.configuration ?? null, secrets: manifest.secrets ?? null, identity: manifest.identity ?? null, presentations: manifest.presentations ?? null } : {}) });
-  return digest(contract(current)) === digest(contract(candidate));
+  return current.mcpVersion === candidate.mcpVersion
+    && digest(current.manifestVersion === 2 ? current.managedState ?? null : null) === digest(candidate.manifestVersion === 2 ? candidate.managedState ?? null : null)
+    && digest(contract(current)) === digest(contract(candidate));
 }
 
 export class PluginRegistry {
@@ -173,6 +178,7 @@ export class PluginRegistry {
   readonly accounts: ReadonlyMap<string, PluginAccountService>;
   private readonly deploymentBindings: ReadonlyMap<string, PluginDeploymentBinding>;
   private readonly resolveActor: PluginRegistryOptions['resolveActor'];
+  private readonly resolveActorSnapshot: PluginRegistryOptions['resolveActorSnapshot'];
   private readonly operatorManagedLoopbackOrigin: string | undefined;
   private readonly managedContracts: ReadonlyMap<string, ManagedPluginContractSource>;
 
@@ -193,6 +199,7 @@ export class PluginRegistry {
     this.accounts = options.accounts ?? new Map();
     this.deploymentBindings = options.deploymentBindings ?? new Map();
     this.resolveActor = options.resolveActor;
+    this.resolveActorSnapshot = options.resolveActorSnapshot;
     this.operatorManagedLoopbackOrigin = options.operatorManagedLoopbackOrigin;
     this.defaultSourcePolicy = options.defaultSourcePolicy ? sourcePolicySchema.parse(options.defaultSourcePolicy) : undefined;
     this.candidateTtlMs = candidateTtlMs;
@@ -303,6 +310,7 @@ export class PluginRegistry {
   }
 
   private validateManifestSchemas(manifest: PluginManifest): void {
+    if (manifest.manifestVersion === 2 && manifest.managedState) managedStateValidator(manifest.managedState.applicationSchema);
     for (const tool of manifest.tools) { validateSchema(tool.inputSchema, {}); validateSchema(tool.outputSchema, {}); }
   }
 
@@ -596,6 +604,9 @@ export class PluginRegistry {
       ...(state.candidate && state.candidateBaseDigest !== undefined && state.candidateExpiresAt !== undefined ? { candidate: state.candidate, candidateBaseDigest: state.candidateBaseDigest, candidateExpiresAt: state.candidateExpiresAt } : {}),
     };
     this.validateManifestSchemas(plugin.manifest);
+    if (plugin.manifest.manifestVersion === 2 && plugin.manifest.managedState) {
+      await this.settings.persistInitial(instanceId, plugin.manifest);
+    }
     this.installed.set(instanceId, plugin);
     try {
       if (managed) await this.refreshManaged(plugin, connecting);
@@ -854,7 +865,7 @@ export class PluginRegistry {
       reachable: 'failed', authenticated: 'not_verified', authorized: 'not_assessed',
       userReady: 'blocked', remedies: [],
     };
-    const client = new Client({ name: 'hasi-core-connection-test', version: '0.1.0' }, { versionNegotiation: { mode: 'auto' }, listMaxPages: 1 });
+    const client = this.client(plugin, true);
     try {
       await this.refresh(plugin);
       result.configured = plugin.settings?.ready ? 'ready' : 'incomplete';
@@ -904,7 +915,7 @@ export class PluginRegistry {
     const presentation = plugin.manifest.presentations?.find(item => item.id === presentationId);
     const tools = plugin.manifest.tools.filter(tool => tool.presentationId === presentationId && tool.effect === 'read' && !plugin.settings?.disabledTools.includes(tool.name) && (tool.visibility ?? ['model']).includes('app') && tool.requiredPermissions.every(permission => actor.permissions.includes(permission)));
     if (!presentation || !tools.length || !this.reviewedAppDigests.has(presentation.sha256.toLowerCase())) throw new RequestError(404, 'Ansicht nicht verfügbar.');
-    const client = new Client({ name: 'hasi-core', version: '0.1.0' }, { versionNegotiation: { mode: 'auto' } });
+    const client = this.client(plugin);
     const transport = new StreamableHTTPClientTransport(new URL(plugin.registration.endpoint), { requestInit: { headers: { authorization: `Bearer ${plugin.registration.serviceToken}` }, redirect: 'error' }, fetch: plugin.fetch });
     try {
       await client.connect(transport);
@@ -980,10 +991,30 @@ export class PluginRegistry {
     const body = { executionId, tool: name, argsHash: digest(args) };
     const context = { installationId: id, configurationRevision: plugin.settings?.activeRevision ?? 0, configuration: plugin.settings?.configuration ?? {}, executionId };
     const token = await createInvocationToken({ actor: projectActorContext(actor, plugin.manifest), pluginId: plugin.manifest.id, pluginVersion: plugin.manifest.version, tool: '__hasi.action_status', args: body, context }, this.privateKey);
-    const response = await plugin.fetch(new URL('./hasi/actions/status', plugin.registration.endpoint), { method: 'POST', headers: { authorization: `Bearer ${plugin.registration.serviceToken}`, 'x-hasi-invocation': token, 'content-type': 'application/json' }, body: JSON.stringify(body), redirect: 'error', signal: AbortSignal.timeout(5000) });
-    if (!response.ok) return { status: 'outcome_unknown' as const };
-    const raw: unknown = await response.json();
-    const resolution = z.discriminatedUnion('status', [z.strictObject({ status: z.literal('confirmed'), result: z.record(z.string(), z.unknown()) }), z.strictObject({ status: z.literal('outcome_unknown') })]).parse(raw);
+    let resolution: z.infer<typeof managedStateActionStatusResult>;
+    if (plugin.manifest.manifestVersion === 2 && plugin.manifest.managedState) {
+      const client = this.client(plugin);
+      let state: ManagedPluginStateSession | undefined;
+      try {
+        state = await this.stateSession(plugin, originalActor, token, '__hasi.action_status', body, true);
+        state?.register(client);
+        await client.connect(new StreamableHTTPClientTransport(new URL(plugin.registration.endpoint), {
+          requestInit: { headers: { authorization: `Bearer ${plugin.registration.serviceToken}`, 'x-hasi-invocation': token }, redirect: 'error' }, fetch: plugin.fetch,
+        }));
+        const current = await this.refresh(plugin);
+        await this.deploymentBindings.get(id)?.assertCurrent(id, context.configurationRevision);
+        if (this.bindingFor(current) !== expectedBinding || authority !== await this.authorityBinding(id, originalActor)
+          || client.getServerVersion()?.version !== current.manifest.version) throw new RequestError(409, 'Die Aktionsfreigabe hat sich geändert.');
+        this.assertInvocation(current, name, args, actor, true);
+        state?.activate();
+        resolution = await client.request({ method: MANAGED_STATE_METHODS.actionStatus, params: body }, managedStateActionStatusResult, { timeout: 5000 });
+        await state?.close();
+      } finally { try { await client.close(); } finally { await state?.close(); } }
+    } else {
+      const response = await plugin.fetch(new URL('./hasi/actions/status', plugin.registration.endpoint), { method: 'POST', headers: { authorization: `Bearer ${plugin.registration.serviceToken}`, 'x-hasi-invocation': token, 'content-type': 'application/json' }, body: JSON.stringify(body), redirect: 'error', signal: AbortSignal.timeout(5000) });
+      if (!response.ok) return { status: 'outcome_unknown' as const };
+      resolution = managedStateActionStatusResult.parse(await response.json());
+    }
     if (resolution.status === 'confirmed') this.validateExecutionResult(id, name, resolution.result);
     if (this.bindingFor(await this.refresh(plugin)) !== expectedBinding) throw new RequestError(409, 'Die Aktionsfreigabe hat sich geändert.');
     if (authority !== await this.authorityBinding(id, originalActor)) throw new RequestError(409, 'Die persönliche Kontoberechtigung wurde geändert.');
@@ -1003,6 +1034,78 @@ export class PluginRegistry {
     return tool;
   }
 
+  private client(plugin: InstalledPlugin, connectionTest = false) {
+    return new Client({ name: connectionTest ? 'hasi-core-connection-test' : 'hasi-core', version: '0.1.0' }, {
+      versionNegotiation: { mode: plugin.manifest.manifestVersion === 2 && plugin.manifest.managedState ? 'legacy' : 'auto' },
+      ...(connectionTest ? { listMaxPages: 1 } : {}),
+    });
+  }
+
+  private async stateSession(plugin: InstalledPlugin, originalActor: ActorContext, token: string, proofTool: string, proofArgs: Record<string, unknown>, status = false): Promise<ManagedPluginStateSession | undefined> {
+    const manifest = plugin.manifest;
+    if (manifest.manifestVersion !== 2 || !manifest.managedState) return undefined;
+    const id = plugin.instanceId;
+    const store = this.store;
+    const routeBinding = this.deploymentBindings.get(id);
+    if (!store || !('readWithFence' in store) || !('compareAndSetWithFence' in store)
+      || typeof store.readWithFence !== 'function' || typeof store.compareAndSetWithFence !== 'function'
+      || !this.resolveActor || !this.resolveActorSnapshot || !routeBinding || !plugin.managedDeploymentRevision) {
+      throw new RequestError(503, 'Die verwaltete Zustandsanbindung ist nicht vollständig eingerichtet.');
+    }
+    const invocation = await verifyInvocationTokenClaims(token, { pluginId: manifest.id, pluginVersion: manifest.version, installationId: id, tool: proofTool, args: proofArgs }, this.publicKey);
+    const expectedBinding = this.bindingFor(plugin);
+    const expectedAuthority = await this.authorityBinding(id, originalActor);
+    const freshActor = projectActorContext((await this.actorFor(id, originalActor)).actor, manifest);
+    if (digest(freshActor) !== digest(invocation.actor)) throw new RequestError(409, 'Die persönliche Kontoberechtigung wurde geändert.');
+    const assertCurrent = async () => {
+      const current = await this.refresh(this.get(id));
+      await routeBinding.assertCurrent(id, invocation.context?.configurationRevision ?? -1);
+      if (!current.enabled || !current.settings?.ready || current.settings.disabledTools.includes(status ? String(proofArgs.tool) : proofTool) || this.bindingFor(current) !== expectedBinding
+        || await this.authorityBinding(id, originalActor) !== expectedAuthority) throw new RequestError(409, 'Die Zustandsfreigabe wurde geändert.');
+    };
+    await assertCurrent();
+    const record = await store.read(this.stateKey(id));
+    if (!record || !this.validatePersistedState(record.value, plugin.registration, id).enabled) throw new RequestError(409, 'Die Plugin-Installation ist nicht mehr freigegeben.');
+    const settings = await this.settings.authoritySnapshot(id, manifest);
+    if (settings.state.activeRevision !== invocation.context?.configurationRevision || digest(settings.state.active.values) !== digest(invocation.context.configuration)) throw new RequestError(409, 'Die Plugin-Konfiguration wurde geändert.');
+    const route = await routeBinding.stateAuthority(id, settings.state.activeRevision, store);
+    if (!route.route.active) throw new RequestError(409, 'Die Plugin-Installation ist nicht aktiv.');
+    const subject = await this.resolveActorSnapshot(originalActor.subject);
+    if (subject?.actor.subject !== invocation.actor.subject
+      || !invocation.actor.permissions.every(permission => subject.actor.permissions.includes(permission))) throw new RequestError(403, 'Die aktuellen Kontorechte geben den Zugriff nicht frei.');
+    const fences: StateFence[] = [{ key: this.stateKey(id), revision: record.revision }, settings.fence, route.fence, subject.fence];
+    if (this.catalogSources.has(id)) {
+      const connection = await store.read(this.catalogKey(id));
+      if (!connection || !this.connectionActive(connection.value, id)) throw new RequestError(409, 'Die Plugin-Verbindung ist getrennt.');
+      fences.push({ key: this.catalogKey(id), revision: connection.revision });
+    }
+    const account = this.accounts.get(id);
+    let authorityExpiresAt: number | undefined;
+    if (account) {
+      if (!account.usesStateStore(store)) throw new RequestError(503, 'Die Kontoberechtigung verwendet einen anderen Zustandsspeicher.');
+      const snapshot = await account.resolveAuthoritySnapshot(originalActor.subject);
+      fences.push(snapshot.fence);
+      if (snapshot.authority.expiresAt !== null) authorityExpiresAt = Date.parse(snapshot.authority.expiresAt);
+    }
+    const toolName = status ? proofArgs.tool : proofTool;
+    const tool = manifest.tools.find(item => item.name === toolName);
+    if (!tool?.requiredPermissions.every(permission => invocation.actor.permissions.includes(permission))) throw new RequestError(403, 'Das Werkzeug ist nicht freigegeben.');
+    const executionId = invocation.context.executionId;
+    const executionBinding: ExecutionBinding | undefined = executionId ? {
+      subject: invocation.actor.subject, installationId: id, executionId, tool: tool.name,
+      argsHash: status ? String(proofArgs.argsHash) : invocation.argsHash,
+      configurationRevision: invocation.context.configurationRevision,
+    } : undefined;
+    await assertCurrent();
+    return ManagedPluginStateSession.create({
+      store: store as FencedJsonStore, scope: this.scope, installationId: id, manifest, actor: invocation.actor,
+      invocation, fences, hasPersonalAccount: Boolean(account), mode: status ? 'status' : tool.effect,
+      ...(authorityExpiresAt === undefined ? {} : { authorityExpiresAt }),
+      ...(executionBinding ? { executionBinding } : {}),
+      validateExecutionResult: value => validateSchema(tool.outputSchema, value), assertCurrent,
+    });
+  }
+
   async invoke(id: string, name: string, args: Record<string, unknown>, actor: ActorContext, execution = false, source: 'model' | 'app' = 'model', expectedBinding?: string, executionId?: string, requiredEffect?: 'read'): Promise<Record<string, unknown>> {
     const plugin = await this.refresh(this.get(id));
     this.assertInvocation(plugin, name, args, actor, execution, source, requiredEffect);
@@ -1018,9 +1121,12 @@ export class PluginRegistry {
     const manifestDigest = digest(plugin.manifest);
     const tokenActor = projectActorContext(actor, plugin.manifest);
     const token = await createInvocationToken({ actor: tokenActor, pluginId: plugin.manifest.id, pluginVersion: version, tool: name, args, ...(plugin.manifest.manifestVersion === 2 || executionId ? { context: { installationId: id, configurationRevision: plugin.settings?.activeRevision ?? 0, configuration: plugin.settings?.configuration ?? {}, ...(executionId ? { executionId } : {}) } } : {}) }, this.privateKey);
-    const client = new Client({ name: 'hasi-core', version: '0.1.0' }, { versionNegotiation: { mode: 'auto' } });
-    const transport = new StreamableHTTPClientTransport(new URL(plugin.registration.endpoint), { requestInit: { headers: { authorization: `Bearer ${plugin.registration.serviceToken}`, 'x-hasi-invocation': token }, redirect: 'error' }, fetch: plugin.fetch });
+    const client = this.client(plugin);
+    let state: ManagedPluginStateSession | undefined;
     try {
+      state = await this.stateSession(plugin, originalActor, token, name, args);
+      state?.register(client);
+      const transport = new StreamableHTTPClientTransport(new URL(plugin.registration.endpoint), { requestInit: { headers: { authorization: `Bearer ${plugin.registration.serviceToken}`, 'x-hasi-invocation': token }, redirect: 'error' }, fetch: plugin.fetch });
       await client.connect(transport);
       const current = await this.refresh(plugin);
       await this.deploymentBindings.get(id)?.assertCurrent(id, current.settings?.activeRevision ?? 0);
@@ -1032,7 +1138,9 @@ export class PluginRegistry {
       const currentTool = this.assertInvocation(current, name, args, actor, execution, source, requiredEffect);
       const serverVersion = client.getServerVersion();
       if (serverVersion?.version !== current.manifest.version) throw new RequestError(409, 'Die Plugin-Version hat sich geändert. Bitte zuerst prüfen und freigeben.');
+      state?.activate();
       const result = await client.callTool({ name, arguments: args });
+      await state?.close();
       if (result.isError) throw new RequestError(502, 'Die Plugin-Anfrage konnte nicht ausgeführt werden.');
       const output: unknown = result.structuredContent;
       if (!output || typeof output !== 'object' || Array.isArray(output) || !validateSchema(currentTool.outputSchema, output)) throw new RequestError(502, 'Die Plugin-Antwort entspricht nicht dem vereinbarten Vertrag.');
@@ -1044,6 +1152,6 @@ export class PluginRegistry {
     } catch (error) {
       plugin.healthy = false;
       throw error;
-    } finally { await client.close(); }
+    } finally { try { await client.close(); } finally { await state?.close(); } }
   }
 }
