@@ -167,7 +167,7 @@ same pnpm store and `XDG_CACHE_HOME` for preparation and qualification.
 Packaging itself uses `--offline --frozen-lockfile`, disables lifecycle scripts
 and has no automatic online retry. A missing cache entry fails the build.
 Subprocess failures expose only an allowlisted category, phase and exit status,
-never raw registry responses, paths or credentials. The qualification runs
+never raw registry responses, paths or credentials. The initial reference-process qualification runs
 the packaged app from independent directories, checks its bounded `/healthz`
 endpoint and exercises update/route recovery using a shared in-memory store.
 The proxy has focused tests for service authentication, path allowlisting,
@@ -208,9 +208,14 @@ The route controller's trusted `withdraw` compares owner, installation, active
 deployment/digest and configuration revision in the same CAS journal used for
 activation. A committed withdrawal has an explicit null route; stale operations
 cannot clear a newer route. Stop traffic before discarding an active runtime.
-These operator APIs are not public admin/HTTP actions; production composition
-must wire authorization, audit, compatibility preflight and pending-action
-invalidation before exposing a complete update/disable journey.
+The low-level route/coordinator APIs remain operator-only. The managed worker
+exposes signed private administration RPC; authenticated host administration
+routes dispatch its reviewed stage, approval, activation and rollback commands.
+Current configuration, custody, publisher/reviewer trust and pending-action
+bindings are checked by that composition. The separate
+[managed pending-action qualification](../verification/2026-10-20/managed-pending-lifecycle.md)
+records an actual isolated TestIdP/API/Docker/PostgreSQL journey. Complete browser
+setup, update review and recovery qualification remains open.
 
 The disposable local PostgreSQL/gateway exercise is:
 
