@@ -1,4 +1,4 @@
-import { request as httpRequest, type IncomingHttpHeaders } from 'node:http';
+import { request as httpRequest, type IncomingHttpHeaders, type IncomingMessage, type ServerResponse } from 'node:http';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { DockerPluginActiveEndpointResolver } from './docker-plugin-driver.js';
 
@@ -66,52 +66,155 @@ async function forward(input: {
   readonly body?: Buffer;
   readonly timeoutMs: number;
   readonly maxResponseBytes: number;
-}): Promise<{ readonly statusCode: number; readonly headers: Record<string, string>; readonly body: Buffer }> {
+  readonly incomingRequest: IncomingMessage;
+  readonly downstreamResponse: ServerResponse;
+  readonly startEventStream: (statusCode: number, headers: Record<string, string>) => void;
+  readonly activeForwards?: Set<() => void>;
+}): Promise<
+  | { readonly streamed: true }
+  | { readonly streamed: false; readonly statusCode: number; readonly headers: Record<string, string>; readonly body: Buffer }
+> {
   return await new Promise((resolve, reject) => {
-    const outbound = httpRequest({
-      hostname: '127.0.0.1',
-      port: input.port,
-      method: input.method,
-      path: input.path,
-      headers: input.headers,
-      agent: false,
-    }, response => {
+    let settled = false;
+    let streaming = false;
+    let upstreamResponse: IncomingMessage | undefined;
+    const outboundHandle: { request?: ReturnType<typeof httpRequest> } = {};
+    const chunks: Buffer[] = [];
+    let size = 0;
+
+    const onClientAbort = (): void => { fail(new Error('client aborted')); };
+    const onClientClose = (): void => {
+      if (!input.downstreamResponse.writableFinished) fail(new Error('client disconnected'));
+    };
+    const onClientError = (): void => { fail(new Error('client response failed')); };
+    const onDrain = (): void => { upstreamResponse?.resume(); };
+    const onGatewayClose = (): void => { fail(new Error('gateway closing')); };
+
+    function cleanup(): void {
+      clearTimeout(timer);
+      input.incomingRequest.removeListener('aborted', onClientAbort);
+      input.downstreamResponse.removeListener('close', onClientClose);
+      input.downstreamResponse.removeListener('drain', onDrain);
+      input.downstreamResponse.removeListener('error', onClientError);
+      input.activeForwards?.delete(onGatewayClose);
+    }
+    function finish(result: Awaited<ReturnType<typeof forward>>): void {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(result);
+    }
+    function fail(error: Error): void {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      upstreamResponse?.destroy();
+      outboundHandle.request?.destroy();
+      if (streaming) {
+        if (!input.downstreamResponse.destroyed && !input.downstreamResponse.writableFinished) input.downstreamResponse.destroy();
+        // Headers are already on the wire; the only safe result is to terminate
+        // the response. In particular, do not append a JSON error to an SSE body.
+        resolve({ streamed: true });
+      } else {
+        reject(error);
+      }
+    }
+    input.activeForwards?.add(onGatewayClose);
+    input.incomingRequest.once('aborted', onClientAbort);
+    input.downstreamResponse.once('close', onClientClose);
+    input.downstreamResponse.once('error', onClientError);
+
+    const timer = setTimeout(() => { fail(new Error('upstream timeout')); }, input.timeoutMs);
+    const onUpstreamResponse = (response: IncomingMessage): void => {
+      if (settled) { response.destroy(); return; }
+      upstreamResponse = response;
       const statusCode = response.statusCode ?? 502;
       if (statusCode >= 300 && statusCode < 400) {
         response.destroy();
-        reject(new Error('redirect rejected'));
+        fail(new Error('redirect rejected'));
         return;
       }
-      const chunks: Buffer[] = [];
-      let size = 0;
+
+      const headers: Record<string, string> = {};
+      for (const name of RESPONSE_HEADERS) {
+        const value = response.headers[name];
+        if (typeof value === 'string' && value.length <= 1024 && !/[\r\n\0]/u.test(value)) headers[name] = value;
+      }
+      const contentType = response.headers['content-type'];
+      if (typeof contentType === 'string' && /^\s*text\/event-stream(?:\s*;|\s*$)/iu.test(contentType)) {
+        streaming = true;
+        try {
+          input.startEventStream(statusCode, headers);
+          input.downstreamResponse.flushHeaders();
+        } catch {
+          fail(new Error('could not start event stream'));
+          return;
+        }
+        input.downstreamResponse.on('drain', onDrain);
+      }
+
       response.on('data', (chunk: unknown) => {
+        if (settled) return;
         if (!(chunk instanceof Buffer)) {
-          response.destroy(new Error('invalid response chunk'));
+          fail(new Error('invalid response chunk'));
           return;
         }
         size += chunk.byteLength;
         if (size > input.maxResponseBytes) {
-          response.destroy(new Error('response too large'));
+          fail(new Error('response too large'));
           return;
         }
-        chunks.push(chunk);
-      });
-      response.once('error', reject);
-      response.once('end', () => {
-        const headers: Record<string, string> = {};
-        for (const name of RESPONSE_HEADERS) {
-          const value = response.headers[name];
-          if (typeof value === 'string' && value.length <= 1024 && !/[\r\n\0]/u.test(value)) headers[name] = value;
+        if (streaming) {
+          if (!input.downstreamResponse.write(chunk)) response.pause();
+        } else {
+          chunks.push(chunk);
         }
-        resolve({ statusCode, headers, body: Buffer.concat(chunks, size) });
       });
-    });
-    const timer = setTimeout(() => outbound.destroy(new Error('upstream timeout')), input.timeoutMs);
-    outbound.once('close', () => { clearTimeout(timer); });
-    outbound.once('error', reject);
-    if (input.body) outbound.write(input.body);
-    outbound.end();
+      response.once('error', error => { fail(error); });
+      response.once('aborted', () => { fail(new Error('upstream response aborted')); });
+      response.once('end', () => {
+        if (settled) return;
+        if (streaming) {
+          input.downstreamResponse.end(() => { finish({ streamed: true }); });
+        } else {
+          finish({ streamed: false, statusCode, headers, body: Buffer.concat(chunks, size) });
+        }
+      });
+    };
+    function createOutboundRequest(): ReturnType<typeof httpRequest> | undefined {
+      try {
+        const outgoingRequest = httpRequest({
+          hostname: '127.0.0.1',
+          port: input.port,
+          method: input.method,
+          path: input.path,
+          headers: input.headers,
+          agent: false,
+        }, onUpstreamResponse);
+        outboundHandle.request = outgoingRequest;
+        return outgoingRequest;
+      } catch (error) {
+        fail(error instanceof Error ? error : new Error('upstream request could not start'));
+        return undefined;
+      }
+    }
+    const outgoingRequest = createOutboundRequest();
+    if (!outgoingRequest) {
+      return;
+    }
+    outgoingRequest.once('error', error => { fail(error); });
+    if ((input.incomingRequest.destroyed && !input.incomingRequest.complete) || input.downstreamResponse.destroyed) {
+      fail(new Error('client disconnected'));
+      return;
+    }
+    if (input.body) outgoingRequest.write(input.body);
+    outgoingRequest.end();
   });
+}
+
+interface PluginDeploymentProxyLifecycle {
+  readonly activeForwards: Set<() => void>;
+  isClosing: boolean;
 }
 
 /**
@@ -119,7 +222,11 @@ async function forward(input: {
  * by the registry. It resolves the active managed container afresh per request
  * and exposes only the protocol routes needed by the host.
  */
-export function registerPluginDeploymentProxyRoutes(app: FastifyInstance, options: PluginDeploymentProxyOptions): void {
+function registerPluginDeploymentProxyRoutesInternal(
+  app: FastifyInstance,
+  options: PluginDeploymentProxyOptions,
+  lifecycle?: PluginDeploymentProxyLifecycle,
+): void {
   const timeoutMs = options.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxRequestBytes = options.maxRequestBytes ?? MAX_REQUEST_BYTES;
   const maxResponseBytes = options.maxResponseBytes ?? MAX_RESPONSE_BYTES;
@@ -188,6 +295,7 @@ export function registerPluginDeploymentProxyRoutes(app: FastifyInstance, option
         if (!await options.endpointResolver.assertActiveEndpoint({ installationId, endpoint })) {
           return await reply.code(503).header('retry-after', '1').send({ error: 'Active plugin deployment changed before dispatch.' });
         }
+        if (lifecycle?.isClosing) return await reply.code(503).send({ error: 'Plugin deployment gateway is closing.' });
         const result = await forward({
           port: endpoint.port,
           path,
@@ -196,17 +304,30 @@ export function registerPluginDeploymentProxyRoutes(app: FastifyInstance, option
           ...(body ? { body } : {}),
           timeoutMs,
           maxResponseBytes,
+          incomingRequest: request.raw,
+          downstreamResponse: reply.raw,
+          ...(lifecycle ? { activeForwards: lifecycle.activeForwards } : {}),
+          startEventStream: (statusCode, responseHeaders) => {
+            reply.hijack();
+            reply.raw.writeHead(statusCode, { ...responseHeaders, 'cache-control': 'no-store' });
+          },
         });
+        if (result.streamed) return await reply;
         reply.code(result.statusCode);
         for (const [name, value] of Object.entries(result.headers)) reply.header(name, value);
         reply.header('content-length', String(result.body.byteLength));
         reply.header('cache-control', 'no-store');
         return await reply.send(result.body);
       } catch {
+        if (reply.raw.headersSent || reply.raw.destroyed || reply.raw.writableEnded) return reply;
         return await reply.code(502).send({ error: 'Plugin deployment request failed.' });
       }
     },
   });
+}
+
+export function registerPluginDeploymentProxyRoutes(app: FastifyInstance, options: PluginDeploymentProxyOptions): void {
+  registerPluginDeploymentProxyRoutesInternal(app, options);
 }
 
 export interface PluginDeploymentGateway {
@@ -221,8 +342,16 @@ export async function createPluginDeploymentGateway(options: PluginDeploymentPro
     throw new TypeError('Plugin deployment gateway port is invalid.');
   }
   const app: FastifyInstance = Fastify({ logger: false, bodyLimit: options.maxRequestBytes ?? MAX_REQUEST_BYTES });
+  const lifecycle: PluginDeploymentProxyLifecycle = { activeForwards: new Set(), isClosing: false };
+  app.addHook('preClose', () => {
+    lifecycle.isClosing = true;
+    for (const abort of [...lifecycle.activeForwards]) abort();
+    // This is the gateway's private loopback listener; shutdown closes only
+    // these connections after owned upstream forwards have been canceled.
+    app.server.closeAllConnections();
+  });
   app.get('/healthz', async (_request, reply) => reply.code(200).send({ status: 'ok' }));
-  registerPluginDeploymentProxyRoutes(app, options);
+  registerPluginDeploymentProxyRoutesInternal(app, options, lifecycle);
   try {
     const address = await app.listen({ host: '127.0.0.1', port: options.port });
     const url = new URL(address);

@@ -105,6 +105,29 @@ network metadata that fails inspection. See
   revoked authority. A relay program/image revision is a platform input that
   also needs compatibility qualification.
 
+## Bounded MCP HTTP streaming
+
+The private deployment gateway forwards `text/event-stream` response headers
+and chunks before the upstream response ends. Buffering those responses until
+completion deadlocks server-to-client MCP requests that need a concurrent client
+response. JSON responses retain the existing buffered behavior.
+
+Streaming retains the fixed loopback target, path/header allowlists, service
+credential and deployment-revision checks. The default total deadline remains
+30 seconds and the response cap remains 2 MiB. Backpressure pauses the upstream
+until the downstream drains; the deadline remains active through downstream
+completion. Timeout, oversize data, upstream failure or client cancellation
+terminates the stream rather than appending a JSON error after SSE headers.
+The standalone gateway cancels its own forwards and closes its private listener
+connections during shutdown. The route registrar does not take lifecycle
+ownership of a caller's application.
+
+This changes neither MCP negotiation nor the SDK's default stateless server.
+It adds no state handler, mount or network permission. The
+[actual MCP regression and failure probes](../verification/2026-10-21/plugin-gateway-streaming.md)
+qualify local transport only, not authenticated managed-plugin state or complete
+P5/P6 acceptance.
+
 ## Qualification status
 
 The relay child-process suite has passed 16 tests, including fixed-target byte
