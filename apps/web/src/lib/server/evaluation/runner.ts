@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   boundedEvaluationJsonObjectSchema,
@@ -17,6 +17,7 @@ import {
   parseEvaluationOracle,
   type EvaluationOracleAssessment,
 } from "./oracles";
+import { parseEvaluationWorkflowObservation, type EvaluationWorkflowObservation } from "./workflow-observations";
 
 const syntheticMeasurementsSchema = z.strictObject({
   kind: z.literal("synthetic"),
@@ -58,6 +59,16 @@ const transportResponseSchema = z.preprocess((value, context) => {
 export type EvaluationTransportResponse = z.infer<typeof transportResponseSchema>;
 export type EvaluationTransport = (input: EvaluationModelInput) => Promise<unknown>;
 
+export interface EvaluationWorkflowObservationRequest {
+  runId: string;
+  caseId: string;
+  inputDigestSha256: string;
+  response: EvaluationTransportResponse;
+}
+
+/** Registered by trusted server code; never supplied by a case or model response. */
+export type EvaluationWorkflowObserver = (request: EvaluationWorkflowObservationRequest) => Promise<unknown>;
+
 export interface EvaluationRunDependencies {
   /** Server-produced evidence identity allowlist for this synthetic fixture run. */
   serverAuthorizedEvidence: ReadonlySet<string>;
@@ -65,11 +76,13 @@ export interface EvaluationRunDependencies {
   oracle?: unknown;
   /** Required injection point. This module deliberately provides no transport implementation. */
   transport: EvaluationTransport;
+  /** Optional observation adapter for a bounded synthetic application fixture. */
+  observeWorkflow?: EvaluationWorkflowObserver;
 }
 
 interface NotRunAssessment {
   status: "not_run";
-  reason: "transport_error" | "invalid_transport_response";
+  reason: "transport_error" | "invalid_transport_response" | "workflow_observer_error" | "invalid_workflow_observation";
 }
 
 interface NotAssessed {
@@ -82,6 +95,7 @@ type RunMetadata = Pick<EvaluationCase, "id" | "familyId" | "datasetSplit" | "re
 export type EvaluationRun = RunMetadata & {
   runKind: "offline_fixture_transport";
   inputDigestSha256: string;
+  workflowRunId?: string;
 } & (
   | {
       transport: { status: "error"; errorCode: "injected_transport_failed" };
@@ -93,7 +107,7 @@ export type EvaluationRun = RunMetadata & {
     }
   | {
       transport: { status: "completed"; response: EvaluationTransportResponse };
-      assessment: NotAssessed | EvaluationOracleAssessment;
+      assessment: NotAssessed | NotRunAssessment | EvaluationOracleAssessment;
     }
 );
 
@@ -115,7 +129,8 @@ function runMetadata(evaluationCase: EvaluationCase): RunMetadata {
 
 /**
  * Runs only an explicitly injected transport against the allowlisted projection.
- * It never executes tools and never grades a synthetic response as model quality.
+ * It provides no tool executor and never grades a synthetic response as model
+ * quality. A separately injected fixture observer owns any application evidence.
  */
 export async function runEvaluationCase(
   value: unknown,
@@ -130,12 +145,21 @@ export async function runEvaluationCase(
   const oracle = dependencies.oracle === undefined
     ? undefined
     : parseEvaluationOracle(dependencies.oracle);
+  const requiresWorkflow = oracle?.assertions.some(assertion => assertion.kind === "workflow_trace_exact") ?? false;
+  if (requiresWorkflow && typeof dependencies.observeWorkflow !== "function") {
+    throw new TypeError("A workflow oracle requires an explicitly injected server observer.");
+  }
+  if (!requiresWorkflow && dependencies.observeWorkflow !== undefined) {
+    throw new TypeError("A workflow observer requires an explicit workflow oracle.");
+  }
   const metadata = runMetadata(evaluationCase);
   const inputDigestSha256 = digestModelInput(input);
+  const workflowRunId = requiresWorkflow ? randomUUID() : undefined;
   const common = {
     ...metadata,
     runKind: "offline_fixture_transport" as const,
     inputDigestSha256,
+    ...(workflowRunId ? { workflowRunId } : {}),
   };
 
   let responseValue: unknown;
@@ -158,11 +182,42 @@ export async function runEvaluationCase(
     };
   }
 
+  let workflowObservation: EvaluationWorkflowObservation | undefined;
+  if (requiresWorkflow && dependencies.observeWorkflow && workflowRunId) {
+    let observed: unknown;
+    try {
+      observed = await dependencies.observeWorkflow({
+        runId: workflowRunId,
+        caseId: evaluationCase.id,
+        inputDigestSha256,
+        response: structuredClone(response.data),
+      });
+    } catch {
+      return {
+        ...common,
+        transport: { status: "completed", response: response.data },
+        assessment: { status: "not_run", reason: "workflow_observer_error" },
+      };
+    }
+    try {
+      workflowObservation = parseEvaluationWorkflowObservation(observed);
+      if (workflowObservation.runId !== workflowRunId || workflowObservation.caseId !== evaluationCase.id || workflowObservation.inputDigestSha256 !== inputDigestSha256) {
+        throw new TypeError("Workflow observation belongs to a different run, case or model projection.");
+      }
+    } catch {
+      return {
+        ...common,
+        transport: { status: "completed", response: response.data },
+        assessment: { status: "not_run", reason: "invalid_workflow_observation" },
+      };
+    }
+  }
+
   return {
     ...common,
     transport: { status: "completed", response: response.data },
     assessment: oracle
-      ? assessEvaluationOracle(oracle, response.data, input)
+      ? assessEvaluationOracle(oracle, response.data, input, workflowObservation)
       : { status: "not_assessed", reason: "synthetic_transport_only" },
   };
 }

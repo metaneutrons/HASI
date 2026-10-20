@@ -157,6 +157,14 @@ not executable quality judgments. The bounded TypeScript runner validates and
 projects inputs to an explicitly injected offline transport; it does not score
 fixture responses as model quality. See the [smoke corpus evidence](../verification/2026-10-19/evaluation-smoke-corpus.md).
 
+The [typed workflow-observation contract](workflow-observations.md) adds a
+separately registered server observer and per-run correlation for explicit
+fixture trace assertions. A test-only API/Anny bridge additionally observes
+actual isolated mock commits and lost responses for booking/cancellation runtime
+variants. These are bounded application-control checks; they do not turn draft
+fixture events into observations, establish browser confirmation or promote
+cases to gold/model-quality results.
+
 ## Three evaluation layers
 
 | Layer | Inputs held fixed | What the result measures |
