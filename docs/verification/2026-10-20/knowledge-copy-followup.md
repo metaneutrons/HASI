@@ -10,6 +10,13 @@ unassigned-source label. User-entered text is unchanged. The separate Markdown
 copy and source-view options retain the exact original Markdown, including any
 literal source markers.
 
+Verified inline answer citations now use the same client-side navigation as source
+cards, with prefetch disabled. Previously the inline anchor performed a full
+document navigation and could interrupt an unsaved protected draft. Render tests
+retain exact eligible mapping and unsafe-link checks; the actual browser
+exercise below covers source-card navigation, not a new protected inline-answer
+click journey.
+
 The caller passes only that message's eligible answer/source-card mappings.
 Normalization ignores supplied URLs and reconstructs the document/revision route;
 no model-provided URL establishes a verified source. Existing API permission and
