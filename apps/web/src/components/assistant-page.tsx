@@ -15,7 +15,7 @@ import type { Booking, Resource, TimeInterval, User } from "@/lib/types";
 import { useChatWorkspaceStore } from "@/components/chat-sidebar-context";
 import { useSession } from "@/components/session-provider";
 import { availabilityInputForSlot, createAnnyChatTools, type AnnyChatToolResult } from "@/lib/anny-chat-tools";
-import { knowledgeModelDocuments, searchKnowledge } from "@/lib/knowledge";
+import { knowledgeModelDocuments, knowledgeSourceMessage, knowledgeSourceSummary, searchKnowledge } from "@/lib/knowledge";
 import { chatKnowledgeCitations } from "@/lib/chat-knowledge-citations";
 import { knowledgeCitationHref } from "@/lib/knowledge-citations";
 import { knowledgeChatReturnHref, knowledgeOrigin, knowledgeReturnLocation } from "@/lib/knowledge-navigation";
@@ -558,7 +558,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
               });
               output = { ...result, documents: knowledgeModelDocuments(result.documents) };
               successfulTools.push("knowledge_search");
-              add({ role: "assistant", text: result.documents.length ? result.documents.every(document => document.synthetic) ? "Gefundene Demoquellen. Die folgende Antwort wertet diese Beispiele aus." : "Gefundene freigegebene Quellen. Die Antwort nennt die verwendeten Dokumentfassungen." : "Keine passenden, aktuell freigegebenen Quellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents, ...(result.contextId ? { sourceContextId: result.contextId } : {}), model: actualLabel });
+              add({ role: "assistant", text: knowledgeSourceSummary(result.documents), tool: "Wissensdienst · MCP", ...knowledgeSourceMessage(result), model: actualLabel });
             } else {
               assertRequestedRoomTime(call.name, call.arguments, roomIntent.current);
               const result = await tools().run(call.name, call.arguments);
@@ -723,7 +723,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         setRoomContext(false);
         setActivity("Wissensdienst · Quellen suchen");
         const result = await searchKnowledge(requestForChat, { query: trimmed });
-        add({ role: "assistant", text: result.documents.length ? "Diese synthetischen Dokumente passen zu deiner Frage. In der Dialog-Demo kannst du die Quellen lesen; für eine formulierte Antwort wähle ein Sprachmodell." : "Keine passenden, für dein Testkonto freigegebenen Demoquellen gefunden.", tool: "Wissensdienst · MCP", sources: result.documents });
+        add({ role: "assistant", text: knowledgeSourceSummary(result.documents), tool: "Wissensdienst · MCP", ...knowledgeSourceMessage(result) });
       } else if (intent === "rooms") {
         const reset = !roomContext || /(?:neue|andere)\s+(?:raum)?suche|(?:anderen|neuen)\s+raum|von vorne/i.test(trimmed);
         const next = mergeRoomRequest(trimmed, reset ? {} : request, requestTime);

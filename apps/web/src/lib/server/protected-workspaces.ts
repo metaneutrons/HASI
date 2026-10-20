@@ -16,7 +16,7 @@ import { actionReferenceKey, actionReferencesSchema, retainedActionReferences, u
 import { createHostDialogueSigner } from "./host-dialogue";
 import { proposalPresentation } from "../proposal-presentation";
 import { compactPluginToolResult, MODEL_PLUGIN_TOOL_NAME } from "../plugin-tools";
-import { knowledgeDocumentSchema, type KnowledgeDocument } from "../knowledge";
+import { knowledgeDocumentSchema, knowledgeSourceSummary, type KnowledgeDocument } from "../knowledge";
 import type { KnowledgeEvidence, WireMessage } from "../chat-contract";
 import {
   createKnowledgeEvidence,
@@ -243,13 +243,10 @@ function sanitizeDisplayMessages(
     if (message.sources !== undefined || contextId !== undefined) {
       const context = contextId ? contexts.get(contextId) : undefined;
       if (!contextId || context?.status !== "valid") return unavailableMessage(message, UNAVAILABLE_SOURCES);
-      const allSynthetic = context.documents.length > 0 && context.documents.every(document => document.synthetic);
       return {
         id: message.id,
         role: "assistant",
-        text: allSynthetic
-          ? "Gefundene Demoquellen. Die folgende Antwort wertet diese Beispiele aus."
-          : "Gefundene freigegebene Quellen. Die Antwort nennt die verwendeten Dokumentfassungen.",
+        text: knowledgeSourceSummary(context.documents),
         sources: context.documents,
         sourceContextId: contextId,
         ...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }),
