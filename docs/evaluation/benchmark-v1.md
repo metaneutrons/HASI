@@ -159,8 +159,11 @@ fixture responses as model quality. See the [smoke corpus evidence](../verificat
 
 The [typed workflow-observation contract](workflow-observations.md) adds a
 separately registered server observer and per-run correlation for explicit
-fixture trace assertions. This is harness plumbing; it does not turn draft
-fixture events into observed application effects or promote cases to gold.
+fixture trace assertions. A test-only API/Anny bridge additionally observes
+actual isolated mock commits and lost responses for booking/cancellation runtime
+variants. These are bounded application-control checks; they do not turn draft
+fixture events into observations, establish browser confirmation or promote
+cases to gold/model-quality results.
 
 ## Three evaluation layers
 

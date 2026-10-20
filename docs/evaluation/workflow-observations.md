@@ -1,6 +1,6 @@
 # Typed workflow observations for offline evaluation
 
-This is a bounded M6 harness contract, not a model-quality or application-workflow
+This is a bounded M6 harness contract, not a model-quality or complete application-workflow
 qualification. The development cases remain drafts; no gold case or acceptance
 threshold is promoted by this change. No production executor, provider transport,
 real API write or budget bypass is supplied.
@@ -63,8 +63,49 @@ observer registration and response-copy isolation. Parser checks include hostile
 objects and bounded input. These tests qualify the harness plumbing only. They
 are not an execution of the room/cancellation workflow or a live-provider result.
 
-The next slice must connect this contract to observations of the actual synthetic
-application executor and author the case-specific server oracles. The generic
+## Synthetic application bridge
+
+The test-only `tests/support/evaluation-anny-fixture.ts` bridge uses the actual
+`createDemoRuntime`, API proposal/confirmation routes, Anny plugin, execution
+journal and HTTP mock. Each run owns a fresh isolated memory store, synthetic
+employee account, Anny consent and loopback listener. A separate synthetic host
+request reads the current proposal and confirms it through the authenticated
+API. This establishes API confirmation, not a browser click or institutional
+identity.
+
+Expected confirmation details come from the pending server proposal. Observed
+confirmation/attempt details come from successful store transitions and the
+mock's persisted execution evidence, correlated by the server's execution ID.
+The attempt's subject and argument digest are derived independently from the
+committed source record. A response is deliberately lost only after the mock
+commits; the core must retain `outcome_unknown`. Cancellation has a separately
+identified setup booking. Setup effects are counted separately, not silently
+ignored or confused with the cancellation under test.
+
+The `anny-03-runtime` and `anny-06-runtime` development variants connect these
+observations to the runner with exact trace and no-model-retry assertions. Their
+model input uses sanitized status from that executed fixture and a generic user
+request; it does not pretend the draft cases' static people, room names or
+confirmation events were executed. An attempted model retry fails its own
+proposal assertion even when the backend effect trace remains safe. Model output
+never invokes an execute tool. The isolated fixture is consumed by one run and
+closed afterwards; no production source or model provider is contacted. The
+observer checks all source write requests as well as correlated committed
+receipts: a rejected extra request with a missing/different execution binding
+cannot disappear from the attempt count. An isolated counter-probe sends an
+unauthenticated loopback write request and requires HTTP 401, zero added effects
+and an ungraded observation. A separate counter-probe corrupts only a captured
+receipt copy, leaving the actual private memory state intact, and requires the
+observer to reject the argument/digest mismatch.
+
+This bridge does not establish the original cases' UI provenance, cross-process
+persistence, provider answer quality or general observer trust. The host owns the
+fixture lifecycle; stamping a matching run envelope cannot make an arbitrary
+observer truthful. Browser confirmation and independently persisted production
+correlation remain separate evidence requirements.
+
+The remaining integration must author the case-specific server oracles and
+qualify the full evaluation lifecycle. The generic
 `applicationEvents` and `trustedApplicationContext` draft fixture fields have not
 been declared observations or silently treated as runtime evidence. The other
 workflow/access/injection cases require event types appropriate to their effects.
@@ -72,10 +113,20 @@ Gold review/adjudication, agreed thresholds, the larger separated corpus and the
 instrumented budgeted per-profile comparison remain in M6 (#53). Institutional
 source/vendor semantics remain in M8 (#80).
 
-Local verification on 2026-10-20: 45 focused tests in the two existing harness
+Contract-only checkpoint on 2026-10-20 (`c7d0aa1`): 45 focused tests in the two existing harness
 suites and two new workflow suites passed, as did root/web typechecking and
 affected type-aware lint. Independent bounded source review identified the
 missing attempted-payload binding; attempts gained their own subject/digest and
 two countercases, and the follow-up review found that contract gap closed. No
-actual workflow executor or provider was run. Required full-suite/CI qualification
-and delivery remain separate from this local result.
+actual workflow executor or provider was run at that checkpoint. The subsequent
+mandatory local pre-push gate passed backend build, root/web types, reference
+preparation, secret checks and 1,434 tests plus one existing platform skip. The
+application bridge and final CI/delivery require their own qualification.
+
+Application-bridge checkpoint on 2026-10-20: eight focused tests passed, covering
+both actions' lost replies, foreign/repeated confirmation, unsafe model retry,
+corrupted captured receipt and an extra rejected unbound write request. The
+previous five harness suites passed 51 tests before the last two counter-probes
+were added; affected type-aware lint passed after those additions. Root/web type
+checks passed during development. These are local synthetic results; final
+full-suite/CI and delivery are recorded separately in the implementation PR.
