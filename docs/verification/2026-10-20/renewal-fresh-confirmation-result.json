@@ -1,0 +1,109 @@
+{
+  "date": "2026-10-20",
+  "scope": "Fresh generic prepare/confirm after personal account expiry/renewal; bounded local synthetic P3-A3/P4-A3/P6-A2 evidence",
+  "codeRevision": "c0334a049b4155a5d8d1974fe5c452ca4ba7a743",
+  "identicalMergedTree": "b728cfa13236d008022934f6825f27a0386c762b",
+  "node": "v24.21.0",
+  "browser": {
+    "name": "ChatGPT in-app browser",
+    "engineVersion": "Not exposed by the supported tool APIs; exact browser version is unverified",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390
+    }
+  },
+  "sourceDigests": {
+    "scripts/serve-plugin-journey.ts": "560a2af40be263490132ac5e198796e16533fded3a1b7793d24982733a5f1f06",
+    "scripts/plugin-journey-model.ts": "7e029c6ff9f8061cff8c05af33b5844b3f955e6440c44e27585877cbdb9571f6",
+    "apps/api/src/index.ts": "fe3c9ee2051746764c85498f6494be71a244138fd798b766bcf87b9335275c3c",
+    "apps/api/src/plugin-accounts.ts": "52e38b73ddf5ee04846d9aa0a2b94c4218b984c239759ccaa1eda49bd931a32e",
+    "apps/web/src/components/plugin-account-consent.tsx": "f5d1d270390b23f2c94389a768b295885742079a45c241a5bddd379e820432fe",
+    "apps/web/src/lib/server/protected-workspaces.ts": "93fdf754a0062162c63cbe217ac58cc82d34390ccd151844705f72e9f789993d",
+    "apps/web/src/lib/server/action-history-references.ts": "2265d20d8632af66c5d0343bc785302ee169eeeaa3c3bbdc39ab8b125e7ae0c5",
+    "apps/web/src/components/assistant-page.tsx": "1e3138a640403701bb07b51e824afadb11ad9971e4a565ad5f2067ef451977c2",
+    "examples/reference-plugin/src/state.js": "0d1bb2777f1213995e461f46f59787a69185db7a1ce3088c844093c322af52be",
+    "examples/reference-plugin/src/server.js": "669a3af0790b519f3370448bf74f66196deb6db982b9be94291ade46f93233a9"
+  },
+  "fixture": {
+    "apiReplicas": 2,
+    "scope": "89c34961-65d5-4693-a610-c4999032f234",
+    "initialReferencePid": 83132,
+    "restartedReferencePid": 83858,
+    "referenceVersion": "1.0.0",
+    "persistentReferenceState": true,
+    "metadataSha256": "3ace733fc9d090e7ac9f326be8bba54b01898d365b654002d4d24f6c3e5c68ff",
+    "releases": [
+      {
+        "version": "1.0.0",
+        "artifactSha256": "701c711f2ffd1a5eb22365f1467c8b1780ce1c5db0b6e42e6e727229af7f542c",
+        "sourceSha": "e4f1a7933180df97fb332b71602b5737f3faf7a6"
+      },
+      {
+        "version": "1.0.1",
+        "artifactSha256": "6f9f3a53cbf674ed45911699bb20ccfb6b5fcaf8aa8a9cf4d4b1b772d7e3d65d",
+        "sourceSha": "7de7010bb26585625203f81167a161b3a539a725"
+      }
+    ]
+  },
+  "observations": {
+    "accountClockReplicasAcknowledged": 2,
+    "expired": {
+      "oldCardVisible": false,
+      "oldConfirmationVisible": false,
+      "draftRetained": true,
+      "marks": 0,
+      "executionRequests": 0
+    },
+    "renewed": {
+      "returnedToOriginalChat": true,
+      "draftRetained": true,
+      "oldProposalStatus": "invalidated",
+      "oldConfirmationVisible": false
+    },
+    "freshPendingAfterReload": {
+      "oldProposalStatus": "invalidated",
+      "newProposalStatus": "pending",
+      "confirmationControls": 1,
+      "marks": 0,
+      "executionRequests": 0
+    },
+    "confirmedAndRestarted": {
+      "oldProposalStatus": "invalidated",
+      "newProposalStatus": "confirmed",
+      "confirmationControls": 0,
+      "modelFixtureCalls": 2,
+      "realProviderCalls": 0,
+      "marks": 1,
+      "journalRows": 1,
+      "sourceRows": 1,
+      "invocationRows": 2,
+      "executionRequests": 1,
+      "droppedReplies": 0,
+      "visibleSaveError": false
+    }
+  },
+  "rejectedAttempt": {
+    "reason": "Initial launcher used closed stdin; expire-reference could not be delivered",
+    "checkpoint": "One pending proposal displayed; renewal was not attempted or qualified",
+    "metadataSha256": "e5312d80bd0494d4c93e1383db3a9c123db55b6e9b8c89680ac6a6e6dc1f6c52",
+    "cleanup": "Exact owned fixture received SIGTERM; exit 0, owned processes stopped, caller DB retained"
+  },
+  "cleanup": {
+    "command": "quit",
+    "exitCode": 0,
+    "ownedProcessesStopped": true,
+    "callerOwnedTestDatabaseRetained": true,
+    "browserTabs": "All agent-created tabs closed",
+    "viewport": "reset"
+  },
+  "screenshots": {
+    "docs/verification/2026-10-20/assets/renewal-fresh-confirmation-390.jpg": "7a90f5f19ebac1ac719fc84c9d4c70953d0fc7d335f520a3a4839a7d96173291"
+  },
+  "limitations": [
+    "Synthetic personal account renewal after TestIdP login; not institutionally authorized SSO or data.",
+    "No managed installer update/disable/rollback, disconnect/external-revocation later-model-context proof, full P6 matrix or M7 acceptance.",
+    "No real model/provider calls, provider quality/caching/billing claim or real business write.",
+    "Browser version unavailable; physical devices/native AT and broad UI latency remain unqualified."
+  ]
+}

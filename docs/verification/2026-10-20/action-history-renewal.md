@@ -67,6 +67,15 @@ confirmation after renewal with historical invalidated cards remains unqualified
 in the browser. Setup is not counted as a journey pass. The independent bounded
 in-process mixed-save reproduction does pass, as do fresh Core confirmations.
 
+## Later bounded follow-up — 2026-10-20
+
+The [fresh-confirmation browser run](renewal-fresh-confirmation.md) subsequently
+completes the normal fresh prepare/reload/confirm case after actual synthetic account
+renewal, with the old card invalidated and exactly one effect retained across an
+independent plugin restart. The earlier incomplete runs above remain incomplete.
+This supersedes only their missing normal-action observation, not the broader
+remaining M2/M7 gates below.
+
 ## Integration and remaining scope
 
 The prior Node 24 PostgreSQL coverage run passed 1,374 tests in 151 files, with
