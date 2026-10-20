@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">HASI app icon</title>
+  <desc id="desc">Scalable HASI dialogue mark for 32 or 64 pixel display.</desc>
+  <rect x="1" y="1" width="62" height="62" rx="15" fill="#cf6b43" />
+  <svg x="8" y="8" width="48" height="48" viewBox="0 0 96 96" fill="none" stroke="#f1f0ec" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M27 14h39c11 0 18 7 18 18v25c0 11-7 18-18 18H49L31 89V75h-4C16 75 9 68 9 57V32c0-11 7-18 18-18Z" />
+    <path d="M32 61V25m0 24c0-8 5-13 13-13s13 5 13 14v11" />
+  </svg>
+</svg>

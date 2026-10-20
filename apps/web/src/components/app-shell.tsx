@@ -1,5 +1,6 @@
 "use client";
 
+import { HasiIcon } from "@/components/hasi-icon";
 import {
   ArrowRight,
   Check,
@@ -50,11 +51,7 @@ function HasiMark({ compact = false }: { compact?: boolean }) {
   return (
     <span className={`brand-lockup${compact ? " brand-lockup--compact" : ""}`}>
       <span className="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 32 32" fill="none">
-          <path d="M7 9.25A3.25 3.25 0 0 1 10.25 6h11.5A3.25 3.25 0 0 1 25 9.25v13.5A3.25 3.25 0 0 1 21.75 26h-11.5A3.25 3.25 0 0 1 7 22.75V9.25Z" stroke="currentColor" strokeWidth="2.2" />
-          <path d="M12 20V12m8 8v-4.2a3.8 3.8 0 0 0-7.6 0V20m-1.1-4h8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          <circle cx="22.3" cy="9.7" r="2.2" fill="currentColor" />
-        </svg>
+        <HasiIcon />
       </span>
       <span className="brand-name">hasi</span>
     </span>
