@@ -22,16 +22,21 @@ function statusLabel(status: string) {
 export function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sortedBookings = [...bookings].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
+    setBookings([]);
+    setHasLoaded(false);
     setError(null);
     try {
       const result = await apiRequest<{ bookings: Booking[] }>("/api/bookings");
       setBookings(result.bookings);
+      setHasLoaded(true);
     } catch (cause) {
+      setBookings([]);
       setError(cause instanceof Error ? cause.message : "Buchungen konnten nicht geladen werden.");
     } finally {
       setLoading(false);
@@ -42,10 +47,16 @@ export function BookingsPage() {
     let active = true;
     apiRequest<{ bookings: Booking[] }>("/api/bookings")
       .then((result) => {
-        if (active) setBookings(result.bookings);
+        if (active) {
+          setBookings(result.bookings);
+          setHasLoaded(true);
+        }
       })
       .catch((cause: unknown) => {
-        if (active) setError(cause instanceof Error ? cause.message : "Buchungen konnten nicht geladen werden.");
+        if (active) {
+          setBookings([]);
+          setError(cause instanceof Error ? cause.message : "Buchungen konnten nicht geladen werden.");
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -68,7 +79,7 @@ export function BookingsPage() {
 
       <div className="bookings-toolbar">
         <div><span className="section-kicker">RESERVIERUNGEN</span><h2>Deine Übersicht</h2></div>
-        {!loading && <span className="result-count">{bookings.length} {bookings.length === 1 ? "Buchung" : "Buchungen"}</span>}
+        {hasLoaded && !loading && !error && <span className="result-count">{bookings.length} {bookings.length === 1 ? "Buchung" : "Buchungen"}</span>}
       </div>
 
       {loading ? (
@@ -79,6 +90,7 @@ export function BookingsPage() {
         <div className="state-card state-card--error" role="alert">
           <span className="state-icon"><CircleAlert size={20} aria-hidden="true" /></span>
           <div><strong>Buchungen gerade nicht erreichbar</strong><p>{error}</p></div>
+          <Link className="button button--secondary" href="/account/connections?returnTo=/bookings">Verbindung prüfen</Link>
           <button className="button button--secondary" type="button" onClick={() => void loadBookings()}>Erneut laden</button>
         </div>
       ) : bookings.length === 0 ? (
