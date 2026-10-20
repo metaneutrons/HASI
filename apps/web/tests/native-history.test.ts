@@ -94,4 +94,25 @@ describe("native history reconstruction", () => {
     expect((await productionNativeHistoryResolver(request)(value)).proposals.size).toBe(0);
     expect(protectedCoreRequest).not.toHaveBeenCalled();
   });
+  it("redeems server-side recovery IDs through the same authenticated GETs without execution or cached display data", async () => {
+    const value = createChatWorkspace("owner");
+    const id = randomUUID();
+    const proposal = { id, action: "book" as const, resourceName: "Freshly authorized recovery target", startDate: booking.startDate,
+      endDate: booking.endDate, expiresAt: "2099-10-20T08:05:00Z", status: "confirmed" as const };
+    const core = vi.mocked(protectedCoreRequest).mockResolvedValue(Response.json({ proposal }));
+    const resolve = productionNativeHistoryResolver(request);
+    expect((await resolve(value, [id, id, "not-a-uuid"])).proposals.get(id)).toEqual(proposal);
+    expect(core.mock.calls).toEqual([[`/api/proposals/${id}`, request, "GET"]]);
+    core.mockResolvedValue(new Response(null, { status: 403 }));
+    expect((await resolve(value, [id])).proposals.size).toBe(0);
+    expect(core.mock.calls.every(([, , method]) => method === "GET")).toBe(true);
+  });
+  it("shares the existing proposal-read cap between visible cards and hidden recovery references", async () => {
+    const value = createChatWorkspace("owner");
+    required(value.sessions[0]).snapshot.messages = [{ id: randomUUID(), role: "assistant", text: "old",
+      proposal: { id: randomUUID(), resourceName: "desk", startDate: booking.startDate, endDate: booking.endDate,
+        expiresAt: "2099-10-20T08:05:00Z", status: "confirmed" } }];
+    expect((await productionNativeHistoryResolver(request)(value, Array.from({ length: 32 }, () => randomUUID()))).proposals.size).toBe(0);
+    expect(protectedCoreRequest).not.toHaveBeenCalled();
+  });
 });

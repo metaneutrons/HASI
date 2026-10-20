@@ -2,11 +2,12 @@ import { generateKeyPairSync, randomUUID } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { createPluginServer, digest, ExecutionJournal, type ActorContext, type PluginManifestV2 } from '@hasi/plugin-sdk';
 import { MemoryJsonStore } from '@hasi/state';
+import type { ActionPolicy } from '../apps/api/src/action-policy.js';
 import { createApi, PluginRegistry, RequestError } from '../apps/api/src/index.js';
 
 const object = (properties: Record<string, unknown>) => ({ type: 'object', properties, required: Object.keys(properties), additionalProperties: false });
 
-async function createHarness(resolveActor?: (subject: string) => Promise<ActorContext | undefined>) {
+async function createHarness(resolveActor?: (subject: string) => Promise<ActorContext | undefined>, withPolicy = false) {
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
   const store = new MemoryJsonStore(`action-reconciliation-${randomUUID()}`);
   const args = object({ target: { type: 'string' } });
@@ -32,7 +33,13 @@ async function createHarness(resolveActor?: (subject: string) => Promise<ActorCo
     ...(resolveActor ? { resolveActor } : {}),
   });
   await registry.install({ endpoint: `http://127.0.0.1:${String(address.port)}/mcp`, serviceToken: 'synthetic-service', expectedManifestDigest: digest(manifest), allowLoopback: true });
-  const api = await createApi({ mode: 'test', registry, store });
+  let actionPolicyRevision = 'policy-r1';
+  const actionPolicies: Record<string, ActionPolicy> | undefined = withPolicy ? { [manifest.id]: {
+    get revision() { return actionPolicyRevision; },
+    preview: () => Promise.resolve({ instance: 'Actions', account: 'Student', effect: 'Execute', consequences: ['Synthetic action'], costs: 'None' }),
+    reconcile: () => Promise.resolve({ status: 'outcome_unknown' }),
+  } } : undefined;
+  const api = await createApi({ mode: 'test', registry, store, ...(actionPolicies ? { actionPolicies } : {}) });
   const headers = { host: '127.0.0.1', origin: 'http://127.0.0.1:3000' };
   return {
     api,
@@ -41,6 +48,7 @@ async function createHarness(resolveActor?: (subject: string) => Promise<ActorCo
     plugin,
     registry,
     store,
+    setActionPolicyRevision(value: string) { actionPolicyRevision = value; },
     get writes() { return writes; },
     async cookieFor(personaId: string) {
       const login = await api.inject({ method: 'POST', url: '/api/dev/login', headers, payload: { personaId } });
@@ -59,6 +67,73 @@ async function createHarness(resolveActor?: (subject: string) => Promise<ActorCo
 }
 
 describe('authoritative action reconciliation', () => {
+  it('projects a revision-stale pending proposal as invalidated without mutating it', async () => {
+    const fixture = await createHarness();
+    try {
+      const cookie = await fixture.cookieFor('student');
+      const originalAuthorityBinding = fixture.registry.authorityBinding.bind(fixture.registry);
+      let accountRevisionChanged = false;
+      vi.spyOn(fixture.registry, 'authorityBinding').mockImplementation(async (...input) => {
+        const current = await originalAuthorityBinding(...input);
+        return accountRevisionChanged ? digest({ current, accountRevision: 2 }) : current;
+      });
+      const oldProposal = await fixture.prepare(cookie);
+      const oldKey = `proposal:${oldProposal}`;
+      const storedBeforeRenewal = await fixture.store.read(oldKey);
+      expect(storedBeforeRenewal).toBeDefined();
+      const beforeRenewal = await fixture.api.inject({ method: 'GET', url: `/api/proposals/${oldProposal}`, headers: { ...fixture.headers, cookie } });
+      expect(beforeRenewal.statusCode, beforeRenewal.body).toBe(200);
+      expect(beforeRenewal.json<{ proposal: { status: string } }>().proposal.status).toBe('pending');
+
+      accountRevisionChanged = true;
+      const afterRenewal = await fixture.api.inject({ method: 'GET', url: `/api/proposals/${oldProposal}`, headers: { ...fixture.headers, cookie } });
+      expect(afterRenewal.statusCode, afterRenewal.body).toBe(200);
+      expect(afterRenewal.json<{ proposal: { status: string } }>().proposal.status).toBe('invalidated');
+      expect((await fixture.store.read(oldKey))?.value).toEqual(storedBeforeRenewal?.value);
+
+      const staleConfirmation = await fixture.api.inject({ method: 'POST', url: `/api/proposals/${oldProposal}/confirm`, headers: { ...fixture.headers, cookie }, payload: {} });
+      expect(staleConfirmation.statusCode).toBe(409);
+      expect(fixture.writes).toBe(0);
+
+      const freshProposal = await fixture.prepare(cookie);
+      const freshRead = await fixture.api.inject({ method: 'GET', url: `/api/proposals/${freshProposal}`, headers: { ...fixture.headers, cookie } });
+      expect(freshRead.statusCode, freshRead.body).toBe(200);
+      expect(freshRead.json<{ proposal: { status: string } }>().proposal.status).toBe('pending');
+      const freshConfirmation = await fixture.api.inject({ method: 'POST', url: `/api/proposals/${freshProposal}/confirm`, headers: { ...fixture.headers, cookie }, payload: {} });
+      expect(freshConfirmation.statusCode, freshConfirmation.body).toBe(200);
+      expect(freshConfirmation.json<{ proposal: { status: string } }>().proposal.status).toBe('confirmed');
+      expect(fixture.writes).toBe(1);
+    } finally { await fixture.close(); }
+  });
+
+  it.each(['expired', 'policy-changed'] as const)('projects a pending proposal as invalidated when %s', async change => {
+    const fixture = await createHarness(undefined, change === 'policy-changed');
+    try {
+      const cookie = await fixture.cookieFor('student');
+      const proposalId = await fixture.prepare(cookie);
+      const before = await fixture.api.inject({ method: 'GET', url: `/api/proposals/${proposalId}`, headers: { ...fixture.headers, cookie } });
+      expect(before.statusCode, before.body).toBe(200);
+      expect(before.json<{ proposal: { status: string } }>().proposal.status).toBe('pending');
+
+      if (change === 'expired') {
+        const key = `proposal:${proposalId}`;
+        const stored = await fixture.store.read(key);
+        expect(stored).toBeDefined();
+        expect(await fixture.store.compareAndSet(key, stored?.revision ?? null, {
+          ...(stored?.value as Record<string, unknown>), expiresAt: new Date(Date.now() - 1_000).toISOString(),
+        })).toBe(true);
+      } else {
+        fixture.setActionPolicyRevision('policy-r2');
+      }
+
+      const current = await fixture.api.inject({ method: 'GET', url: `/api/proposals/${proposalId}`, headers: { ...fixture.headers, cookie } });
+      expect(current.statusCode, current.body).toBe(200);
+      expect(current.json<{ proposal: { status: string } }>().proposal.status).toBe('invalidated');
+      expect((await fixture.store.read(`proposal:${proposalId}`))?.value).toMatchObject({ status: 'pending' });
+      expect(fixture.writes).toBe(0);
+    } finally { await fixture.close(); }
+  });
+
   it('does not revive a pending confirmation after disable and re-enable', async () => {
     const fixture = await createHarness();
     try {
@@ -183,6 +258,9 @@ describe('authoritative action reconciliation', () => {
       else await registry.setEnabled(fixture.manifest.id, false);
 
       for (let attempt = 0; attempt < 2; attempt += 1) {
+        const read = await api.inject({ method: 'GET', url: `/api/proposals/${proposalId}`, headers: { ...headers, cookie } });
+        expect(read.statusCode).toBe(409);
+        expect(read.body).not.toContain('Synthetic target');
         const repeated = await api.inject({ method: 'POST', url: `/api/proposals/${proposalId}/confirm`, headers: { ...headers, cookie }, payload: {} });
         expect(repeated.statusCode, repeated.body).toBe(409);
         expect(repeated.body).not.toContain('Synthetic target');

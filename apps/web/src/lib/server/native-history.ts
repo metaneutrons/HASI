@@ -12,7 +12,7 @@ export interface NativeHistoryAccess {
   readonly bookings: readonly Booking[];
   readonly proposals: ReadonlyMap<string, ChatProposal>;
 }
-export type NativeHistoryResolver = (workspace: ChatWorkspace) => Promise<NativeHistoryAccess>;
+export type NativeHistoryResolver = (workspace: ChatWorkspace, recoveryProposalIds?: readonly string[]) => Promise<NativeHistoryAccess>;
 
 async function readNativeJson(request: Request, path: "/api/resources" | "/api/bookings" | `/api/proposals/${string}`): Promise<unknown> {
   const response = await protectedCoreRequest(path, request, "GET");
@@ -45,9 +45,9 @@ export async function readNativeBookings(request: Request): Promise<Booking[]> {
 
 /** Display reconstruction only: fixed authenticated GETs, never prepare/confirm/reconcile. */
 export function productionNativeHistoryResolver(request: Request): NativeHistoryResolver {
-  return async workspace => {
+  return async (workspace, recoveryProposalIds = []) => {
     const messages = workspace.sessions.flatMap(session => session.snapshot.messages);
-    const proposalIds = [...new Set(messages.flatMap(message => message.proposal ? [message.proposal.id] : []))];
+    const proposalIds = [...new Set([...messages.flatMap(message => message.proposal ? [message.proposal.id] : []), ...recoveryProposalIds])];
     const needsResources = messages.some(message => message.rooms !== undefined || message.hostDialogue?.resourceDigest !== undefined)
       || workspace.sessions.some(session => session.snapshot.chosenRoom !== null);
     const needsBookings = messages.some(message => message.bookings !== undefined);

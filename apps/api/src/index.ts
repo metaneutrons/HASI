@@ -43,7 +43,7 @@ const publicUser = (user: Persona) => ({ id: user.id, displayName: user.displayN
 class InvalidatedProposalError extends Error {
   constructor() { super('Die Dienstfreigabe wurde geändert. Dieser Vorschlag ist ungültig. Bitte neu vorbereiten.'); }
 }
-const publicProposal = (proposal: Proposal) => ({ ...(proposal.preview ? { preview: proposal.preview } : {}), id: proposal.id, resourceName: proposal.resourceName, startDate: proposal.startDate, endDate: proposal.endDate, expiresAt: proposal.expiresAt, status: proposal.status, arguments: proposal.args, pluginId: proposal.pluginId, executionTool: proposal.executionTool, ...(proposal.pluginId !== ANNY ? { executionTitle: proposal.executionTitle ?? proposal.executionTool, executionDescription: proposal.executionDescription ?? '' } : {}), action: proposal.pluginId === ANNY ? proposal.executionTool === 'anny.execute_cancellation' ? 'cancel_booking' : 'book' : 'execute_tool' });
+const publicProposal = (proposal: Proposal, status: Proposal['status'] | 'invalidated' = proposal.status) => ({ ...(proposal.preview ? { preview: proposal.preview } : {}), id: proposal.id, resourceName: proposal.resourceName, startDate: proposal.startDate, endDate: proposal.endDate, expiresAt: proposal.expiresAt, status, arguments: proposal.args, pluginId: proposal.pluginId, executionTool: proposal.executionTool, ...(proposal.pluginId !== ANNY ? { executionTitle: proposal.executionTitle ?? proposal.executionTool, executionDescription: proposal.executionDescription ?? '' } : {}), action: proposal.pluginId === ANNY ? proposal.executionTool === 'anny.execute_cancellation' ? 'cancel_booking' : 'book' : 'execute_tool' });
 
 export interface ApiOptions {
   mode: 'development' | 'test' | 'public-demo' | 'production'; registry: PluginRegistry; origin?: string;
@@ -368,7 +368,17 @@ export async function createApi(options: ApiOptions) {
     const proposal = record?.value as Proposal | undefined;
     if (proposal?.subject !== user.actor.subject) throw new RequestError(404, 'Vorschlag nicht gefunden.');
     await assertProposalReadAccess(proposal, user);
-    return { proposal: publicProposal(proposal) };
+    let projectedStatus: Proposal['status'] | 'invalidated' = proposal.status;
+    if (proposal.status === 'pending') {
+      const currentAuthorityDigest = await options.registry.authorityBinding(proposal.pluginId, user.actor);
+      // The proposal can be read under unchanged projected rights after renewal,
+      // but its old confirmation was bound to the previous account revision.
+      await assertProposalReadAccess(proposal, user);
+      if (Date.parse(proposal.expiresAt) <= Date.now()
+        || proposal.actionPolicyRevision !== options.actionPolicies?.[proposal.pluginId]?.revision
+        || proposal.authorityDigest !== currentAuthorityDigest) projectedStatus = 'invalidated';
+    }
+    return { proposal: publicProposal(proposal, projectedStatus) };
   });
   app.post('/api/proposals/:id/confirm', async request => {
     const user = await requireUser(request.cookies[cookieName]);
