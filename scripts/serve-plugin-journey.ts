@@ -15,6 +15,7 @@ import { annyManifest } from '@hasi/anny-plugin';
 import { knowledgeManifest } from '@hasi/knowledge-plugin';
 import { hshDemoCatalog } from '../fixtures/catalog.js';
 import { createApi, OidcIdentityProvider, PluginRegistry, PluginAccountService, startTestIdp, stableOidcSubject, withDemoPluginClaims } from '../apps/api/src/index.js';
+import type { PluginAccountAdapter } from '../apps/api/src/plugin-accounts.js';
 import { personas, type Persona } from '../apps/api/src/identity.js';
 import { createRegistryKnowledgeContexts } from '../apps/api/src/knowledge-context-runtime.js';
 import { DemoPluginAccountAdapter } from '../packages/demo-runtime/src/plugin-account-adapter.js';
@@ -84,6 +85,70 @@ async function advanceAccountClocks(apis: ChildProcess[], command: 'expire-anny'
     const timer = setTimeout(() => { finish(new Error('A synthetic account clock did not acknowledge.')); }, 5000);
     api.on('message', onMessage);
     api.send({ command, commandId }, error => { if (error) finish(new Error('A synthetic account command could not be delivered.')); });
+  })));
+}
+
+/** A synthetic external provider revocation, kept separate from host account authority. */
+export class JourneyReferenceAccountAdapter implements PluginAccountAdapter {
+  readonly trustLevel = 'demo-only' as const;
+  private readonly providerRevokedSubjects = new Set<string>();
+
+  constructor(private readonly delegate: PluginAccountAdapter) {}
+
+  revokeAtProvider(subject: string): void {
+    this.providerRevokedSubjects.add(subject);
+  }
+
+  begin(input: Parameters<PluginAccountAdapter['begin']>[0]): ReturnType<PluginAccountAdapter['begin']> {
+    return this.delegate.begin(input);
+  }
+
+  complete(input: Parameters<PluginAccountAdapter['complete']>[0]): ReturnType<PluginAccountAdapter['complete']> {
+    return this.delegate.complete(input);
+  }
+
+  async inspect(input: Parameters<PluginAccountAdapter['inspect']>[0]): ReturnType<PluginAccountAdapter['inspect']> {
+    const inspection = await this.delegate.inspect(input);
+    if (!this.providerRevokedSubjects.has(input.subject)) return inspection;
+    return {
+      ...inspection,
+      status: 'revoked',
+      authorityRevision: inspection.authorityRevision + (inspection.status === 'revoked' ? 0 : 1),
+      projection: undefined,
+    };
+  }
+
+  revoke(input: Parameters<PluginAccountAdapter['revoke']>[0]): ReturnType<PluginAccountAdapter['revoke']> {
+    return this.delegate.revoke(input);
+  }
+}
+
+/** Set the reference provider state on every API replica before reporting it applied. */
+export async function revokeReferenceProvider(apis: ChildProcess[]): Promise<void> {
+  if (apis.length !== 2) throw new Error('Reference provider revocation requires both synthetic API replicas.');
+  const commandId = randomUUID();
+  await Promise.all(apis.map(api => new Promise<void>((done, reject) => {
+    const finish = (error?: Error) => {
+      clearTimeout(timer); api.off('message', onMessage); api.off('exit', onExit); api.off('error', onExit);
+      if (error) reject(error); else done();
+    };
+    const onExit = () => { finish(new Error('An API replica stopped before acknowledging reference provider revocation.')); };
+    const onMessage = (message: unknown) => {
+      const ack = z.strictObject({
+        event: z.literal('reference-provider-state-applied'),
+        commandId: z.uuid(),
+        installationId: z.literal(REFERENCE_ID),
+        persona: z.literal('admin'),
+        status: z.literal('revoked'),
+      }).safeParse(message);
+      if (!ack.success || ack.data.commandId !== commandId) return;
+      finish();
+    };
+    const timer = setTimeout(() => { finish(new Error('An API replica did not acknowledge reference provider revocation.')); }, 5000);
+    api.on('message', onMessage); api.once('exit', onExit); api.once('error', onExit);
+    api.send({ command: 'revoke-reference-provider', commandId }, error => {
+      if (error) finish(new Error('Reference provider revocation could not be delivered to an API replica.'));
+    });
   })));
 }
 
@@ -242,9 +307,11 @@ async function apiChild(path: string): Promise<void> {
     }, resolveAuthority: subject => Promise.resolve(users.get(subject)) });
   const offsets = new Map<string, number>();
   const accounts = new Map<string, PluginAccountService>();
+  const adminSubject = stableOidcSubject(config.issuer, 'journey-admin');
+  let referenceAccountAdapter: JourneyReferenceAccountAdapter | undefined;
   for (const installationId of [ANNY_ID, REFERENCE_ID]) {
     const clock = () => Date.now() + (offsets.get(installationId) ?? 0);
-    const adapter = new DemoPluginAccountAdapter({ mode: 'test', privateKey, store, scope: config.scope, installationId, clock,
+    const demoAdapter = new DemoPluginAccountAdapter({ mode: 'test', privateKey, store, scope: config.scope, installationId, clock,
       resolveProjection: ({ subject }) => {
         const user = users.get(subject);
         if (!user) return undefined;
@@ -253,6 +320,9 @@ async function apiChild(path: string): Promise<void> {
           : { permissions: user.actor.permissions.filter(permission => permission.startsWith('rooms:')), customerId: user.actor.customerId,
             resourceIds: user.actor.resourceIds, claims: { 'anny.customerId': user.actor.customerId ?? '', 'anny.resourceIds': user.actor.resourceIds ?? [] } };
       } });
+    const adapter = installationId === REFERENCE_ID
+      ? (referenceAccountAdapter = new JourneyReferenceAccountAdapter(demoAdapter))
+      : demoAdapter;
     accounts.set(installationId, new PluginAccountService({ mode: 'test', privateKey, store, scope: config.scope, installationId, adapter, clock }));
   }
   const registry = new PluginRegistry(privateKey, { store, scope: config.scope, accounts, envelopeResults: true,
@@ -276,6 +346,10 @@ async function apiChild(path: string): Promise<void> {
       if (!('commandId' in message) || !z.uuid().safeParse(message.commandId).success) return;
       offsets.set(id, (offsets.get(id) ?? 0) + 9 * 60 * 60 * 1000);
       process.send?.({ event: 'clock-advanced', commandId: message.commandId });
+    } else if (message.command === 'revoke-reference-provider') {
+      if (!('commandId' in message) || !z.uuid().safeParse(message.commandId).success || !referenceAccountAdapter) return;
+      referenceAccountAdapter.revokeAtProvider(adminSubject);
+      process.send?.({ event: 'reference-provider-state-applied', commandId: message.commandId, installationId: REFERENCE_ID, persona: 'admin', status: 'revoked' });
     }
   });
   for (const signal of ['SIGTERM', 'SIGINT'] as const) process.once(signal, () => { void app.close().then(() => { if (process.connected) process.disconnect(); }); });
@@ -438,7 +512,7 @@ async function serve(): Promise<void> {
       releases: packaged.releases.map(release => ({ sourceSha: release.sourceSha, ...release.evidence })) }, null, 2), { mode: 0o600 });
     await writeEvidence();
     console.info(JSON.stringify({ event: 'plugin-journey-ready', webOrigin: WEB_ORIGIN, evidence: join(directory, 'evidence.json'), apiReplicas: 2,
-      independentReferencePid: reference.pid, syntheticOnly: true, commands: ['expire-anny', 'expire-reference', 'reference-lose-ack', 'reference-source-unavailable', 'reference-source-available', 'reference-drop-reply', 'restart-reference', 'reference-v2', 'reference-v1', 'stats', 'quit'] }));
+      independentReferencePid: reference.pid, syntheticOnly: true, commands: ['expire-anny', 'expire-reference', 'revoke-reference', 'reference-lose-ack', 'reference-source-unavailable', 'reference-source-available', 'reference-drop-reply', 'restart-reference', 'reference-v2', 'reference-v1', 'stats', 'quit'] }));
     stage = 'ready';
     input = createInterface({ input: process.stdin, terminal: false });
     input.on('line', line => {
@@ -449,6 +523,9 @@ async function serve(): Promise<void> {
         if (line === 'expire-anny' || line === 'expire-reference') {
           await advanceAccountClocks(apis, line);
           console.info(JSON.stringify({ event: 'synthetic-account-clock-advanced', service: line, replicasAcknowledged: apis.length }));
+        } else if (line === 'revoke-reference') {
+          await revokeReferenceProvider(apis);
+          console.info(JSON.stringify({ event: 'reference-provider-revocation-applied', installationId: REFERENCE_ID, persona: 'admin', replicasAcknowledged: apis.length }));
         } else if (line === 'reference-lose-ack' || line === 'reference-source-unavailable' || line === 'reference-source-available') {
           const command = line === 'reference-lose-ack' ? 'lose-next-execution-ack' : line === 'reference-source-unavailable' ? 'source-unavailable' : 'source-available';
           await sendReferenceCommand(reference, command);

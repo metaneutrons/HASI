@@ -526,10 +526,23 @@ export class PluginAccountService {
     if (inspection.status === 'revoked' || inspection.status === 'expired') {
       const nextStatus = inspection.status;
       const eventAt = asIso(this.now());
+      const event = nextStatus === 'revoked' ? 'external_revocation' : 'expired';
       state = await this.mutateState(subjectDigest, (current) => {
+        const lastEvent = current.history.at(-1);
+        // Another replica may have reconciled exactly this provider transition
+        // after our inspection. Return that result without a second revision or
+        // history event. A newer consent/disconnect/pending flow still conflicts.
+        const alreadyReconciled = current.status === nextStatus
+          && current.authorityRevision === state.authorityRevision + 1
+          && current.adapterAuthorityRevision === inspection.authorityRevision
+          && current.expiresAt === inspection.expiresAt
+          && current.revocationStatus === (nextStatus === 'revoked' ? 'confirmed' : 'none')
+          && current.pendingChallengeDigest === undefined && current.pendingOperation === undefined
+          && current.pendingChallengeExpiresAt === undefined
+          && lastEvent?.operation === event && lastEvent.authorityRevision === current.authorityRevision;
+        if (alreadyReconciled) return current;
         if (current.status !== 'linked' || current.authorityRevision !== state.authorityRevision) throw new PluginAccountError(409, 'account_changed', 'Die Kontoberechtigung wurde parallel geändert. Bitte lade den Status neu.');
         const revision = current.authorityRevision + 1;
-        const event = nextStatus === 'revoked' ? 'external_revocation' : 'expired';
         return this.appendHistory({ ...current, status: nextStatus, authorityRevision: revision, adapterAuthorityRevision: inspection.authorityRevision, expiresAt: inspection.expiresAt, updatedAt: eventAt, pendingChallengeDigest: undefined, pendingOperation: undefined, pendingChallengeExpiresAt: undefined, revocationStatus: nextStatus === 'revoked' ? 'confirmed' : 'none' }, event, eventAt, revision);
       });
       return this.publicStatus(state);
