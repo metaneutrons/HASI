@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import {
   evaluationCaseSchema,
@@ -48,4 +49,9 @@ export function projectEvaluationModelInput(
     userMessages: evaluationCase.userMessages,
     evidence: modelEvidence,
   });
+}
+
+/** Exact allowlisted case input identity; fixture labels and operator credentials are excluded. */
+export function digestEvaluationModelInput(input: EvaluationModelInput): string {
+  return createHash("sha256").update("hasi-evaluation-model-input-v1\0").update(JSON.stringify(input)).digest("hex");
 }

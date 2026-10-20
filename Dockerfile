@@ -14,6 +14,7 @@ COPY packages ./packages
 COPY fixtures ./fixtures
 COPY scripts ./scripts
 COPY docs/assets/hasi-hero-light.svg docs/assets/hasi-hero-dark.svg ./docs/assets/
+COPY docs/evaluation/example-cases.json ./docs/evaluation/
 
 RUN pnpm install --frozen-lockfile
 
@@ -23,6 +24,19 @@ ENV HASI_STANDALONE_BUILD=1
 ENV NEXT_PUBLIC_HASI_PUBLIC_DEMO=1
 RUN mkdir -p apps/web/public
 RUN pnpm --filter @hasi/web build
+
+# Explicit operator-only target. It is not the public app image or a release
+# channel; live credentials are injected at run time, never during the build.
+FROM build AS evaluation
+ARG SOURCE_COMMIT=unknown
+LABEL org.opencontainers.image.source="https://github.com/metaneutrons/HASI"
+LABEL org.opencontainers.image.licenses="GPL-3.0-only"
+LABEL org.opencontainers.image.revision="${SOURCE_COMMIT}"
+ENV HASI_EVALUATION_BUILD_REVISION=${SOURCE_COMMIT}
+ENV NODE_ENV=production
+USER node:node
+ENTRYPOINT ["node", "--conditions=react-server", "--import", "tsx", "apps/web/scripts/evaluate-models.ts"]
+CMD ["--help"]
 
 FROM ${NODE_IMAGE} AS runtime
 ARG VERSION=0.1.0

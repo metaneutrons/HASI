@@ -136,6 +136,19 @@ The public mock admin cannot edit global configuration or credentials.
 See [configuration, fallback examples and qualification limits](docs/architecture/model-provider-configuration.md).
 Legacy `CUSTOM_*` settings remain supported when no explicit JSON is supplied.
 
+### Plan a synthetic model comparison
+
+```sh
+pnpm evaluate:models --profiles groq-oss-120b,gwdg-qwen3-30b,deepinfra-deepseek-v4.1-flash
+```
+
+This is plan-only: no credentials are resolved, database opened or provider
+called. Explicit live execution uses the existing router and shared daily
+budget, a pinned synthetic corpus and an actual HTTP-attempt cap. Reports
+separate provider-reported usage from tariff-based cost estimates and unknown
+usage. The bounded citation checks do not establish semantic quality or M6
+acceptance. See [operator instructions and measurement limits](docs/evaluation/provider-observations.md).
+
 ### Local PostgreSQL server mode
 
 This one-process mode runs the server-backed demo against a local PostgreSQL database. Create a local database and a new 32-byte base64url `HASI_DEMO_SECRET`, then set these values in `apps/web/.env.local`:

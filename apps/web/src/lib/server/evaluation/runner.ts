@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   boundedEvaluationJsonObjectSchema,
@@ -10,6 +10,7 @@ import {
 } from "./case-schema";
 import {
   projectEvaluationModelInput,
+  digestEvaluationModelInput,
   type EvaluationModelInput,
 } from "./input-projection";
 import {
@@ -111,12 +112,6 @@ export type EvaluationRun = RunMetadata & {
     }
 );
 
-function digestModelInput(input: EvaluationModelInput): string {
-  return createHash("sha256")
-    .update("hasi-evaluation-model-input-v1\0")
-    .update(JSON.stringify(input))
-    .digest("hex");
-}
 
 function runMetadata(evaluationCase: EvaluationCase): RunMetadata {
   return {
@@ -153,7 +148,7 @@ export async function runEvaluationCase(
     throw new TypeError("A workflow observer requires an explicit workflow oracle.");
   }
   const metadata = runMetadata(evaluationCase);
-  const inputDigestSha256 = digestModelInput(input);
+  const inputDigestSha256 = digestEvaluationModelInput(input);
   const workflowRunId = requiresWorkflow ? randomUUID() : undefined;
   const common = {
     ...metadata,
