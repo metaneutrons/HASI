@@ -2,6 +2,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { MemoryJsonStore, type JsonStore } from '@hasi/state';
 import {
+  PluginAccountError,
   PluginAccountService,
   type PluginAccountAdapter,
   type PluginAccountActorProjection,
@@ -109,6 +110,62 @@ async function beginAndComplete(service: PluginAccountService, subject = SUBJECT
   return { state, result };
 }
 
+function sharedServices(adapter: PluginAccountAdapter, clock: () => number = Date.now) {
+  const { privateKey } = generateKeyPairSync('ed25519');
+  const store = new MemoryJsonStore('plugin-account-shared-status-race');
+  const options: PluginAccountServiceOptions = { privateKey, store, scope: 'tenant:one', installationId: INSTALLATION, mode: 'test', adapter, clock };
+  return { store, first: new PluginAccountService(options), second: new PluginAccountService(options) };
+}
+
+function recordAdapterRevocations(delegate: PluginAccountAdapter) {
+  let calls = 0;
+  const adapter: PluginAccountAdapter = {
+    ...delegate,
+    revoke(input) {
+      calls++;
+      return delegate.revoke(input);
+    },
+  };
+  return { adapter, calls: () => calls };
+}
+
+function deferFirstInspection(delegate: PluginAccountAdapter) {
+  let release!: () => void;
+  let captured!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const inspectionCaptured = new Promise<void>(resolve => { captured = resolve; });
+  let hasDeferred = false;
+  const adapter: PluginAccountAdapter = {
+    ...delegate,
+    async inspect(input) {
+      const snapshot = await delegate.inspect(input);
+      if (!hasDeferred) {
+        hasDeferred = true;
+        captured();
+        await gate;
+      }
+      return snapshot;
+    },
+  };
+  return { adapter, inspectionCaptured, release: () => { release(); } };
+}
+
+function barrierInspections(delegate: PluginAccountAdapter, expected: number): PluginAccountAdapter {
+  let arrived = 0;
+  let release!: () => void;
+  const barrier = new Promise<void>(resolve => { release = resolve; });
+  return {
+    ...delegate,
+    async inspect(input) {
+      const snapshot = await delegate.inspect(input);
+      arrived++;
+      if (arrived === expected) release();
+      await barrier;
+      return snapshot;
+    },
+  };
+}
+
 describe('personal plugin account lifecycle', () => {
   it('offers a real renewal after expiry and restores access only after explicit completion', async () => {
     let now = Date.now();
@@ -184,6 +241,128 @@ describe('personal plugin account lifecycle', () => {
     external.revokeExternally();
     expect((await base.service.status(SUBJECT))).toMatchObject({ status: 'revoked', authorityRevision: 2 });
     await expect(base.service.assertCurrent(SUBJECT, authority.authorityRevision)).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it('reconciles one external revocation consistently across concurrent status reads on shared services', async () => {
+    const { privateKey } = generateKeyPairSync('ed25519');
+    const store = new MemoryJsonStore('plugin-account-concurrent-external-revocation');
+    const external = trustedAdapter();
+    let inspectionsArrived = 0;
+    let releaseInspections!: () => void;
+    const bothInspectionsStarted = new Promise<void>(resolve => { releaseInspections = resolve; });
+    let delegateRevokeCalls = 0;
+    const adapter: PluginAccountAdapter = {
+      ...external.adapter,
+      async inspect(input) {
+        inspectionsArrived++;
+        if (inspectionsArrived === 2) releaseInspections();
+        await bothInspectionsStarted;
+        return external.adapter.inspect(input);
+      },
+      revoke(input) {
+        delegateRevokeCalls++;
+        return external.adapter.revoke(input);
+      },
+    };
+    const serviceOptions: PluginAccountServiceOptions = {
+      privateKey,
+      store,
+      scope: 'tenant:one',
+      installationId: INSTALLATION,
+      mode: 'test',
+      adapter,
+    };
+    const first = new PluginAccountService(serviceOptions);
+    const second = new PluginAccountService(serviceOptions);
+    await beginAndComplete(first);
+    external.revokeExternally();
+
+    const attempts = await Promise.allSettled([first.status(SUBJECT), second.status(SUBJECT)]);
+    const attemptSummary = attempts.map(result => result.status === 'fulfilled'
+      ? { status: result.status, accountStatus: result.value.status, authorityRevision: result.value.authorityRevision }
+      : { status: result.status, error: result.reason instanceof PluginAccountError
+        ? { statusCode: result.reason.statusCode, code: result.reason.code, message: result.reason.message }
+        : String(result.reason) });
+    expect(attemptSummary).toEqual([
+      { status: 'fulfilled', accountStatus: 'revoked', authorityRevision: 2 },
+      { status: 'fulfilled', accountStatus: 'revoked', authorityRevision: 2 },
+    ]);
+    const reconciled = attempts.flatMap(result => result.status === 'fulfilled' ? [result.value] : []);
+    expect(reconciled).toHaveLength(2);
+    expect(reconciled.map(({ status, authorityRevision }) => ({ status, authorityRevision }))).toEqual([
+      { status: 'revoked', authorityRevision: 2 },
+      { status: 'revoked', authorityRevision: 2 },
+    ]);
+    expect(reconciled[0]?.history).toEqual(reconciled[1]?.history);
+    expect(reconciled[0]?.history.filter(entry => entry.operation === 'external_revocation')).toHaveLength(1);
+    expect(delegateRevokeCalls).toBe(0);
+  });
+
+  it('rejects a stale revocation inspection after a newer consent completes', async () => {
+    const external = trustedAdapter();
+    const counted = recordAdapterRevocations(external.adapter);
+    const gate = deferFirstInspection(counted.adapter);
+    const services = sharedServices(gate.adapter);
+    await beginAndComplete(services.first);
+    external.revokeExternally();
+
+    const staleInspection = services.first.status(SUBJECT);
+    await gate.inspectionCaptured;
+    const started = await services.second.begin(SUBJECT, { operation: 'consent', returnTo: '/account/connections' });
+    const state = new URL(started.authorizationUrl).searchParams.get('state');
+    if (!state) throw new Error('The newer consent omitted its state');
+    await services.second.complete(SUBJECT, state, { state, code: 'synthetic-code' });
+
+    gate.release();
+    await expect(staleInspection).rejects.toMatchObject({ statusCode: 409, code: 'account_changed' });
+    const latest = await services.second.status(SUBJECT);
+    expect(latest).toMatchObject({ status: 'linked', authorityRevision: 3, flow: 'idle' });
+    expect(latest.history.map(entry => entry.operation)).toEqual(['consent', 'external_revocation', 'consent']);
+    expect(latest.history.filter(entry => entry.operation === 'external_revocation')).toHaveLength(1);
+    expect(counted.calls()).toBe(0);
+  });
+
+  it('rejects a stale revocation inspection while preserving a newer pending consent', async () => {
+    const external = trustedAdapter();
+    const counted = recordAdapterRevocations(external.adapter);
+    const gate = deferFirstInspection(counted.adapter);
+    const services = sharedServices(gate.adapter);
+    await beginAndComplete(services.first);
+    external.revokeExternally();
+
+    const staleInspection = services.first.status(SUBJECT);
+    await gate.inspectionCaptured;
+    await expect(services.second.status(SUBJECT)).resolves.toMatchObject({ status: 'revoked', authorityRevision: 2 });
+    const pending = await services.second.begin(SUBJECT, { operation: 'consent', returnTo: '/account/connections' });
+    expect(new URL(pending.authorizationUrl).searchParams.get('state')).toMatch(/^[A-Za-z0-9_-]{43}$/u);
+
+    gate.release();
+    await expect(staleInspection).rejects.toMatchObject({ statusCode: 409, code: 'account_changed' });
+    const latest = await services.second.status(SUBJECT);
+    expect(latest).toMatchObject({ status: 'revoked', authorityRevision: 2, flow: 'consent_pending' });
+    expect(latest.history.map(entry => entry.operation)).toEqual(['consent', 'external_revocation']);
+    expect(latest.history.filter(entry => entry.operation === 'external_revocation')).toHaveLength(1);
+    expect(counted.calls()).toBe(0);
+  });
+
+  it('reconciles concurrent expired inspections with one transition', async () => {
+    let now = Date.now();
+    const clock = () => now;
+    const external = trustedAdapter({ clock });
+    const counted = recordAdapterRevocations(external.adapter);
+    const adapter = barrierInspections(counted.adapter, 2);
+    const services = sharedServices(adapter, clock);
+    await beginAndComplete(services.first);
+    now += 60_001;
+
+    const attempts = await Promise.all([services.first.status(SUBJECT), services.second.status(SUBJECT)]);
+    expect(attempts.map(({ status, authorityRevision }) => ({ status, authorityRevision }))).toEqual([
+      { status: 'expired', authorityRevision: 2 },
+      { status: 'expired', authorityRevision: 2 },
+    ]);
+    expect(attempts[0].history).toEqual(attempts[1].history);
+    expect(attempts[0].history.filter(entry => entry.operation === 'expired')).toHaveLength(1);
+    expect(counted.calls()).toBe(0);
   });
 
   it('invalidates local authority before remote disconnect and keeps a retryable revocation record', async () => {
