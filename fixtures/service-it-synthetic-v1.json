@@ -486,7 +486,7 @@
       "synthetic": true,
       "language": "de",
       "title": "Demo-FAQ: In welchen Gebieten benötige ich keine aktive VPN Verbindung für die Anmeldung an M365 Diensten",
-      "revision": 1,
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -499,8 +499,8 @@
         "microsoft",
         "vpn"
       ],
-      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Fall 8C190F übt In welchen Gebieten benötige ich keine aktive VPN Verbindung für die Anmeldung an M365 Diensten in einer isolierten VPN-Demo unter https://vpn-demo.invalid. Prüfe zuerst die Testverbindung, wähle dann nur das simulierte Geräteprofil 8C190F und kontrolliere die Statusanzeige nach dem Verbindungsversuch. Netzwerkname, Anbieterprofil und Anmeldung sind erfunden; keine echte VPN-Verbindung oder MFA-Freigabe auslösen.",
-      "citationId": "knowledge:service_it:svc-catalog-9e71428c190f:1",
+      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Ob ein M365-Dienst ohne VPN erreichbar ist, hängt vom verwendeten Netz und den geltenden Zugriffsregeln ab. Diese Demo legt keine freigegebenen Netze oder Ausnahmen fest. Notiere den betroffenen Dienst, das verwendete Netz und die genaue Anmeldefehlermeldung. Aus diesem Eintrag lässt sich weder eine allgemeine VPN-Pflicht noch eine Ausnahme für einen Hochschulstandort ableiten. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
+      "citationId": "knowledge:service_it:svc-catalog-9e71428c190f:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1094,7 +1094,7 @@
       "synthetic": true,
       "language": "de",
       "title": "Demo-FAQ: Einrichtung: einen zweiten Faktor für die Nutzung von VPN ein",
-      "revision": 1,
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1105,8 +1105,8 @@
         "kind:faq",
         "vpn"
       ],
-      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Fall 8B226D übt Einrichtung: einen zweiten Faktor für die Nutzung von VPN ein in einer isolierten VPN-Demo unter https://vpn-demo.invalid. Prüfe zuerst die Testverbindung, wähle dann nur das simulierte Geräteprofil 8B226D und kontrolliere die Statusanzeige nach dem Verbindungsversuch. Netzwerkname, Anbieterprofil und Anmeldung sind erfunden; keine echte VPN-Verbindung oder MFA-Freigabe auslösen.",
-      "citationId": "knowledge:service_it:svc-catalog-9b30ce8b226d:1",
+      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für einen zweiten Faktor benötigst du die freigegebene Einrichtungsanleitung und die für dein Konto zugelassene Methode. Diese Demo enthält weder eine MFA-Registrierung noch gültige Einrichtungscodes. Notiere, ob die Einrichtung selbst scheitert oder eine bereits eingerichtete Methode bei der VPN-Anmeldung nicht funktioniert. Teile keine Passwörter, Wiederherstellungscodes oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
+      "citationId": "knowledge:service_it:svc-catalog-9b30ce8b226d:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1177,7 +1177,7 @@
       "synthetic": true,
       "language": "de",
       "title": "Demo-FAQ: Fehlersuche: funktioniert mein VPN nicht",
-      "revision": 1,
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1188,8 +1188,8 @@
         "kind:faq",
         "vpn"
       ],
-      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Fall E68F04 übt Fehlersuche: funktioniert mein VPN nicht in einer isolierten VPN-Demo unter https://vpn-demo.invalid. Prüfe zuerst die Testverbindung, wähle dann nur das simulierte Geräteprofil E68F04 und kontrolliere die Statusanzeige nach dem Verbindungsversuch. Netzwerkname, Anbieterprofil und Anmeldung sind erfunden; keine echte VPN-Verbindung oder MFA-Freigabe auslösen.",
-      "citationId": "knowledge:service_it:svc-catalog-6c79c1e68f04:1",
+      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Prüfe zuerst, ob gewöhnliche Internetseiten ohne VPN erreichbar sind. Notiere den genauen Wortlaut der Fehlermeldung samt Fehlercode, das Betriebssystem sowie Name und Version des VPN-Clients. Halte fest, ob der VPN-Verbindungsaufbau selbst fehlschlägt oder ob die Anmeldung beziehungsweise Verbindung gelingt, aber eine benötigte Ressource nicht erreichbar ist. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
+      "citationId": "knowledge:service_it:svc-catalog-6c79c1e68f04:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2551,7 +2551,7 @@
       "synthetic": true,
       "language": "de",
       "title": "Demo-FAQ: Fehlerbild: mich nach der Aktualisierung von GlobalProtect nicht mehr anmelden",
-      "revision": 1,
+      "revision": 2,
       "demoAudience": [
         "employee",
         "admin"
@@ -2561,8 +2561,8 @@
         "kind:faq",
         "vpn"
       ],
-      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Fall B4D323 übt Fehlerbild: mich nach der Aktualisierung von GlobalProtect nicht mehr anmelden in einer isolierten VPN-Demo unter https://vpn-demo.invalid. Prüfe zuerst die Testverbindung, wähle dann nur das simulierte Geräteprofil B4D323 und kontrolliere die Statusanzeige nach dem Verbindungsversuch. Netzwerkname, Anbieterprofil und Anmeldung sind erfunden; keine echte VPN-Verbindung oder MFA-Freigabe auslösen.",
-      "citationId": "knowledge:service_it:svc-catalog-b2bfd3b4d323:1",
+      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Prüfe zuerst, ob gewöhnliche Internetseiten ohne VPN erreichbar sind. Notiere den genauen Wortlaut der Fehlermeldung samt Fehlercode, das Betriebssystem sowie Name und Version des VPN-Clients. Halte fest, ob der VPN-Verbindungsaufbau selbst fehlschlägt oder ob die Anmeldung beziehungsweise Verbindung gelingt, aber eine benötigte Ressource nicht erreichbar ist. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
+      "citationId": "knowledge:service_it:svc-catalog-b2bfd3b4d323:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3381,7 +3381,7 @@
       "synthetic": true,
       "language": "de",
       "title": "Demo-FAQ: Einrichtung: einen VPN Client unter Android ein",
-      "revision": 1,
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3392,8 +3392,8 @@
         "kind:faq",
         "vpn"
       ],
-      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Fall CCD7BE übt Einrichtung: einen VPN Client unter Android ein in einer isolierten VPN-Demo unter https://vpn-demo.invalid. Prüfe zuerst die Testverbindung, wähle dann nur das simulierte Geräteprofil CCD7BE und kontrolliere die Statusanzeige nach dem Verbindungsversuch. Netzwerkname, Anbieterprofil und Anmeldung sind erfunden; keine echte VPN-Verbindung oder MFA-Freigabe auslösen.",
-      "citationId": "knowledge:service_it:svc-catalog-94f501ccd7be:1",
+      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für die VPN-Einrichtung müssen Betriebssystem und Version, ein freigegebener VPN-Client sowie die dafür vorgesehenen Verbindungsparameter zusammenpassen. Diese Demo enthält keinen verifizierten Download, keine Serveradresse und kein Geräteprofil. Notiere Betriebssystem und Version sowie den Schritt, an dem du nicht weiterkommst, und verwende für konkrete Einstellungen die freigegebene Anleitung des zuständigen Dienstes. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
+      "citationId": "knowledge:service_it:svc-catalog-94f501ccd7be:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3402,7 +3402,7 @@
       "synthetic": true,
       "language": "de",
       "title": "Demo-FAQ: Einrichtung: GlobalProtect auf meinem Chromebook ein",
-      "revision": 1,
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3413,8 +3413,8 @@
         "kind:faq",
         "vpn"
       ],
-      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Fall 7AC91E übt Einrichtung: GlobalProtect auf meinem Chromebook ein in einer isolierten VPN-Demo unter https://vpn-demo.invalid. Prüfe zuerst die Testverbindung, wähle dann nur das simulierte Geräteprofil 7AC91E und kontrolliere die Statusanzeige nach dem Verbindungsversuch. Netzwerkname, Anbieterprofil und Anmeldung sind erfunden; keine echte VPN-Verbindung oder MFA-Freigabe auslösen.",
-      "citationId": "knowledge:service_it:svc-catalog-8269e07ac91e:1",
+      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für die VPN-Einrichtung müssen Betriebssystem und Version, ein freigegebener VPN-Client sowie die dafür vorgesehenen Verbindungsparameter zusammenpassen. Diese Demo enthält keinen verifizierten Download, keine Serveradresse und kein Geräteprofil. Notiere Betriebssystem und Version sowie den Schritt, an dem du nicht weiterkommst, und verwende für konkrete Einstellungen die freigegebene Anleitung des zuständigen Dienstes. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
+      "citationId": "knowledge:service_it:svc-catalog-8269e07ac91e:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3423,7 +3423,7 @@
       "synthetic": true,
       "language": "de",
       "title": "Demo-FAQ: Einrichtung: einen VPN Client unter Windows S ein",
-      "revision": 1,
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3435,8 +3435,8 @@
         "microsoft",
         "vpn"
       ],
-      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Fall B1F7E7 übt Einrichtung: einen VPN Client unter Windows S ein in einer isolierten VPN-Demo unter https://vpn-demo.invalid. Prüfe zuerst die Testverbindung, wähle dann nur das simulierte Geräteprofil B1F7E7 und kontrolliere die Statusanzeige nach dem Verbindungsversuch. Netzwerkname, Anbieterprofil und Anmeldung sind erfunden; keine echte VPN-Verbindung oder MFA-Freigabe auslösen.",
-      "citationId": "knowledge:service_it:svc-catalog-4d9b0bb1f7e7:1",
+      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für die VPN-Einrichtung müssen Betriebssystem und Version, ein freigegebener VPN-Client sowie die dafür vorgesehenen Verbindungsparameter zusammenpassen. Diese Demo enthält keinen verifizierten Download, keine Serveradresse und kein Geräteprofil. Notiere Betriebssystem und Version sowie den Schritt, an dem du nicht weiterkommst, und verwende für konkrete Einstellungen die freigegebene Anleitung des zuständigen Dienstes. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
+      "citationId": "knowledge:service_it:svc-catalog-4d9b0bb1f7e7:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3445,7 +3445,7 @@
       "synthetic": true,
       "language": "de",
       "title": "Demo-FAQ: Einrichtung: einen VPN Client unter macOS ein",
-      "revision": 1,
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3456,8 +3456,8 @@
         "kind:faq",
         "vpn"
       ],
-      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Fall 71D1E7 übt Einrichtung: einen VPN Client unter macOS ein in einer isolierten VPN-Demo unter https://vpn-demo.invalid. Prüfe zuerst die Testverbindung, wähle dann nur das simulierte Geräteprofil 71D1E7 und kontrolliere die Statusanzeige nach dem Verbindungsversuch. Netzwerkname, Anbieterprofil und Anmeldung sind erfunden; keine echte VPN-Verbindung oder MFA-Freigabe auslösen.",
-      "citationId": "knowledge:service_it:svc-catalog-4760a271d1e7:1",
+      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für die VPN-Einrichtung müssen Betriebssystem und Version, ein freigegebener VPN-Client sowie die dafür vorgesehenen Verbindungsparameter zusammenpassen. Diese Demo enthält keinen verifizierten Download, keine Serveradresse und kein Geräteprofil. Notiere Betriebssystem und Version sowie den Schritt, an dem du nicht weiterkommst, und verwende für konkrete Einstellungen die freigegebene Anleitung des zuständigen Dienstes. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
+      "citationId": "knowledge:service_it:svc-catalog-4760a271d1e7:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3466,7 +3466,7 @@
       "synthetic": true,
       "language": "de",
       "title": "Demo-FAQ: Einrichtung: einen VPN Client unter Windows ein",
-      "revision": 1,
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3478,8 +3478,8 @@
         "microsoft",
         "vpn"
       ],
-      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Fall CE9803 übt Einrichtung: einen VPN Client unter Windows ein in einer isolierten VPN-Demo unter https://vpn-demo.invalid. Prüfe zuerst die Testverbindung, wähle dann nur das simulierte Geräteprofil CE9803 und kontrolliere die Statusanzeige nach dem Verbindungsversuch. Netzwerkname, Anbieterprofil und Anmeldung sind erfunden; keine echte VPN-Verbindung oder MFA-Freigabe auslösen.",
-      "citationId": "knowledge:service_it:svc-catalog-45e0e1ce9803:1",
+      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für die VPN-Einrichtung müssen Betriebssystem und Version, ein freigegebener VPN-Client sowie die dafür vorgesehenen Verbindungsparameter zusammenpassen. Diese Demo enthält keinen verifizierten Download, keine Serveradresse und kein Geräteprofil. Notiere Betriebssystem und Version sowie den Schritt, an dem du nicht weiterkommst, und verwende für konkrete Einstellungen die freigegebene Anleitung des zuständigen Dienstes. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
+      "citationId": "knowledge:service_it:svc-catalog-45e0e1ce9803:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -4271,7 +4271,7 @@
       "synthetic": true,
       "language": "de",
       "title": "Demo-Service: VPN (Virtual Private Network)",
-      "revision": 1,
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -4282,8 +4282,8 @@
         "kind:service",
         "vpn"
       ],
-      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Fall DA7793 übt VPN (Virtual Private Network) in einer isolierten VPN-Demo unter https://vpn-demo.invalid. Prüfe zuerst die Testverbindung, wähle dann nur das simulierte Geräteprofil DA7793 und kontrolliere die Statusanzeige nach dem Verbindungsversuch. Netzwerkname, Anbieterprofil und Anmeldung sind erfunden; keine echte VPN-Verbindung oder MFA-Freigabe auslösen.",
-      "citationId": "knowledge:service_it:svc-catalog-1b51d9da7793:1",
+      "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Ein VPN kann den Zugriff auf Ressourcen in einem anderen Netz ermöglichen. Eine erfolgreiche Anmeldung beweist noch nicht, dass jede Ressource freigegeben oder erreichbar ist. Diese Demo nennt keine echten VPN-Adressen, Geräteprofile oder Zugriffsrechte. Unterscheide bei der Fehlersuche zwischen fehlender Internetverbindung, gescheitertem VPN-Aufbau und einer einzelnen nicht erreichbaren Ressource. Notiere dabei Betriebssystem, Client-Version und die genaue Fehlermeldung, ohne Passwörter oder MFA-Codes weiterzugeben. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
+      "citationId": "knowledge:service_it:svc-catalog-1b51d9da7793:2",
       "publicationStatus": "syntheticdemo"
     },
     {

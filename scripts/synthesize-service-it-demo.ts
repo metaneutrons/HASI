@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, realpath, writeFile } from 'node:fs/promises';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SYNTHETIC_DEMO_NOTICE as NOTICE, syntheticVpnGuidance } from './synthetic-vpn-guidance.js';
 
 interface SourceEntry {
   readonly title: string;
@@ -22,7 +23,7 @@ interface SyntheticDocument {
   readonly synthetic: true;
   readonly language: 'de';
   readonly title: string;
-  readonly revision: 1;
+  readonly revision: 1 | 2;
   readonly demoAudience: readonly ('student' | 'employee' | 'admin')[];
   readonly tags: readonly string[];
   readonly text: string;
@@ -41,7 +42,6 @@ const EXPECTED_TOTAL = FAQ_COUNT + PUBLIC_FAQ_SUPPLEMENT_COUNT + SERVICE_COUNT +
 const AUDIENCE_ORDER = ['student', 'employee', 'admin'] as const;
 const REPO_ROOT = await realpath(fileURLToPath(new URL('..', import.meta.url)));
 const DEFAULT_OUTPUT = resolve(REPO_ROOT, 'fixtures/service-it-synthetic-v1.json');
-const NOTICE = 'SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel.';
 const AUTH_ROLES = new Set(['HIT', 'Hiwi', 'Personal', 'Studierende', 'Gast', 'Schliesssystem']);
 
 function fail(message: string): never {
@@ -331,7 +331,8 @@ function scenario(group: string, title: string, type: 'faq' | 'service' | 'news'
   }
   if (/serviceit mit wagtail|wagtail/u.test(`${g} ${t}`)) return `${NOTICE} Die fiktive Redaktion übt ${cue} im CMS-Labor https://cms-demo.invalid. Erstelle einen Entwurf mit der Referenz ${ref}, prüfe Titel, Vorschau und Sprache und kontrolliere bei Medien die erfundene Beschreibung. Änderungen bleiben im Testbereich und werden nicht veröffentlicht; es werden weder echte Seiten noch echte Formulare bearbeitet.`;
   if (/multi.?faktor|mfa|passkey|yubikey|authenticator|totp|keepass/u.test(`${g} ${t}`)) return `${NOTICE} Die Übung ${ref} simuliert ${cue} mit dem Testprofil MFA-${ref}. Wähle in der Oberfläche eine fiktive Methode, prüfe die Bestätigung mit einem ausdrücklich synthetischen Demo-Code und entferne anschließend das Testprofil. Keine echte Passkey-, Schlüssel-, Authenticator- oder KeePass-Registrierung ausführen und keine Codes aus einem persönlichen Gerät übernehmen.`;
-  if (/vpn|virtual private|globalprotect/u.test(`${g} ${t}`)) return `${NOTICE} Der Fall ${ref} übt ${cue} in einer isolierten VPN-Demo unter https://vpn-demo.invalid. Prüfe zuerst die Testverbindung, wähle dann nur das simulierte Geräteprofil ${ref} und kontrolliere die Statusanzeige nach dem Verbindungsversuch. Netzwerkname, Anbieterprofil und Anmeldung sind erfunden; keine echte VPN-Verbindung oder MFA-Freigabe auslösen.`;
+  const vpnGuidance = syntheticVpnGuidance(g, t, type);
+  if (vpnGuidance) return vpnGuidance.text;
   if (/kurzurl|shorturl/u.test(`${g} ${t}`)) return `${NOTICE} Der URL-Fall ${ref} zeigt ${cue} mit short-demo.invalid und ziel-demo.invalid. Vergleiche zuerst die vollständige Zieladresse, öffne eine sichere Vorschau und ändere anschließend nur den fiktiven Eintrag URL-${ref}. Beide Domains sind reservierte Testnamen; eine reale Weiterleitung oder DNS-Änderung findet nicht statt.`;
   if (/person einladen|gäste|gast|guest/u.test(`${g} ${t}`)) return `${NOTICE} Die Übung ${ref} simuliert ${cue} mit dem Profil GAST-${ref}. Wähle nur eine fiktive Laufzeit und minimale Demo-Rolle, kontrolliere in der Vorschau, dass keine echte Person oder E-Mail-Adresse eingetragen ist, und widerrufe das Testprofil am Ende. Es wird keine echte Einladung oder WLAN-Berechtigung beantragt.`;
   if (g.includes('campuscard')) {
@@ -361,12 +362,14 @@ function makeDocument(entry: SourceEntry, kind: 'faq' | 'service' | 'news' | 'li
   const group = topicGroup(entry, kind);
   const tags = [`topic:${slug(group)}`, `kind:${kind}`, ...queryTags(group, entry.title)].filter((tag, index, all) => all.indexOf(tag) === index).slice(0, 10);
   const title = cleanTitle(entry, kind);
+  const vpnGuidance = syntheticVpnGuidance(group, entry.title, kind);
   const body = scenario(group, entry.title, kind, id);
+  const revision: 1 | 2 = vpnGuidance?.text === body ? vpnGuidance.revision : 1;
   if (title.length >= 200 || body.length >= 4000) fail('A generated document exceeds a field limit.');
   return {
-    id, sourceSystem: 'service_it', synthetic: true, language: 'de', title, revision: 1,
+    id, sourceSystem: 'service_it', synthetic: true, language: 'de', title, revision,
     demoAudience: demoAudience(entry.roles ?? []), tags, text: body,
-    citationId: `knowledge:service_it:${id}:1`, publicationStatus: 'syntheticdemo',
+    citationId: `knowledge:service_it:${id}:${String(revision)}`, publicationStatus: 'syntheticdemo',
   };
 }
 function assertSafeDocuments(documents: readonly SyntheticDocument[]): void {
