@@ -21,4 +21,6 @@ A preliminary visibility preflight recorded 60 successes across navigation, menu
 
 ![Room results collapsed with the focused toggle visible at 1280×720](assets/results-collapse-visible-1280.jpg)
 
+Independent bounded source review found no actionable regression in the collapse correction. The visibility check covers CSS visibility, viewport intersection and clipping ancestors; it does not establish actual painted pixels or exclude occlusion by overlapping siblings or top-layer elements. The screenshot supports this tested collapse state, not arbitrary overlays.
+
 The probe is local-only and measures visible client-side UI feedback. It says nothing about server, model, provider, or request latency. This is one local Chrome viewport, not a mobile matrix, and it is bounded prototype evidence rather than full M7 qualification. Cleanup stopped owned processes and closed ports 3001 and 4100–4103, removed the temporary test HOME, restored the generated Next declaration and original dark theme, disposed the probe, and closed the owned browser tab. The caller-owned PostgreSQL instance was retained.

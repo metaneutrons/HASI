@@ -50,7 +50,7 @@
     "nativeAnnyTestBooking": {
       "count": 1,
       "resource": "Amrum 1",
-      "period": "2026-10-21 10:00–12:00",
+      "period": "2026-10-21 10:00\u201312:00",
       "realBooking": false
     }
   },
@@ -1155,7 +1155,7 @@
   },
   "collapseFocusFix": {
     "before": "On collapse, the focused toggle remained about 600 px above the viewport.",
-    "after": "A useLayoutEffect calls scrollIntoView({block:\"nearest\", behavior:\"instant\"}) after collapse. The focused toggle was visible at vertical bounds 122–166 px in the chat viewport.",
+    "after": "A useLayoutEffect calls scrollIntoView({block:\"nearest\", behavior:\"instant\"}) after collapse. The focused toggle was visible at vertical bounds 122\u2013166 px in the chat viewport.",
     "screenshot": "assets/results-collapse-visible-1280.jpg",
     "screenshotSha256": "8cf6468a6468276bfa81c5045c8eaede74dd1532810cd5df29dc35e72c0de112",
     "screenshotDimensions": {
@@ -1175,8 +1175,9 @@
   },
   "limitations": [
     "This measures visible browser-side UI response. It makes no claim about server, model, provider, or network request latency.",
-    "Only the local 1280×720 DPR 2 Chrome 155 setup was exercised; this is not a mobile-device matrix.",
-    "These results are bounded local evidence and do not establish full M7 evidence or production/runtime integration."
+    "Only the local 1280\u00d7720 DPR 2 Chrome 155 setup was exercised; this is not a mobile-device matrix.",
+    "These results are bounded local evidence and do not establish full M7 evidence or production/runtime integration.",
+    "Visibility checks cover CSS visibility, viewport intersection and ancestor clipping, not actual painted pixels or occlusion by overlapping siblings or top-layer elements."
   ],
   "sourceWorkingTreeChanges": [
     "apps/web/src/components/chat-room-results.tsx",
