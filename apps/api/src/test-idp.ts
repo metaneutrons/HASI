@@ -7,6 +7,9 @@ const MAX_REQUEST_BYTES = 16 * 1024;
 const MAX_TLS_KEY_BYTES = 64 * 1024;
 const MAX_TLS_CERT_BYTES = 256 * 1024;
 const AUTH_CODE_LIFETIME_MS = 60_000;
+const MAX_TEST_SUBJECT_CHOICES = 4;
+const MAX_TEST_SUBJECT_ID_LENGTH = 128;
+const MAX_TEST_SUBJECT_LABEL_BYTES = 256;
 
 export interface TestIdpTokenOverrides {
   issuer?: string;
@@ -29,6 +32,7 @@ export interface TestIdpOptions {
   clientId: string;
   redirectUri: string;
   subject?: string;
+  subjects?: readonly { readonly subject: string; readonly label: string }[];
   port?: number;
   host?: '127.0.0.1' | '::1';
   clock?: () => number;
@@ -64,6 +68,91 @@ function respond(response: ServerResponse, status: number, body: unknown, header
 
 function isLoopbackHost(host: string): boolean {
   return host === '127.0.0.1' || host === '::1';
+}
+
+function copyTestSubjects(options: TestIdpOptions): readonly { readonly subject: string; readonly label: string }[] | undefined {
+  const configuredSubjects: unknown = options.subjects;
+  if (configuredSubjects === undefined) return undefined;
+  if (options.subject !== undefined) throw new TypeError('Fixed and selectable test identities cannot be configured together.');
+  if (!Array.isArray(configuredSubjects) || configuredSubjects.length === 0 || configuredSubjects.length > MAX_TEST_SUBJECT_CHOICES) {
+    throw new TypeError(`Test identity choices must contain between one and ${MAX_TEST_SUBJECT_CHOICES.toString()} entries.`);
+  }
+
+  const seenSubjects = new Set<string>();
+  const copiedSubjects = configuredSubjects.map((value: unknown) => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new TypeError('Each test identity choice must contain only a subject and label.');
+    }
+    const choice = value as Record<string, unknown>;
+    const keys = Object.keys(choice);
+    if (keys.length !== 2 || !Object.hasOwn(choice, 'subject') || !Object.hasOwn(choice, 'label')) {
+      throw new TypeError('Each test identity choice must contain only a subject and label.');
+    }
+
+    const { subject, label } = choice;
+    if (typeof subject !== 'string' || subject.length > MAX_TEST_SUBJECT_ID_LENGTH ||
+        !/^[A-Za-z0-9][A-Za-z0-9._~-]*$/u.test(subject)) {
+      throw new TypeError('A test identity subject is invalid.');
+    }
+    if (seenSubjects.has(subject)) throw new TypeError('Test identity subjects must be distinct.');
+    const hasControlCharacter = typeof label === 'string' && Array.from(label).some(character => {
+      const codePoint = character.codePointAt(0);
+      return codePoint !== undefined && (codePoint < 32 || (codePoint >= 127 && codePoint <= 159));
+    });
+    if (typeof label !== 'string' || label.trim().length === 0 || Buffer.byteLength(label, 'utf8') > MAX_TEST_SUBJECT_LABEL_BYTES || hasControlCharacter) {
+      throw new TypeError('A test identity label is invalid.');
+    }
+    seenSubjects.add(subject);
+    return Object.freeze({ subject, label });
+  });
+
+  return Object.freeze(copiedSubjects);
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/gu, character => {
+    switch (character) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#39;';
+      default: return character;
+    }
+  });
+}
+
+function renderTestIdentityChoicePage(
+  response: ServerResponse,
+  params: URLSearchParams,
+  subjects: readonly { readonly subject: string; readonly label: string }[],
+  callbackOrigin: string,
+): void {
+  const validatedParameters: readonly [string, string][] = [
+    ['response_type', 'code'],
+    ['client_id', params.get('client_id') ?? ''],
+    ['redirect_uri', params.get('redirect_uri') ?? ''],
+    ['scope', params.get('scope') ?? ''],
+    ['code_challenge_method', 'S256'],
+    ['code_challenge', params.get('code_challenge') ?? ''],
+    ['state', params.get('state') ?? ''],
+    ['nonce', params.get('nonce') ?? ''],
+  ];
+  const hiddenFields = validatedParameters
+    .map(([name, value]) => `<input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(value)}">`)
+    .join('');
+  const buttons = subjects
+    .map(({ subject, label }) => `<button type="submit" name="test_subject" value="${escapeHtml(subject)}">${escapeHtml(label)}</button>`)
+    .join('\n');
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Choose a test identity</title></head><body><main><h1>Choose a synthetic test identity</h1><form method="get" action="/authorize">${hiddenFields}<fieldset><legend>Synthetic identities</legend>${buttons}</fieldset></form></main></body></html>`;
+  response.writeHead(200, {
+    'content-type': 'text/html; charset=utf-8',
+    'cache-control': 'no-store',
+    'content-security-policy': `default-src 'none'; base-uri 'none'; form-action 'self' ${callbackOrigin}; frame-ancestors 'none'`,
+    'content-length': Buffer.byteLength(html),
+    'x-content-type-options': 'nosniff',
+  });
+  response.end(html);
 }
 
 function copyTlsMaterial(value: unknown): HttpsServerOptions {
@@ -122,6 +211,7 @@ async function readForm(request: IncomingMessage): Promise<URLSearchParams> {
 export async function startTestIdp(options: TestIdpOptions): Promise<TestIdpServer> {
   if (options.mode !== 'test') throw new Error('The local test identity provider is available only in explicit test mode.');
   if (!options.clientId || options.clientId.length > 512 || !options.redirectUri) throw new TypeError('A client ID and redirect URI are required.');
+  const testSubjects = copyTestSubjects(options);
   if (options.port !== undefined && (!Number.isInteger(options.port) || options.port < 0 || options.port > 65_535)) throw new TypeError('The test IdP port is invalid.');
   const host = options.host ?? '127.0.0.1';
   if (!isLoopbackHost(host)) throw new TypeError('The test identity provider must bind to loopback.');
@@ -186,13 +276,26 @@ export async function startTestIdp(options: TestIdpOptions): Promise<TestIdpServ
         respond(response, 400, { error: 'invalid_request' });
         return;
       }
+      const requestedSubjects = params.getAll('test_subject');
+      if (testSubjects === undefined) {
+        if (requestedSubjects.length > 0) {
+          respond(response, 400, { error: 'invalid_request' });
+          return;
+        }
+      } else if (requestedSubjects.length === 0) {
+        renderTestIdentityChoicePage(response, params, testSubjects, callback.origin);
+        return;
+      } else if (requestedSubjects.length !== 1 || !testSubjects.some(choice => choice.subject === requestedSubjects[0])) {
+        respond(response, 400, { error: 'invalid_request' });
+        return;
+      }
       const code = randomBytes(32).toString('base64url');
       codes.set(code, {
         clientId: options.clientId,
         redirectUri: options.redirectUri,
         challenge,
         nonce,
-        subject: options.subject ?? 'test-subject-1',
+        subject: requestedSubjects[0] ?? options.subject ?? 'test-subject-1',
         expiresAt: clock() + AUTH_CODE_LIFETIME_MS,
         used: false,
       });

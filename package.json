@@ -25,7 +25,8 @@
     "knowledge:serve": "tsx scripts/serve-institutional-knowledge.ts",
     "knowledge:inspect": "tsx scripts/inspect-knowledge-content.ts",
     "brand:generate": "tsx apps/web/scripts/generate-brand-assets.ts",
-    "brand:check": "tsx apps/web/scripts/generate-brand-assets.ts --check"
+    "brand:check": "tsx apps/web/scripts/generate-brand-assets.ts --check",
+    "journey:serve": "tsx scripts/serve-plugin-journey.ts"
   },
   "dependencies": {
     "@hasi/plugin-sdk": "workspace:*",
