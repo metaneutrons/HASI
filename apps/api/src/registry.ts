@@ -990,11 +990,12 @@ export class PluginRegistry {
     return resolution;
   }
 
-  private assertInvocation(plugin: InstalledPlugin, name: string, args: Record<string, unknown>, actor: ActorContext, execution: boolean, source: 'model' | 'app' = 'model') {
+  private assertInvocation(plugin: InstalledPlugin, name: string, args: Record<string, unknown>, actor: ActorContext, execution: boolean, source: 'model' | 'app' = 'model', requiredEffect?: 'read') {
     if (!plugin.enabled) throw new RequestError(409, 'Das Plugin ist deaktiviert.');
     if (!plugin.settings?.ready) throw new RequestError(409, 'Das Plugin ist noch nicht vollständig konfiguriert.');
     if (plugin.settings.disabledTools.includes(name)) throw new RequestError(403, 'Dieses Tool ist deaktiviert.');
     const tool = plugin.manifest.tools.find(candidate => candidate.name === name);
+    if (requiredEffect === 'read' && tool?.effect !== 'read') throw new RequestError(403, 'Dieser Aufruf darf nur lesen.');
     if (tool && !execution && (!( (tool as ToolDefinitionV2).visibility ?? ['model']).includes(source) || (source === 'app' && tool.effect !== 'read'))) throw new RequestError(403, 'Dieser Aufruf ist für die Oberfläche nicht freigegeben.');
     if (!tool || (tool.effect === 'execute' && !execution)) throw new RequestError(403, 'Dieser Tool-Aufruf ist nicht freigegeben.');
     if (!tool.requiredPermissions.every(permission => actor.permissions.includes(permission))) throw new RequestError(403, 'Die Berechtigung für diese Aktion fehlt.');
@@ -1002,15 +1003,15 @@ export class PluginRegistry {
     return tool;
   }
 
-  async invoke(id: string, name: string, args: Record<string, unknown>, actor: ActorContext, execution = false, source: 'model' | 'app' = 'model', expectedBinding?: string, executionId?: string): Promise<Record<string, unknown>> {
+  async invoke(id: string, name: string, args: Record<string, unknown>, actor: ActorContext, execution = false, source: 'model' | 'app' = 'model', expectedBinding?: string, executionId?: string, requiredEffect?: 'read'): Promise<Record<string, unknown>> {
     const plugin = await this.refresh(this.get(id));
-    this.assertInvocation(plugin, name, args, actor, execution, source);
+    this.assertInvocation(plugin, name, args, actor, execution, source, requiredEffect);
     const originalActor = actor;
     const authority = await this.authorityBinding(id, originalActor);
     actor = (await this.actorFor(id, originalActor)).actor;
     await this.deploymentBindings.get(id)?.assertCurrent(id, plugin.settings?.activeRevision ?? 0);
     if (expectedBinding !== undefined && this.bindingFor(plugin) !== expectedBinding) throw new RequestError(409, 'Die bestätigte Plugin-Konfiguration ist nicht mehr aktuell.');
-    this.assertInvocation(plugin, name, args, actor, execution, source);
+    this.assertInvocation(plugin, name, args, actor, execution, source, requiredEffect);
     const version = plugin.manifest.version;
     const invocationBinding = this.bindingFor(plugin);
     const settingsDigest = plugin.settings?.digest;
@@ -1028,7 +1029,7 @@ export class PluginRegistry {
       if (!current.enabled) throw new RequestError(409, 'Das Plugin ist deaktiviert.');
       if (plugin.managedDeploymentRevision && this.bindingFor(current) !== invocationBinding) throw new RequestError(409, 'Die freigegebene Plugin-Installation wurde geändert.');
       if (digest(current.manifest) !== manifestDigest || current.settings?.digest !== settingsDigest) throw new RequestError(409, 'Die Plugin-Version wurde geändert. Bitte erneut prüfen und freigeben.');
-      const currentTool = this.assertInvocation(current, name, args, actor, execution, source);
+      const currentTool = this.assertInvocation(current, name, args, actor, execution, source, requiredEffect);
       const serverVersion = client.getServerVersion();
       if (serverVersion?.version !== current.manifest.version) throw new RequestError(409, 'Die Plugin-Version hat sich geändert. Bitte zuerst prüfen und freigeben.');
       const result = await client.callTool({ name, arguments: args });

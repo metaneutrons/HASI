@@ -62,6 +62,25 @@ function withSession(workspace: ChatWorkspace, session = createChatSession()): C
 }
 
 describe("chat session persistence", () => {
+  it("salvages incomplete generic exchanges without replaying pending calls and retains complete context references", () => {
+    const workspace = createChatWorkspace("generic-owner");
+    const session = required(workspace.sessions[0]);
+    const name = "hasi_aaaaaaaaaaaaaaaaaaaaaaaa" as const;
+    const user = { role: "user" as const, content: "Read reference status." };
+    const assistant = { role: "assistant" as const, content: "", toolCalls: [
+      { id: "read-1", name, arguments: {} }, { id: "read-2", name, arguments: {} },
+    ] };
+    const contextId = "4de1c038-4b30-4c6c-9e14-3f7c9cac1b89";
+    const first = { role: "tool" as const, name, toolCallId: "read-1", content: "{}", toolContextId: contextId };
+    for (const history of [[user, assistant], [user, assistant, first]]) {
+      const saved = updateChatSnapshot(workspace, session.id, makeSnapshot({ history, interrupted: true }));
+      expect(required(saved.sessions[0]).snapshot.history).toEqual([user]);
+    }
+    const history = [user, assistant, first, { role: "tool" as const, name, toolCallId: "read-2", content: "{}", toolContextId: contextId }];
+    const complete = updateChatSnapshot(workspace, session.id, makeSnapshot({ history }));
+    expect(required(complete.sessions[0]).snapshot.history).toEqual(history);
+  });
+
   it("retains a blocked service request and its calendar anchor across connection navigation", () => {
     const initial = createChatWorkspace("user-1");
     const session = required(initial.sessions[0]);

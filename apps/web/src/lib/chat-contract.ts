@@ -179,6 +179,7 @@ const userMessageSchema = z.strictObject({
 export const knowledgeEvidenceSchema = z.strictObject({
   authorityDigest: z.string().regex(/^[a-f0-9]{64}$/u).optional(),
   contextIds: z.array(z.uuid()).max(32),
+  toolContextIds: z.array(z.uuid()).max(32).optional(),
   expiresAt: z.iso.datetime(),
   receipt: z.string().regex(/^[A-Za-z0-9_-]{43}$/u),
 });
@@ -198,6 +199,7 @@ const toolMessageSchema = z.strictObject({
   content: z.string().max(8000),
   toolCallId: z.string().trim().min(1).max(128),
   name: chatToolCallNameSchema,
+  toolContextId: z.uuid().optional(),
 });
 
 export const wireMessageSchema = z.discriminatedUnion("role", [

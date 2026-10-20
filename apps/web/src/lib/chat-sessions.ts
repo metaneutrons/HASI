@@ -2,7 +2,8 @@ import { hostDialogueReceiptSchema, type HostDialogueReceipt } from "./host-dial
 import { actionPreviewSchema, type ActionPreview } from "./action-preview";
 import { z } from "zod";
 import {
-  CHAT_TOOL_NAMES,
+  chatToolCallNameSchema,
+  isChatToolName,
   chatProfileIdSchema,
   messageMetadataShape,
   knowledgeEvidenceSchema,
@@ -11,7 +12,7 @@ import {
   type MessageTimestamp,
   chatRequestSchema,
   chatToolSchemas,
-  type ChatToolName,
+  type ChatToolCallName,
   type ModelProfileId,
   type WireMessage,
 } from "./chat-contract";
@@ -55,6 +56,7 @@ export interface ChatMessage {
   rooms?: ChatRoomOption[];
   sources?: KnowledgeDocument[];
   sourceContextId?: string;
+  pluginResultContextId?: string;
   evidence?: KnowledgeEvidence;
   hostDialogue?: HostDialogueReceipt;
   proposal?: ChatProposal;
@@ -208,6 +210,7 @@ const chatMessageSchema = z.strictObject({
     .optional(),
   sources: z.array(knowledgeDocumentSchema).max(5).optional(),
   sourceContextId: z.uuid().optional(),
+  pluginResultContextId: z.uuid().optional(),
   evidence: knowledgeEvidenceSchema.optional(),
   hostDialogue: hostDialogueReceiptSchema.optional(),
   proposal: z.union([proposalSchema, pluginToolProposalSchema]).optional(),
@@ -264,7 +267,7 @@ const workspaceEnvelopeSchema = z.strictObject({
 
 const incompleteToolCallSchema = z.strictObject({
   id: z.string().trim().min(1).max(128),
-  name: z.enum(CHAT_TOOL_NAMES),
+  name: chatToolCallNameSchema,
   arguments: z.record(z.string(), z.unknown()),
 });
 
@@ -281,7 +284,8 @@ const incompleteToolResultSchema = z.strictObject({
   role: z.literal("tool"),
   content: plainTextSchema(8_000),
   toolCallId: z.string().trim().min(1).max(128),
-  name: z.enum(CHAT_TOOL_NAMES),
+  name: chatToolCallNameSchema,
+  toolContextId: z.uuid().optional(),
 });
 
 const finalAssistantMessageSchema = z.strictObject({
@@ -369,9 +373,9 @@ function salvageInterruptedToolExchange(messages: unknown[], profileId: ChatProf
   const priorResult = parseWithSentinel(prior, profileId);
   if (!priorResult.success) return null;
 
-  const pending = new Map<string, ChatToolName>();
+  const pending = new Map<string, ChatToolCallName>();
   for (const [index, call] of assistantResult.toolCalls.entries()) {
-    if (pending.has(call.id) || !chatToolSchemas[call.name].safeParse(call.arguments).success) {
+    if (pending.has(call.id) || isChatToolName(call.name) && !chatToolSchemas[call.name].safeParse(call.arguments).success) {
       return null;
     }
     pending.set(call.id, call.name);
@@ -514,6 +518,7 @@ function normalizeChatMessage(message: z.infer<typeof chatMessageSchema>): ChatM
     }),
     ...(message.sources === undefined ? {} : { sources: message.sources }),
     ...(message.sourceContextId === undefined ? {} : { sourceContextId: message.sourceContextId }),
+    ...(message.pluginResultContextId === undefined ? {} : { pluginResultContextId: message.pluginResultContextId }),
     ...(message.evidence === undefined ? {} : { evidence: message.evidence }),
     ...(message.hostDialogue === undefined ? {} : { hostDialogue: message.hostDialogue }),
     ...(proposal === undefined ? {} : { proposal }),

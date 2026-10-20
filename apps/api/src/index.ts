@@ -342,12 +342,13 @@ export async function createApi(options: ApiOptions) {
   });
   app.post('/api/tools/call', async request => {
     const user = await requireUser(request.cookies[cookieName]);
-    const body = z.strictObject({ pluginId: z.string(), name: z.string(), arguments: z.record(z.string(), z.unknown()), source: z.enum(['model', 'app']).optional() }).parse(request.body);
+    const body = z.strictObject({ pluginId: z.string(), name: z.string(), arguments: z.record(z.string(), z.unknown()), source: z.enum(['model', 'app']).optional(), requiredEffect: z.literal('read').optional() }).parse(request.body);
     await options.registry.refreshAll();
     const tool = options.registry.list().find(plugin => plugin.id === body.pluginId)?.tools.find(candidate => candidate.name === body.name);
+    if (body.requiredEffect === 'read' && tool?.effect !== 'read') throw new RequestError(403, 'Dieser Aufruf darf nur lesen.');
     if (body.source === 'app' && tool?.effect !== 'read') throw new RequestError(403, 'Die Ansicht darf nur freigegebene Leseaktionen ausführen.');
     if (tool?.effect === 'prepare') return makeProposal(user, body.pluginId, body.name, body.arguments);
-    const result = await options.registry.invoke(body.pluginId, body.name, body.arguments, user.actor, false, body.source ?? 'model');
+    const result = await options.registry.invoke(body.pluginId, body.name, body.arguments, user.actor, false, body.source ?? 'model', undefined, undefined, body.requiredEffect);
     if (body.pluginId === 'de.hsh.hasi.knowledge' && body.name === 'knowledge.search' && options.knowledgeContexts) {
       const documents = z.array(z.record(z.string(), z.unknown())).max(5).parse(result.documents);
       const binding = await options.registry.binding(body.pluginId);

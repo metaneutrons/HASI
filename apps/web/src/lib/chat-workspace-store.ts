@@ -12,6 +12,7 @@ import {
   type ChatWorkspace,
 } from "./chat-sessions";
 import { modelProfileIdSchema, type ModelProfileId } from "./chat-contract";
+import { MODEL_PLUGIN_TOOL_NAME } from "./plugin-tools";
 import { LiveRoomAvailability } from "./live-room-availability";
 import { forwardProposalStatus, proposalPresentation, sameProposalDetails } from "./proposal-presentation";
 
@@ -85,6 +86,18 @@ function compatibleOwnProjection(before: ChatSnapshot, approved: ChatSnapshot): 
   const progressed = new Set<string>();
   const messages = before.messages.map(message => {
     const projected = approvedMessages.get(message.id);
+    if (message.role === "assistant" && message.pluginResultContextId !== undefined) {
+      const allowedFields = new Set(["id", "role", "text", "timestamp", "tool", "pluginResultContextId"]);
+      if (projected?.role === "assistant" && projected.pluginResultContextId === message.pluginResultContextId
+        && Object.keys(message).every(key => allowedFields.has(key))
+        && Object.keys(projected).every(key => allowedFields.has(key))) {
+        const withoutPresentation = (value: typeof message) => Object.fromEntries(
+          Object.entries(value).filter(([key]) => key !== "text" && key !== "tool"),
+        );
+        if (JSON.stringify(withoutPresentation(message)) === JSON.stringify(withoutPresentation(projected))) return projected;
+      }
+      return message;
+    }
     if (message.role === "assistant" && message.proposal && projected?.proposal
       && projected.tool === "Aktion · Aktueller Beleg" && projected.text === proposalPresentation(projected.proposal).summary
       && sameProposalDetails(message.proposal, projected.proposal)
@@ -107,9 +120,19 @@ function compatibleOwnProjection(before: ChatSnapshot, approved: ChatSnapshot): 
     });
     return sameTargets ? projected : message;
   });
+  const history = before.history.map((message, index) => {
+    const projected = approved.history[index];
+    if (message.role !== "tool" || projected?.role !== "tool" || !message.toolContextId
+      || !MODEL_PLUGIN_TOOL_NAME.test(message.name) || message.toolCallId !== projected.toolCallId
+      || message.name !== projected.name || message.toolContextId !== projected.toolContextId) return message;
+    const withoutContent = (value: typeof message) => Object.fromEntries(
+      Object.entries(value).filter(([key]) => key !== "content"),
+    );
+    return JSON.stringify(withoutContent(message)) === JSON.stringify(withoutContent(projected)) ? projected : message;
+  });
   const activeProposal = before.activeProposal && approved.activeProposal === null && progressed.has(before.activeProposal)
     ? null : before.activeProposal;
-  return JSON.stringify({ ...before, activeProposal, input: "", messages }) === JSON.stringify({ ...approved, input: "" });
+  return JSON.stringify({ ...before, activeProposal, input: "", messages, history }) === JSON.stringify({ ...approved, input: "" });
 }
 
 function reconcileOwnSave(remote: ChatWorkspace, submitted: ChatWorkspace, current: ChatWorkspace): ChatWorkspace | undefined {
@@ -220,8 +243,10 @@ export function createChatWorkspaceStore(
           return {
             id: item.id,
             role: "assistant" as const,
-            text: item.sources !== undefined || item.sourceContextId !== undefined
-              ? "Diese frühere Quellenkarte ist nicht mehr verfügbar. Bitte suche erneut."
+            text: item.pluginResultContextId !== undefined
+              ? "Dieses frühere Plugin-Ergebnis ist nicht mehr verfügbar. Bitte frage erneut."
+              : item.sources !== undefined || item.sourceContextId !== undefined
+                ? "Diese frühere Quellenkarte ist nicht mehr verfügbar. Bitte suche erneut."
               : "Diese frühere Antwort ist nicht mehr verfügbar. Bitte stelle die Frage erneut.",
             ...(item.timestamp === undefined ? {} : { timestamp: item.timestamp }),
           };
@@ -352,7 +377,11 @@ export function createChatWorkspaceStore(
       const normalized = updatedSession.snapshot;
       next = JSON.stringify(session.snapshot) === JSON.stringify(normalized) ? view.workspace : candidate;
     } catch {
-      view = { ...view, busy: { ...view.busy, [sessionId]: busy }, notice: "Dieser Chat überschreitet die Speichergrenzen und kann gerade nicht gespeichert werden. Beginne für weitere Fragen einen neuen Chat." }; emit(); return;
+      const notice = "Dieser Chat überschreitet die Speichergrenzen und kann gerade nicht gespeichert werden. Beginne für weitere Fragen einen neuen Chat.";
+      if (view.notice !== notice || Boolean(view.busy[sessionId]) !== busy) {
+        view = { ...view, busy: { ...view.busy, [sessionId]: busy }, notice }; emit();
+      }
+      return;
     }
     publish(next, Boolean(view.busy[sessionId]) === busy ? view.busy : { ...view.busy, [sessionId]: busy });
   }

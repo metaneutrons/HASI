@@ -3,6 +3,7 @@ import { MAX_CHAT_WORKSPACE_BYTES, parseChatWorkspace } from "@/lib/chat-session
 import { chatAccess } from "@/lib/server/chat-access";
 import { protectedWebConfiguration } from "@/lib/server/core-api";
 import { productionKnowledgeResolver } from "@/lib/server/knowledge-context";
+import { PluginResultContextStore } from "@/lib/server/plugin-result-context";
 import { ProtectedWorkspaceConflict, ProtectedWorkspaceStore } from "@/lib/server/protected-workspaces";
 import { productionNativeHistoryResolver } from "@/lib/server/native-history";
 import { productionHistoryAuthority } from "@/lib/server/history-authority";
@@ -90,15 +91,24 @@ async function readJson(request: Request): Promise<unknown> {
 }
 
 function createWorkspaceService(access: ProductionChatAccess) {
-  return getServerChatStorage().then(store => new ProtectedWorkspaceStore({
-    store,
-    ownerId: access.production.ownerId,
-    scope: access.production.scope,
-    secret: access.production.secret,
-    resolve: productionKnowledgeResolver(access.request),
-    resolveNative: productionNativeHistoryResolver(access.request),
-    authority: () => productionHistoryAuthority(access.request),
-  }));
+  return getServerChatStorage().then(store => {
+    const pluginResultContexts = new PluginResultContextStore({
+      store,
+      ownerId: access.production.ownerId,
+      scope: access.production.scope,
+      secret: access.production.secret,
+    });
+    return new ProtectedWorkspaceStore({
+      store,
+      ownerId: access.production.ownerId,
+      scope: access.production.scope,
+      secret: access.production.secret,
+      resolve: productionKnowledgeResolver(access.request),
+      resolveNative: productionNativeHistoryResolver(access.request),
+      authority: () => productionHistoryAuthority(access.request),
+      resolvePluginResults: pluginResultContexts.resolve.bind(pluginResultContexts),
+    });
+  });
 }
 
 export async function GET(request: Request) {

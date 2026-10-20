@@ -10,6 +10,8 @@ import { productionHistoryAuthority } from "@/lib/server/history-authority";
 import type { ChatRequest } from "@/lib/chat-contract";
 import { ModelRouterError } from "@/lib/server/model-router-error";
 import { loadModelConfiguration } from "@/lib/server/model-config";
+import { PluginResultContextStore } from "@/lib/server/plugin-result-context";
+import { getServerChatStorage } from "@/lib/server/server-chat-storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,21 +32,32 @@ export async function POST(request: Request) {
   if (access instanceof Response) return access;
   const signer = access.production ? createKnowledgeEvidence(access.production.secret, access.production.scope) : undefined;
   const resolve = productionKnowledgeResolver(access.request);
+  const production = access.production;
+  const resolveTools = production ? async (conversationId: string, ids: readonly string[], authority: string) => {
+    const contexts = new PluginResultContextStore({ store: await getServerChatStorage(), ...production });
+    return contexts.resolve(conversationId, ids, authority);
+  } : undefined;
   let rebuilt: Awaited<ReturnType<typeof rebuildKnowledgeContext>> | undefined;
   let authorityDigest: string | undefined;
   const assertCurrent = async () => {
     if (signer) {
       if (!authorityDigest || await productionHistoryAuthority(access.request) !== authorityDigest) throw new ModelRouterError("context_unavailable", "Conversation authority changed");
     }
-    if (!rebuilt?.contextIds.length) return;
-    const current = await resolve(rebuilt.contextIds);
-    if (current.some(item => item.status !== "valid")) throw new ModelRouterError("context_unavailable", "Source authority changed");
+    if (rebuilt?.contextIds.length) {
+      const current = await resolve(rebuilt.contextIds);
+      if (current.some(item => item.status !== "valid")) throw new ModelRouterError("context_unavailable", "Source authority changed");
+    }
+    if (rebuilt?.toolContextIds.length) {
+      if (!resolveTools || !authorityDigest || !rebuilt.request.conversationId) throw new ModelRouterError("context_unavailable", "Tool authority unavailable");
+      const current = await resolveTools(rebuilt.request.conversationId, rebuilt.toolContextIds, authorityDigest);
+      if (current.length !== rebuilt.toolContextIds.length || current.some(item => item.status !== "valid")) throw new ModelRouterError("context_unavailable", "Tool result authority changed");
+    }
   };
   return handleChatPost(access.request, {
     run: async (input: ChatRequest) => {
       if (signer) {
         authorityDigest = await productionHistoryAuthority(access.request);
-        rebuilt = await rebuildKnowledgeContext(input, signer, resolve, authorityDigest);
+        rebuilt = await rebuildKnowledgeContext(input, signer, resolve, authorityDigest, resolveTools);
       } else rebuilt = undefined;
       const request = rebuilt?.request ?? input;
       const reply = await runModelStep(request, { context: access.modelContext, budgetAdmission: await getModelBudgetAdmission(), routingPins: access.routingPins, authorizedTools: await loadAuthorizedModelTools(access.request), messageTimes: request.messages.map(message => access.clock.verify(message, message.timestamp)), ...(signer ? { beforeProviderCall: assertCurrent } : {}), telemetry: metrics => { console.info("HASI model usage", JSON.stringify(metrics)); } });
@@ -55,7 +68,7 @@ export async function POST(request: Request) {
     finalize: (reply, input) => {
       if (signer && input.conversationId) {
         if (!authorityDigest) throw new ModelRouterError("context_unavailable", "Current conversation authority is unavailable");
-        reply.message.evidence = signer.stamp(input.conversationId, reply.message, rebuilt?.contextIds ?? [], authorityDigest);
+        reply.message.evidence = signer.stamp(input.conversationId, reply.message, rebuilt?.contextIds ?? [], authorityDigest, rebuilt?.toolContextIds ?? []);
       }
       return Promise.resolve();
     },

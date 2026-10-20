@@ -3,7 +3,7 @@
 import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, MessageCircle, PanelLeft, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { HasiIcon } from "@/components/hasi-icon";
-import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject, type SyntheticEvent } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject, type SyntheticEvent } from "react";
 import { apiRequest, formatDateTime, formatTime } from "@/lib/api";
 import { classifyIntent, mergeRoomRequest, requestStartDate, roomRequestSummary, type RoomRequest } from "@/lib/chat-demo";
 import { hostDialogueMessageSchema, staticHostDialogue, type HostDialogueMessage, type StaticHostDialogueCode } from "@/lib/host-dialogue";
@@ -33,7 +33,7 @@ import { ChatMarkdown } from "@/components/chat-markdown";
 import { bookingStatusLabel } from "@/lib/chat-message-copy";
 import { ChatRoomResults } from "@/components/chat-room-results";
 import { PluginResultApp } from "@/components/plugin-result-app";
-import { boundedPluginToolResult, compactPluginToolResult, parsePluginProposal, parsePluginProposalSnapshot, parsePluginTools, pluginToolProposalPresentation, samePluginProposalSnapshot, type PluginToolDescriptor, type PluginToolProposal } from "@/lib/plugin-tools";
+import { pluginResultReadResponseSchema, boundedPluginToolResult, compactPluginToolResult, parsePluginProposal, parsePluginProposalSnapshot, parsePluginTools, pluginToolProposalPresentation, samePluginProposalSnapshot, type PluginToolDescriptor, type PluginToolProposal } from "@/lib/plugin-tools";
 
 interface ModelConfiguration { profiles: ModelProfile[]; userChoiceEnabled: boolean; defaultProfileId: ModelProfileId; loading: boolean; error: string | null }
 interface ComposerSelection { start: number; end: number; direction: HTMLTextAreaElement["selectionDirection"] }
@@ -104,12 +104,15 @@ function ChatWorkspace({ user }: { user: User }) {
   }, [store]);
 
   function newChat() { store.create(configuration.defaultProfileId); drawer.current?.close(); }
+  const saveConversation = useCallback((id: string, snapshot: ChatSnapshot, busy: boolean) => {
+    store.updateConversation(id, snapshot, busy);
+  }, [store]);
 
   return <section className="chat-workspace" aria-label="Deine Chatverläufe">
     <dialog className="chat-history-dialog" ref={drawer} id="chat-conversations-dialog" aria-label="Unterhaltungen" onClick={(event) => { if (event.target === event.currentTarget) drawer.current?.close(); }}><div className="chat-history-dialog-body"><ChatSessionList view={view} store={store} close={() => drawer.current?.close()} /></div></dialog>
     <div className="chat-conversations">
       {view.notice && <div className="chat-storage-notice" role="status"><span>{view.notice}</span><button className="icon-button" type="button" aria-label="Hinweis schließen" onClick={() => { store.dismissNotice(); }}><X size={16} /></button></div>}
-      {!configuration.loading && view.workspace.sessions.map((session) => <Conversation key={`${session.id}:${String(view.sessionEpochs[session.id] ?? 0)}`} composerFocus={composerFocus} sessionId={session.id} ownerId={user.id} initial={session.snapshot} name={user.displayName.split(/\s|·/)[0] ?? ""} active={session.id === view.workspace.activeId} configuration={configuration} onSnapshot={(id, snapshot, busy) => { store.updateConversation(id, snapshot, busy); }} onDraft={(id, input) => { store.updateDraft(id, input); }} onNewChat={newChat} newChatDisabled={!canStartNewChat(view)} onShowHistory={() => drawer.current?.showModal()} />)}
+      {!configuration.loading && view.workspace.sessions.map((session) => <Conversation key={`${session.id}:${String(view.sessionEpochs[session.id] ?? 0)}`} composerFocus={composerFocus} sessionId={session.id} ownerId={user.id} initial={session.snapshot} name={user.displayName.split(/\s|·/)[0] ?? ""} active={session.id === view.workspace.activeId} configuration={configuration} onSnapshot={saveConversation} onDraft={(id, input) => { store.updateDraft(id, input); }} onNewChat={newChat} newChatDisabled={!canStartNewChat(view)} onShowHistory={() => drawer.current?.showModal()} />)}
     </div>
   </section>;
 }
@@ -466,14 +469,21 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
           const pluginDescriptor = isChatToolName(call.name) ? undefined : pluginToolsByModelName.get(call.name);
           setActivity(pluginDescriptor ? `Plugin · ${pluginDescriptor.title}` : `anny · ${call.name === "anny_propose_booking" ? "Buchung vorbereiten" : call.name === "anny_propose_cancellation" ? "Stornierung beginnen" : "Testdaten abfragen"}`);
           let output: Record<string, unknown>;
+          let toolContextId: string | undefined;
           try {
             if (!isChatToolName(call.name)) {
               if (!pluginDescriptor) throw new Error("Das freigegebene Werkzeug ist in dieser Sitzung nicht verfügbar.");
-              const raw = await postForChat<unknown>("/api/tools/call", {
-                pluginId: pluginDescriptor.pluginId,
-                name: pluginDescriptor.name,
-                arguments: call.arguments,
-              });
+              const protectedRead = mode === "oidc" && pluginDescriptor.effect === "read";
+              const response = protectedRead
+                ? await postForChat<{ result: Record<string, unknown>; contextId: string }>("/api/chat/plugin-read", {
+                  conversationId: sessionId, assistantMessage: reply.message, toolCallId: call.id,
+                })
+                : await postForChat<unknown>("/api/tools/call", {
+                  pluginId: pluginDescriptor.pluginId, name: pluginDescriptor.name, arguments: call.arguments,
+                });
+              const read = protectedRead ? pluginResultReadResponseSchema.parse(response) : undefined;
+              const raw = read?.result ?? response;
+              toolContextId = read?.contextId;
               output = boundedPluginToolResult(raw);
               if (pluginDescriptor.effect === "prepare") {
                 const proposal = parsePluginProposal(raw, pluginDescriptor);
@@ -488,7 +498,8 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
                 setActiveProposal(proposal.id);
                 actionableResult = true;
               } else {
-                add({ role: "assistant", text: compactPluginToolResult(output), tool: `Plugin · ${pluginDescriptor.title}`, model: actualLabel });
+                add({ role: "assistant", text: compactPluginToolResult(output), tool: `Plugin · ${pluginDescriptor.title}`,
+                  ...(toolContextId ? { pluginResultContextId: toolContextId } : { model: actualLabel }) });
               }
             } else if (call.name === "knowledge_search") {
               setActivity("Wissensdienst · Quellen suchen");
@@ -514,7 +525,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
             const failedLabel = pluginDescriptor ? `Plugin · ${pluginDescriptor.title} · Anfrage fehlgeschlagen` : call.name === "knowledge_search" ? "Wissensdienst · Anfrage fehlgeschlagen" : "anny · Anfrage fehlgeschlagen";
             add({ role: "assistant", text: String(output.error), tool: failedLabel });
           }
-          history.current.push(remember({ role: "tool", toolCallId: call.id, name: call.name, content: JSON.stringify(output) }));
+          history.current.push(remember({ role: "tool", toolCallId: call.id, name: call.name, content: JSON.stringify(output), ...(toolContextId ? { toolContextId } : {}) }));
         }
         // Host-rendered cards already provide the answer and next action.
         // Stop after every successful Anny result, including empty/unchecked searches.

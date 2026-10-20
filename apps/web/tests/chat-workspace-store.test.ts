@@ -11,6 +11,23 @@ function memory() {
 afterEach(() => vi.useRealTimers());
 
 describe("mounted chat workspace isolation", () => {
+  it("does not repeatedly emit the same invalid-snapshot failure during subscriber renders", () => {
+    vi.useFakeTimers();
+    const store = createChatWorkspaceStore("invalid-owner", memory());
+    const session = required(store.getSnapshot().workspace.sessions[0]);
+    const invalid = { ...session.snapshot, history: [{ role: "tool" as const, name: "knowledge_search" as const, toolCallId: "orphan", content: "{}" }] };
+    let emissions = 0;
+    const stop = store.subscribe(() => {
+      emissions += 1;
+      if (emissions < 10) store.updateConversation(session.id, invalid, false);
+    });
+    store.updateConversation(session.id, invalid, false);
+    stop();
+    expect(emissions).toBe(1);
+    expect(store.getSnapshot().notice).toContain("Speichergrenzen");
+    expect(required(store.getSnapshot().workspace.sessions[0]).snapshot.history).toEqual([]);
+  });
+
   it("does not reorder existing chats merely because fields arrive in a different object order after mounting", () => {
     vi.useFakeTimers();
     const storage = memory();
