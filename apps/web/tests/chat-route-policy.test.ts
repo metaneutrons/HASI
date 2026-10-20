@@ -63,10 +63,10 @@ function configureModelPolicy(): void {
   vi.stubEnv("HASI_LLM_CONFIG", JSON.stringify(configuration));
 }
 
-async function postChat(body: unknown): Promise<Response> {
+async function postChat(body: unknown, signal?: AbortSignal): Promise<Response> {
   const { POST } = await import("../src/app/api/chat/route");
   return POST(new Request(webOrigin + "/api/chat", {
-    method: "POST",
+    method: "POST", ...(signal ? { signal } : {}),
     headers: {
       host: new URL(webOrigin).host,
       origin: webOrigin,
@@ -222,5 +222,52 @@ describe("chat route profile switching policy", () => {
     expect(response.status).toBe(409);
     expect(providerCalls).toBe(0);
     expect(authorityReads).toBeGreaterThanOrEqual(2);
+  });
+
+  it.each(["stable", "before", "after", "denied", "aborted"] as const)("fences current action lookup around provider I/O: %s", async mode => {
+    const proposalId = "5f891aac-81c0-4c7e-9a89-aed77396eea9";
+    const controller = new AbortController();
+    let actionReads = 0;
+    let providerCalls = 0;
+    const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+    let providerText = "";
+    budgetMock.getAdmission.mockImplementation(() => Promise.resolve({
+      reserve: () => Promise.resolve({ settle: (usage: { inputTokens: number; outputTokens: number } | undefined) => { settlements.push(usage); return Promise.resolve(); } }),
+    }));
+    vi.stubGlobal("fetch", ((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(urlOf(input));
+      if (url.origin === apiOrigin && url.pathname === "/api/session") return Promise.resolve(Response.json({
+        user: { id: "test-account" }, mode: "oidc", modelContext: { dataClasses: ["public", "confidential"] },
+      }));
+      if (url.origin === apiOrigin && url.pathname === "/api/history/authority") return Promise.resolve(Response.json({ authorityDigest: "a".repeat(64) }));
+      if (url.origin === apiOrigin && url.pathname === "/api/tools") return Promise.resolve(Response.json({ tools: [] }));
+      if (url.origin === apiOrigin && url.pathname === `/api/proposals/${proposalId}`) {
+        actionReads += 1;
+        if (mode === "aborted") { controller.abort(); return Promise.resolve(Response.json({ error: "denied" }, { status: 403 })); }
+        expect(init?.method ?? (input instanceof Request ? input.method : "GET")).toBe("GET");
+        if (mode === "denied") return Promise.resolve(Response.json({ error: "private owner detail" }, { status: 403 }));
+        const changed = mode === "before" && actionReads >= 2 || mode === "after" && actionReads >= 3;
+        return Promise.resolve(Response.json({ proposal: { id: proposalId, status: changed ? "confirmed" : "pending", expiresAt: "2030-01-01T00:00:00Z", preview: "PRIVATE_PREVIEW" } }));
+      }
+      if (url.origin === "https://api.groq.com") {
+        providerCalls += 1;
+        providerText = JSON.stringify(readProviderRequest(init));
+        return Promise.resolve(Response.json({ id: "test-completion", object: "chat.completion", created: 1797136800,
+          model: "openai/gpt-oss-120b", choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: "VPN diagnostics" } }],
+          usage: { prompt_tokens: 12, completion_tokens: 3 } }));
+      }
+      throw new Error("Unexpected test fetch");
+    }) satisfies typeof fetch);
+    const response = await postChat({ conversationId, profileId: "groq-oss-120b", proposalIds: [proposalId], messages: [{ role: "user", content: "Mein VPN funktioniert nicht" }] }, controller.signal);
+    expect(response.status).toBe(mode === "before" || mode === "after" || mode === "aborted" ? 409 : 200);
+    const responseText = await response.text();
+    if (mode === "before" || mode === "after") { expect(responseText).toContain("Aktionsstatus"); expect(responseText).not.toContain("Quellenrechte"); }
+    expect(providerCalls).toBe(mode === "before" || mode === "aborted" ? 0 : 1);
+    expect(actionReads).toBe(mode === "aborted" ? 1 : mode === "before" ? 2 : 3);
+    expect(providerText).not.toContain("PRIVATE_PREVIEW");
+    expect(providerText).not.toContain("private owner detail");
+    if (mode === "denied") expect(providerText).toContain("unavailable");
+    if (mode === "stable") expect(providerText).toContain("pending");
+    expect(settlements).toEqual(mode === "aborted" ? [] : mode === "before" ? [{ inputTokens: 0, outputTokens: 0 }] : [{ inputTokens: 12, outputTokens: 3 }]);
   });
 });

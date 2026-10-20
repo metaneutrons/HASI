@@ -46,3 +46,25 @@ export function modelToolContent(message: Extract<WireMessage, { role: "tool" }>
 export function retainedAnnyResultIndices(messages: WireMessage[]): Set<number> {
   return new Set(messages.flatMap((message, index) => message.role === "tool" && message.name !== "knowledge_search" ? [index] : []).slice(-2));
 }
+
+/** Remove complete native tool cycles from a provider turn that cannot use them.
+ * Historical proposal cycles are always omitted: current status comes from the server.
+ * Stored history and source/policy admission still see the complete conversation.
+ */
+export function projectNativeToolHistory(messages: readonly WireMessage[], includeNativeTools: boolean): WireMessage[] {
+  const latestUser = messages.findLastIndex(message => message.role === "user");
+  const suppressed = new Set(messages.flatMap((message, index) => message.role === "assistant"
+    ? (message.toolCalls ?? []).filter(call => call.name.startsWith("anny_") && (!includeNativeTools
+      || index < latestUser && (call.name === "anny_propose_booking" || call.name === "anny_propose_cancellation"))).map(call => call.id)
+    : []));
+  return messages.flatMap((message): WireMessage[] => {
+    if (message.role === "tool") return suppressed.has(message.toolCallId) || !includeNativeTools && message.name.startsWith("anny_") ? [] : [message];
+    if (message.role !== "assistant" || !message.toolCalls?.length) return [message];
+    const toolCalls = message.toolCalls.filter(call => !suppressed.has(call.id));
+    if (toolCalls.length) return [{ ...message, toolCalls }];
+    if (!message.content.trim()) return [];
+    const textMessage = { ...message };
+    delete textMessage.toolCalls;
+    return [textMessage];
+  });
+}

@@ -10,7 +10,7 @@ import type { Resource } from "../types";
 
 const RETENTION = 30 * 24 * 60 * 60 * 1000;
 const authoritySchema = z.string().regex(/^[a-f0-9]{64}$/u);
-const staticCodeSchema = z.enum(["greeting", "capabilities", "request_retry", "confirmation_guidance"]);
+const staticCodeSchema = z.enum(["greeting", "capabilities", "request_retry", "confirmation_guidance", "action_controls_guidance"]);
 const inputSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("static"), conversationId: z.uuid(), code: staticCodeSchema }),
   z.strictObject({ kind: z.literal("rooms"), conversationId: z.uuid(), request: roomRequestSchema,

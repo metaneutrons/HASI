@@ -346,6 +346,7 @@ export const chatRequestSchema = z
     profileId: modelProfileIdSchema,
     conversationId: z.uuid().optional(),
     routingToken: z.string().min(1).max(2_048).optional(),
+    proposalIds: z.array(z.uuid()).max(8).refine(ids => new Set(ids).size === ids.length).optional(),
     messages: z.array(wireMessageSchema).max(64),
   })
   .superRefine((request, context) => {

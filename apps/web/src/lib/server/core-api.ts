@@ -56,7 +56,7 @@ async function fixedCoreRequest(path: string, request: Request, method: string, 
       body = Buffer.concat(chunks);
     }
   }
-  return fetch(target, { method, headers, ...(body ? { body: Buffer.from(body) } : {}), cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(45000) });
+  return fetch(target, { method, headers, ...(body ? { body: Buffer.from(body) } : {}), cache: "no-store", redirect: "manual", signal: AbortSignal.any([request.signal, AbortSignal.timeout(45000)]) });
 }
 
 export async function productionCoreRequest(path: string, request: Request, method = request.method): Promise<Response> {

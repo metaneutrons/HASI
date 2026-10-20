@@ -13,6 +13,8 @@ import { loadModelConfiguration } from "@/lib/server/model-config";
 import { PluginResultContextStore } from "@/lib/server/plugin-result-context";
 import { getServerChatStorage } from "@/lib/server/server-chat-storage";
 
+import { loadActionContext, sameActionContext, type ActionContext } from "@/lib/server/action-context";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -39,7 +41,16 @@ export async function POST(request: Request) {
   } : undefined;
   let rebuilt: Awaited<ReturnType<typeof rebuildKnowledgeContext>> | undefined;
   let authorityDigest: string | undefined;
+  let actionIds: readonly string[] = [];
+  let actions: ActionContext = [];
+  const assertNotCancelled = () => {
+    if (access.request.signal.aborted) throw new ModelRouterError("context_unavailable", "Chat request cancelled");
+  };
   const assertCurrent = async () => {
+    assertNotCancelled();
+    if (actionIds.length && !sameActionContext(actions, await loadActionContext(access.request, actionIds))) {
+      throw new ModelRouterError("action_context_changed", "Action status changed");
+    }
     if (signer) {
       if (!authorityDigest || await productionHistoryAuthority(access.request) !== authorityDigest) throw new ModelRouterError("context_unavailable", "Conversation authority changed");
     }
@@ -55,12 +66,16 @@ export async function POST(request: Request) {
   };
   return handleChatPost(access.request, {
     run: async (input: ChatRequest) => {
+      assertNotCancelled();
       if (signer) {
         authorityDigest = await productionHistoryAuthority(access.request);
         rebuilt = await rebuildKnowledgeContext(input, signer, resolve, authorityDigest, resolveTools);
       } else rebuilt = undefined;
       const request = rebuilt?.request ?? input;
-      const reply = await runModelStep(request, { context: access.modelContext, budgetAdmission: await getModelBudgetAdmission(), routingPins: access.routingPins, authorizedTools: await loadAuthorizedModelTools(access.request), messageTimes: request.messages.map(message => access.clock.verify(message, message.timestamp)), ...(signer ? { beforeProviderCall: assertCurrent } : {}), telemetry: metrics => { console.info("HASI model usage", JSON.stringify(metrics)); } });
+      actionIds = input.proposalIds ?? [];
+      actions = await loadActionContext(access.request, actionIds);
+      assertNotCancelled();
+      const reply = await runModelStep(request, { context: access.modelContext, budgetAdmission: await getModelBudgetAdmission(), routingPins: access.routingPins, authorizedTools: await loadAuthorizedModelTools(access.request), messageTimes: request.messages.map(message => access.clock.verify(message, message.timestamp)), actionContext: actions, beforeProviderCall: assertCurrent, telemetry: metrics => { console.info("HASI model usage", JSON.stringify(metrics)); } });
       await assertCurrent();
       if (rebuilt?.changed) reply.contextNotice = "Frühere Inhalte ohne aktuelle Quellenfreigabe wurden aus dem Modellkontext entfernt.";
       return reply;

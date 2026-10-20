@@ -13,7 +13,7 @@ import { ModelRouterError } from "./model-router-error";
 import { annyWorkflow, isAvailabilityFollowUp, isMixedKnowledgeRequest } from "../chat-tool-loop";
 import { classifyIntent, parseStandaloneOfficePreference } from "../chat-demo";
 import { parseGroqRateLimitDiagnostics, type GroqRateLimitDiagnostics } from "./provider-rate-limits";
-import { modelToolContent, retainedAnnyResultIndices } from "../chat-tool-context";
+import { modelToolContent, retainedAnnyResultIndices, projectNativeToolHistory } from "../chat-tool-context";
 import { groqErrorDiagnostics } from "./groq-error-diagnostics";
 import { measuredInputCache, type InputCacheUsage } from "./model-cache-usage";
 export { ModelRouterError } from "./model-router-error";
@@ -34,6 +34,8 @@ import {
   type PluginToolDescriptor,
 } from "../plugin-tools";
 import { expectedModelToolName, knownToolAlias, validatePluginToolArguments } from "./authorized-tools";
+
+import type { ActionContext } from "./action-context";
 
 type SecretEnvironment = Readonly<Record<string, string | undefined>>;
 interface ProviderConnection { baseURL: string }
@@ -57,6 +59,8 @@ interface RouterOptions {
   budgetAdmission?: ModelBudgetAdmission;
   /** Current source access is checked again immediately before every provider attempt. */
   beforeProviderCall?: () => Promise<void>;
+  /** Current authenticated status only; client statuses are never accepted. */
+  actionContext?: ActionContext;
   /** Conservative per-call protocol overhead included in admission, defaulting to 4096 tokens. */
   budgetProtocolOverheadTokens?: number;
   telemetry?: (metrics: { outcome: "success" | "failure"; providerStatus?: number; profileId: string; attempts: number; systemChars: number; historyChars: number; modelHistoryChars: number; inputTokens?: number; outputTokens?: number; cache?: InputCacheUsage; rateLimits?: GroqRateLimitDiagnostics }) => void;
@@ -437,9 +441,16 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
   const turnTools = toolsForTurn(request.messages, options.authorizedTools);
   const allowedTools = turnTools.providerTools;
   const toolNames = Object.keys(allowedTools);
-  const instructions = buildSystemPrompt(getNow(options.now), request.messages, options.messageTimes)
+  const projectedHistory = projectNativeToolHistory(request.messages, toolNames.some(name => name.startsWith("anny_")));
+  // Projection removes whole messages; verified user times must follow their new positions.
+  const projectedTimes = options.messageTimes ? projectedHistory.map(message =>
+    options.messageTimes?.[request.messages.indexOf(message)] ?? null) : undefined;
+  const instructions = buildSystemPrompt(getNow(options.now), projectedHistory, projectedTimes)
     + `\nAktuell freigegebene Tools dieses Schritts: ${toolNames.join(", ") || "keine"}. Nur diese Tools sind verfügbar. Fehlende Werkzeuge nicht durch Ressourcen-IDs von Nutzenden oder erfundene Aufrufe ersetzen.`
-    + (toolNames.length ? "" : "\nFormuliere aus vorhandenen Belegen; bei fehlender Dienstfreigabe deren Grenze nennen. Raumkarten liefern bereits Ergebnisse und nächste Schritte. Keine weiteren Tool-Aufrufe.");
+    + (toolNames.length ? "" : "\nFormuliere aus vorhandenen Belegen; bei fehlender Dienstfreigabe deren Grenze nennen. Raumkarten liefern bereits Ergebnisse und nächste Schritte. Keine weiteren Tool-Aufrufe.")
+    + "\nHistorische Vorschläge oder Klicks belegen keinen aktuellen Aktionsstatus. Bestätigung nur an der aktiven HASI-Karte; keinen externen Bestätigungsweg erfinden."
+    + (options.actionContext?.length ? `\nServergeprüfter Aktionsstatus: ${JSON.stringify(options.actionContext)}. unavailable bedeutet unbekannt, weder Erfolg noch Misserfolg.` : "")
+    + (!toolNames.some(name => name.startsWith("anny_")) ? "\nBei einer Wissensfrage ausschließlich die aktuelle Frage beantworten. Eine frühere Buchungsaufgabe nicht ohne ausdrücklichen neuen Auftrag fortsetzen." : "");
   const workflow = annyWorkflow(request.messages);
   const userIndex = request.messages.findLastIndex(message => message.role === "user");
   const userText = request.messages[userIndex]?.content ?? "";
@@ -449,7 +460,7 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
     || parseStandaloneOfficePreference(userText) !== undefined;
   const needsInitialSearch = options.authorizedTools !== undefined && workflow === "rooms" && allowedTools.anny_search_resources !== undefined
     && !currentAnnyResult && (discoveryRequest || !earlierAnnyResult);
-  const messages = toModelMessages(request.messages);
+  const messages = toModelMessages(projectedHistory);
   const deadline = Math.min(budget.deadline, Date.now() + profile.parameters.timeoutMs);
   let attempts = 0;
   const generate = async (retry: boolean) => {
@@ -478,8 +489,9 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
     let settlementAttempted = false;
     try {
       try { await options.beforeProviderCall?.(); }
-      catch {
+      catch (cause) {
         if (reservation) { settlementAttempted = true; await reservation.settle({ inputTokens: 0, outputTokens: 0 }); }
+        if (cause instanceof ModelRouterError && cause.code === "action_context_changed") throw cause;
         throw new ModelRouterError("context_unavailable", "Source authority changed before provider dispatch");
       }
       const result = await generateText({
@@ -529,7 +541,7 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
       result = await generate(true);
     }
   } catch (cause) {
-    if (cause instanceof ModelRouterError && ["budget_exhausted", "budget_unavailable", "budget_unpriced", "budget_usage_invalid", "tools_unavailable", "context_unavailable", "configuration_invalid"].includes(cause.code)) throw cause;
+    if (cause instanceof ModelRouterError && ["budget_exhausted", "budget_unavailable", "budget_unpriced", "budget_usage_invalid", "tools_unavailable", "context_unavailable", "action_context_changed", "configuration_invalid"].includes(cause.code)) throw cause;
     const status = APICallError.isInstance(cause) ? cause.statusCode : undefined;
     const failedQuota = connection.adapter === "groq" && APICallError.isInstance(cause)
       ? parseGroqRateLimitDiagnostics(cause.responseHeaders ?? {}, cause.responseBody, getNow(options.now)) : undefined;
