@@ -20,6 +20,7 @@ import { createRegistryKnowledgeContexts } from '../apps/api/src/knowledge-conte
 import { DemoPluginAccountAdapter } from '../packages/demo-runtime/src/plugin-account-adapter.js';
 import { packageReferencePlugin, ReferencePackagingCommandError, type ReferencePluginArtifactEvidence } from './package-reference-plugin.js';
 import { startJourneyModel } from './plugin-journey-model.js';
+import { startJourneyReferenceProxy } from './plugin-journey-proxy.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = fileURLToPath(import.meta.url);
@@ -88,6 +89,39 @@ async function advanceAccountClocks(apis: ChildProcess[], command: 'expire-anny'
 
 function cleanEnvironment(): NodeJS.ProcessEnv {
   return Object.fromEntries(['PATH', 'HOME', 'TMPDIR', 'LANG', 'npm_config_store_dir'].flatMap(name => process.env[name] ? [[name, process.env[name]]] : []));
+}
+
+const referenceCommandSchema = z.enum(['lose-next-execution-ack', 'source-unavailable', 'source-available', 'stats']);
+const referenceStatsSchema = z.strictObject({
+  marks: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  journalRows: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  sourceRows: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  invocationRows: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+});
+
+/** Commands travel through an owned process channel, never through model/HTTP input. */
+export function sendReferenceCommand(child: ChildProcess, command: z.infer<typeof referenceCommandSchema>): Promise<z.infer<typeof referenceStatsSchema> | undefined> {
+  referenceCommandSchema.parse(command);
+  if (!child.connected || child.exitCode !== null || child.signalCode !== null) return Promise.reject(new Error('The reference process is not available.'));
+  const commandId = randomUUID();
+  return new Promise((done, reject) => {
+    const finish = (error?: Error, stats?: z.infer<typeof referenceStatsSchema>) => {
+      clearTimeout(timer); child.off('message', onMessage); child.off('exit', onExit); child.off('error', onExit);
+      if (error) reject(error); else done(stats);
+    };
+    const onExit = () => { finish(new Error('The reference command lost its process.')); };
+    const onMessage = (message: unknown) => {
+      const ack = z.object({ event: z.literal('reference-command-applied'), commandId: z.literal(commandId), command: z.literal(command), stats: referenceStatsSchema.optional() }).safeParse(message);
+      if (!ack.success) return;
+      if (command === 'stats' && !ack.data.stats) { finish(new Error('The reference statistics are unavailable.')); return; }
+      finish(undefined, ack.data.stats);
+    };
+    const timer = setTimeout(() => { finish(new Error('The reference command did not acknowledge.')); }, 5000);
+    child.on('message', onMessage); child.once('exit', onExit); child.once('error', onExit);
+    child.send({ type: 'reference-command', commandId, command }, error => {
+      if (error) finish(new Error('The reference command could not be delivered.'));
+    });
+  });
 }
 
 async function available(port: number): Promise<void> {
@@ -164,7 +198,7 @@ function localCommand(command: string, arguments_: string[], cwd: string): strin
 async function artifacts(directory: string): Promise<{ manifest: PluginManifestV2; releases: { directory: string; sourceSha: string; evidence: ReferencePluginArtifactEvidence }[] }> {
   const source = join(directory, 'independent-source');
   await mkdir(join(source, 'src'), { recursive: true, mode: 0o700 });
-  for (const path of ['package.json', 'README.md', 'src/server.js', 'src/manifest.json']) await cp(join(REFERENCE_SOURCE, path), join(source, path));
+  for (const path of ['package.json', 'README.md', 'src/server.js', 'src/state.js', 'src/manifest.json']) await cp(join(REFERENCE_SOURCE, path), join(source, path));
   localCommand('git', ['init', '--quiet'], source);
   const manifest = manifestSchema.parse(JSON.parse(await readFile(join(source, 'src/manifest.json'), 'utf8'))) as PluginManifestV2;
   const releases: { directory: string; sourceSha: string; evidence: ReferencePluginArtifactEvidence }[] = [];
@@ -293,9 +327,12 @@ async function serve(): Promise<void> {
   for (const port of [3001, 4100, 4101, 4102, 4103]) await available(port);
   const directory = await mkdtemp(join(tmpdir(), 'hasi-plugin-journey-'));
   const children: ChildProcess[] = [];
+  const retiring = new WeakSet<ChildProcess>();
   const servers: Server[] = [];
+  let referenceProxy: Awaited<ReturnType<typeof startJourneyReferenceProxy>> | undefined;
   let idp: Awaited<ReturnType<typeof startTestIdp>> | undefined;
   let model: Awaited<ReturnType<typeof startJourneyModel>> | undefined;
+  let commands = Promise.resolve();
   let shutdown: (() => void) | undefined;
   const complete = new Promise<void>(done => { shutdown = done; });
   const state = { unexpectedExit: false, cleanupFailed: false, shutdownRequested: false };
@@ -305,9 +342,10 @@ async function serve(): Promise<void> {
   let stopping = false;
   const child = (arguments_: string[], environment: NodeJS.ProcessEnv, cwd = ROOT, ipc = false, executable = process.execPath) => {
     if (state.shutdownRequested) throw new Error('Synthetic journey startup was interrupted.');
-    return spawnJourneyChild({ executable, arguments: arguments_, cwd,
+    const spawned = spawnJourneyChild({ executable, arguments: arguments_, cwd,
       environment: { ...cleanEnvironment(), ...environment }, ipc, children,
-      onUnexpectedExit: () => { if (!stopping) { state.unexpectedExit = true; shutdown?.(); } } });
+      onUnexpectedExit: () => { if (!stopping && !retiring.has(spawned)) { state.unexpectedExit = true; onSignal(); } } });
+    return spawned;
   };
   let timer: ReturnType<typeof setTimeout> | undefined;
   let input: ReturnType<typeof createInterface> | undefined;
@@ -338,10 +376,19 @@ async function serve(): Promise<void> {
     const knowledge = child(['--import', 'tsx', 'apps/knowledge-plugin/src/server.ts'], { HASI_MODE: 'development', HASI_PUBLIC_KEY: publicKey, HASI_KNOWLEDGE_TOKEN: knowledgeToken });
     await Promise.all([ready('http://127.0.0.1:4101/health', anny), ready('http://127.0.0.1:4103/health', knowledge)]);
     stage = 'reference-process';
-    const referencePort = await allocatePort();
-    const reference = child(['src/server.js'], { NODE_ENV: 'test', HASI_REFERENCE_PLUGIN_TEST_MODE: '1', HASI_REFERENCE_PLUGIN_HOST: '127.0.0.1',
-      HASI_REFERENCE_PLUGIN_PORT: String(referencePort), HASI_REFERENCE_PLUGIN_TOKEN: referenceToken, HASI_REFERENCE_PLUGIN_PUBLIC_KEY: publicKey }, first.directory);
-    await ready(`http://127.0.0.1:${String(referencePort)}/healthz`, reference);
+    const referenceTargetPort = await allocatePort();
+    const referenceStatePath = join(directory, 'reference-state.sqlite');
+    const startReference = async (release: typeof first) => {
+      const started = child(['src/server.js'], { NODE_ENV: 'test', HASI_REFERENCE_PLUGIN_TEST_MODE: '1', HASI_REFERENCE_PLUGIN_HOST: '127.0.0.1',
+        HASI_REFERENCE_PLUGIN_PORT: String(referenceTargetPort), HASI_REFERENCE_PLUGIN_TOKEN: referenceToken, HASI_REFERENCE_PLUGIN_PUBLIC_KEY: publicKey,
+        HASI_REFERENCE_STATE_FILE: referenceStatePath }, release.directory, true);
+      await ready(`http://127.0.0.1:${String(referenceTargetPort)}/healthz`, started);
+      return started;
+    };
+    let activeRelease = first;
+    let reference = await startReference(activeRelease);
+    referenceProxy = await startJourneyReferenceProxy({ targetOrigin: `http://127.0.0.1:${String(referenceTargetPort)}` });
+    const referencePort = Number(new URL(referenceProxy.origin).port);
     stage = 'test-idp';
     idp = await startTestIdp({ mode: 'test', clientId: 'hasi-plugin-journey', redirectUri: `${WEB_ORIGIN}/api/auth/callback`,
       subjects: [{ subject: 'journey-admin', label: 'Test-Administration' }, { subject: 'journey-student', label: 'Test-Studentin' }] });
@@ -385,36 +432,61 @@ async function serve(): Promise<void> {
     await ready(`${WEB_ORIGIN}/`, web);
     stage = 'protected-web-probe';
     await protectedWebProbe(idp.issuer);
-    await writeFile(join(directory, 'evidence.json'), JSON.stringify({ scope, webOrigin: WEB_ORIGIN, apiReplicas: 2, hostPid: process.pid,
-      apiPids: apis.map(process_ => process_.pid), referencePid: reference.pid, releases: packaged.releases.map(release => ({ sourceSha: release.sourceSha, ...release.evidence })) }, null, 2), { mode: 0o600 });
+    const writeEvidence = async () => writeFile(join(directory, 'evidence.json'), JSON.stringify({ scope, webOrigin: WEB_ORIGIN, apiReplicas: 2, hostPid: process.pid,
+      apiPids: apis.map(process_ => process_.pid), referencePid: reference.pid, referenceVersion: activeRelease.evidence.pluginVersion,
+      persistentReferenceState: true, referenceProxy: referenceProxy?.stats(),
+      releases: packaged.releases.map(release => ({ sourceSha: release.sourceSha, ...release.evidence })) }, null, 2), { mode: 0o600 });
+    await writeEvidence();
     console.info(JSON.stringify({ event: 'plugin-journey-ready', webOrigin: WEB_ORIGIN, evidence: join(directory, 'evidence.json'), apiReplicas: 2,
-      independentReferencePid: reference.pid, syntheticOnly: true, commands: ['expire-anny', 'expire-reference', 'stats', 'quit'] }));
+      independentReferencePid: reference.pid, syntheticOnly: true, commands: ['expire-anny', 'expire-reference', 'reference-lose-ack', 'reference-source-unavailable', 'reference-source-available', 'reference-drop-reply', 'restart-reference', 'reference-v2', 'reference-v1', 'stats', 'quit'] }));
     stage = 'ready';
     input = createInterface({ input: process.stdin, terminal: false });
-    let commands = Promise.resolve();
     input.on('line', line => {
-      if (line === 'quit') shutdown?.();
-      else if (line === 'expire-anny' || line === 'expire-reference') {
-        commands = commands.then(async () => {
+      if (state.shutdownRequested) return;
+      commands = commands.then(async () => {
+        if (state.shutdownRequested) return;
+        if (line === 'quit') { onSignal(); return; }
+        if (line === 'expire-anny' || line === 'expire-reference') {
           await advanceAccountClocks(apis, line);
           console.info(JSON.stringify({ event: 'synthetic-account-clock-advanced', service: line, replicasAcknowledged: apis.length }));
-        }).catch(() => { state.unexpectedExit = true; shutdown?.(); });
-      }
-      else if (line === 'stats') console.info(JSON.stringify({ event: 'synthetic-model-stats', calls: model?.calls(), resultObservations: model?.resultObservations(), realProviderCalls: 0 }));
-      else console.info(JSON.stringify({ event: 'unknown-fixture-command' }));
+        } else if (line === 'reference-lose-ack' || line === 'reference-source-unavailable' || line === 'reference-source-available') {
+          const command = line === 'reference-lose-ack' ? 'lose-next-execution-ack' : line === 'reference-source-unavailable' ? 'source-unavailable' : 'source-available';
+          await sendReferenceCommand(reference, command);
+          console.info(JSON.stringify({ event: 'reference-control-applied', command }));
+        } else if (line === 'reference-drop-reply') {
+          referenceProxy?.armNextExecutionReplyDrop();
+          console.info(JSON.stringify({ event: 'reference-reply-drop-armed' }));
+        } else if (line === 'restart-reference' || line === 'reference-v2' || line === 'reference-v1') {
+          const nextRelease = line === 'restart-reference' ? activeRelease : packaged.releases[line === 'reference-v2' ? 1 : 0];
+          if (!nextRelease) throw new Error('The independent reference release is unavailable.');
+          retiring.add(reference);
+          await stopJourneyChild(reference);
+          if (reference.exitCode !== 0 || reference.signalCode !== null) throw new Error('Reference process did not stop gracefully.');
+          reference = await startReference(nextRelease);
+          activeRelease = nextRelease;
+          await writeEvidence();
+          console.info(JSON.stringify({ event: 'reference-process-restarted', referencePid: reference.pid, version: activeRelease.evidence.pluginVersion,
+            stats: await sendReferenceCommand(reference, 'stats'), artifactDigest: activeRelease.evidence.artifactSha256 }));
+        } else if (line === 'stats') {
+          console.info(JSON.stringify({ event: 'synthetic-model-stats', calls: model?.calls(), resultObservations: model?.resultObservations(), realProviderCalls: 0,
+            reference: await sendReferenceCommand(reference, 'stats'), proxy: referenceProxy?.stats() }));
+          await writeEvidence();
+        } else console.info(JSON.stringify({ event: 'unknown-fixture-command' }));
+      }).catch(() => { if (!state.shutdownRequested) { state.unexpectedExit = true; onSignal(); } });
     });
-    timer = setTimeout(() => shutdown?.(), 30 * 60 * 1000);
+    timer = setTimeout(onSignal, 30 * 60 * 1000);
     await complete;
     if (state.unexpectedExit) throw new Error('A fixture child stopped unexpectedly.');
   } catch (error) {
     failure = error instanceof Error ? error : new Error('Synthetic fixture failed.');
   } finally {
-    stopping = true; clearTimeout(timer); input?.close();
+    stopping = true; state.shutdownRequested = true; clearTimeout(timer); input?.close();
+    await commands;
     const results = await Promise.allSettled(children.map(stopJourneyChild));
     results.push(...await Promise.allSettled(servers.map(server => new Promise<void>((done, reject) => {
       server.closeAllConnections(); server.close(error => { if (error) reject(error); else done(); });
     }))));
-    results.push(...await Promise.allSettled([idp?.close(), model?.close()]));
+    results.push(...await Promise.allSettled([idp?.close(), model?.close(), referenceProxy?.close()]));
     results.push(...await Promise.allSettled([rm(directory, { recursive: true, force: true })]));
     state.cleanupFailed = results.some(result => result.status === 'rejected');
     for (const signal of ['SIGTERM', 'SIGINT'] as const) process.off(signal, onSignal);

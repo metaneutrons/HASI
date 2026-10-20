@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-20",
+  "baseline": "de76b24d278f346c01d1334c458e7bf31ef592dd",
+  "syntheticOnly": true,
+  "realProviderCalls": 0,
+  "finalArtifacts": [
+    {
+      "pluginVersion": "1.0.0",
+      "sourceSha": "992896faa93cb87f05940cfeab0e98237f021036",
+      "manifestDigest": "01038ec93bce8c02af0b3918911735348839ffe5a72b01de317c27d388851611",
+      "artifactSha256": "701c711f2ffd1a5eb22365f1467c8b1780ce1c5db0b6e42e6e727229af7f542c",
+      "artifactManifestSha256": "c7183185150cec8a00824967cda03a902313881f4d361e694a3ba5a369c60143"
+    },
+    {
+      "pluginVersion": "1.0.1",
+      "sourceSha": "cfc44b8f60fb57937e9c44146337a6612d81d673",
+      "manifestDigest": "0a50a7c4fd3ad3e3a25d8bab1c2d4366cfd302c3a2b3b64b6a7db8d6fed0806b",
+      "artifactSha256": "6f9f3a53cbf674ed45911699bb20ccfb6b5fcaf8aa8a9cf4d4b1b772d7e3d65d",
+      "artifactManifestSha256": "28487fda5c48f20985543916e1ebed6b38c9d1b9d31a3298ddc6c0fe490c8d10"
+    }
+  ],
+  "firstTransportLoss": {
+    "artifactSha256": "950a5d539edb84309387a4be1c70b4636ef55e91631e2a9794a8fb9272cc95a8",
+    "effects": 1,
+    "executeRequests": 1,
+    "droppedConfirmedReplies": 1,
+    "afterRestartStatus": "confirmed",
+    "modelCalls": 1,
+    "gracefulReferenceExitQualified": false
+  },
+  "finalSourceRecovery": {
+    "effects": 2,
+    "executeRequests": 2,
+    "journalRows": 2,
+    "sourceRows": 2,
+    "modelCalls": 2,
+    "sourceOutageRemainedUnknown": true,
+    "processRestartRetainedState": true,
+    "secondActionReconciledFromSource": true,
+    "repeatStatusDidNotExecute": true,
+    "journalStatuses": {
+      "outcome_unknown": 1,
+      "confirmed": 1
+    },
+    "artifactSwitchPreservedCounts": true,
+    "gracefulReferenceExitRequired": true
+  },
+  "shutdownCounterProbe": {
+    "commands": [
+      "restart-reference",
+      "stats",
+      "quit",
+      "restart-reference",
+      "reference-v2"
+    ],
+    "restartsAcknowledged": 1,
+    "exitCode": 0,
+    "ownedCleanupConfirmed": true,
+    "callerDatabaseRetained": true
+  },
+  "productFindings": {
+    "unsignedUnknownOutcomeTextRedacted": true,
+    "concurrentSaveCanInterruptNextTurn": true,
+    "expiredActionCardNotRestoredAfterRenewal": true
+  },
+  "completeJoinedJourneyAccepted": false,
+  "managedUpdateRollbackAccepted": false,
+  "M2Accepted": false,
+  "M6Accepted": false,
+  "M7Accepted": false,
+  "finalImplementationSources": {
+    "examples/reference-plugin/src/server.js": "669a3af0790b519f3370448bf74f66196deb6db982b9be94291ade46f93233a9",
+    "examples/reference-plugin/src/state.js": "0d1bb2777f1213995e461f46f59787a69185db7a1ce3088c844093c322af52be",
+    "scripts/serve-plugin-journey.ts": "560a2af40be263490132ac5e198796e16533fded3a1b7793d24982733a5f1f06",
+    "scripts/plugin-journey-proxy.ts": "af491b01d7d443ba3cd482478fad405020539713df6e7152d127c4ff3c85f017"
+  },
+  "browserLauncherExactCandidateQualified": false,
+  "measurementScope": "Browser action probes preceded the final proxy-ingress and command-queue corrections. The independent reference artifact is the recorded artifact; final launcher startup/shutdown and fixed proxy behavior have separate probes."
+}

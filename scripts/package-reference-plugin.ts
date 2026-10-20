@@ -286,6 +286,7 @@ export async function packageReferencePlugin(input: {
     await copyFile(join(sourceDirectory, 'README.md'), join(outputDirectory, 'README.md'));
     await copyFile(join(WORKSPACE_ROOT, 'LICENSE'), join(outputDirectory, 'LICENSE'));
     await copyFile(join(sourceDirectory, 'src', 'server.js'), join(outputDirectory, 'src', 'server.js'));
+    await copyFile(join(sourceDirectory, 'src', 'state.js'), join(outputDirectory, 'src', 'state.js'));
     await copyFile(join(sourceDirectory, 'src', 'manifest.json'), join(outputDirectory, 'src', 'manifest.json'));
     const packagedMetadata = {
       name: packageMetadata.name,
