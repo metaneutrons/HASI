@@ -9,7 +9,9 @@
     "apps/web/src/lib/server/protected-workspaces.ts": "93fdf754a0062162c63cbe217ac58cc82d34390ccd151844705f72e9f789993d",
     "apps/web/tests/action-history-recovery.test.ts": "637cdfab6cb710f6073cad7c715b03ec230b3a01dc593149fd43ca527a4c4315",
     "apps/web/tests/native-history.test.ts": "dd8b425d57152f60d6d049f9e0994155ff15e64c68c3ed18b9310f8d7d2db7e9",
-    "tests/action-reconciliation.test.ts": "e481fe3feb28962d7ac4297337bd769e9e3db179fdb750d85df5576f09a96aaf"
+    "tests/action-reconciliation.test.ts": "e481fe3feb28962d7ac4297337bd769e9e3db179fdb750d85df5576f09a96aaf",
+    "tests/anny-source-reconciliation.test.ts": "936ee2fdd3220466830bd9f96ff3fc8cee287f7df81d0a0f3b79b9abb42ed3a0",
+    "packages/state/tests/model-budget.test.ts": "5a25a104fcf8d24d6a6ce241cb130bdee75283efa8c9b735daa72b84666da2aa"
   },
   "scope": "Local synthetic action-history recovery; not full M2/P6/M7 acceptance",
   "validation": {
@@ -61,7 +63,43 @@
       "files": 6,
       "exitCode": 0,
       "durationSeconds": 38.16
-    }
+    },
+    "functionalDeadlineQualification": {
+      "cases": [
+        "source reply-loss reconciliation with real10.01s cooldown",
+        "exhaustive2048window unknown-budget accounting"
+      ],
+      "previousPerCaseDeadlineMs": 15000,
+      "perCaseDeadlineMs": 60000,
+      "defaultDeadlineChanged": false,
+      "inputsAndAssertionsChanged": false,
+      "applicationLatencyCriteriaChanged": false,
+      "focusedTests": {
+        "passed": 17,
+        "files": 2,
+        "postgres": true,
+        "exitCode": 0,
+        "durationSeconds": 26.48
+      },
+      "independentReview": "No blocker: all inputs, mutation-count assertions, real cooldown and immediate429 countercheck retained.",
+      "rejectedExperiment": "Global Date.now advancement made two recovery assertions return outcome_unknown; discarded. No clock mocking remains."
+    },
+    "mandatoryPushAttempts": [
+      {
+        "workers": "default",
+        "passed": 1372,
+        "failedTimeouts": 3,
+        "skipped": 1,
+        "exitCode": 1
+      },
+      {
+        "workers": 2,
+        "passed": 1373,
+        "failedTimeouts": 2,
+        "skipped": 1,
+        "exitCode": 1
+      }
+    ]
   },
   "firstJoinedFixture": {
     "referenceArtifactDigest": "701c711f2ffd1a5eb22365f1467c8b1780ce1c5db0b6e42e6e727229af7f542c",

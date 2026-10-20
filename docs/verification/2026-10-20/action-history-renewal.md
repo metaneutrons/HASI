@@ -76,6 +76,16 @@ load; those runs are not accepted. A bounded-worker coverage run also timed out 
 The six relevant test files then passed all 55 cases without coverage and with
 two workers (38.16 s), including PostgreSQL. This isolates instrumentation/load
 sensitivity but does not turn the failed full coverage attempts into passes.
+The default-worker and two-worker mandatory push attempts also timed out and
+were rejected. Two deliberately expensive functional cases now have their own
+finite 60 s deadlines: source recovery retains its real 10.01 s cooldown and
+immediate 429 countercheck; budget accounting retains all 2,048 windows and
+assertions. The default 15 s deadline, coverage floors and application latency
+criteria are unchanged. All 17 focused cases in those two files pass with
+PostgreSQL (26.48 s). Independent review found no blocker in this adjustment.
+An attempted global clock advance failed signed downstream recovery checks and
+was discarded completely.
+
 Lint, root/web typechecks and the production web build pass. Independent review found no scoped defect;
 initial test-fixture clock and lint weaknesses were corrected before integration.
 

@@ -126,6 +126,7 @@ describe('ModelBudgetLedger', () => {
     });
   });
 
+  // Exhaustive 2,048-window accounting is a functional bound check, not a latency benchmark.
   it('archives older unresolved holds while retaining recent prior-window IDs for reconciliation', async () => {
     let now = 0;
     const instance = ledger(new MemoryJsonStore('archived-unknown-budget'), () => now, {
@@ -159,7 +160,7 @@ describe('ModelBudgetLedger', () => {
         microUsd: 3_072,
       },
     });
-  });
+  }, 60_000);
 
   it('allows a late settlement to protect its prior-window ID while archiving other excess holds', async () => {
     let now = 0;
