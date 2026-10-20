@@ -248,6 +248,7 @@ export async function runReferencePluginQualification(): Promise<ReferencePlugin
   await cp(join(EXAMPLE_ROOT, 'package.json'), join(repoPath, 'package.json'));
   await cp(join(EXAMPLE_ROOT, 'README.md'), join(repoPath, 'README.md'));
   await cp(join(EXAMPLE_ROOT, 'src/server.js'), join(repoPath, 'src/server.js'));
+  await cp(join(EXAMPLE_ROOT, 'src/state.js'), join(repoPath, 'src/state.js'));
   await cp(join(EXAMPLE_ROOT, 'src/manifest.json'), join(repoPath, 'src/manifest.json'));
 
   const activeProcesses: ChildProcess[] = [];

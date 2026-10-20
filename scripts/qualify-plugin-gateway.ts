@@ -93,7 +93,7 @@ async function versionedSource(root: string): Promise<string> {
     value.version = '1.1.0';
     await writeFile(join(source, name), `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx' });
   }
-  for (const name of ['README.md', 'src/server.js']) await copyFile(join(ROOT, 'examples/reference-plugin', name), join(source, name));
+  for (const name of ['README.md', 'src/server.js', 'src/state.js']) await copyFile(join(ROOT, 'examples/reference-plugin', name), join(source, name));
   return source;
 }
 
@@ -109,7 +109,7 @@ async function main(): Promise<Record<string, unknown>> {
     'apps/api/src/plugin-route-controller.ts', 'apps/api/src/plugin-deployment-binding.ts',
     'apps/api/src/plugin-deployment-proxy.ts', 'apps/api/src/docker-plugin-driver.ts',
     'apps/api/src/docker-plugin-relay.ts', 'apps/api/src/plugin-relay-program.ts',
-    'examples/reference-plugin/src/server.js', 'pnpm-lock.yaml',
+    'examples/reference-plugin/src/server.js', 'examples/reference-plugin/src/state.js', 'pnpm-lock.yaml',
   ].map(async (path): Promise<[string, string]> => [path, f.sha256(await readFile(join(ROOT, path), 'utf8'))])));
   let externalArtifacts: ExternalPluginArtifactPair<Artifact> | undefined;
   try {

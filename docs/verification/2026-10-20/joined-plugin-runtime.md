@@ -13,8 +13,11 @@ administrator/student choices, native Anny/knowledge fixtures, and an independen
 reference-plugin process. The reference plugin is built offline from a separate
 temporary Git repository into self-contained 1.0.0/1.0.1 artifacts, using the
 existing SDK packaging verifier. It does not import the host workspace at runtime.
-The current launcher starts 1.0.0; packaging 1.0.1 does not qualify an update or
-rollback through the UI. Both APIs use the same random signing key/scope and a
+The launcher starts 1.0.0 and can explicitly restart that process or switch the
+independent artifact to 1.0.1/1.0.0 while retaining its SQLite state. An artifact
+switch alone does not qualify an administrator-approved managed update/rollback.
+The SQLite file lives outside both versioned artifacts; it stores source receipts,
+SDK execution receipts, scoped counters and invocation replay records. Both APIs use the same random signing key/scope and a
 caller-supplied disposable PostgreSQL database. Personal reference/Anny accounts
 begin unlinked and require the normal explicit synthetic consent path.
 
@@ -52,7 +55,24 @@ separate. Use the administrator choice to connect/configure/activate the approve
 reference plugin, then connect the personal account under Connected services.
 No institutional credentials are needed.
 
-Terminal commands: `stats`, `expire-anny`, `expire-reference`, `quit`. Account
+Terminal commands:
+
+- `stats`: numeric model, source/journal and proxy observations only.
+- `expire-anny`, `expire-reference`: advance the matching synthetic account clock.
+- `reference-drop-reply`: discard the next successful `execute_mark` HTTP reply
+  after the proxy has actually received a confirmed upstream result.
+- `reference-lose-ack`: commit the next synthetic mark, then leave the SDK journal
+  unknown; source reconciliation can prove the retained effect.
+- `reference-source-unavailable`, `reference-source-available`: control that
+  synthetic source resolver without exposing fault controls over HTTP/MCP.
+- `restart-reference`: stop and restart the exact artifact against the same state.
+- `reference-v2`, `reference-v1`: switch the independent process artifact, preserving
+  state. Normal host compatibility/approval remains enforced. These commands do
+  not perform managed installation approval or waive remote downgrade rejection.
+- `quit`: stop owned processes and remove generated keys/artifacts/state files.
+
+Commands are serialized. Reference controls use correlated IPC acknowledgements;
+restarts require a graceful exit and new readiness before acknowledging. Account
 clock advancement is acknowledged by both replicas before completion is
 reported. `quit`, SIGINT/SIGTERM or the 30-minute bound stop owned processes and
 remove generated keys/artifacts. The caller-owned database and its isolated

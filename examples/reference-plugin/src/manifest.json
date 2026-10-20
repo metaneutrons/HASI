@@ -73,7 +73,7 @@
     {
       "name": "execute_mark",
       "title": "Execute mark",
-      "description": "Increments a process-local synthetic confirmation counter.",
+      "description": "Increments a durable installation- and account-scoped synthetic confirmation counter.",
       "effect": "execute",
       "requiredPermissions": ["reference:execute"],
       "inputSchema": {

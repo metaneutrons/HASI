@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChildProcess } from 'node:child_process';
 import { expect, it } from 'vitest';
-import { spawnJourneyChild, stopJourneyChild } from '../scripts/serve-plugin-journey.js';
+import { sendReferenceCommand, spawnJourneyChild, stopJourneyChild } from '../scripts/serve-plugin-journey.js';
 
 it('handles a failed spawn and still stops an earlier owned process', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'hasi-journey-spawn-'));
@@ -29,6 +29,30 @@ it('handles a failed spawn and still stops an earlier owned process', async () =
     await stopped;
     expect(running.signalCode).toBe('SIGTERM');
     await expect(stopJourneyChild(running)).resolves.toBeUndefined();
+  } finally {
+    await Promise.all(children.map(stopJourneyChild));
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+
+it('accepts only the matching owned IPC acknowledgement and rejects a lost process', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'hasi-journey-ipc-'));
+  const children: ChildProcess[] = [];
+  try {
+    const child = spawnJourneyChild({ executable: process.execPath, arguments: ['-e', `
+      process.on('message', message => {
+        if (message.command === 'source-unavailable') { process.disconnect(); process.exitCode = 0; return; }
+        process.send({ event: 'reference-command-applied', commandId: 'foreign', command: message.command, stats: { marks: 999 } });
+        process.send({ event: 'reference-command-applied', commandId: message.commandId, command: message.command,
+          ...(message.command === 'stats' ? { stats: { marks: 1, journalRows: 1, sourceRows: 1, invocationRows: 2 } } : {}) });
+      });
+      process.on('SIGTERM', () => { if (process.connected) process.disconnect(); process.exitCode = 0; });
+    `], cwd: directory, environment: {}, ipc: true, children, onUnexpectedExit: () => { /* This probe deliberately disconnects its owned child. */ } });
+    expect(await sendReferenceCommand(child, 'stats')).toEqual({ marks: 1, journalRows: 1, sourceRows: 1, invocationRows: 2 });
+    expect(await sendReferenceCommand(child, 'lose-next-execution-ack')).toBeUndefined();
+    await expect(sendReferenceCommand(child, 'source-unavailable')).rejects.toThrow('lost its process');
+    await expect(sendReferenceCommand(child, 'stats')).rejects.toThrow('not available');
   } finally {
     await Promise.all(children.map(stopJourneyChild));
     await rm(directory, { recursive: true, force: true });
