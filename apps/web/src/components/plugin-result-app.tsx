@@ -108,9 +108,7 @@ export function PluginResultApp({ pluginId, presentationId, initialResult }: Plu
 
   // Cached display bodies carry no current account/resource authority. The
   // view performs fresh typed reads; the host separately rebuilds native cards.
-  const initialToolArguments = initialResult
-    ? initialPluginAppArguments(initialResult)
-    : undefined;
+  const initialToolArguments = initialPluginAppArguments(initialResult ?? {});
 
   return (
     <details
@@ -139,7 +137,7 @@ export function PluginResultApp({ pluginId, presentationId, initialResult }: Plu
               resourceHtml={resource.resourceHtml}
               resourceSha256={resource.resourceSha256}
               csp={resource.csp}
-              {...(initialToolArguments ? { initialToolArguments } : {})}
+              initialToolArguments={initialToolArguments}
               allowedToolNames={resource.allowedToolNames}
               toolGrants={resource.tools}
               onToolCall={handleAppToolCall}
@@ -184,13 +182,13 @@ function safeLoadError(error: unknown): string {
   return 'Die Plugin-Ansicht ist momentan nicht verfügbar.';
 }
 
-function initialPluginAppArguments(result: PluginAppInitialResult): Record<string, unknown> | undefined {
+function initialPluginAppArguments(result: PluginAppInitialResult): Record<string, unknown> {
   const arguments_: Record<string, unknown> = {};
   if (isOffsetDateTime(result.requestedStartDate)) arguments_.requestedStartDate = result.requestedStartDate;
   if (isOffsetDateTime(result.requestedEndDate)) arguments_.requestedEndDate = result.requestedEndDate;
   // Earlier availability is never a current availability assertion.
   arguments_.chatAvailabilityChecked = false;
-  return Object.keys(arguments_).length > 0 ? arguments_ : undefined;
+  return arguments_;
 }
 
 function isOffsetDateTime(value: unknown): value is string {

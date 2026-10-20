@@ -383,6 +383,7 @@ let total = 0;
 let page = 0;
 let loading = false;
 let catalogPageLoaded = false;
+let initialReadStarted = false;
 let requestedStartDate;
 let requestedEndDate;
 let chatAvailabilityChecked = false;
@@ -477,7 +478,7 @@ function render() {
     card.append(title, type, description, facts);
     cards.append(card);
   }
-  status.textContent = total ? String(total) + " Treffer · Seite " + String(page + 1) + " von " + String(pageCount) : "Keine passenden Räume oder Arbeitsplätze gefunden.";
+  status.textContent = !catalogPageLoaded ? "Räume werden geladen …" : total ? String(total) + " Treffer · Seite " + String(page + 1) + " von " + String(pageCount) : "Keine passenden Räume oder Arbeitsplätze gefunden.";
   pager.hidden = !catalogPageLoaded || total <= PAGE_SIZE;
   previous.disabled = loading || page <= 0;
   next.disabled = loading || page >= Math.min(100, pageCount - 1);
@@ -488,7 +489,7 @@ function render() {
 
 function applyResult(result) {
   const payload = result && result.structuredContent;
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
   if (Array.isArray(payload.resources)) {
     resources = resourceItems(payload.resources);
     total = Number.isSafeInteger(payload.total) && payload.total >= resources.length ? payload.total : resources.length;
@@ -498,8 +499,11 @@ function applyResult(result) {
       requestedStartDate = payload.requestedStartDate;
       requestedEndDate = payload.requestedEndDate;
     }
+    catalogPageLoaded = true;
     render();
+    return true;
   }
+  return false;
 }
 
 function argumentsForPage(nextPage) {
@@ -515,6 +519,17 @@ function argumentsForPage(nextPage) {
   return arguments_;
 }
 
+function showSearchError() {
+  // A failed read may mean rights were withdrawn. Do not retain catalogue data
+  // after the host could no longer authorize or validate the fresh response.
+  resources = [];
+  total = 0;
+  catalogPageLoaded = false;
+  cards.replaceChildren();
+  pager.hidden = true;
+  status.textContent = "Die Katalogsuche ist derzeit nicht verfügbar. Bitte versuche es mit Aktualisieren erneut oder nutze die Ergebnisse im Chat.";
+}
+
 async function searchResources(nextPage = page) {
   if (loading) return;
   page = Math.max(0, Math.min(100, nextPage));
@@ -522,14 +537,9 @@ async function searchResources(nextPage = page) {
   status.textContent = "Freigegebene Ressourcen werden gesucht …";
   try {
     const result = await app.callServerTool({ name: "anny.view_resources", arguments: argumentsForPage(page) });
-    if (result.isError) {
-      status.textContent = "Die Katalogsuche ist derzeit nicht verfügbar. Bisherige Ergebnisse bleiben sichtbar.";
-    } else {
-      catalogPageLoaded = true;
-      applyResult(result);
-    }
+    if (result.isError || !applyResult(result)) showSearchError();
   } catch {
-    status.textContent = "Die Katalogsuche ist derzeit nicht verfügbar. Bisherige Ergebnisse bleiben sichtbar.";
+    showSearchError();
   } finally {
     setBusy(false);
   }
@@ -564,6 +574,12 @@ app.ontoolinput = (input) => {
     requestedStartDate = arguments_.requestedStartDate;
     requestedEndDate = arguments_.requestedEndDate;
     formatPeriod();
+  }
+  // The host supplies only display arguments, never a cached resource body.
+  // Each mounted view performs one fresh, authenticated, app-only catalogue read.
+  if (!initialReadStarted) {
+    initialReadStarted = true;
+    void searchResources(0);
   }
 };
 function applyHostContext(context) {
