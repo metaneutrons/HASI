@@ -97,6 +97,11 @@ export async function createApi(options: ApiOptions) {
   });
   const requireUser = async (token: string | undefined) => { const user = await identity.resolve(token); if (!user) throw new RequestError(401, oidc ? 'Bitte melde dich an.' : 'Bitte wähle zuerst ein Testkonto.'); return user; };
   const requireAdmin = async (token: string | undefined) => { const user = await requireUser(token); if (user.role !== 'admin' || !user.actor.permissions.includes('plugins:manage')) throw new RequestError(403, 'Diese Funktion ist der Administration vorbehalten.'); return user; };
+  const requirePluginAdmin = async (token: string | undefined) => {
+    const user = await requireAdmin(token);
+    await options.registry.refreshAll();
+    return user;
+  };
   const assertProposalBinding = async (id: string, subject: string) => {
     if (!proposalBindingGuard) return; // Process-local development retains the existing execution checks.
     const observed = await proposalBindingGuard.observeOwnedProposal(id, subject);
@@ -109,7 +114,8 @@ export async function createApi(options: ApiOptions) {
     requireAdmin,
     ...(options.managedPlugins ? { service: options.managedPlugins } : {}),
   });
-  const accountService = (id: string) => {
+  const accountService = async (id: string) => {
+    await options.registry.refreshAll();
     options.registry.manifest(id);
     const service = options.registry.accounts.get(id);
     if (!service) throw new RequestError(404, 'Dieser Dienst benötigt keine persönliche Kontoverknüpfung.');
@@ -130,14 +136,14 @@ export async function createApi(options: ApiOptions) {
     const user = await requireUser(request.cookies[cookieName]);
     const { id } = z.strictObject({ id: z.string().min(1).max(128) }).parse(request.params);
     const input = z.strictObject({ operation: z.enum(['consent', 'renewal']), returnTo: z.enum(['/', '/bookings', '/admin', '/account/connections']) }).parse(request.body);
-    return accountService(id).begin(user.actor.subject, input);
+    return (await accountService(id)).begin(user.actor.subject, input);
   });
   app.get('/api/plugin-accounts/:id/callback', async (request, reply) => {
     const user = await requireUser(request.cookies[cookieName]);
     const { id } = z.strictObject({ id: z.string().min(1).max(128) }).parse(request.params);
     const callback = z.record(z.string().max(64), z.string().max(4096)).parse(request.query);
     const state = z.string().regex(/^[A-Za-z0-9_-]{43}$/).parse(callback.state);
-    const result = await accountService(id).complete(user.actor.subject, state, callback);
+    const result = await (await accountService(id)).complete(user.actor.subject, state, callback);
     return reply.redirect(new URL(result.returnTo, origin).href);
   });
   app.post('/api/plugin-accounts/:id/consent', async request => {
@@ -145,7 +151,7 @@ export async function createApi(options: ApiOptions) {
     const user = await requireUser(request.cookies[cookieName]);
     const { id } = z.strictObject({ id: z.string().min(1).max(128) }).parse(request.params);
     const { state } = z.strictObject({ state: z.string().regex(/^[A-Za-z0-9_-]{43}$/), approved: z.literal(true) }).parse(request.body);
-    const service = accountService(id);
+    const service = await accountService(id);
     if ((await service.status(user.actor.subject)).adapterTrust !== 'demo-only') throw new RequestError(403, 'Diese Bestätigung ist nur für simulierte Anmeldedienste freigegeben.');
     return service.complete(user.actor.subject, state, { state, approved: 'true' });
   });
@@ -153,7 +159,7 @@ export async function createApi(options: ApiOptions) {
     const user = await requireUser(request.cookies[cookieName]);
     const { id } = z.strictObject({ id: z.string().min(1).max(128) }).parse(request.params);
     const { expectedAuthorityRevision } = z.strictObject({ expectedAuthorityRevision: z.number().int().nonnegative() }).parse(request.body);
-    const service = accountService(id);
+    const service = await accountService(id);
     return operation === 'disconnect' ? service.disconnect(user.actor.subject, expectedAuthorityRevision) : service.retryRevocation(user.actor.subject, expectedAuthorityRevision);
   });
   const assertProposalReadAccess = async (proposal: Proposal, user: Persona) => {
@@ -232,38 +238,37 @@ export async function createApi(options: ApiOptions) {
   app.post('/api/logout', async (request, reply) => { await identity.logout(request.cookies[cookieName]); reply.clearCookie(cookieName, { path: '/', secure: options.secureCookies ?? false }); return { ok: true }; });
   app.get('/api/plugins', async request => { await requireUser(request.cookies[cookieName]); await options.registry.refreshAll(); return { plugins: options.registry.list() }; });
   app.get('/api/tools', async request => { const user = await requireUser(request.cookies[cookieName]); await options.registry.refreshAll(); return { tools: await options.registry.authorizedModelTools(user.actor) }; });
-  app.get('/api/admin/plugins', async request => { await requireAdmin(request.cookies[cookieName]); await options.registry.refreshAll(); return { plugins: options.registry.list() }; });
-  app.get('/api/admin/plugin-catalog', async request => { await requireAdmin(request.cookies[cookieName]); return { sources: options.registry.catalog() }; });
-  app.post('/api/admin/plugin-catalog/connect', async request => { await requireAdmin(request.cookies[cookieName]); const { sourceId } = z.strictObject({ sourceId: z.string().min(1).max(128) }).parse(request.body); await options.registry.connectSource(sourceId); return { ok: true }; });
-  app.post('/api/admin/plugins/:id/remove', async request => { await requireAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); z.strictObject({ confirm: z.literal(true) }).parse(request.body); await options.registry.removeSource(id); return { ok: true }; });
-  app.get('/api/admin/plugins/:id/configuration', async request => { await requireAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); return options.registry.configuration(id); });
+  app.get('/api/admin/plugins', async request => { await requirePluginAdmin(request.cookies[cookieName]); return { plugins: options.registry.list() }; });
+  app.get('/api/admin/plugin-catalog', async request => { await requirePluginAdmin(request.cookies[cookieName]); return { sources: options.registry.catalog() }; });
+  app.post('/api/admin/plugin-catalog/connect', async request => { await requirePluginAdmin(request.cookies[cookieName]); const { sourceId } = z.strictObject({ sourceId: z.string().min(1).max(128) }).parse(request.body); await options.registry.connectSource(sourceId); return { ok: true }; });
+  app.post('/api/admin/plugins/:id/remove', async request => { await requirePluginAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); z.strictObject({ confirm: z.literal(true) }).parse(request.body); await options.registry.removeSource(id); return { ok: true }; });
+  app.get('/api/admin/plugins/:id/configuration', async request => { await requirePluginAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); return options.registry.configuration(id); });
   app.post('/api/admin/plugins/:id/test-connection', async request => {
-    await requireAdmin(request.cookies[cookieName]);
+    await requirePluginAdmin(request.cookies[cookieName]);
     const { id } = z.strictObject({ id: z.string().min(1).max(128) }).parse(request.params);
     z.strictObject({}).parse(request.body);
     return options.registry.testConnection(id);
   });
   app.post('/api/admin/plugins/:id/configuration/draft', async request => {
-    const user = await requireAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params);
+    const user = await requirePluginAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params);
     const input = z.strictObject({ revision: z.number().int().nonnegative(), values: z.record(z.string(), z.unknown()), disabledTools: z.array(z.string().min(1).max(256)).max(64) }).parse(request.body);
-    await options.registry.refreshAll();
     return options.registry.settings.saveDraft(id, options.registry.manifest(id), input, user.actor.subject);
   });
   app.post('/api/admin/plugins/:id/configuration/activate', async request => {
-    const user = await requireAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params);
+    const user = await requirePluginAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params);
     const { revision } = z.strictObject({ revision: z.number().int().nonnegative() }).parse(request.body);
-    await options.registry.refreshAll();
     const result = await options.registry.settings.activate(id, options.registry.manifest(id), revision, user.actor.subject, options.registry.registration(id).secretReady);
     await options.registry.configurationActivated(id);
     return result;
   });
   app.get('/api/plugin-apps/:id/:presentationId', async request => {
     const user = await requireUser(request.cookies[cookieName]); const { id, presentationId } = z.object({ id: z.string(), presentationId: z.string() }).parse(request.params);
+    await options.registry.refreshAll();
     return options.registry.readPresentation(id, presentationId, user.actor);
   });
-  app.post('/api/admin/plugins/:id/enabled', async request => { await requireAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); const { enabled } = z.strictObject({ enabled: z.boolean() }).parse(request.body); await options.registry.setEnabled(id, enabled); return { ok: true }; });
-  app.post('/api/admin/plugins/:id/check-update', async request => { await requireAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); return options.registry.checkUpdate(id); });
-  app.post('/api/admin/plugins/:id/activate-update', async request => { await requireAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); await options.registry.activateUpdate(id); return { ok: true }; });
+  app.post('/api/admin/plugins/:id/enabled', async request => { await requirePluginAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); const { enabled } = z.strictObject({ enabled: z.boolean() }).parse(request.body); await options.registry.setEnabled(id, enabled); return { ok: true }; });
+  app.post('/api/admin/plugins/:id/check-update', async request => { await requirePluginAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); return options.registry.checkUpdate(id); });
+  app.post('/api/admin/plugins/:id/activate-update', async request => { await requirePluginAdmin(request.cookies[cookieName]); const { id } = z.object({ id: z.string() }).parse(request.params); await options.registry.activateUpdate(id); return { ok: true }; });
   app.get('/api/resources', async request => { const user = await requireUser(request.cookies[cookieName]); return options.registry.invoke(ANNY, 'anny.search_resources', {}, user.actor); });
   const readKnowledge = async (user: Persona, id: string, revision?: number) => {
     try {

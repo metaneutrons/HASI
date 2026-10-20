@@ -337,7 +337,8 @@ describe('plugin installation lifecycle bindings', () => {
       headers: { ...headers, cookie: runtimeB.adminCookie },
       payload: { enabled: true },
     });
-    expect(reenable.statusCode, reenable.body).toBe(409);
+    // Reconciliation withdraws the removed source before the mutation is resolved.
+    expect(reenable.statusCode, reenable.body).toBe(404);
 
     const tools = await runtimeB.api.inject({ url: '/api/tools', headers: { ...headers, cookie: runtimeB.studentCookie } });
     expect(tools.statusCode, tools.body).toBe(200);
