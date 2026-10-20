@@ -1,0 +1,45 @@
+{
+  "baseCommit": "1c14ed285263485f40b0020544c6c76e9c9115ad",
+  "sources": [
+    {
+      "path": "apps/web/src/lib/api.ts",
+      "sha256": "4d2b746cb3adf22d86a4f80d9b437ae3a50af4c7861198a1ccf96dfeb7816d7f"
+    },
+    {
+      "path": "apps/web/tests/api-cancellation.test.ts",
+      "sha256": "93b4f93ccac740a93a0b7f42417166e5b033343ce1ff6a89857747f1f9ce338c"
+    }
+  ],
+  "browser": {
+    "fixture": "direct joined runtime, two actual API processes, actual TestIdP, Next development StrictMode",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "accountRequestsOnMount": 2,
+    "firstRequestCanceled": true,
+    "secondRequestHttpStatus": 200,
+    "settledViewAvailable": true,
+    "temporaryNetworkBlockSurfacedError": true,
+    "normalRefreshAfterUnblockClearedError": true,
+    "requestBlockingCleared": true,
+    "ownedTabClosed": true
+  },
+  "model": {
+    "syntheticCalls": 0,
+    "realProviderCalls": 0
+  },
+  "limits": [
+    "No capture of every intermediate render; settled DOM and actual network events observed.",
+    "No claim that every prior unavailable message had this cause.",
+    "Not production, full accessibility/mobile or milestone acceptance."
+  ],
+  "cleanup": {
+    "ownedProcessesStopped": true,
+    "callerOwnedTestDatabaseRetained": true,
+    "ownedHomeRemoved": true,
+    "fixtureDirectoryRemoved": true,
+    "fixturePortsClosed": true,
+    "generatedDeclarationRestored": true
+  }
+}

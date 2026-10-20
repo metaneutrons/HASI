@@ -18,7 +18,14 @@ export async function apiRequest<T>(
       credentials: "same-origin",
       cache: "no-store",
     });
-  } catch {
+  } catch (cause) {
+    const signal = init.signal;
+    if (
+      signal?.aborted &&
+      (cause === signal.reason || (cause instanceof DOMException && cause.name === "AbortError"))
+    ) {
+      throw cause;
+    }
     throw Object.assign(new Error("Der HASI-Dienst ist gerade nicht erreichbar."), {
       status: 0,
     }) as ApiError;
