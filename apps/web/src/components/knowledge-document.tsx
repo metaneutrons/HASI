@@ -5,6 +5,7 @@ import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { knowledgeDocumentSchema, knowledgeSourceLabel, type KnowledgeDocument } from "@/lib/knowledge";
+import { knowledgeChatReturnHref, type KnowledgeOrigin } from "@/lib/knowledge-navigation";
 import { useSession } from "./session-provider";
 
 const REVALIDATE_INTERVAL_MS = 30_000;
@@ -14,10 +15,10 @@ function requestCanUpdate(mounted: boolean, controller: AbortController): boolea
   return mounted && !controller.signal.aborted;
 }
 
-export function KnowledgeDocumentPage({ documentId, revision }: { documentId: string; revision?: number }) {
+export function KnowledgeDocumentPage({ documentId, revision, origin }: { documentId: string; revision?: number; origin?: KnowledgeOrigin }) {
   const { user } = useSession();
   return user
-    ? <DocumentReader key={`${user.id}:${documentId}:${revision === undefined ? "latest" : String(revision)}`} documentId={documentId} {...(revision === undefined ? {} : { revision })} />
+    ? <DocumentReader key={`${user.id}:${documentId}:${revision === undefined ? "latest" : String(revision)}`} documentId={documentId} {...(revision === undefined ? {} : { revision })} {...(origin ? { origin } : {})} />
     : null;
 }
 
@@ -33,7 +34,7 @@ function documentRequestPath(documentId: string, revision?: number): string {
   return revision === undefined ? path : `${path}?revision=${String(revision)}`;
 }
 
-function DocumentReader({ documentId, revision }: { documentId: string; revision?: number }) {
+function DocumentReader({ documentId, revision, origin }: { documentId: string; revision?: number; origin?: KnowledgeOrigin }) {
   const [activeDocument, setActiveDocument] = useState<KnowledgeDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,7 +95,7 @@ function DocumentReader({ documentId, revision }: { documentId: string; revision
   }, [documentId, revision]);
 
   return <section className="knowledge-reader" aria-label="Wissensdokument">
-    <Link className="knowledge-back" href="/"><ArrowLeft size={18} aria-hidden="true" /> Zum Chat</Link>
+    <Link className="knowledge-back" href={knowledgeChatReturnHref(origin)}><ArrowLeft size={18} aria-hidden="true" /> {origin ? "Zurück zur Nachricht" : "Zum Chat"}</Link>
     {error ? <p className="knowledge-reader__status knowledge-reader__status--error" role="alert">{error}</p>
       : !activeDocument ? <p className="knowledge-reader__status" role="status">{loading ? "Dokument und Zugriffsrecht werden geprüft …" : UNAVAILABLE_MESSAGE}</p>
         : <DocumentArticle document={activeDocument} />}
@@ -157,8 +158,7 @@ function DocumentArticle({ document }: { document: KnowledgeDocument }) {
     </section>}
 
     <footer>
-      <span>Quellenkennung</span>
-      <code>{document.citationId}</code>
+      <details className="knowledge-source-details"><summary>Quellendetails</summary><span>Quellenkennung</span><code>{document.citationId}</code></details>
       {originalHref && <a className="knowledge-reader__original" href={originalHref} target="_blank" rel="noopener noreferrer">
         <ExternalLink size={16} aria-hidden="true" /> {english ? "Open authorized original" : "Autorisierte Originalquelle öffnen"}
       </a>}

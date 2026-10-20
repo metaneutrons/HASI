@@ -3,7 +3,7 @@
 import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, MessageCircle, PanelLeft, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { HasiIcon } from "@/components/hasi-icon";
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject, type SyntheticEvent } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject, type SyntheticEvent } from "react";
 import { apiRequest, formatDateTime, formatTime } from "@/lib/api";
 import { classifyIntent, mergeRoomRequest, requestStartDate, roomRequestSummary, type RoomRequest } from "@/lib/chat-demo";
 import { hostDialogueMessageSchema, staticHostDialogue, type HostDialogueMessage, type StaticHostDialogueCode } from "@/lib/host-dialogue";
@@ -13,7 +13,10 @@ import type { Booking, Resource, TimeInterval, User } from "@/lib/types";
 import { useChatWorkspaceStore } from "@/components/chat-sidebar-context";
 import { useSession } from "@/components/session-provider";
 import { availabilityInputForSlot, createAnnyChatTools, type AnnyChatToolResult } from "@/lib/anny-chat-tools";
-import { knowledgeModelDocuments, searchKnowledge, knowledgeDocumentHref, knowledgeSourceLabel } from "@/lib/knowledge";
+import { knowledgeModelDocuments, searchKnowledge } from "@/lib/knowledge";
+import { chatKnowledgeCitations } from "@/lib/chat-knowledge-citations";
+import { knowledgeCitationHref } from "@/lib/knowledge-citations";
+import { knowledgeChatReturnHref, knowledgeOrigin, knowledgeReturnLocation } from "@/lib/knowledge-navigation";
 import { chatProfileIdSchema, chatToolSchemas, isChatToolName, modelProfilesResponseSchema, modelReplySchema, type ChatToolCallName, type ChatToolName, type MessageTimestamp, type ModelProfile, type ModelProfileId, type WireMessage } from "@/lib/chat-contract";
 import { createChatMessageClock } from "@/lib/chat-message-clock";
 import { appendChatText, trimChatHistory } from "@/lib/chat-history";
@@ -82,6 +85,14 @@ function ChatWorkspace({ user }: { user: User }) {
   const drawer = useRef<HTMLDialogElement>(null);
   const composerFocus = useRef(new Map<string, ComposerSelection>());
   const [configuration, setConfiguration] = useState<ModelConfiguration>({ profiles: [], userChoiceEnabled: false, defaultProfileId: "groq-oss-120b", loading: true, error: null });
+
+  useLayoutEffect(() => {
+    const origin = knowledgeReturnLocation(window.location);
+    if (!origin) return;
+    const session = store.getSnapshot().workspace.sessions.find(item => item.id === origin.sessionId);
+    if (session?.snapshot.messages.some(message => message.id === origin.messageId)) store.select(session.id);
+    else window.history.replaceState(window.history.state, "", "/");
+  }, [store]);
 
   useEffect(() => {
     let active = true;
@@ -244,8 +255,19 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
 
   useEffect(() => {
     const element = scroller.current;
-    if (active && element) element.scrollTo({ top: latestMessage || busy ? element.scrollHeight : 0, behavior: "instant" });
-  }, [latestMessage, busy, active]);
+    if (!active || !element) return;
+    const origin = knowledgeReturnLocation(window.location);
+    if (origin?.sessionId === sessionId) {
+      const message = element.ownerDocument.getElementById(`chat-${sessionId}-message-${origin.messageId}`);
+      if (message && element.contains(message)) {
+        element.scrollTo({ top: element.scrollTop + message.getBoundingClientRect().top - element.getBoundingClientRect().top - 16, behavior: "instant" });
+        message.focus({ preventScroll: true });
+        window.history.replaceState(window.history.state, "", "/");
+        return;
+      }
+    }
+    element.scrollTo({ top: latestMessage || busy ? element.scrollHeight : 0, behavior: "instant" });
+  }, [latestMessage, busy, active, sessionId]);
 
   async function requestForChat<T>(path: string, init: RequestInit = {}, onRequestStart?: () => void): Promise<T> {
     const signal = pendingRequest.current?.signal;
@@ -952,6 +974,12 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     if (!rooms.length) return [];
     return rooms.length === message.rooms.length ? [message] : [{ ...message, rooms }];
   });
+  const knowledgeCitations = useMemo(() => chatKnowledgeCitations(messages, mode !== "oidc"), [messages, mode]);
+
+  function rememberSourceOrigin(messageId: string) {
+    const origin = knowledgeOrigin(sessionId, messageId);
+    if (origin) window.history.replaceState(window.history.state, "", knowledgeChatReturnHref(origin));
+  }
 
   function submit(event: SyntheticEvent<HTMLFormElement>) { event.preventDefault(); void send(input); }
 
@@ -979,12 +1007,12 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
               const pluginProposalView = pluginProposal ? pluginToolProposalPresentation(pluginProposal) : null;
               const serviceConnection = message.serviceConnection;
               return (
-              <article key={message.id} className={`chat-message chat-message--${message.role}`} aria-label={message.role === "user" ? "Du" : "HASI"}>
+              <article key={message.id} id={`chat-${sessionId}-message-${message.id}`} tabIndex={-1} className={`chat-message chat-message--${message.role}`} aria-label={message.role === "user" ? "Du" : "HASI"}>
                 <span className="chat-speaker">{message.role === "user" ? "Du" : <><HasiIcon size={18} /> HASI {message.model && <small>{message.model}</small>}</>}</span>
                 <div className="chat-message-meta">{message.timestamp ? <time className="chat-message-time" dateTime={message.timestamp.createdAt} title="Servereingang · Europe/Berlin">{formatMessageTime(message.timestamp.createdAt)}</time> : <span className="chat-message-time">Zeitpunkt unbekannt</span>}<ChatMessageCopy message={message} /></div>
                 <div className="chat-message-body">
                   {message.tool && <span className="chat-tool-label"><Check size={13} aria-hidden="true" /> {message.tool}</span>}
-                  <ChatMarkdown source={message.proposal ? proposalPresentation(message.proposal).summary : message.text} />
+                  <ChatMarkdown source={message.proposal ? proposalPresentation(message.proposal).summary : message.text} citations={knowledgeCitations.answers.get(message.id) ?? []} origin={{ sessionId, messageId: message.id }} onCitationOpen={() => { rememberSourceOrigin(message.id); }} />
                   {serviceConnection && <ChatServiceConnection
                     key={`${serviceConnection.installationId}:${serviceConnection.requestId}`}
                     installationId={serviceConnection.installationId}
@@ -1008,7 +1036,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
                       availabilityChecked: message.rooms.every(room => room.checked),
                     }}
                   />}
-                  {message.sources && message.sources.length > 0 && <div className="chat-source-list" aria-label="Gefundene Quellen">{message.sources.map((source) => <Link className="chat-source-card" href={knowledgeDocumentHref(source.id, source.revision)} target="_blank" rel="noreferrer" key={source.id}><BookOpen size={18} aria-hidden="true" /><span><small>{knowledgeSourceLabel(source.sourceSystem, source.synthetic)} · Fassung {source.revision}</small><strong>{source.title}</strong><code>{source.citationId}</code></span><ArrowRight size={16} aria-hidden="true" /></Link>)}</div>}
+                  {(knowledgeCitations.sourceCards.get(message.id)?.length ?? 0) > 0 && <div className="chat-source-list" aria-label="Gefundene Quellen">{knowledgeCitations.sourceCards.get(message.id)?.map(source => <Link className="chat-source-card" href={knowledgeCitationHref(source, { sessionId, messageId: message.id }) ?? source.href} onClick={event => { if (!event.defaultPrevented && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && event.button === 0) rememberSourceOrigin(message.id); }} aria-label={`Quelle ${String(source.number)}: ${source.title} · ${source.sourceLabel} · Fassung ${String(source.revision)}`} key={source.citationId}><span className="chat-source-number" aria-hidden="true">{source.number}</span><span><small>{source.sourceLabel} · Fassung {source.revision}</small><strong>{source.title}</strong></span><ArrowRight size={16} aria-hidden="true" /></Link>)}</div>}
                   {pluginProposal && pluginProposalView && <div className="chat-tool-card chat-proposal" role="group" tabIndex={-1} aria-label={pluginProposal.status === "pending" ? "Pluginaktionsvorschlag" : proposalPresentation(pluginProposal).label} ref={node => { if (node) proposalCards.current.set(pluginProposal.id, node); else proposalCards.current.delete(pluginProposal.id); }}>
                     <span className="chat-proposal-label">{proposalPresentation(pluginProposal).label}</span>
                     <h2>{pluginProposalView.actionTitle}</h2>
