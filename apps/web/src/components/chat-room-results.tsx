@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, Building2, CalendarDays, Check, ChevronDown, Clock3, MapPin, Users } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { formatDateTime, formatTime } from "@/lib/api";
 import type { ChatRoomOption } from "@/lib/chat-sessions";
 import type { Resource, TimeInterval } from "@/lib/types";
@@ -128,6 +128,15 @@ function RoomResult({
 export function ChatRoomResults({ rooms, disabled, onChooseRoom, onChooseSlot }: ChatRoomResultsProps) {
   const [expanded, setExpanded] = useState(false);
   const listId = `chat-room-results-${useId()}`;
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const restoreToggle = useRef(false);
+
+  useLayoutEffect(() => {
+    if (!expanded && restoreToggle.current) {
+      restoreToggle.current = false;
+      toggleRef.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
+    }
+  }, [expanded]);
 
   if (rooms.length === 0) return null;
 
@@ -149,11 +158,15 @@ export function ChatRoomResults({ rooms, disabled, onChooseRoom, onChooseSlot }:
       </div>
       {remainingCount > 0 && (
         <button
+          ref={toggleRef}
           className="chat-room-results__toggle"
           type="button"
           aria-expanded={expanded}
           aria-controls={listId}
-          onClick={() => { setExpanded((current) => !current); }}
+          onClick={() => {
+            restoreToggle.current = expanded;
+            setExpanded((current) => !current);
+          }}
         >
           {expanded ? "Weniger anzeigen" : `Weitere ${String(remainingCount)} anzeigen`}
           <ChevronDown className={expanded ? "is-expanded" : undefined} size={16} aria-hidden="true" />

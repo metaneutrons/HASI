@@ -1,0 +1,1186 @@
+{
+  "date": "2026-10-20",
+  "scope": "Local browser UI feedback evidence for four interactions; bounded prototype observation, not full M7 qualification.",
+  "baseCommit": "de45f0ff963b5c34dc2036183151677b52fd4dc2",
+  "sourceDigests": {
+    "apps/web/scripts/ui-feedback-probe.ts": "d8da981fca29dfc790b52503ed1bf3da6dba6b3ea0ec8a43e163592579951271",
+    "apps/web/tests/ui-feedback-probe.test.ts": "bf60ad4d37b1ce1c8f0bbed71cfd887020aed946e1a125b75d7563efc8953363",
+    "apps/web/src/components/assistant-page.tsx": "385a0ebf7a2e228542d98e9d9b73bf57c6ce7667baf20dcac170f42c71a33000",
+    "apps/web/src/lib/knowledge.ts": "d361916afbd70de0c275a2cdc65d823b11bd8656b5da3ab5dd05e1607dd1a846",
+    "apps/web/src/lib/server/protected-workspaces.ts": "03d8641d14ca295e9688663b14ad0498e9708f297865dcc789daea8ff1c60be1",
+    "apps/web/src/components/app-shell.tsx": "5e499ad9591c1416cd73530200fcde2a2fbf90a7b1f39663f76ea0454be42fdf",
+    "apps/web/src/components/chat-session-list.tsx": "eb27d7beaf539ee0d176134a5cbfa8a5c713a02317b93d1a499bc45424af2e46",
+    "apps/web/src/components/chat-room-results.tsx": "e83f13549c93b39387f6e835e1f765d99aa2e014cfae30cf50fe2397efdb55da",
+    "apps/web/src/components/theme-provider.tsx": "a0be30946df5253bb6a15457b6e692293f7dbaf8dcb6cfadce38a3492234d4da",
+    "apps/web/src/app/globals.css": "1c73cfa8a07c47444466925f37f385e37f540b097446ad61e3966965355caf65",
+    "scripts/serve-plugin-journey.ts": "9ad67242f52a34ff5cc97b98bc5455acac1107c8ab7fd97ebcdb8b4d120093a2",
+    "pnpm-lock.yaml": "d17165ca9989d72401f3eaa9718d1ffa43bc1adb486113602760f30db13317ba"
+  },
+  "sourceSnapshotCapturedAt": "2026-10-20T21:30:19.370218+00:00",
+  "implementation": {
+    "probe": "apps/web/scripts/ui-feedback-probe.ts",
+    "testFile": "apps/web/tests/ui-feedback-probe.test.ts",
+    "admittedOrigin": "http://127.0.0.1:3001",
+    "measuredInteractions": [
+      "navigation",
+      "actions-open",
+      "results",
+      "theme"
+    ],
+    "start": "Capture of a trusted native browser click on the admitted visible target.",
+    "completion": "MutationObserver detects the expected semantic state change; after two animation frames the probe rechecks state and visibility.",
+    "thresholdMs": 200,
+    "precision": "Raw performance.now() durations are retained without rounding before comparison."
+  },
+  "validation": {
+    "focusedTests": {
+      "count": 11,
+      "file": "apps/web/tests/ui-feedback-probe.test.ts",
+      "result": "passed",
+      "coverage": [
+        "200 ms threshold boundary and above-limit rejection",
+        "delayed countercase",
+        "malformed, missing, and recorded hidden-page failure samples",
+        "local-origin restriction",
+        "invalid delay and missing visible target"
+      ]
+    },
+    "syntheticModelCalls": 0,
+    "realProviderCalls": 0,
+    "nativeAnnyTestBooking": {
+      "count": 1,
+      "resource": "Amrum 1",
+      "period": "2026-10-21 10:00–12:00",
+      "realBooking": false
+    }
+  },
+  "environment": {
+    "application": "Local Next.js development server",
+    "identity": "A local TestIdP with two API replicas",
+    "database": "PostgreSQL with synthetic fixtures",
+    "persona": "Synthetic Anny; synthetic knowledge; Dialog-Demo chat",
+    "browser": "Chrome 155",
+    "viewport": {
+      "width": 1280,
+      "height": 720,
+      "devicePixelRatio": 2
+    },
+    "theme": "dark",
+    "documentVisibility": "visible"
+  },
+  "positiveRun": {
+    "freshClientReload": true,
+    "passed": true,
+    "sampleCount": 80,
+    "requiredSamplesPerInteraction": 20,
+    "thresholdMs": 200,
+    "maximaMs": {
+      "actions-open": 24.799999952316284,
+      "navigation": 14.399999856948853,
+      "results": 14.5,
+      "theme": 16.600000143051147
+    },
+    "gate": {
+      "interactions": {
+        "actions-open": {
+          "count": 20,
+          "failures": [],
+          "maxMs": 24.799999952316284,
+          "passed": true
+        },
+        "navigation": {
+          "count": 20,
+          "failures": [],
+          "maxMs": 14.399999856948853,
+          "passed": true
+        },
+        "results": {
+          "count": 20,
+          "failures": [],
+          "maxMs": 14.5,
+          "passed": true
+        },
+        "theme": {
+          "count": 20,
+          "failures": [],
+          "maxMs": 16.600000143051147,
+          "passed": true
+        }
+      },
+      "invalidSamples": 0,
+      "passed": true,
+      "requiredCount": 20,
+      "thresholdMs": 200
+    },
+    "samples": [
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.599999904632568,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 6.900000095367432,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.5,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 11.399999856948853,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 6.299999952316284,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13.299999952316284,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.799999952316284,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.799999952316284,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 11.099999904632568,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14.100000143051147,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13.199999809265137,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13.700000047683716,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13.199999809265137,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 9,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14.5,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.800000190734863,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13.299999952316284,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.299999952316284,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 9,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 8.399999856948853,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14.399999856948853,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 9,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13.700000047683716,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 11.700000047683716,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.399999856948853,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 11.5,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.299999952316284,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.699999809265137,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.699999809265137,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 11.099999904632568,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.400000095367432,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 7.6000001430511475,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 9.299999952316284,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 8,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 17.5,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 21,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 22.100000143051147,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 24.300000190734863,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 20.5,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 21.799999952316284,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 24,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 24.399999856948853,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 21.299999952316284,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 16.59999990463257,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 16.59999990463257,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 24.5,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 18.200000047683716,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 22.200000047683716,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 24,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 24.799999952316284,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 17.40000009536743,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 23.700000047683716,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 21.799999952316284,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 23.59999990463257,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.299999952316284,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14.199999809265137,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 8.600000143051147,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.099999904632568,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 15.900000095367432,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.700000047683716,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.799999952316284,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 15.099999904632568,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 9.400000095367432,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 9.5,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14.200000047683716,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13.599999904632568,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 16.600000143051147,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 8.299999952316284,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.399999856948853,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 8.299999952316284,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 11.5,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 15.399999856948853,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.100000143051147,
+        "name": "theme",
+        "status": "passed"
+      }
+    ]
+  },
+  "delayedCounter": {
+    "overallGatePassed": false,
+    "sampleCount": 80,
+    "deliberatelyDelayedInteraction": "navigation",
+    "injectedMainThreadDelayMs": 250,
+    "navigationMaximumMs": 254,
+    "navigationGateFailures": [
+      "over-limit"
+    ],
+    "unchangedOtherBaselineSampleCount": 60,
+    "interpretation": "All delayed navigation clicks reached visible feedback, but their measured durations exceeded 200 ms and the aggregate gate rejected them. The other 60 samples repeat the successful zero-delay baseline. A sample status of passed denotes observed semantic feedback; the aggregate threshold is reported separately.",
+    "gate": {
+      "interactions": {
+        "actions-open": {
+          "count": 20,
+          "failures": [],
+          "maxMs": 24.799999952316284,
+          "passed": true
+        },
+        "navigation": {
+          "count": 20,
+          "failures": [
+            "over-limit"
+          ],
+          "maxMs": 254,
+          "passed": false
+        },
+        "results": {
+          "count": 20,
+          "failures": [],
+          "maxMs": 14.5,
+          "passed": true
+        },
+        "theme": {
+          "count": 20,
+          "failures": [],
+          "maxMs": 16.600000143051147,
+          "passed": true
+        }
+      },
+      "invalidSamples": 0,
+      "passed": false,
+      "requiredCount": 20,
+      "thresholdMs": 200
+    },
+    "samples": [
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.599999904632568,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 6.900000095367432,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.5,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 11.399999856948853,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 6.299999952316284,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13.299999952316284,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.799999952316284,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.799999952316284,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 11.099999904632568,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14.100000143051147,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13.199999809265137,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13.700000047683716,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13.199999809265137,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 9,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14.5,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.800000190734863,
+        "name": "results",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 17.5,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 21,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 22.100000143051147,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 24.300000190734863,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 20.5,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 21.799999952316284,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 24,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 24.399999856948853,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 21.299999952316284,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 16.59999990463257,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 16.59999990463257,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 24.5,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 18.200000047683716,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 22.200000047683716,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 24,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 24.799999952316284,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 17.40000009536743,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 23.700000047683716,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 21.799999952316284,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 23.59999990463257,
+        "name": "actions-open",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.299999952316284,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14.199999809265137,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 8.600000143051147,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.099999904632568,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 15.900000095367432,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 12.700000047683716,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.799999952316284,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 15.099999904632568,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 9.400000095367432,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 9.5,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14.200000047683716,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 13.599999904632568,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 16.600000143051147,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 8.299999952316284,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.399999856948853,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 14,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 8.299999952316284,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 11.5,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 15.399999856948853,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 0,
+        "elapsedMs": 10.100000143051147,
+        "name": "theme",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.5,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.60000014305115,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.39999985694885,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.70000004768372,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.20000004768372,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.40000009536743,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.09999990463257,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.70000004768372,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.39999985694885,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 254,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.40000009536743,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 254,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.39999985694885,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.60000014305115,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.59999990463257,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.90000009536743,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.09999990463257,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.70000004768372,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.40000009536743,
+        "name": "navigation",
+        "status": "passed"
+      },
+      {
+        "delayMs": 250,
+        "elapsedMs": 253.70000004768372,
+        "name": "navigation",
+        "status": "passed"
+      }
+    ]
+  },
+  "preFinalDiagnostics": {
+    "visibilityPreflight": {
+      "isFinalMeasurement": false,
+      "counts": {
+        "navigationPassed": 20,
+        "actionsOpenPassed": 20,
+        "themePassed": 20,
+        "resultsExpansionPassed": 1,
+        "resultsMissingTarget": 1
+      },
+      "missingTargetCause": "The results toggle was clipped outside the viewport during this preflight. This was an intermediate visibility diagnostic, not the final run.",
+      "failureSamples": [
+        {
+          "interaction": "results",
+          "failure": "missing-target",
+          "count": 1,
+          "cause": "The toggle was clipped outside the viewport."
+        }
+      ]
+    },
+    "collapseBeforeFix": [
+      {
+        "delayMs": 0,
+        "elapsedMs": 2004.5,
+        "failure": "feedback-timeout",
+        "name": "results",
+        "status": "failed"
+      }
+    ]
+  },
+  "collapseFocusFix": {
+    "before": "On collapse, the focused toggle remained about 600 px above the viewport.",
+    "after": "A useLayoutEffect calls scrollIntoView({block:\"nearest\", behavior:\"instant\"}) after collapse. The focused toggle was visible at vertical bounds 122–166 px in the chat viewport.",
+    "screenshot": "assets/results-collapse-visible-1280.jpg",
+    "screenshotSha256": "8cf6468a6468276bfa81c5045c8eaede74dd1532810cd5df29dc35e72c0de112",
+    "screenshotDimensions": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "cleanup": {
+    "probe": "disposed",
+    "ownedBrowserTab": "closed",
+    "ownedProcesses": "stopped",
+    "ports3001And4100To4103": "closed",
+    "temporaryTestHome": "removed",
+    "generatedNextDeclaration": "restored",
+    "theme": "restored to original dark theme",
+    "database": "caller-owned PostgreSQL instance retained"
+  },
+  "limitations": [
+    "This measures visible browser-side UI response. It makes no claim about server, model, provider, or network request latency.",
+    "Only the local 1280×720 DPR 2 Chrome 155 setup was exercised; this is not a mobile-device matrix.",
+    "These results are bounded local evidence and do not establish full M7 evidence or production/runtime integration."
+  ],
+  "sourceWorkingTreeChanges": [
+    "apps/web/src/components/chat-room-results.tsx",
+    "apps/web/scripts/ui-feedback-probe.ts",
+    "apps/web/tests/ui-feedback-probe.test.ts"
+  ]
+}
