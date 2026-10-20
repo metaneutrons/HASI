@@ -7,7 +7,7 @@
     "apps/web/src/lib/knowledge-navigation.ts": "1f01b08c544bfb6ed9f50ea41143c4a7fef9418dacf46a1b28db6f2baebdca33",
     "apps/web/src/components/chat-markdown.tsx": "461e62215fab2ca6afa855850a14b044f1007b36a7a8fceb57db53fe422201c9",
     "apps/web/src/components/chat-markdown.module.css": "25e8d99a66c98986c45a872cbf138fba324d5487ad86bccb22f4569b11c85761",
-    "apps/web/src/components/assistant-page.tsx": "769fb400808fc8dfe9c473933cc1a1e5683d815f9268dceb312808f74f6135d0",
+    "apps/web/src/components/assistant-page.tsx": "c2b6befd12a34c2d2dd408edbf45c8bff3d1b79dd80077dd169e4f1123002b73",
     "apps/web/src/components/knowledge-document.tsx": "36e9b44afeef320cb800e225b94eaf41b8da18ff9df29ec48e0a6f35fc69c5b8",
     "apps/web/src/app/sources/[id]/page.tsx": "b0a80ca252563b630a9e7430ad2f542fe6b99e0724e61c93151bd463a1740e34",
     "apps/web/src/app/globals.css": "460251bd668c23964c7309c4bf49c25936d1bd3a68e8f71dc5402e16f21fa67e",
@@ -75,6 +75,7 @@
     "Inline generated citations are covered by server-rendered component positive/counter tests, not a live-provider conversation in this browser journey.",
     "Coarse-pointer inline targets are implemented as real44px boxes; no physical touch-device qualification.",
     "Current document authorization/revision and protected-history revalidation remain server-owned and unchanged.",
-    "Full current-candidate CI/merge/deployment and local UI<=200ms qualification remain separate."
+    "Full current-candidate CI/merge/deployment and local UI<=200ms qualification remain separate.",
+    "The browser journey preceded the final guard that preserves focus when a user has already focused another control during route loading; exact-candidate CI remains required."
   ]
 }

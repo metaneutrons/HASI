@@ -261,7 +261,8 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       const message = element.ownerDocument.getElementById(`chat-${sessionId}-message-${origin.messageId}`);
       if (message && element.contains(message)) {
         element.scrollTo({ top: element.scrollTop + message.getBoundingClientRect().top - element.getBoundingClientRect().top - 16, behavior: "instant" });
-        message.focus({ preventScroll: true });
+        // A slow route load must not take focus from a newer user interaction.
+        if (element.ownerDocument.activeElement === element.ownerDocument.body) message.focus({ preventScroll: true });
         window.history.replaceState(window.history.state, "", "/");
         return;
       }
