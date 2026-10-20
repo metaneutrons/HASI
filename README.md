@@ -149,6 +149,16 @@ Then run `pnpm --filter @hasi/web dev`. This PostgreSQL mode is separate from `p
 
 For an optimized local preview, run `pnpm preview`. It builds the application first and runs the separate local services in production build mode with in-memory demo data. Model calls in production build mode additionally require the explicitly initialized PostgreSQL budget store; select Dialog-Demo when that store is unavailable. It does not enable real SSO or live integration credentials.
 
+### Joined plugin journey fixture
+
+For actual browser qualification with a local TestIdP, two API replicas, personal
+synthetic account consent and a separately packaged reference plugin, use
+[`pnpm journey:serve`](docs/verification/2026-10-20/joined-plugin-runtime.md).
+It requires an explicitly disposable loopback PostgreSQL database and isolated
+HOME. Its local model is deterministic and uses no real provider credentials.
+The report records current findings and incomplete journeys; starting the fixture
+does not establish M2/P6 acceptance.
+
 ## Verify changes
 
 The self-hosted demo's private [deployment controller](deploy/coolify/main-deployment.md)
