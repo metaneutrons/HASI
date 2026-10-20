@@ -168,7 +168,10 @@ cases to gold/model-quality results.
 The [provider-observation operator tool](provider-observations.md) adds a
 separate opt-in fixed-evidence path through the existing router and shared
 budget. Its tariff-based estimates and literal citation assertions are not
-semantic scores, gold labels or completed provider comparison results.
+semantic scores, gold labels or completed provider comparison results. The
+[first bounded 35-answer development observations](../verification/2026-10-20/provider-development-run.md)
+record complete usage and concrete citation/grounding defects; formal workflow
+comparison and blinded human adjudication remain open.
 
 ## Three evaluation layers
 
