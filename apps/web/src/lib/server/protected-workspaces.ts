@@ -11,6 +11,7 @@ import {
   type ChatWorkspace,
 } from "../chat-sessions";
 import type { NativeHistoryAccess, NativeHistoryResolver } from "./native-history";
+import { proposalPresentation } from "../proposal-presentation";
 import { knowledgeDocumentSchema, type KnowledgeDocument } from "../knowledge";
 import type { KnowledgeEvidence, WireMessage } from "../chat-contract";
 import {
@@ -219,8 +220,7 @@ function sanitizeDisplayMessages(
       if (message.proposal !== undefined) {
         const proposal = native.proposals.get(message.proposal.id);
         return proposal ? { ...base, proposal, tool: "Aktion · Aktueller Beleg",
-          text: proposal.status === "pending" ? "Prüfe den aktuellen Vorschlag. Nur deine separate Bestätigung kann die Aktion ausführen."
-            : "Aktueller Stand der früher vorgeschlagenen Aktion." } : unavailableMessage(message);
+          text: proposalPresentation(proposal).summary } : unavailableMessage(message);
       }
       // Browser-authored labels, confirmations and free-form tool text are not evidence.
       return unavailableMessage(message);

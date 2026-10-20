@@ -31,7 +31,7 @@ export interface AnnyChatProposal {
   resourceName: string;
   startDate: string;
   endDate: string;
-  status: "pending" | "confirmed" | "outcome_unknown" | "failed" | "invalidated";
+  status: "pending" | "executing" | "confirmed" | "outcome_unknown" | "failed" | "invalidated";
   expiresAt: string;
 }
 
@@ -142,7 +142,7 @@ export const proposalSchema = z
     resourceName: plainTextSchema(160),
     startDate: offsetDateTimeSchema,
     endDate: offsetDateTimeSchema,
-    status: z.enum(["pending", "confirmed", "outcome_unknown", "failed", "invalidated"]),
+    status: z.enum(["pending", "executing", "confirmed", "outcome_unknown", "failed", "invalidated"]),
     expiresAt: offsetDateTimeSchema,
   })
   .refine(({ startDate, endDate }) => Date.parse(endDate) > Date.parse(startDate));
@@ -172,7 +172,7 @@ const pluginToolProposalSchema = z.strictObject({
   resourceName: plainTextSchema(200),
   startDate: z.string().max(64),
   endDate: z.string().max(64),
-  status: z.enum(["pending", "confirmed", "outcome_unknown", "failed", "invalidated"]),
+  status: z.enum(["pending", "executing", "confirmed", "outcome_unknown", "failed", "invalidated"]),
   expiresAt: offsetDateTimeSchema,
 });
 

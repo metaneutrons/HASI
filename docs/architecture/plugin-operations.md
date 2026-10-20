@@ -39,6 +39,24 @@ survive switching; inactive values are omitted from submissions. Field and
 unmapped server diagnostics remain visible. Central setup never substitutes
 for personal consent.
 
+## Retained action receipts
+
+The original host proposal card becomes the completion receipt. Its structured
+status, target, interval and preview are reconstructed from the subject-authorized
+proposal GET on protected workspace saves and reads. A client `confirmed` flag or
+free-text success helper cannot create a receipt. Confirmed Anny cards link to
+bookings; pending confirmation controls are absent for executing, unknown, failed
+and confirmed cards. Proposal retention is bounded by the core record lifetime;
+this card is not a permanent vendor invoice or archival record.
+
+The explicit status check validates the same action details before replacing the
+card status. Executing or unknown outcomes use the dedicated reconciliation read;
+other states use proposal GET. Neither path replays confirmation. A matching
+forward status transition during an own autosave does not abort an in-flight
+confirmation. Changed rights, action metadata, history or reversed status still
+invalidate the mounted conversation. Revoked or unavailable current authority
+removes the retained receipt on protected refresh.
+
 ## Conflicts, disable and removal
 
 | State | Operator/user action |

@@ -21,7 +21,7 @@ import { ChatSessionList } from "@/components/chat-session-list";
 import { MAX_MODEL_STEPS, annyWorkflow, toolNeedsModelFollowUp, toolBatchNeedsModelFollowUp, isAvailabilityFollowUp, isMixedKnowledgeRequest, officePreferenceSearch, isOwnBookingsRequest } from "@/lib/chat-tool-loop";
 import { ActionPreviewDetails, ActionStatusControl } from "@/components/action-status";
 import { classifyProposalFailure } from "@/lib/proposal-failure";
-import { sameActionPreview } from "@/lib/action-preview";
+import { proposalPresentation, readProposalSnapshot, sameProposalDetails } from "@/lib/proposal-presentation";
 import { PersonalConnectionNotice } from "@/components/personal-connection-notice";
 import { ChatServiceConnection } from "@/components/chat-service-connection";
 import { parsePluginAccountList } from "@/lib/plugin-accounts";
@@ -56,19 +56,6 @@ function canRequestCancellation(booking: Booking, now = Date.now()) {
     && Date.parse(booking.startDate) > now;
 }
 
-function sameProposalSnapshot(displayed: AnnyChatProposal, authoritative: AnnyChatProposal) {
-  const sameInstant = (left: string, right: string) => {
-    const leftTime = Date.parse(left);
-    const rightTime = Date.parse(right);
-    return Number.isFinite(leftTime) && leftTime === rightTime;
-  };
-  return displayed.id === authoritative.id
-    && (displayed.action ?? "book") === (authoritative.action ?? "book")
-    && sameActionPreview(displayed.preview, authoritative.preview)
-    && displayed.resourceName === authoritative.resourceName
-    && sameInstant(displayed.startDate, authoritative.startDate)
-    && sameInstant(displayed.endDate, authoritative.endDate);
-}
 
 function roomIdentityKey(resource: Resource) {
   return `${resource.serviceId}:${resource.id}`;
@@ -332,9 +319,10 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   }
 
   function updateProposalStatus(proposalId: string, status: Proposal["status"]) {
+    if (status !== "pending") pendingProposalFocus.current = { id: proposalId, confirmation: false };
     setMessages((previous) => previous.map((message) => {
       const proposal = message.proposal;
-      return proposal?.id === proposalId ? { ...message, proposal: { ...proposal, status } } : message;
+      return proposal?.id === proposalId ? { ...message, text: proposalPresentation({ ...proposal, status }).summary, proposal: { ...proposal, status } } : message;
     }));
   }
 
@@ -783,6 +771,11 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       const proposalUrl = `/api/proposals/${encodeURIComponent(proposal.id)}`;
       const current = await requestForChat<unknown>(proposalUrl);
       const authoritative = parsePluginProposalSnapshot(current, proposal);
+      if (authoritative && authoritative.status !== "pending" && samePluginProposalSnapshot(proposal, authoritative)) {
+        setActiveProposal(null);
+        updateProposalStatus(proposal.id, authoritative.status);
+        return;
+      }
       if (authoritative?.status !== "pending" || !samePluginProposalSnapshot(proposal, authoritative)) {
         setActiveProposal(null);
         const statusText = authoritative?.status === "outcome_unknown"
@@ -797,10 +790,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       const confirmed = parsePluginProposalSnapshot(rawResult, proposal);
       if (confirmed?.status === "confirmed" && samePluginProposalSnapshot(proposal, confirmed)) {
         setActiveProposal(null);
-        addActionResult({
-          text: `Die Aktion „${actionName}“ wurde bestätigt. ${compactPluginToolResult(rawResult)}`,
-          tool: `${toolLabel} · bestätigt`,
-        });
+        updateProposalStatus(proposal.id, "confirmed");
       } else {
         setActiveProposal(null);
         if (confirmed?.status === "outcome_unknown") updateProposalStatus(proposal.id, "outcome_unknown");
@@ -853,10 +843,15 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       await stampMessages();
       const proposalUrl = `/api/proposals/${encodeURIComponent(proposal.id)}`;
       const current = await requestForChat<{ proposal?: AnnyChatProposal & { arguments?: { bookingId?: string } } }>(proposalUrl);
-      const authoritative = current.proposal;
+      const authoritative = readProposalSnapshot(current, proposal);
       const currentAction = authoritative?.action ?? "book";
-      const canonicalBookingId = authoritative?.arguments?.bookingId;
-      if (authoritative?.status !== "pending" || !sameProposalSnapshot(proposal, authoritative)
+      const canonicalBookingId = current.proposal?.arguments?.bookingId;
+      if (authoritative && authoritative.status !== "pending" && sameProposalDetails(proposal, authoritative)) {
+        setActiveProposal(null);
+        updateProposalStatus(proposal.id, authoritative.status);
+        return;
+      }
+      if (authoritative?.status !== "pending" || !sameProposalDetails(proposal, authoritative)
         || (cancellation && (currentAction !== "cancel_booking" || typeof canonicalBookingId !== "string" || !canonicalBookingId.trim()))) {
         setActiveProposal(null);
         const text = authoritative?.status === "outcome_unknown"
@@ -868,10 +863,11 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         return;
       }
       const result = await postForChat<{ proposal: AnnyChatProposal; bookingId?: string; status?: "cancelled" }>(`${proposalUrl}/confirm`, {}, () => { executionAttempted = true; });
-      const responseMatches = sameProposalSnapshot(proposal, result.proposal);
+      const responseProposal = readProposalSnapshot(result, proposal);
+      const responseMatches = responseProposal !== null && sameProposalDetails(proposal, responseProposal);
       const bookingIdMatches = cancellation && typeof result.bookingId === "string"
         && result.bookingId.trim().length > 0 && result.bookingId === canonicalBookingId;
-      const confirmed = responseMatches && result.proposal.status === "confirmed"
+      const confirmed = responseMatches && responseProposal.status === "confirmed"
         && (!cancellation || result.status === "cancelled" && bookingIdMatches);
       if (confirmed) {
         setActiveProposal(null);
@@ -881,19 +877,19 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
               ? { ...message, bookings: message.bookings.map((booking) => booking.id === result.bookingId ? { ...booking, status: "cancelled" } : booking) }
               : message));
           }
-          addActionResult({ text: `Die Stornierung der Testbuchung für ${result.proposal.resourceName} wurde bestätigt. ${formatDateTime(result.proposal.startDate)} bis ${formatTime(result.proposal.endDate)} Uhr.`, tool: "anny · Stornierung ausgeführt" });
+          updateProposalStatus(proposal.id, "confirmed");
         } else {
           setRoomContext(false);
           updateRequest({});
           setChosenRoom(null);
-          addActionResult({ text: `Die Testbuchung für ${result.proposal.resourceName} ist bestätigt. ${formatDateTime(result.proposal.startDate)} bis ${formatTime(result.proposal.endDate)} Uhr.`, tool: "anny · Buchung ausgeführt", confirmed: true });
+          updateProposalStatus(proposal.id, "confirmed");
         }
       } else {
         setActiveProposal(null);
-        if (result.proposal.status === "outcome_unknown") updateProposalStatus(proposal.id, "outcome_unknown");
+        if (responseProposal?.status === "outcome_unknown") updateProposalStatus(proposal.id, "outcome_unknown");
         const text = cancellation
-          ? !responseMatches || result.proposal.status === "outcome_unknown" || result.proposal.status === "confirmed" ? "Die Antwort passt nicht eindeutig zum angezeigten Stornierungsvorschlag. Prüfe deine Buchungen, bevor du einen neuen Vorschlag erstellst." : "Die Stornierung konnte nicht bestätigt werden. Prüfe den Buchungsstatus, bevor du erneut vorgehst."
-          : result.proposal.status === "outcome_unknown" ? "Der Buchungsdienst hat nicht eindeutig geantwortet. Prüfe deine Buchungen, bevor du erneut buchst." : "Die Buchung konnte nicht bestätigt werden. Bitte suche erneut nach freien Zeiten.";
+          ? !responseMatches || responseProposal.status === "outcome_unknown" || responseProposal.status === "confirmed" ? "Die Antwort passt nicht eindeutig zum angezeigten Stornierungsvorschlag. Prüfe deine Buchungen, bevor du einen neuen Vorschlag erstellst." : "Die Stornierung konnte nicht bestätigt werden. Prüfe den Buchungsstatus, bevor du erneut vorgehst."
+          : responseProposal?.status === "outcome_unknown" ? "Der Buchungsdienst hat nicht eindeutig geantwortet. Prüfe deine Buchungen, bevor du erneut buchst." : "Die Buchung konnte nicht bestätigt werden. Bitte suche erneut nach freien Zeiten.";
         addActionResult({ text });
       }
     } catch (cause) {
@@ -976,7 +972,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
                 <div className="chat-message-meta">{message.timestamp ? <time className="chat-message-time" dateTime={message.timestamp.createdAt} title="Servereingang · Europe/Berlin">{formatMessageTime(message.timestamp.createdAt)}</time> : <span className="chat-message-time">Zeitpunkt unbekannt</span>}<ChatMessageCopy message={message} /></div>
                 <div className="chat-message-body">
                   {message.tool && <span className="chat-tool-label"><Check size={13} aria-hidden="true" /> {message.tool}</span>}
-                  <ChatMarkdown source={message.text} />
+                  <ChatMarkdown source={message.proposal ? proposalPresentation(message.proposal).summary : message.text} />
                   {serviceConnection && <ChatServiceConnection
                     key={`${serviceConnection.installationId}:${serviceConnection.requestId}`}
                     installationId={serviceConnection.installationId}
@@ -1001,35 +997,35 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
                     }}
                   />}
                   {message.sources && message.sources.length > 0 && <div className="chat-source-list" aria-label="Gefundene Quellen">{message.sources.map((source) => <Link className="chat-source-card" href={knowledgeDocumentHref(source.id, source.revision)} target="_blank" rel="noreferrer" key={source.id}><BookOpen size={18} aria-hidden="true" /><span><small>{knowledgeSourceLabel(source.sourceSystem, source.synthetic)} · Fassung {source.revision}</small><strong>{source.title}</strong><code>{source.citationId}</code></span><ArrowRight size={16} aria-hidden="true" /></Link>)}</div>}
-                  {pluginProposal && pluginProposalView && <div className="chat-tool-card chat-proposal" role="group" tabIndex={-1} aria-label={pluginProposal.status === "invalidated" ? "Vorschlag ungültig" : "Pluginaktionsvorschlag"} ref={node => { if (node) proposalCards.current.set(pluginProposal.id, node); else proposalCards.current.delete(pluginProposal.id); }}>
-                    <span className="chat-proposal-label">{pluginProposal.status === "invalidated" ? "Vorschlag ungültig" : pluginProposal.status === "outcome_unknown" ? "Ausgang unklar" : "PLUGINAKTION PRÜFEN"}</span>
+                  {pluginProposal && pluginProposalView && <div className="chat-tool-card chat-proposal" role="group" tabIndex={-1} aria-label={pluginProposal.status === "pending" ? "Pluginaktionsvorschlag" : proposalPresentation(pluginProposal).label} ref={node => { if (node) proposalCards.current.set(pluginProposal.id, node); else proposalCards.current.delete(pluginProposal.id); }}>
+                    <span className="chat-proposal-label">{proposalPresentation(pluginProposal).label}</span>
                     <h2>{pluginProposalView.actionTitle}</h2>
                     {pluginProposalView.executionDescription && <p>{pluginProposalView.executionDescription}</p>}
                     <small>Plugin: {pluginProposalView.pluginId} · Werkzeug: <code>{pluginProposalView.executionTool}</code></small>
                     <ActionPreviewDetails preview={pluginProposal.preview} />
                     {pluginProposal.resourceName && <p>{pluginProposal.resourceName}</p>}
                     <p>{compactPluginToolResult(pluginProposal.arguments, 800)}</p>
-                    <small>Vorbereitet durch: {pluginProposalView.preparationTitle} · Gültig bis {formatTime(pluginProposal.expiresAt)} Uhr</small>
-                    {pluginProposal.status !== "invalidated" && pluginProposal.status !== "outcome_unknown" && <button className="button button--primary button--wide" data-proposal-confirm type="button" disabled={busy || activeProposal !== pluginProposal.id} onClick={() => { void confirm(pluginProposal); }}>
+                    {pluginProposal.status === "pending" && <small>Vorbereitet durch: {pluginProposalView.preparationTitle} · Gültig bis {formatTime(pluginProposal.expiresAt)} Uhr</small>}
+                    {pluginProposal.status === "pending" && <button className="button button--primary button--wide" data-proposal-confirm type="button" disabled={busy || activeProposal !== pluginProposal.id} onClick={() => { void confirm(pluginProposal); }}>
                       {activeProposal === pluginProposal.id ? pluginProposalView.confirmLabel : "Vorschlag abgeschlossen oder ersetzt"}
                       <Check size={16} aria-hidden="true" />
                     </button>}
                   </div>}
-                  {message.proposal && message.proposal.action !== "execute_tool" && <div className="chat-tool-card chat-proposal" role="group" tabIndex={-1} aria-label={message.proposal.status === "invalidated" ? "Vorschlag ungültig" : message.proposal.action === "cancel_booking" ? "Stornierungsvorschlag" : "Buchungsvorschlag"} ref={node => { const proposalId = message.proposal?.id; if (!proposalId) return; if (node) proposalCards.current.set(proposalId, node); else proposalCards.current.delete(proposalId); }}>
-                    <span className="chat-proposal-label">{message.proposal.status === "invalidated" ? "Vorschlag ungültig" : message.proposal.status === "outcome_unknown" ? "Ausgang unklar" : message.proposal.action === "cancel_booking" ? "STORNIERUNG PRÜFEN" : "BITTE PRÜFEN UND BESTÄTIGEN"}</span>
+                  {message.proposal && message.proposal.action !== "execute_tool" && <div className="chat-tool-card chat-proposal" role="group" tabIndex={-1} aria-label={message.proposal.status !== "pending" ? proposalPresentation(message.proposal).label : message.proposal.action === "cancel_booking" ? "Stornierungsvorschlag" : "Buchungsvorschlag"} ref={node => { const proposalId = message.proposal?.id; if (!proposalId) return; if (node) proposalCards.current.set(proposalId, node); else proposalCards.current.delete(proposalId); }}>
+                    <span className="chat-proposal-label">{proposalPresentation(message.proposal).label}</span>
                     <h2>{message.proposal.resourceName}</h2>
                     <ActionPreviewDetails preview={message.proposal.preview} />
                     <p>{formatDateTime(message.proposal.startDate)} bis {formatTime(message.proposal.endDate)} Uhr</p>
-                    {message.proposal.action === "cancel_booking" && <p>Diese bestehende Buchung wird erst nach deiner Bestätigung storniert.</p>}
-                    <small>Gültig bis {formatTime(message.proposal.expiresAt)} Uhr · Testumgebung</small>
-                    {message.proposal.status !== "invalidated" && message.proposal.status !== "outcome_unknown" && <button className="button button--primary button--wide" data-proposal-confirm type="button" disabled={busy || activeProposal !== message.proposal.id} onClick={() => { if (message.proposal) void confirm(message.proposal); }}>
+                    {message.proposal.action === "cancel_booking" && message.proposal.status === "pending" && <p>Diese bestehende Buchung wird erst nach deiner Bestätigung storniert.</p>}
+                    {message.proposal.status === "pending" && <small>Gültig bis {formatTime(message.proposal.expiresAt)} Uhr · Testumgebung</small>}
+                    {message.proposal.status === "pending" && <button className="button button--primary button--wide" data-proposal-confirm type="button" disabled={busy || activeProposal !== message.proposal.id} onClick={() => { if (message.proposal) void confirm(message.proposal); }}>
                       {activeProposal === message.proposal.id ? message.proposal.action === "cancel_booking" ? "Stornierung bestätigen" : "Buchung bestätigen" : message.proposal.action === "cancel_booking" ? "Stornierungsvorschlag abgeschlossen oder ersetzt" : "Vorschlag abgeschlossen oder ersetzt"}
                       <Check size={16} aria-hidden="true" />
                     </button>}
                   </div>}
-                  {message.proposal && !message.confirmed && activeProposal !== message.proposal.id && !offline && <ActionStatusControl proposalId={message.proposal.id} status={message.proposal.status} disabled={busy} />}
+                  {message.proposal && activeProposal !== message.proposal.id && <ActionStatusControl key={JSON.stringify(message.proposal)} proposal={message.proposal} disabled={busy} onStatusChange={status => { if (message.proposal) updateProposalStatus(message.proposal.id, status); }} />}
                   {message.bookings && message.bookings.length > 0 && <div className="chat-booking-list">{message.bookings.map((booking) => <div className="chat-tool-card" key={booking.id}><h2>{booking.resourceName}</h2><p>{formatDateTime(booking.startDate)} bis {formatTime(booking.endDate)} Uhr</p><div className="chat-booking-footer"><span className="chat-booking-status">{bookingStatusLabel(booking.status)}</span>{canRequestCancellation(booking) && <button className="chat-card-action" type="button" disabled={busy} onClick={() => void prepareCancellation(booking)}>Stornierung beginnen <ArrowRight size={15} aria-hidden="true" /></button>}</div></div>)}</div>}
-                  {message.confirmed && <Link className="chat-card-action" href="/bookings">Meine Buchungen öffnen <ArrowRight size={15} aria-hidden="true" /></Link>}
+                  {message.proposal && proposalPresentation(message.proposal).bookingsLink && <Link className="chat-card-action" href="/bookings">Meine Buchungen öffnen <ArrowRight size={15} aria-hidden="true" /></Link>}
                 </div>
               </article>
               );

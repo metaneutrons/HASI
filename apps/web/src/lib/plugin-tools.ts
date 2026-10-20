@@ -85,7 +85,7 @@ export interface PluginToolProposal {
   resourceName: string;
   startDate: string;
   endDate: string;
-  status: "pending" | "confirmed" | "outcome_unknown" | "failed" | "invalidated";
+  status: "pending" | "executing" | "confirmed" | "outcome_unknown" | "failed" | "invalidated";
   expiresAt: string;
 }
 
@@ -107,7 +107,7 @@ const genericProposalSchema = z.strictObject({
   resourceName: z.string().max(200),
   startDate: z.string().max(64),
   endDate: z.string().max(64),
-  status: z.enum(["pending", "confirmed", "outcome_unknown", "failed", "invalidated"]),
+  status: z.enum(["pending", "executing", "confirmed", "outcome_unknown", "failed", "invalidated"]),
   expiresAt: z.iso.datetime(),
 });
 

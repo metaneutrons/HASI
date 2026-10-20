@@ -30,6 +30,19 @@ describe("message clipboard content", () => {
     expect(text).not.toContain("Hidden retrieval context");
   });
 
+  it("copies an authorized completed card as a receipt, without stale preparation text or internal IDs", () => {
+    const receipt: ChatMessage = { ...message, text: "STALE PREPARATION TEXT", proposal: {
+      action: "cancel_booking", id: "private-proposal-id", resourceName: "Tisch 1",
+      startDate: "2026-10-19T06:00:00Z", endDate: "2026-10-19T14:00:00Z",
+      status: "confirmed", expiresAt: "2026-10-17T16:00:00Z",
+    } };
+    expect(chatMessageMarkdownSource(receipt)).toBe("Die Stornierung wurde bestätigt.");
+    const text = chatMessageCopyText(receipt, origin);
+    expect(text).toContain("Stornierung bestätigt\nTisch 1");
+    expect(text).toContain("08:00 bis 16:00 Uhr");
+    expect(text).not.toMatch(/STALE|private-|Bestätigung erforderlich|Stornierungsvorschlag/u);
+  });
+
   it("distinguishes unchecked candidates from checked availability and pending proposals", () => {
     const resource = { id: "internal-resource", serviceId: "internal-service", name: "Tisch 1", description: "", location: "1J", features: [], capacity: null, kind: "workplace" as const, parentName: "Büro 1", officeWorkplaceCount: 2 };
     const candidate = chatMessageCopyText({ ...message, rooms: [{ resource, checked: false, intervals: [] }] }, origin);
