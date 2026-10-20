@@ -6,6 +6,26 @@ import { knowledgeDocumentV2Schema as knowledgeDocumentSchema } from '@hasi/know
 // Host transport/provenance metadata is not part of the document contract.
 export const knowledgeSearchResultSchema = z.object({ documents: z.array(knowledgeDocumentSchema).max(5), contextId: z.uuid().optional() });
 export type KnowledgeDocument = z.infer<typeof knowledgeDocumentSchema>;
+export type KnowledgeSearchResult = z.infer<typeof knowledgeSearchResultSchema>;
+export interface KnowledgeSourceMessage {
+  sources: KnowledgeDocument[];
+  sourceContextId?: string;
+}
+
+export function knowledgeSourceMessage(result: KnowledgeSearchResult): KnowledgeSourceMessage {
+  return {
+    sources: result.documents,
+    ...(result.contextId ? { sourceContextId: result.contextId } : {}),
+  };
+}
+
+export function knowledgeSourceSummary(documents: readonly Pick<KnowledgeDocument, "synthetic">[]): string {
+  if (documents.length === 0) return "Keine passenden, aktuell freigegebenen Quellen gefunden.";
+  return documents.every(document => document.synthetic)
+    ? "Gefundene Demoquellen."
+    : "Gefundene freigegebene Quellen.";
+}
+
 export function knowledgeDocumentHref(id: string, revision?: number) { return `/sources/${knowledgeDocumentId.parse(id)}${revision === undefined ? "" : `?revision=${String(z.number().int().positive().parse(revision))}`}`; }
 export function knowledgeSourceLabel(source: KnowledgeDocument["sourceSystem"], synthetic = true) { return `${source === "service_it" ? "Service IT" : "Intranet"}${synthetic ? " · Demo" : ""}`; }
 

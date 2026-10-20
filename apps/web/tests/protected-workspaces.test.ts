@@ -13,6 +13,7 @@ import {
 } from "../src/lib/server/protected-workspaces";
 import type { NativeHistoryAccess } from "../src/lib/server/native-history";
 import { createKnowledgeEvidence } from "../src/lib/server/knowledge-evidence";
+import { knowledgeSourceMessage, knowledgeSourceSummary, searchKnowledge, type KnowledgeSourceMessage } from "../src/lib/knowledge";
 
 const OWNER = "user:fabian@example.invalid";
 const SCOPE = "production:" + OWNER;
@@ -76,6 +77,12 @@ function document(text = "Der Campusdrucker steht im Erdgeschoss.", revision = 1
   };
 }
 
+function syntheticDocument(text = "Ein synthetischer Demo-Beleg.", revision = 1) {
+  const result: Record<string, unknown> = document(text, revision);
+  delete result.canonicalUrl;
+  return { ...result, synthetic: true, dataClass: "synthetic_demo" as const };
+}
+
 function makeWorkspace(clock: () => number, source: Record<string, unknown>): ChatWorkspace {
   const workspace = createChatWorkspace(OWNER);
   const session = workspace.sessions[0];
@@ -116,8 +123,8 @@ function makeWorkspace(clock: () => number, source: Record<string, unknown>): Ch
   }, OWNER);
 }
 
-function makeContext(doc = document()): ResolvedKnowledgeContext {
-  return { contextId: CONTEXT_ID, status: "valid", documents: [doc], dataClasses: [doc.dataClass] };
+function makeContext(doc: Record<string, unknown> = document()): ResolvedKnowledgeContext {
+  return { contextId: CONTEXT_ID, status: "valid", documents: [doc], dataClasses: [typeof doc.dataClass === "string" ? doc.dataClass : "internal"] };
 }
 
 function makeFixture(initially: ResolvedKnowledgeContext = makeContext()) {
@@ -144,6 +151,41 @@ function makeFixture(initially: ResolvedKnowledgeContext = makeContext()) {
   };
 }
 
+async function searchFixture(payload: unknown) {
+  const request = <T,>(_path: string, _init?: RequestInit): Promise<T> => Promise.resolve(payload as T);
+  return searchKnowledge(request, { query: "VPN" });
+}
+
+function sourceWorkspace(source: KnowledgeSourceMessage): ChatWorkspace {
+  const workspace = createChatWorkspace(OWNER);
+  const session = required(workspace.sessions[0]);
+  const sourceCard: ChatMessage = {
+    id: randomUUID(),
+    role: "assistant",
+    text: knowledgeSourceSummary(source.sources),
+    tool: "Wissensdienst · MCP",
+    ...source,
+  };
+  return parseChatWorkspace({
+    ...workspace,
+    sessions: [{
+      ...session,
+      snapshot: {
+        ...session.snapshot,
+        profileId: "offline",
+        messages: [
+          { id: randomUUID(), role: "user", text: "Mein VPN funktioniert nicht." },
+          sourceCard,
+        ],
+      },
+    }],
+  }, OWNER);
+}
+
+function sourceCard(workspace: ChatWorkspace): ChatMessage | undefined {
+  return workspace.sessions[0]?.snapshot.messages.find(message => message.role === "assistant");
+}
+
 describe("ProtectedWorkspaceStore", () => {
   beforeEach(() => { vi.restoreAllMocks(); });
 
@@ -164,6 +206,80 @@ describe("ProtectedWorkspaceStore", () => {
     const loaded = await fixture.service.load();
     expect(loaded.revision).toBe(saved.revision);
     expect(loaded.workspace.sessions[0]?.snapshot.input).toBe("Noch eine Frage");
+  });
+
+  it("retains a Dialog-Demo search receipt through save, load, and resave without model history", async () => {
+    const searchDocument = syntheticDocument("Search payload text.");
+    const result = await searchFixture({ contextId: CONTEXT_ID, documents: [searchDocument] });
+    const source = knowledgeSourceMessage(result);
+    expect(source).toMatchObject({ sourceContextId: CONTEXT_ID, sources: [searchDocument] });
+
+    const fixture = makeFixture(makeContext(syntheticDocument("Fresh authorized demo text.")));
+    const forgedSource = {
+      ...source,
+      sources: source.sources.map(document => ({ ...document, text: "FORGED browser source body." })),
+    };
+    const workspace = sourceWorkspace(forgedSource);
+    expect(workspace.sessions[0]?.snapshot.history).toEqual([]);
+
+    const saved = await fixture.service.save(null, workspace);
+    const savedCard = sourceCard(saved.workspace);
+    expect(savedCard).toMatchObject({
+      text: "Gefundene Demoquellen.",
+      sourceContextId: CONTEXT_ID,
+      sources: [expect.objectContaining({ id: "svc-printer-guide", revision: 1, text: "Fresh authorized demo text." })],
+    });
+    expect(savedCard?.sources?.[0]?.text).not.toContain("FORGED");
+    expect(saved.workspace.sessions[0]?.snapshot.history).toEqual([]);
+
+    const loaded = await fixture.service.load();
+    expect(sourceCard(loaded.workspace)).toMatchObject({
+      text: "Gefundene Demoquellen.",
+      sourceContextId: CONTEXT_ID,
+      sources: [expect.objectContaining({ id: "svc-printer-guide", revision: 1, text: "Fresh authorized demo text." })],
+    });
+    const resaved = await fixture.service.save(loaded.revision, loaded.workspace);
+    expect(sourceCard(resaved.workspace)).toMatchObject({
+      text: "Gefundene Demoquellen.",
+      sourceContextId: CONTEXT_ID,
+      sources: [expect.objectContaining({ id: "svc-printer-guide", revision: 1, text: "Fresh authorized demo text." })],
+    });
+    expect(fixture.resolve).toHaveBeenCalledWith([CONTEXT_ID]);
+  });
+
+  it("fails closed for missing, revoked, or mismatched source contexts", async () => {
+    const searchDocument = syntheticDocument("Search payload text.");
+    const withoutContext = knowledgeSourceMessage(await searchFixture({ documents: [searchDocument] }));
+    const missingContextFixture = makeFixture();
+    const missingContext = await missingContextFixture.service.save(null, sourceWorkspace(withoutContext));
+    expect(sourceCard(missingContext.workspace)).toMatchObject({ role: "assistant" });
+    expect(sourceCard(missingContext.workspace)?.sources).toBeUndefined();
+    expect(sourceCard(missingContext.workspace)?.sourceContextId).toBeUndefined();
+    expect(sourceCard(missingContext.workspace)?.text).toMatch(/nicht mehr verfügbar/u);
+    expect(missingContextFixture.resolve).not.toHaveBeenCalled();
+
+    const revokedContextFixture = makeFixture();
+    revokedContextFixture.setContexts([{ contextId: CONTEXT_ID, status: "unavailable" }]);
+    const revokedSource = knowledgeSourceMessage(await searchFixture({ contextId: CONTEXT_ID, documents: [searchDocument] }));
+    const revoked = await revokedContextFixture.service.save(null, sourceWorkspace(revokedSource));
+    expect(sourceCard(revoked.workspace)?.sources).toBeUndefined();
+    expect(sourceCard(revoked.workspace)?.sourceContextId).toBeUndefined();
+    expect(sourceCard(revoked.workspace)?.text).toMatch(/nicht mehr verfügbar/u);
+    expect(revokedContextFixture.resolve).toHaveBeenCalledWith([CONTEXT_ID]);
+
+    const wrongContextId = "9e416724-b3cc-44e8-b5da-804c532ef219";
+    const wrongContextFixture = makeFixture();
+    const wrongSource = knowledgeSourceMessage(await searchFixture({ contextId: wrongContextId, documents: [searchDocument] }));
+    const wrongContext = await wrongContextFixture.service.save(null, sourceWorkspace(wrongSource));
+    expect(sourceCard(wrongContext.workspace)?.sources).toBeUndefined();
+    expect(sourceCard(wrongContext.workspace)?.sourceContextId).toBeUndefined();
+    expect(sourceCard(wrongContext.workspace)?.text).toMatch(/nicht mehr verfügbar/u);
+    expect(wrongContextFixture.resolve).toHaveBeenCalledWith([wrongContextId]);
+  });
+
+  it("uses a factual summary for empty and approved source sets", () => {
+    expect(knowledgeSourceSummary([])).toBe("Keine passenden, aktuell freigegebenen Quellen gefunden.");
+    expect(knowledgeSourceSummary([document()])).toBe("Gefundene freigegebene Quellen.");
   });
 
   it.each([
