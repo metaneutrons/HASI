@@ -31,6 +31,9 @@ type JsonRecord = Record<string, unknown>;
 interface ResultObservations {
   referenceReadResults: number;
   omittedResults: number;
+  priorReferenceReadResults: number;
+  priorReferenceAnswers: number;
+  requestsWithPriorReferenceContext: number;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -156,6 +159,47 @@ function readStatusCallIdsAfterUser(messages: readonly unknown[], userIndex: num
   return callIds;
 }
 
+function readStatusCallIdsBeforeUser(messages: readonly unknown[], userIndex: number): Set<string> {
+  const expectedName = toolHash('read_status');
+  const callIds = new Set<string>();
+  for (let index = 0; index < userIndex; index += 1) {
+    const message = messages[index];
+    if (!isRecord(message) || message.role !== 'assistant' || !Array.isArray(message.tool_calls)) continue;
+    for (const call of message.tool_calls.slice(0, MAX_TOOLS)) {
+      if (!isRecord(call) || typeof call.id !== 'string' || call.id.length === 0 || call.id.length > 128) continue;
+      const functionValue = isRecord(call.function) ? call.function : undefined;
+      const name = typeof functionValue?.name === 'string' ? functionValue.name : call.name;
+      if (name === expectedName) callIds.add(call.id);
+    }
+  }
+  return callIds;
+}
+
+function priorReferenceContext(messages: readonly unknown[], userIndex: number): {
+  referenceReadResults: number;
+  referenceAnswers: number;
+} {
+  const readStatusCallIds = readStatusCallIdsBeforeUser(messages, userIndex);
+  let referenceReadResults = 0;
+  let referenceAnswers = 0;
+  for (let index = 0; index < userIndex; index += 1) {
+    const message = messages[index];
+    if (!isRecord(message)) continue;
+    if (message.role === 'assistant'
+      && typeof message.content === 'string'
+      && message.content === STATIC_READ_STATUS_RESULT) {
+      referenceAnswers += 1;
+    }
+    if (message.role === 'tool'
+      && typeof message.tool_call_id === 'string'
+      && readStatusCallIds.has(message.tool_call_id)
+      && hasReferenceReadData(message.content)) {
+      referenceReadResults += 1;
+    }
+  }
+  return { referenceReadResults, referenceAnswers };
+}
+
 function hasReferenceReadData(content: unknown): boolean {
   if (typeof content !== 'string' || Buffer.byteLength(content, 'utf8') > MAX_TOOL_RESULT_BYTES) return false;
   let parsed: unknown;
@@ -265,6 +309,13 @@ async function handleRequest(
     return;
   }
 
+  const priorContext = priorReferenceContext(body.messages, userIndex);
+  observations.priorReferenceReadResults += priorContext.referenceReadResults;
+  observations.priorReferenceAnswers += priorContext.referenceAnswers;
+  if (priorContext.referenceReadResults > 0 || priorContext.referenceAnswers > 0) {
+    observations.requestsWithPriorReferenceContext += 1;
+  }
+
   const requestId = nextRequestId();
   const toolResults = toolResponsesAfterUser(body.messages, userIndex);
   if (toolResults.length > 0) {
@@ -304,7 +355,13 @@ export async function startJourneyModel(options: JourneyModelOptions): Promise<{
   close: () => Promise<void>;
 }> {
   let requestCount = 0;
-  const observations: ResultObservations = { referenceReadResults: 0, omittedResults: 0 };
+  const observations: ResultObservations = {
+    referenceReadResults: 0,
+    omittedResults: 0,
+    priorReferenceReadResults: 0,
+    priorReferenceAnswers: 0,
+    requestsWithPriorReferenceContext: 0,
+  };
   const sockets = new Set<Duplex>();
   const server: Server = createServer({ key: options.key, cert: options.cert }, (request, response) => {
     void handleRequest(request, response, options.token, () => {

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiRequest } from '@/lib/api';
+import { useSession } from './session-provider';
+import { revalidateProtectedChatWorkspace, useChatWorkspaceStore } from './chat-sidebar-context';
 import {
   getPluginAccountHistoryLabel,
   parsePluginAccountBegin,
@@ -44,6 +46,8 @@ function formatDate(value: string): string {
 
 /** Personal provider consent is separate from centrally managed service setup. */
 export function PluginAccountPanel() {
+  const { mode } = useSession();
+  const store = useChatWorkspaceStore();
   const [accounts, setAccounts] = useState<PluginAccountPanelAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<Action>(null);
@@ -131,11 +135,16 @@ export function PluginAccountPanel() {
     }
     setBusy({ installationId: account.installationId, operation: 'disconnect' });
     setError(null);
+    const release = mode === 'oidc'
+      ? store.beginAuthorityChange('Kontorechte werden aktualisiert. Geschützte Antworten sind vorübergehend ausgeblendet.')
+      : () => undefined;
     try {
       const result = parsePluginAccountRevoke(await request<unknown>(`/api/plugin-accounts/${encodeURIComponent(account.installationId)}/disconnect`, {
         method: 'POST',
         body: JSON.stringify({ expectedAuthorityRevision: account.authorityRevision }),
       }));
+      release();
+      if (mode === 'oidc') await revalidateProtectedChatWorkspace(store);
       if (!mounted.current) return;
       setConfirmingDisconnect(null);
       setNotice(result.revocationStatus === 'confirmed'
@@ -145,6 +154,7 @@ export function PluginAccountPanel() {
     } catch (cause) {
       if (mounted.current) setError(requestFailureMessage(cause));
     } finally {
+      release();
       if (mounted.current) setBusy(null);
     }
   }
@@ -152,11 +162,16 @@ export function PluginAccountPanel() {
   async function retryRevocation(account: PluginAccountPanelAccount) {
     setBusy({ installationId: account.installationId, operation: 'retry' });
     setError(null);
+    const release = mode === 'oidc'
+      ? store.beginAuthorityChange('Kontorechte werden aktualisiert. Geschützte Antworten sind vorübergehend ausgeblendet.')
+      : () => undefined;
     try {
       const result = parsePluginAccountRevoke(await request<unknown>(`/api/plugin-accounts/${encodeURIComponent(account.installationId)}/revocation/retry`, {
         method: 'POST',
         body: JSON.stringify({ expectedAuthorityRevision: account.authorityRevision }),
       }));
+      release();
+      if (mode === 'oidc') await revalidateProtectedChatWorkspace(store);
       if (!mounted.current) return;
       setNotice(result.revocationStatus === 'confirmed'
         ? 'Der Anmeldedienst hat den Widerruf bestätigt.'
@@ -165,6 +180,7 @@ export function PluginAccountPanel() {
     } catch (cause) {
       if (mounted.current) setError(requestFailureMessage(cause));
     } finally {
+      release();
       if (mounted.current) setBusy(null);
     }
   }

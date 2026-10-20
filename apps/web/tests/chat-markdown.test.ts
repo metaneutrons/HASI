@@ -71,7 +71,7 @@ describe("chat Markdown renderer", () => {
       source: `${token} [knowledge:service_it:svc-001:2] [knowledge:intranet:int-002:1]`,
       citations: [citation],
     }));
-    expect(html).toMatch(/<a class="[^"]+" href="\/sources\/svc-001\?revision=1" aria-label=/u);
+    expect(html).toMatch(/<a\b[^>]*class="[^"]+"[^>]*>/u);
     expect(html).toContain(`href=\"/sources/svc-001?revision=1\"`);
     expect(html).toContain("aria-label=\"Quelle 1: Demo: WLAN; Service IT · Demo; Fassung 1\"");
     expect(html).toContain(">[1]</a>");

@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-20",
+  "scope": "bounded local synthetic personal-disconnect/history-context proof, not complete M2 acceptance",
+  "base": "b1272f6186b8a0d6753796a6ed2c2c2a3bf09d42",
+  "node": "v24.21.0",
+  "apiReplicas": 2,
+  "independentReferencePid": 14915,
+  "metadataSha256": "73950829dce4fb2e33082289f2e99a7e9d75332f6d2c170431bdca5762cca11d",
+  "priorFailedUiProbeMetadataSha256": "ecebe07c8c270ca424a7ad4faa2fb5866368813616a483ee1d6e251872b72e3c",
+  "observations": [
+    {
+      "stage": "first authorized read",
+      "calls": 2,
+      "currentReadResults": 1,
+      "priorReadResults": 0,
+      "priorAnswers": 0,
+      "requestsWithPriorReferenceContext": 0
+    },
+    {
+      "stage": "second authorized read",
+      "calls": 4,
+      "currentReadResults": 2,
+      "priorReadResults": 2,
+      "priorAnswers": 2,
+      "requestsWithPriorReferenceContext": 2
+    },
+    {
+      "stage": "after disconnect and third prompt",
+      "calls": 5,
+      "currentReadResults": 2,
+      "priorReadResults": 2,
+      "priorAnswers": 2,
+      "requestsWithPriorReferenceContext": 2
+    }
+  ],
+  "realProviderCalls": 0,
+  "marks": 0,
+  "executions": 0,
+  "invocationRows": 2,
+  "immediateSpaReturnOldSource": false,
+  "immediateSpaReturnOldAnswer": false,
+  "draftRetainedInOriginalChat": true,
+  "reloadOldSource": false,
+  "reloadOldAnswer": false,
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "documentWidth": 390
+  },
+  "browserEngineVersion": "unavailable",
+  "sourceSha256": {
+    "apps/web/src/lib/chat-workspace-store.ts": "00f22a6242a5801b2f47265c3a0320d20de00311409fe4b79521b6473b49979a",
+    "apps/web/src/lib/protected-workspace-refresh.ts": "52ff51ebcc2431f74b9667341b7c431e68d1cc987e60571a6c5e89f1f782563d",
+    "apps/web/src/components/chat-sidebar-context.tsx": "d454501e7cfaee1918ee00483959e75ad570e4e6c44d3e48b0ca9cc3640d1d92",
+    "apps/web/src/components/plugin-account-panel.tsx": "97c4d9ef4a744573f3bbdc2a7cb0fbd81799a7e82076de17b8c8d59bd950b0ce",
+    "apps/web/src/components/assistant-page.tsx": "186b731961c78dba6bc7809c885018440da641a372ba8fd402a78f3906fd4d9e",
+    "scripts/plugin-journey-model.ts": "fc0d2c94a54c172e534418e3c6f13fec0da9380829c023e2153becd3078b4521"
+  }
+}

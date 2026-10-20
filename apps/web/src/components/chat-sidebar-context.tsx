@@ -10,6 +10,7 @@ import {
   type ProtectedWorkspaceResult,
 } from "@/lib/chat-workspace-store";
 import { chatStorageKey, parseChatWorkspace, type ChatWorkspace } from "@/lib/chat-sessions";
+import { refreshProtectedWorkspace } from "@/lib/protected-workspace-refresh";
 
 const ChatWorkspaceStoreContext = createContext<ChatWorkspaceStore | null>(null);
 const WORKSPACE_ENDPOINT = "/api/chat/workspace";
@@ -33,6 +34,14 @@ async function readProtectedWorkspace(ownerId: string): Promise<ProtectedWorkspa
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) throw new Error("protected workspace unavailable");
   return resultFromPayload(payload, ownerId);
+}
+
+export function revalidateProtectedChatWorkspace(store: ChatWorkspaceStore): Promise<boolean> {
+  const ownerId = store.getSnapshot().workspace.ownerId;
+  return refreshProtectedWorkspace(store, () => readProtectedWorkspace(ownerId), {
+    recover: true,
+    failureMessage: "Die Kontorechte konnten nicht erneut geprüft werden. Geschützte Antworten bleiben ausgeblendet.",
+  });
 }
 
 async function writeProtectedWorkspace(workspace: ChatWorkspace, expectedRevision: string | null, ownerId: string): Promise<ProtectedWorkspaceResult> {
@@ -132,26 +141,25 @@ function ProtectedStoreWorkspaceProvider({ store, children }: { store: ChatWorks
   const ownerId = view.workspace.ownerId;
 
   const refreshRemote = useCallback(async () => {
-    if (refreshing.current || store.hasPendingWrites() || store.hasBusyChats()) return;
+    if (refreshing.current) return;
     refreshing.current = true;
     try {
-      const remote = await readProtectedWorkspace(ownerId);
-      store.applyRemoteWorkspace(remote.workspace, remote.revision);
-    } catch {
-      store.redactProtectedContent("Die Quellenfreigabe konnte nicht geprüft werden. Geschützte Antworten wurden ausgeblendet.");
+      await refreshProtectedWorkspace(store, () => readProtectedWorkspace(ownerId), {
+        failureMessage: "Die Quellenfreigabe konnte nicht geprüft werden. Geschützte Antworten wurden ausgeblendet.",
+      });
     } finally {
       refreshing.current = false;
     }
   }, [ownerId, store]);
 
   const retry = useCallback(async () => {
-    if (retrying || store.hasBusyChats()) return;
+    if (retrying || store.hasBusyChats() || store.hasAuthorityChange()) return;
     setRetrying(true);
     try {
-      const remote = await readProtectedWorkspace(ownerId);
-      store.retryWithRemoteWorkspace(remote.workspace, remote.revision);
-    } catch {
-      store.redactProtectedContent("Der geschützte Chat-Speicher ist weiterhin nicht erreichbar. Geschützte Antworten wurden ausgeblendet.");
+      await refreshProtectedWorkspace(store, () => readProtectedWorkspace(ownerId), {
+        recover: true,
+        failureMessage: "Der geschützte Chat-Speicher ist weiterhin nicht erreichbar. Geschützte Antworten wurden ausgeblendet.",
+      });
     } finally {
       setRetrying(false);
     }
@@ -171,7 +179,7 @@ function ProtectedStoreWorkspaceProvider({ store, children }: { store: ChatWorks
   return <ChatWorkspaceStoreProvider store={store}>
     {view.protectedPersistence && view.protectedPersistence.state !== "saved" && <div className="chat-storage-notice" role="status">
       <span>{view.protectedPersistence.message ?? "Der geschützte Chat-Speicher ist nicht synchronisiert."}</span>
-      <button type="button" disabled={retrying || store.hasBusyChats()} onClick={() => { void retry(); }}>{retrying ? "Wird erneut versucht …" : "Erneut versuchen"}</button>
+      <button type="button" disabled={retrying || store.hasBusyChats() || store.hasAuthorityChange()} onClick={() => { void retry(); }}>{retrying ? "Wird erneut versucht …" : "Erneut versuchen"}</button>
     </div>}
     {children}
   </ChatWorkspaceStoreProvider>;

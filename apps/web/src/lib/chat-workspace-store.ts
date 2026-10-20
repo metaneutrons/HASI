@@ -77,7 +77,9 @@ function preserveDrafts(remote: ChatWorkspace, local: ChatWorkspace, ownerId: st
       snapshot: { ...current.snapshot, messages: [], history: [], activeResult: null, activeProposal: null },
     });
   }
-  const activeId = remoteIds.has(remote.activeId) ? remote.activeId : sessions[0]?.id;
+  // Revalidation owns protected content, not the user's newer navigation.
+  const activeId = sessions.some(session => session.id === local.activeId)
+    ? local.activeId : remoteIds.has(remote.activeId) ? remote.activeId : sessions[0]?.id;
   return parseChatWorkspace({ version: 1, ownerId, activeId, sessions }, ownerId);
 }
 
@@ -188,6 +190,7 @@ export function createChatWorkspaceStore(
   let remotePendingCount = 0;
   let remoteBlocked = false;
   let remoteGeneration = 0;
+  let authorityChanges = 0;
   let workspaceVersion = 0;
   const liveAvailability = new LiveRoomAvailability();
   let availabilityTimer: ReturnType<typeof setTimeout> | undefined;
@@ -398,6 +401,21 @@ export function createChatWorkspaceStore(
     dismissNotice() { view = { ...view, notice: null }; emit(); },
     hasPendingWrites() { return timer !== undefined || remotePendingCount > 0; },
     hasBusyChats() { return Object.values(view.busy).some(Boolean); },
+    getAuthorityVersion() { return `${String(remoteGeneration)}:${String(view.accessEpoch)}`; },
+    hasAuthorityChange() { return authorityChanges > 0; },
+    beginAuthorityChange(message: string) {
+      authorityChanges += 1;
+      redactProtectedContent(message);
+      let released = false;
+      return () => {
+        if (released) return;
+        released = true;
+        authorityChanges -= 1;
+        remoteGeneration += 1;
+        view = { ...view };
+        emit();
+      };
+    },
     applyRemoteWorkspace(workspace: ChatWorkspace, revision: string | null) {
       applyRemoteWorkspace(workspace, revision, true);
     },

@@ -1,4 +1,5 @@
 import ReactMarkdown, { type Components } from "react-markdown";
+import Link from "next/link";
 import remarkGfm from "remark-gfm";
 import { knowledgeCitationHref, normalizeKnowledgeCitation, type KnowledgeCitation, type KnowledgeCitationOrigin } from "@/lib/knowledge-citations";
 import styles from "./chat-markdown.module.css";
@@ -95,16 +96,17 @@ function markdownComponents(citations: ReadonlyMap<string, CitationRender>, onCi
       const marker = properties?.["data-knowledge-citation"];
       const citation = typeof marker === "string" ? citations.get(marker) : undefined;
       if (citation && href === citation.href) {
-        return <a
+        return <Link
           className={styles.citation}
           href={citation.href}
+          prefetch={false}
           aria-label={citation.accessibleLabel}
           title={citation.accessibleLabel}
           onClick={(event) => {
             if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
             onCitationOpen?.(citation);
           }}
-        >{children}</a>;
+        >{children}</Link>;
       }
 
       const safeHref = href ? validatedHttpUrl(href) : undefined;

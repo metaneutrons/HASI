@@ -53,3 +53,5 @@ physical iPhone/assistive technology, formal UI latency, full M7 qualification o
 institutional authorization is claimed. Those criteria remain in their existing
 milestones. The separately reported Anny preparation/confirmation mismatch and
 unsupported external-portal advice are not fixed by this change.
+
+The [normal-copy follow-up](knowledge-copy-followup.md) separately removes opaque identifiers from readable copied output while preserving explicit Markdown source copying.
