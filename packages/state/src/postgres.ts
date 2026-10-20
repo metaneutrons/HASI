@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { Pool, type PoolConfig } from 'pg';
-import type { JsonStore } from './store.js';
-import { cloneJsonValue, isUuidRevision, validateExpiry, validateKey, validateNamespace } from './store.js';
+import { Pool, type PoolClient, type PoolConfig } from 'pg';
+import type { FencedReadResult, FencedJsonStore, StateFence } from './store.js';
+import {
+  cloneJsonValue,
+  isUuidRevision,
+  snapshotStateFences,
+  validateExpiry,
+  validateKey,
+  validateNamespace,
+} from './store.js';
 
 export interface PostgresJsonStoreOptions {
   /** An injected pool remains owned by the caller and is not ended by close(). */
@@ -14,6 +21,19 @@ interface JsonStateRow {
   readonly revision: string;
   readonly value: unknown;
 }
+
+interface StateFenceRow {
+  readonly key: string;
+  readonly revision: string;
+}
+
+interface LockedKeyRow {
+  readonly key: string;
+}
+
+type FencedTransactionResult<T> =
+  | { readonly matched: false }
+  | { readonly matched: true; readonly value: T };
 
 const CREATE_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS hasi_state_v1 (
@@ -30,13 +50,35 @@ const CREATE_EXPIRY_INDEX_SQL = `
   ON hasi_state_v1 (namespace, expires_at)
   WHERE expires_at IS NOT NULL
 `;
+const LOCK_FENCED_KEYS_SQL = `
+  SELECT key
+  FROM hasi_state_v1
+  WHERE namespace = $1
+    AND key = ANY($2::text[])
+  ORDER BY key COLLATE "C"
+  FOR UPDATE
+`;
+const VERIFY_FENCES_SQL = `
+  SELECT key, revision
+  FROM hasi_state_v1
+  WHERE namespace = $1
+    AND key = ANY($2::text[])
+    AND (expires_at IS NULL OR expires_at > clock_timestamp())
+`;
+const READ_FENCED_TARGET_SQL = `
+  SELECT revision, value
+  FROM hasi_state_v1
+  WHERE namespace = $1
+    AND key = $2
+    AND (expires_at IS NULL OR expires_at > clock_timestamp())
+`;
 
 const SCHEMA_LOCK_CLASS = 1_212_242_761;
 const SCHEMA_LOCK_ID = 1_448_232_001;
 const MAX_EXPIRED_ROWS_PER_BATCH = 1_000;
 
 /** A PostgreSQL-backed JSON store. Call initialize() before using it. */
-export class PostgresJsonStore implements JsonStore {
+export class PostgresJsonStore implements FencedJsonStore {
   private readonly pool: Pool;
   private readonly ownsPool: boolean;
   private initialized = false;
@@ -92,6 +134,22 @@ export class PostgresJsonStore implements JsonStore {
     return { revision: row.revision, value: cloneJsonValue(row.value) };
   }
 
+  async readWithFence(key: string, fences: readonly StateFence[]): Promise<FencedReadResult> {
+    validateKey(key);
+    const fenceSnapshot = snapshotStateFences(key, fences);
+    this.ensureInitialized();
+
+    const result = await this.withFencedRowsLocked(key, fenceSnapshot, async (client) => {
+      const target = await client.query<JsonStateRow>(READ_FENCED_TARGET_SQL, [this.namespace, key]);
+      const row = target.rows[0];
+      if (row === undefined) return undefined;
+      return { revision: row.revision, value: cloneJsonValue(row.value) };
+    });
+    if (!result.matched) return { matched: false };
+    if (result.value === undefined) return { matched: true };
+    return { matched: true, entry: result.value };
+  }
+
   async compareAndSet(key: string, expectedRevision: string | null, value: unknown, expiresAt?: number): Promise<boolean> {
     validateKey(key);
     this.ensureInitialized();
@@ -131,6 +189,56 @@ export class PostgresJsonStore implements JsonStore {
       [...values, expectedRevision],
     );
     return (result.rowCount ?? result.rows.length) > 0;
+  }
+
+  async compareAndSetWithFence(
+    key: string,
+    expectedRevision: string | null,
+    value: unknown,
+    fences: readonly StateFence[],
+    expiresAt?: number,
+  ): Promise<boolean> {
+    validateKey(key);
+    const fenceSnapshot = snapshotStateFences(key, fences);
+    this.ensureInitialized();
+    const storedValue = cloneJsonValue(value);
+    const expiration = validateExpiry(expiresAt);
+    if (expectedRevision !== null && !isUuidRevision(expectedRevision)) return false;
+
+    const revision = randomUUID();
+    const values = [this.namespace, key, JSON.stringify(storedValue), revision, expiration === null ? null : new Date(expiration)];
+    const result = await this.withFencedRowsLocked(key, fenceSnapshot, async (client) => {
+      if (expectedRevision === null) {
+        const inserted = await client.query(
+          `INSERT INTO hasi_state_v1 (namespace, key, value, revision, expires_at)
+           VALUES ($1, $2, $3::jsonb, $4::uuid, $5::timestamptz)
+           ON CONFLICT (namespace, key) DO UPDATE
+           SET value = EXCLUDED.value,
+               revision = EXCLUDED.revision,
+               expires_at = EXCLUDED.expires_at
+           WHERE hasi_state_v1.expires_at IS NOT NULL
+             AND hasi_state_v1.expires_at <= clock_timestamp()
+           RETURNING revision`,
+          values,
+        );
+        return (inserted.rowCount ?? inserted.rows.length) > 0;
+      }
+
+      const updated = await client.query(
+        `UPDATE hasi_state_v1
+         SET value = $3::jsonb,
+             revision = $4::uuid,
+             expires_at = $5::timestamptz
+         WHERE namespace = $1
+           AND key = $2
+           AND revision = $6::uuid
+           AND (expires_at IS NULL OR expires_at > clock_timestamp())
+         RETURNING revision`,
+        [...values, expectedRevision],
+      );
+      return (updated.rowCount ?? updated.rows.length) > 0;
+    });
+    return result.matched && result.value;
   }
 
   async delete(key: string): Promise<void> {
@@ -173,5 +281,59 @@ export class PostgresJsonStore implements JsonStore {
   private ensureInitialized(): void {
     if (this.closed) throw new Error('PostgresJsonStore is closed');
     if (!this.initialized) throw new Error('PostgresJsonStore.initialize() must complete before use');
+  }
+
+  private async withFencedRowsLocked<T>(
+    targetKey: string,
+    fences: readonly StateFence[],
+    operation: (client: PoolClient) => Promise<T>,
+  ): Promise<FencedTransactionResult<T>> {
+    const client = await this.pool.connect();
+    let destroyClient = false;
+    let transactionOpen = false;
+    try {
+      await client.query('BEGIN');
+      transactionOpen = true;
+      await client.query("SET LOCAL lock_timeout = '2s'");
+      await client.query("SET LOCAL statement_timeout = '2s'");
+      const lockedRows = await client.query<LockedKeyRow>(LOCK_FENCED_KEYS_SQL, [
+        this.namespace,
+        [targetKey, ...fences.map((fence) => fence.key)],
+      ]);
+      const lockedKeys = new Set(lockedRows.rows.map((row) => row.key));
+      if (!fences.every((fence) => lockedKeys.has(fence.key))) {
+        await client.query('COMMIT');
+        transactionOpen = false;
+        return { matched: false };
+      }
+
+      const currentFences = await client.query<StateFenceRow>(VERIFY_FENCES_SQL, [
+        this.namespace,
+        fences.map((fence) => fence.key),
+      ]);
+      const revisionsByKey = new Map(currentFences.rows.map((row) => [row.key, row.revision.toLowerCase()]));
+      if (!fences.every((fence) => revisionsByKey.get(fence.key) === fence.revision.toLowerCase())) {
+        await client.query('COMMIT');
+        transactionOpen = false;
+        return { matched: false };
+      }
+
+      const value = await operation(client);
+      await client.query('COMMIT');
+      transactionOpen = false;
+      return { matched: true, value };
+    } catch (error) {
+      if (transactionOpen) {
+        try {
+          await client.query('ROLLBACK');
+          transactionOpen = false;
+        } catch {
+          destroyClient = true;
+        }
+      }
+      throw error;
+    } finally {
+      client.release(destroyClient);
+    }
   }
 }

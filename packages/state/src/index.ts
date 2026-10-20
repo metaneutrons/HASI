@@ -9,6 +9,12 @@ export {
   type ModelBudgetSnapshot,
   type ModelBudgetUsage,
 } from './model-budget.js';
-export { validateNamespace, type JsonStore } from './store.js';
+export {
+  validateNamespace,
+  type FencedJsonStore,
+  type FencedReadResult,
+  type JsonStore,
+  type StateFence,
+} from './store.js';
 
 export { ASSISTANT_BUDGET_NAMESPACE, ASSISTANT_BUDGET_POLICY } from './assistant-budget.js';
