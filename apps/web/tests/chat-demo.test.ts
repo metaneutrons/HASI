@@ -127,6 +127,17 @@ describe("bounded German chat demo parser", () => {
     expect(any.query).toBeUndefined();
   });
 
+  it("understands the offered office description without confusing it with requested desk quantity", () => {
+    const previous: RoomRequest = { kind: "workplace", date: "2026-10-21", time: "10:00", durationMinutes: 120, location: "1J" };
+    const single = mergeRoomRequest("Ein Büro mit einem Arbeitsplatz.", previous);
+    expect(single).toEqual({ ...previous, officeType: "single" });
+    expect(single.query).toBeUndefined();
+    expect(mergeRoomRequest("Einen Platz in einem geteilten Büro.", previous)).toEqual({ ...previous, officeType: "shared" });
+    for (const text of ["1 Arbeitsplatz", "Ein Arbeitsplatz", "Kein Büro mit einem Arbeitsplatz"]) {
+      expect(mergeRoomRequest(text, previous).officeType).toBeUndefined();
+    }
+  });
+
   it("filters only explicitly named single or shared offices and requests clarification for broad catalogs", () => {
     const workplaces: Resource[] = [
       { ...required(rooms[0]), id: "single", kind: "workplace", name: "Arbeitsplatz 1", parentName: "Einzelbüro 1.01" },

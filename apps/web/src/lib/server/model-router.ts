@@ -11,7 +11,7 @@ import { APICallError, generateText, isStepCount, jsonSchema, tool, type ModelMe
 import { z } from "zod";
 import { ModelRouterError } from "./model-router-error";
 import { annyWorkflow, isAvailabilityFollowUp, isMixedKnowledgeRequest } from "../chat-tool-loop";
-import { classifyIntent } from "../chat-demo";
+import { classifyIntent, parseStandaloneOfficePreference } from "../chat-demo";
 import { parseGroqRateLimitDiagnostics, type GroqRateLimitDiagnostics } from "./provider-rate-limits";
 import { modelToolContent, retainedAnnyResultIndices } from "../chat-tool-context";
 import { groqErrorDiagnostics } from "./groq-error-diagnostics";
@@ -446,7 +446,7 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
   const currentAnnyResult = request.messages.slice(userIndex + 1).some(message => message.role === "tool" && isAnnyToolName(message.name));
   const earlierAnnyResult = request.messages.slice(0, userIndex).some(message => message.role === "tool" && isAnnyToolName(message.name));
   const discoveryRequest = /\b(?:such\w*|brauch\w*|benötig\w*|find\w*|möcht\w*)\b/iu.test(userText)
-    || /^(?:(?:bitte|lieber)\s+)?(?:(?:ein|einen)\s+)?(?:einzelbüro|1er[- ]?büro|geteiltes büro|shared office|beides|(?:mir\s+)?egal|keine präferenz)(?:\s+bitte)?[.!?\s]*$/iu.test(userText.trim());
+    || parseStandaloneOfficePreference(userText) !== undefined;
   const needsInitialSearch = options.authorizedTools !== undefined && workflow === "rooms" && allowedTools.anny_search_resources !== undefined
     && !currentAnnyResult && (discoveryRequest || !earlierAnnyResult);
   const messages = toModelMessages(request.messages);

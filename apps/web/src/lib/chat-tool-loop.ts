@@ -1,4 +1,4 @@
-import { classifyIntent, mergeRoomRequest, type RoomRequest } from "./chat-demo";
+import { classifyIntent, mergeRoomRequest, parseStandaloneOfficePreference, type RoomRequest } from "./chat-demo";
 import type { ChatToolName, WireMessage } from "./chat-contract";
 
 // One planning call; only knowledge synthesis or a failed planning call needs a follow-up.
@@ -39,8 +39,7 @@ export function isMixedKnowledgeRequest(text: string, hasRoomContext: boolean): 
 /** Only standalone, unambiguous replies qualify. Compound requests still use the model. */
 export function officePreferenceSearch(text: string, previous: RoomRequest, now: Date): RoomRequest | null {
   if (previous.kind !== "workplace") return null;
-  const normalized = text.toLowerCase().trim().replace(/[.!?]+$/u, "").trim();
-  if (!/^(?:(?:bitte|lieber)\s+)?(?:(?:ein|einen)\s+)?(?:einzelbüro|1er[- ]?büro|geteiltes büro|gemeinsames büro|shared office|beides|(?:mir\s+)?egal|keine präferenz)(?:\s+bitte)?$/u.test(normalized)) return null;
+  if (parseStandaloneOfficePreference(text) === undefined) return null;
   const next = mergeRoomRequest(text, previous, now);
   return next.officeType !== undefined ? next : null;
 }

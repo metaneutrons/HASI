@@ -100,7 +100,7 @@ function normalize(value: string): string {
     .replace(/\p{Diacritic}/gu, "");
 }
 
-const SINGLE_OFFICE_PATTERN = /\b(?:einzelburos?|1er|single[- ]?offices?)\b/u;
+const SINGLE_OFFICE_PATTERN = /\b(?:einzelburos?|1er|single[- ]?offices?|buro\s+mit\s+(?:einem|1)\s+arbeitsplatz)\b/u;
 const SHARED_OFFICE_PATTERN = /\b(?:2|3)(?:er)?\s*(?:buros?|offices?)\b|\b(?:geteilte[nrsm]?|gemeinsame[nrsm]?|gemeinschafts)\s*(?:buros?|offices?)\b|\bshared(?:\s*(?:buros?|offices?))?\b/u;
 const ANY_OFFICE_PATTERN = /\b(?:egal|gleich|beides|keine?\s+pr(?:ae|a)ferenz|ohne\s+pr(?:ae|a)ferenz|keine?\s+bevorzugung)\b/u;
 const OFFICE_TYPE_QUERY_PATTERN = /\b(?:einzelb[uü]ros?|1er|single[- ]?offices?|(?:2|3)(?:er)?\s*(?:b[uü]ros?|offices?)|(?:geteilte[nrsm]?|gemeinsame[nrsm]?|gemeinschafts)\s*(?:b[uü]ros?|offices?)|shared(?:\s*(?:b[uü]ros?|offices?))?|egal|gleich|beides|keine?\s+(?:praeferenz|präferenz|bevorzugung)|ohne\s+(?:praeferenz|präferenz))\b/giu;
@@ -382,6 +382,7 @@ function parseLocation(text: string): { found: boolean; value?: string } {
 }
 
 function parseQuery(text: string): string | undefined {
+  if (parseStandaloneOfficePreference(text) !== undefined) return undefined;
   let residual = text;
   const patterns = [
     /\b(?:neue|andere)\s+(?:raum)?suche\b/giu,
@@ -426,6 +427,14 @@ function parseOfficeType(text: string): OfficeType | undefined {
   if (any && single === shared) return "any";
   if (single === shared) return undefined;
   return single ? "single" : "shared";
+}
+
+/** Complete preference replies only; desk quantity, negation and compound tasks stay ambiguous. */
+export function parseStandaloneOfficePreference(text: string): OfficeType | undefined {
+  if (text.length > 2_000) return undefined;
+  const normalized = normalize(text).trim().replace(/[.!?]+$/u, "").trim();
+  if (!/^(?:(?:bitte|lieber)\s+)?(?:(?:ein|einen)\s+)?(?:einzelburo|1er[- ]?buro|buro\s+mit\s+(?:einem|1)\s+arbeitsplatz|platz\s+in\s+einem\s+geteilten\s+buro|geteiltes buro|gemeinsames buro|shared office|beides|(?:mir\s+)?egal|keine praferenz)(?:\s+bitte)?$/u.test(normalized)) return undefined;
+  return parseOfficeType(normalized);
 }
 
 export function mergeRoomRequest(text: string, previous: RoomRequest, now = new Date()): RoomRequest {

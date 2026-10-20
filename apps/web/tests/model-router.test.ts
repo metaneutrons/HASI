@@ -1667,6 +1667,32 @@ it.each([true, false])("does not let historical Anny results suppress a new sear
 });
 
 it.each([
+  ["Ein Büro mit einem Arbeitsplatz.", true],
+  ["Einen Platz in einem geteilten Büro.", true],
+  ["1 Arbeitsplatz", false],
+  ["Kein Büro mit einem Arbeitsplatz", false],
+  ["Ein Büro mit einem Arbeitsplatz morgen um 10", false],
+  ["Ein Büro mit einem Arbeitsplatz, aber erkläre VPN", false],
+])("shares the standalone preference boundary after historical search: %s", async (text, forced) => {
+  const pluginId = "de.hsh.hasi.anny"; const name = "anny.search_resources";
+  const modelName = `hasi_${createHash("sha256").update(`${pluginId}\0${name}`).digest("hex").slice(0, 24)}`;
+  const provider = fakeProvider(completion(forced
+    ? { toolCalls: [{ id: "preference-search", name: "anny_search_resources", arguments: '{"kind":"workplace","location":"1J"}' }] }
+    : { content: "Bitte konkretisiere deine neue Anfrage." }));
+  await runModelStep({ ...request(), messages: [
+    { role: "user", content: "Suche morgen in 1J einen Arbeitsplatz von 10 bis 12 Uhr." },
+    { role: "assistant", content: "", toolCalls: [{ id: "old-search", name: "anny_search_resources", arguments: { kind: "workplace", location: "1J" } }] },
+    { role: "tool", toolCallId: "old-search", name: "anny_search_resources", content: '{"resources":[]}' },
+    { role: "user", content: text },
+  ] }, {
+    env: { GROQ_API_KEY: FAKE_KEY }, fetch: provider.fetch, now: NOW,
+    authorizedTools: [{ pluginId, name, modelName, title: "Search", description: "Search", effect: "read", requiredPermissions: ["rooms:read"], inputSchema: { type: "object", properties: {} }, outputSchema: { type: "object" } }],
+  });
+  expect(provider.calls).toHaveLength(1);
+  expect(providerRequest(provider.calls[0]?.init).tool_choice).toEqual(forced ? { type: "function", function: { name: "anny_search_resources" } } : "auto");
+});
+
+it.each([
   ["Ich suche einen Arbeitsplatz in Gebäude 1J.", ["anny_search_resources", "anny_get_availability", "anny_propose_booking"]],
   ["Zeige mir meine Buchungen", ["anny_list_my_bookings", "anny_propose_cancellation"]],
   ["Wie funktioniert WLAN?", ["knowledge_search"]],
