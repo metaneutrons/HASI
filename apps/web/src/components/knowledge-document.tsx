@@ -182,9 +182,12 @@ function DocumentArticle({ document, detailsOpen, onDetailsChange }: { document:
       {originalHref && <a className="knowledge-reader__original" href={originalHref} target="_blank" rel="noopener noreferrer">
         <ExternalLink size={16} aria-hidden="true" /> {english ? "Open authorized original" : "Autorisierte Originalquelle öffnen"}
       </a>}
-      {demoHref && <a className="knowledge-reader__original" href={demoHref} target="_blank" rel="noopener noreferrer">
-        <ExternalLink size={16} aria-hidden="true" /> Demoquelle öffnen · HsH-Netz
-      </a>}
+      {demoHref && <div className="knowledge-replica-link">
+        <a className="knowledge-reader__original" href={demoHref} target="_blank" rel="noopener noreferrer">
+          <ExternalLink size={16} aria-hidden="true" /> Demo-Website öffnen
+        </a>
+        <p>Die Demo-Website ist auf freigegebene Hochschuladressen beschränkt. Die freigegebene Dokumentfassung kannst du hier lesen.</p>
+      </div>}
     </footer>
   </article>;
 }

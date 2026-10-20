@@ -1310,8 +1310,15 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 }
 
 /* Sources are rendered by the host from authenticated MCP document IDs. */
-.chat-source-list { display: grid; gap: 10px; margin-top: 16px; min-width: 0; }
-.chat-source-card { display: flex; align-items: center; gap: 14px; padding: 16px; min-height: 64px; color: var(--ink); border: 1px solid var(--line); border-radius: 16px; background: var(--surface); text-decoration: none; }
+.chat-source-results { margin-top: 12px; min-width: 0; }
+.chat-source-results > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; width: fit-content; cursor: pointer; color: var(--muted); font-size: 13px; }
+.chat-source-results > summary::after { content: "+"; margin-left: 4px; }
+.chat-source-results[open] > summary::after { content: "−"; }
+.chat-source-results > summary span { padding: 1px 7px; border-radius: 10px; background: var(--surface-soft); font-variant-numeric: tabular-nums; }
+.chat-source-results > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.chat-source-list { display: grid; gap: 6px; margin-top: 4px; min-width: 0; }
+.knowledge-replica-link p { max-width: 60ch; margin: 4px 0 0; line-height: 1.6; }
+.chat-source-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; min-height: 44px; color: var(--ink); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-decoration: none; }
 .chat-source-card > span { display: grid; gap: 5px; min-width: 0; flex: 1; }
 .chat-source-card > .chat-source-number { display: grid; place-items: center; flex: 0 0 32px; min-height: 32px; border-radius: 10px; background: var(--surface-soft); color: var(--accent); font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .chat-source-card:focus-visible, .knowledge-back:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

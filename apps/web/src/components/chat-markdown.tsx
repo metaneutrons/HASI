@@ -33,7 +33,7 @@ function citationAccessibleLabel(citation: KnowledgeCitation): string {
   return `Quelle ${String(citation.number)}: ${citation.title}; ${citation.sourceLabel}; Fassung ${String(citation.revision)}`;
 }
 
-function splitCitationText(value: string, citations: ReadonlyMap<string, CitationRender>): MarkdownNode[] {
+function splitCitationText(value: string, citations: ReadonlyMap<string, CitationRender>, used: Map<string, CitationRender>): MarkdownNode[] {
   const nodes: MarkdownNode[] = [];
   let cursor = 0;
 
@@ -41,6 +41,7 @@ function splitCitationText(value: string, citations: ReadonlyMap<string, Citatio
     const token = match[0];
     const position = match.index;
     const citation = citations.get(token.slice(1, -1));
+    if (citation) used.set(citation.citationId, citation);
     if (position > cursor) nodes.push({ type: "text", value: value.slice(cursor, position) });
     nodes.push(citation
       ? {
@@ -63,7 +64,7 @@ function splitCitationText(value: string, citations: ReadonlyMap<string, Citatio
   return nodes;
 }
 
-function transformTextNodes(node: MarkdownNode, citations: ReadonlyMap<string, CitationRender>): void {
+function transformTextNodes(node: MarkdownNode, citations: ReadonlyMap<string, CitationRender>, used: Map<string, CitationRender>): void {
   if (excludedNodeTypes.has(node.type) || !node.children) return;
 
   const children: MarkdownNode[] = [];
@@ -71,18 +72,40 @@ function transformTextNodes(node: MarkdownNode, citations: ReadonlyMap<string, C
     if (excludedNodeTypes.has(child.type)) {
       children.push(child);
     } else if (child.type === "text" && typeof child.value === "string") {
-      children.push(...splitCitationText(child.value, citations));
+      children.push(...splitCitationText(child.value, citations, used));
     } else {
-      transformTextNodes(child, citations);
+      transformTextNodes(child, citations, used);
       children.push(child);
     }
   }
   node.children = children;
 }
 
-function remarkKnowledgeCitations(citations: ReadonlyMap<string, CitationRender>) {
+function remarkKnowledgeCitations(citations: ReadonlyMap<string, CitationRender>, showSources: boolean) {
   return () => (tree: MarkdownNode) => {
-    transformTextNodes(tree, citations);
+    const used = new Map<string, CitationRender>();
+    transformTextNodes(tree, citations, used);
+    if (!showSources || used.size === 0 || !tree.children) return;
+    tree.children.push({
+      type: "paragraph",
+      data: { hProperties: { className: styles.sourcesHeading } },
+      children: [{ type: "text", value: "Quellen dieser Antwort" }],
+    }, {
+      type: "list",
+      data: { hProperties: { className: styles.sources, "aria-label": "Quellen dieser Antwort" } },
+      children: [...used.values()].map(citation => ({
+        type: "listItem",
+        children: [{ type: "paragraph", children: [{
+          type: "link", url: citation.href,
+          data: { hProperties: { "data-knowledge-citation": citation.citationId, "data-knowledge-source-reference": "true" } },
+          children: [
+            { type: "text", value: `[${String(citation.number)}] ${citation.title}` },
+            { type: "break" },
+            { type: "emphasis", data: { hName: "small" }, children: [{ type: "text", value: `${citation.sourceLabel} · Fassung ${String(citation.revision)}` }] },
+          ],
+        }] }],
+      })),
+    });
   };
 }
 
@@ -97,7 +120,7 @@ function markdownComponents(citations: ReadonlyMap<string, CitationRender>, onCi
       const citation = typeof marker === "string" ? citations.get(marker) : undefined;
       if (citation && href === citation.href) {
         return <Link
-          className={styles.citation}
+          className={properties?.["data-knowledge-source-reference"] === "true" ? styles.sourceLink : styles.citation}
           href={citation.href}
           prefetch={false}
           aria-label={citation.accessibleLabel}
@@ -127,11 +150,13 @@ export function ChatMarkdown({
   citations,
   origin,
   onCitationOpen,
+  showSources = false,
 }: {
   source: string;
   citations?: readonly KnowledgeCitation[];
   origin?: KnowledgeCitationOrigin;
   onCitationOpen?: (citation: KnowledgeCitation) => void;
+  showSources?: boolean;
 }) {
   const citationsById = new Map<string, CitationRender>();
   const citationsByHref = new Map<string, CitationRender>();
@@ -147,7 +172,7 @@ export function ChatMarkdown({
 
   const urlTransform = (value: string) => citationsByHref.has(value) ? value : validatedHttpUrl(value);
   return <div className={styles.markdown}>
-    <ReactMarkdown remarkPlugins={[remarkGfm, remarkKnowledgeCitations(citationsById)]} components={markdownComponents(citationsById, onCitationOpen)} skipHtml urlTransform={urlTransform}>
+    <ReactMarkdown remarkPlugins={[remarkGfm, remarkKnowledgeCitations(citationsById, showSources)]} components={markdownComponents(citationsById, onCitationOpen)} skipHtml urlTransform={urlTransform}>
       {source}
     </ReactMarkdown>
   </div>;
