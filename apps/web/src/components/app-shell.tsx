@@ -348,7 +348,8 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const chatStore = useChatWorkspaceStore();
   const activeKey = pathname.startsWith("/account/connections") ? "connections" : pathname === "/bookings" ? "bookings" : pathname === "/admin" ? "admin" : "assistant";
-  const frameRef = useChatViewport(activeKey === "assistant");
+  const isChatPage = pathname === "/";
+  const frameRef = useChatViewport(isChatPage);
   const initial = user ? initials(user.displayName) : "H";
 
   async function handleLogout(): Promise<boolean> {
@@ -366,12 +367,12 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
   }
 
   return (
-    <div ref={frameRef} className={`app-frame${activeKey === "assistant" ? " app-frame--chat" : ""}`}>
+    <div ref={frameRef} className={`app-frame${isChatPage ? " app-frame--chat" : ""}`}>
       <aside className="side-nav" aria-label="HASI Navigation">
         <WordmarkLink />
         <div className="side-nav-label">CAMPUS</div>
         <nav className="primary-nav" aria-label="Hauptnavigation">
-          <ChatNavigation active={activeKey === "assistant"} store={chatStore} onOpenChat={() => { if (activeKey !== "assistant") router.push("/"); }} />
+          <ChatNavigation active={activeKey === "assistant"} store={chatStore} onOpenChat={() => { if (!isChatPage) router.push("/"); }} />
           <NavLink href="/bookings" label="Buchungen" icon={PanelTop} active={activeKey === "bookings"} />
           <NavLink href="/account/connections" label="Verbundene Dienste" icon={UserRound} active={activeKey === "connections"} />
           {user?.role === "admin" && (

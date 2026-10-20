@@ -54,12 +54,23 @@ const snapshotTime = `${knowledgeCreatedAt}T00:00:00Z`;
 const stopWords = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'can', 'for', 'from', 'how', 'in', 'is',
   'it', 'of', 'on', 'or', 'the', 'this', 'to', 'was', 'what', 'when', 'where', 'which', 'with',
+  'i', 'me', 'my', 'mine', 'we', 'us', 'our', 'ours', 'you', 'your', 'yours',
+  'do', 'does', 'did', 'please', 'help',
   'aber', 'alle', 'als', 'am', 'an', 'auch', 'auf', 'aus', 'bei', 'das', 'dem', 'den', 'der',
   'des', 'die', 'ein', 'eine', 'einer', 'eines', 'für', 'im', 'in', 'ist', 'mit', 'oder', 'und',
   'von', 'vom', 'was', 'wie', 'zu', 'zum', 'zur',
+  'ich', 'du', 'dich', 'dir', 'mich', 'mir', 'mein', 'meine', 'meinem', 'meinen', 'meiner', 'meines',
+  'wir', 'uns', 'unser', 'unsere', 'unserem', 'unseren', 'unserer', 'unseres',
+  'bitte', 'kann', 'kannst', 'können', 'könnt', 'helfen', 'hilfe',
   'beispiel', 'demo', 'example', 'fictitious', 'fiktiv', 'fictional', 'sample', 'synthetic',
   'synthetisch',
-]);
+].map(normalize));
+const contextTerms = new Set([
+  'not', 'no', 'work', 'works', 'working', 'broken', 'problem', 'problems', 'issue', 'issues', 'error', 'errors', 'failed', 'failure',
+  'nicht', 'kein', 'keine', 'keinem', 'keinen', 'keiner', 'keines', 'funktioniere', 'funktionieren', 'funktioniert', 'funktionierst',
+  'geht', 'gehen', 'ging', 'gegangen', 'klappt', 'klappen', 'fehler', 'fehlerbild', 'fehlersuche', 'probleme', 'störung', 'störungen',
+  'kaputt', 'defekt',
+].map(normalize));
 
 /** Demo fixtures use the current MCP contract; only the source adapter differs. */
 export function createKnowledgePlugin(options: KnowledgePluginOptions): FastifyInstance {
@@ -72,11 +83,20 @@ export function createKnowledgePlugin(options: KnowledgePluginOptions): FastifyI
         const args = searchArguments.parse(rawArgs);
         const visible = visibleDocuments(actor).filter(document =>
           args.sourceSystem === undefined || document.sourceSystem === args.sourceSystem);
-        const queryTokens = tokenize(args.query).filter(token => !stopWords.has(token));
+        const queryTokens = [...new Set(tokenize(args.query))];
+        const topicTokens = queryTokens.filter(token => !stopWords.has(token) && !contextTerms.has(token));
+        const contextTokens = queryTokens.filter(token => contextTerms.has(token));
         const ranked = visible
-          .map((document, index) => ({ document, index, score: scoreDocument(document, queryTokens, args.query) }))
-          .filter(candidate => candidate.score > 0)
-          .sort((left, right) => right.score - left.score || left.index - right.index)
+          .map((document, index) => ({
+            document,
+            index,
+            topicScore: scoreDocument(document, topicTokens),
+            contextScore: scoreDocument(document, contextTokens, []),
+          }))
+          .filter(candidate => candidate.topicScore > 0)
+          .sort((left, right) => right.topicScore - left.topicScore
+            || right.contextScore - left.contextScore
+            || left.index - right.index)
           .slice(0, args.limit ?? 5);
         const acquired = await acquireRankedServiceIt(ranked.map(({ document }) => document), demoContent);
         return { documents: ranked.map(({ document }) => toResult(document, actor, acquired.get(document.id))) };
@@ -129,7 +149,7 @@ function toResult(document: KnowledgeDocument, actor: ActorContext, acquired?: D
   };
 }
 
-function scoreDocument(document: KnowledgeDocument, queryTokens: string[], rawQuery: string): number {
+function scoreDocument(document: KnowledgeDocument, queryTokens: string[], phraseTokens = queryTokens): number {
   if (queryTokens.length === 0) return 0;
   const titleTokens = tokenize(document.title);
   const tagTokens = document.tags
@@ -149,14 +169,16 @@ function scoreDocument(document: KnowledgeDocument, queryTokens: string[], rawQu
   }
 
   if (matchedTerms > 1) score += matchedTerms;
-  const normalizedQuery = normalize(rawQuery).trim();
-  if (normalizedQuery.length >= 3) {
-    const normalizedTitle = normalize(document.title);
-    const normalizedText = normalize(document.text);
-    if (normalizedTitle.includes(normalizedQuery)) score += 6;
-    else if (normalizedText.includes(normalizedQuery)) score += 2;
+  if (phraseTokens.length > 0) {
+    if (containsTokenSequence(titleTokens, phraseTokens)) score += 6;
+    else if (containsTokenSequence(bodyTokens, phraseTokens)) score += 2;
   }
   return score;
+}
+
+function containsTokenSequence(fieldTokens: string[], queryTokens: string[]): boolean {
+  return queryTokens.length > 0 && fieldTokens.some((_, start) =>
+    queryTokens.every((token, offset) => fieldTokens[start + offset] === token));
 }
 
 function fieldScore(fieldTokens: string[], queryToken: string, exact: number, prefix: number): number {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { knowledgeDocumentSchema, knowledgeSourceLabel, type KnowledgeDocument } from "@/lib/knowledge";
 import { knowledgeChatReturnHref, type KnowledgeOrigin } from "@/lib/knowledge-navigation";
@@ -38,6 +38,8 @@ function DocumentReader({ documentId, revision, origin }: { documentId: string; 
   const [activeDocument, setActiveDocument] = useState<KnowledgeDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const readerRef = useRef<HTMLElement>(null);
+  const [revalidationHeight, setRevalidationHeight] = useState<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -47,6 +49,9 @@ function DocumentReader({ documentId, revision, origin }: { documentId: string; 
     const revalidate = async () => {
       if (!mounted || requestRunning) return;
       requestRunning = true;
+      // Remove stale content during the rights check without collapsing the
+      // reader and resetting the browser's current scroll position.
+      setRevalidationHeight(readerRef.current?.getBoundingClientRect().height ?? null);
       setActiveDocument(null);
       setError(null);
       setLoading(true);
@@ -94,7 +99,7 @@ function DocumentReader({ documentId, revision, origin }: { documentId: string; 
     };
   }, [documentId, revision]);
 
-  return <section className="knowledge-reader" aria-label="Wissensdokument">
+  return <section ref={readerRef} className="knowledge-reader" aria-label="Wissensdokument" aria-busy={loading} style={{ overflowAnchor: "none", ...(loading && revalidationHeight !== null ? { minHeight: revalidationHeight } : {}) }}>
     <Link className="knowledge-back" href={knowledgeChatReturnHref(origin)}><ArrowLeft size={18} aria-hidden="true" /> {origin ? "Zurück zur Nachricht" : "Zum Chat"}</Link>
     {error ? <p className="knowledge-reader__status knowledge-reader__status--error" role="alert">{error}</p>
       : !activeDocument ? <p className="knowledge-reader__status" role="status">{loading ? "Dokument und Zugriffsrecht werden geprüft …" : UNAVAILABLE_MESSAGE}</p>

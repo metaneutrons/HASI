@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { generateKeyPairSync } from 'node:crypto';
 import { createInvocationToken, type ActorContext } from '@hasi/plugin-sdk';
+import { knowledgeDocuments } from '../fixtures/knowledge-catalog.js';
 import { createKnowledgePlugin, knowledgeManifest } from '../apps/knowledge-plugin/src/index.js';
 
 const { privateKey, publicKey } = generateKeyPairSync('ed25519');
@@ -101,6 +102,64 @@ describe('knowledge plugin', () => {
     });
     const documents = (result.structuredContent as { documents: { id: string }[] }).documents;
     expect(documents[0]?.id).toBe('svc-025');
+  });
+
+  it('keeps a German VPN failure query within the VPN topic', async () => {
+    const result = await callAs(employee, 'knowledge.search', {
+      query: 'Mein VPN funktioniert nicht.',
+      sourceSystem: 'service_it',
+      limit: 5,
+    });
+    const documents = (result.structuredContent as { documents: { id: string }[] }).documents;
+    const tagsById = new Map(knowledgeDocuments.map((document) => [document.id, document.tags]));
+
+    expect(documents[0]?.id).toBe('svc-catalog-6c79c1e68f04');
+    expect(documents.map((document) => document.id)).not.toContain('svc-catalog-511b8c0b0a9d');
+    expect(documents.map((document) => document.id)).not.toContain('svc-catalog-f2adceb9e13f');
+    expect(documents.every((document) => tagsById.get(document.id)?.includes('vpn'))).toBe(true);
+  });
+
+  it('keeps a German MFA failure query within the MFA topic', async () => {
+    const result = await callAs(employee, 'knowledge.search', {
+      query: 'Meine MFA funktioniert nicht.',
+      sourceSystem: 'service_it',
+      limit: 5,
+    });
+    const documents = (result.structuredContent as { documents: { id: string }[] }).documents;
+    const tagsById = new Map(knowledgeDocuments.map((document) => [document.id, document.tags]));
+
+    expect(documents.length).toBeGreaterThan(0);
+    expect(documents.every((document) => tagsById.get(document.id)?.includes('mfa'))).toBe(true);
+  });
+
+  it('returns no unrelated hits for conversational filler and supports English failure phrasing', async () => {
+    const filler = await callAs(employee, 'knowledge.search', {
+      query: 'Kannst du mir bitte helfen?',
+      sourceSystem: 'service_it',
+    });
+    expect((filler.structuredContent as { documents: unknown[] }).documents).toEqual([]);
+
+    const noTopic = await callAs(employee, 'knowledge.search', {
+      query: 'Was ist für mich kaputt?',
+      sourceSystem: 'service_it',
+    });
+    expect((noTopic.structuredContent as { documents: unknown[] }).documents).toEqual([]);
+
+    const failureOnly = await callAs(employee, 'knowledge.search', {
+      query: 'funktioniert nicht.',
+      sourceSystem: 'service_it',
+    });
+    expect((failureOnly.structuredContent as { documents: unknown[] }).documents).toEqual([]);
+
+    const english = await callAs(employee, 'knowledge.search', {
+      query: 'My VPN does not work.',
+      sourceSystem: 'service_it',
+      limit: 5,
+    });
+    const documents = (english.structuredContent as { documents: { id: string }[] }).documents;
+    const tagsById = new Map(knowledgeDocuments.map((document) => [document.id, document.tags]));
+    expect(documents.length).toBeGreaterThan(0);
+    expect(documents.every((document) => tagsById.get(document.id)?.includes('vpn'))).toBe(true);
   });
 });
 
