@@ -175,6 +175,9 @@ Live execution additionally requires explicit operator opt-in and the existing s
 durable budget. The [execution boundary and limits](docs/evaluation/application-policy-observations.md)
 separate source authorization, model proposals, backend rejection and human review;
 this is not completed adversarial or M6 acceptance.
+The [first actual-route development run](docs/verification/2026-10-21/application-policy-development-run.md)
+records nine provider calls and an intentional stop after partial DeepInfra
+capture; denied-source cases and human review remain open, with no model ranking.
 
 ### Local PostgreSQL server mode
 
@@ -238,8 +241,11 @@ local artifacts also have an [actual joined browser record](docs/verification/20
 That does not establish public-marketplace distribution or milestone acceptance.
 See the [managed browser runtime](docs/verification/2026-10-20/managed-browser-runtime.md)
 for isolation, commands, cleanup and the bounded browser observations.
-The report records current findings and incomplete journeys; starting the fixture
-does not establish M2/P6 acceptance. The [protected action-history follow-up](docs/verification/2026-10-20/plugin-action-history.md)
+The report preserves its dated findings and incomplete journeys. The later
+[criterion-mapped qualification](docs/verification/2026-10-19/m2-evidence-reconciliation.md#addendum--2026-10-21-p1p6-evidence-map)
+and [trusted touch follow-up](docs/verification/2026-10-21/reviewed-app-touch.md)
+record the subsequent technical evidence; starting the fixture alone does not
+establish M2/P6 acceptance. The [protected action-history follow-up](docs/verification/2026-10-20/plugin-action-history.md)
 records the overlapping-save correction and bounded multi-turn browser checks;
 the [account-renewal follow-up](docs/verification/2026-10-20/action-history-renewal.md) records signed action references and bounded expiry/renewal checks. Complete product qualification remains open.
 
@@ -286,9 +292,13 @@ The separate trusted managed-plugin installer now provides approved-release
 staging, manifest preflight, explicit before/after contract review, activation, cancellation, rollback
 and reconciliation through private signed RPC and the admin interface. Docker
 access belongs only to that worker. Configuration can be prepared before the
-first installation. Deployed lifecycle, independent artifact distribution and
-the remaining M2 qualification are still open; this does not enable arbitrary
-repository execution in the public demo.
+first installation. The [joined browser qualification](docs/verification/2026-10-21/external-plugin-joined-qualification.md)
+and [managed container lifecycle](docs/verification/2026-10-21/managed-state-container-lifecycle.md)
+record synthetic setup, independently versioned artifacts, update and recovery
+without a host rebuild. Their bounded technical scope does not establish
+institutional approval or public-marketplace distribution. The current technical
+acceptance decision is recorded in [M2 #49](https://github.com/metaneutrons/HASI/issues/49);
+arbitrary repository execution remains unavailable in the public demo.
 
 Managed release envelopes authenticate source commit, payload digest and
 package/license inventory together with the reviewed image. A canonical image
@@ -318,11 +328,11 @@ distinct stable subjects and current resource grants through signed MCP and a
 contract HTTP mock. Worker isolation, full model evaluation and browser workflows
 remain separate gates; these synthetic checks do not authorize real HsH access.
 
-The host owns identity, permissions and state transitions. The model can search and prepare a proposal; only the user can confirm the exact proposal, and the current booking path writes to the synthetic service. Production third-party plugin isolation, source integrations and institutional authorization remain open work.
+The host owns identity, permissions and state transitions. The model can search and prepare a proposal; only the user can confirm the exact proposal, and the current booking path writes to the synthetic service. Institutional approval of external-plugin isolation, source integrations and authorization remains open work.
 
 ## Status
 
-HASI is an incomplete MVP prototype, not an operational Hochschule Hannover service. The M2 account/action/deployment implementation is available for qualification; real HsH SSO/account-adapter provisioning, institutional permission mapping, live availability and booking, approved live Intranet/Service-IT acquisition configurations and source-owner qualification, source-specific uncertain-write reconciliation, provider approval and final isolation/native-device qualification remain outstanding. Responsive browser checks do not establish iPhone or Android qualification. The public demo's durable synthetic state does not provide institutional authorization or booking reconciliation.
+HASI is an incomplete MVP prototype, not an operational Hochschule Hannover service. The synthetic account/action/deployment and independent-plugin evidence is [mapped to the M2 criteria](docs/verification/2026-10-19/m2-evidence-reconciliation.md#addendum--2026-10-21-p1p6-evidence-map), with the current acceptance decision in [M2 #49](https://github.com/metaneutrons/HASI/issues/49). Real HsH SSO/account-adapter provisioning, institutional permission mapping, live availability and booking, approved live Intranet/Service-IT acquisition configurations and source-owner qualification, source-specific uncertain-write reconciliation, provider approval and final isolation/native-device qualification remain outstanding. Responsive browser checks do not establish iPhone or Android qualification. The public demo's durable synthetic state does not provide institutional authorization or booking reconciliation.
 
 Versioned GHCR images for `linux/amd64` and `linux/arm64` are built only through Release Please. The workflow and local Compose demo are implemented; no GHCR image has been published, and hosted native qualification is recorded separately in [D3](https://github.com/metaneutrons/HASI/issues/17). See the [container runtime and release boundaries](docs/architecture/container-runtime.md) before building or selecting a release image. Read-only mainline qualification uploads CI artifacts without creating a tag or release.
 

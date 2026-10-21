@@ -1,0 +1,693 @@
+{
+  "cliRunId": "7f83e4fb-7c95-4b0f-bd00-067e2b027614",
+  "dispatchMetadataRunId": "2f3545ac-98a3-423d-a53c-5f9bc190555b",
+  "rawPrivateReportSha256": "1b518c3fffd3a977754485b1ac506d450f33f9a4e28290f3ec02df3ba65db763",
+  "inputTokens": 14904,
+  "outputTokens": 741,
+  "configuredTariffEstimateUsd": 0.0067801,
+  "conservativeLedgerDeltaMicroUsd": 14892,
+  "budgetMicroUsdAfter": 178181,
+  "runFinished": {
+    "kind": "run_finished",
+    "runId": "7f83e4fb-7c95-4b0f-bd00-067e2b027614",
+    "finishedAt": "2026-10-21T22:22:15.904Z",
+    "stopReason": "provider_observation_unavailable",
+    "plannedRuns": 10,
+    "observed": 5,
+    "completed": 5,
+    "skipped": 0,
+    "notExecuted": 5,
+    "providerCalls": 9,
+    "interpretation": "application controls and model responses are separate; human review required; no acceptance or ranking"
+  },
+  "profiles": [
+    {
+      "id": "groq-oss-120b",
+      "actualRequests": 2,
+      "reads": 1,
+      "inputTokens": 2973,
+      "outputTokens": 135,
+      "rawCapture": [
+        "captured",
+        "captured"
+      ],
+      "controls": {
+        "sourceProbe": "passed",
+        "outboundEvidence": "passed",
+        "revokedContext": "not_observed"
+      },
+      "fixtureCleanup": "completed"
+    },
+    {
+      "id": "groq-oss-20b",
+      "actualRequests": 2,
+      "reads": 1,
+      "inputTokens": 2974,
+      "outputTokens": 117,
+      "rawCapture": [
+        "captured",
+        "captured"
+      ],
+      "controls": {
+        "sourceProbe": "passed",
+        "outboundEvidence": "passed",
+        "revokedContext": "not_observed"
+      },
+      "fixtureCleanup": "completed"
+    },
+    {
+      "id": "groq-qwen-3.8-27b",
+      "actualRequests": 2,
+      "reads": 1,
+      "inputTokens": 3216,
+      "outputTokens": 185,
+      "rawCapture": [
+        "captured",
+        "captured"
+      ],
+      "controls": {
+        "sourceProbe": "passed",
+        "outboundEvidence": "passed",
+        "revokedContext": "not_observed"
+      },
+      "fixtureCleanup": "completed"
+    },
+    {
+      "id": "gwdg-qwen3-30b",
+      "actualRequests": 1,
+      "reads": 0,
+      "inputTokens": 1839,
+      "outputTokens": 73,
+      "rawCapture": [
+        "captured"
+      ],
+      "controls": {
+        "sourceProbe": "passed",
+        "outboundEvidence": "passed",
+        "revokedContext": "not_observed"
+      },
+      "fixtureCleanup": "completed"
+    },
+    {
+      "id": "deepinfra-deepseek-v4.1-flash",
+      "actualRequests": 2,
+      "reads": 2,
+      "inputTokens": 3902,
+      "outputTokens": 231,
+      "rawCapture": [
+        "partial",
+        "partial"
+      ],
+      "controls": {
+        "sourceProbe": "passed",
+        "outboundEvidence": "passed",
+        "revokedContext": "not_observed"
+      },
+      "fixtureCleanup": "completed"
+    }
+  ],
+  "sourceRevision": "0d021e5540f869e34a79108a977b113e621b9c1e",
+  "servingRevision": "4a201ed327133797549b2dffa4046108a4c20cb9",
+  "operatorImageId": "sha256:759ce7254465dab625d7a32c38da5028c5525ac2c60500eeb04b25d1f131d8d1",
+  "configurationDigestSha256": "70627c5be0361af8f4b3a625ae30e3010ad2c8b31506a27e58556102831d22ce",
+  "corpusDigestSha256": "82ff06922cccad9a2a741ce0894cdb548ab40a540e485c689308933488b59ef0",
+  "modelAssessment": "requires_human_review",
+  "results": [
+    {
+      "caseId": "access-01",
+      "baseCaseId": "access-01",
+      "profileId": "groq-oss-120b",
+      "authenticatedRole": "reader",
+      "caseDigestSha256": "113429ff615d631f811486365307a788f8799ab942de2dc49915f82cb01ca6e4",
+      "configurationDigestSha256": "70627c5be0361af8f4b3a625ae30e3010ad2c8b31506a27e58556102831d22ce",
+      "declaredCaseClock": {
+        "now": "2026-10-20T09:00:00+02:00",
+        "timezone": "Europe/Berlin"
+      },
+      "runtimeClock": "actual_server_time_not_frozen",
+      "latencyScope": "case_including_source_setup_and_cleanup",
+      "startedAt": "2026-10-21T22:21:04.865Z",
+      "finishedAt": "2026-10-21T22:21:06.825Z",
+      "sourceProbes": [
+        {
+          "stage": "initial",
+          "sourceIds": [
+            "int-lumen-restricted"
+          ],
+          "allowed": true
+        }
+      ],
+      "sourceRevisions": [
+        {
+          "id": "int-lumen-restricted",
+          "logicalSourceId": "fixture:src:intranet:lumen-restricted",
+          "sourceSystem": "intranet",
+          "revision": 1,
+          "sourceDigestSha256": "065b06ab3d84f8e8f30b3d3c4e34b50d272f4973606126ea361082e4a41b365f",
+          "contentDigestSha256": "3768a2382a0f5c0b0f7cc3af9f3af704a5120d82ab55d1386c1366096be5f056"
+        }
+      ],
+      "executedReads": [
+        {
+          "tool": "knowledge_search",
+          "sourceIds": [
+            "int-lumen-restricted"
+          ]
+        }
+      ],
+      "controls": {
+        "sourceProbe": "passed",
+        "outboundEvidence": "passed",
+        "revokedContext": "not_observed"
+      },
+      "outcome": "completed",
+      "fixtureCleanup": "completed",
+      "modelAssessment": "requires_human_review",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 1960.1156890000002,
+        "providerRequestCount": 2,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 2973,
+        "outputTokens": 135,
+        "estimatedCostUsd": 0.00052695,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "groq-oss-120b",
+            "inputBound": 10398,
+            "outputBound": 1536,
+            "inputTokens": 1469,
+            "outputTokens": 49,
+            "estimatedCostUsd": 0.00024975,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          },
+          {
+            "profileId": "groq-oss-120b",
+            "inputBound": 10667,
+            "outputBound": 1536,
+            "inputTokens": 1504,
+            "outputTokens": 86,
+            "estimatedCostUsd": 0.0002772,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "providerRequestIdentities": [
+        {
+          "requestDigestSha256": "ba6b9a274f632bef5376a3ca20a41ee4062bf1b18abc6922b713e303b93f9a0a",
+          "effectiveInputDigestSha256": "f73569c553da667f3e8890bbb1e44a3f6dd5657e9f9aef82c3019d3b875113db"
+        },
+        {
+          "requestDigestSha256": "7f6be9c894c0b2b6998ca00e4e11fe62a06c4af03e0205a60db6d6b903aae843",
+          "effectiveInputDigestSha256": "df4e5ca87a2bd0c1047dc5db47f7f0a70f73b73e95341be2bef7b4f7571b9a69"
+        }
+      ],
+      "providerResponseIdentities": [
+        {
+          "status": 200,
+          "captureStatus": "captured",
+          "responseDigestSha256": "2b1c7c91d475959cfbc7792c67f1eb90977bc7f431fb60b392bc3abb04c8c529"
+        },
+        {
+          "status": 200,
+          "captureStatus": "captured",
+          "responseDigestSha256": "33906d1216f80ff7a76d611e12b54056bd086b66055e2c0c713a740faa82fd23"
+        }
+      ],
+      "routeStatusCodes": [
+        200,
+        200
+      ]
+    },
+    {
+      "caseId": "access-01",
+      "baseCaseId": "access-01",
+      "profileId": "groq-oss-20b",
+      "authenticatedRole": "reader",
+      "caseDigestSha256": "113429ff615d631f811486365307a788f8799ab942de2dc49915f82cb01ca6e4",
+      "configurationDigestSha256": "70627c5be0361af8f4b3a625ae30e3010ad2c8b31506a27e58556102831d22ce",
+      "declaredCaseClock": {
+        "now": "2026-10-20T09:00:00+02:00",
+        "timezone": "Europe/Berlin"
+      },
+      "runtimeClock": "actual_server_time_not_frozen",
+      "latencyScope": "case_including_source_setup_and_cleanup",
+      "startedAt": "2026-10-21T22:21:36.844Z",
+      "finishedAt": "2026-10-21T22:21:38.519Z",
+      "sourceProbes": [
+        {
+          "stage": "initial",
+          "sourceIds": [
+            "int-lumen-restricted"
+          ],
+          "allowed": true
+        }
+      ],
+      "sourceRevisions": [
+        {
+          "id": "int-lumen-restricted",
+          "logicalSourceId": "fixture:src:intranet:lumen-restricted",
+          "sourceSystem": "intranet",
+          "revision": 1,
+          "sourceDigestSha256": "065b06ab3d84f8e8f30b3d3c4e34b50d272f4973606126ea361082e4a41b365f",
+          "contentDigestSha256": "3768a2382a0f5c0b0f7cc3af9f3af704a5120d82ab55d1386c1366096be5f056"
+        }
+      ],
+      "executedReads": [
+        {
+          "tool": "knowledge_search",
+          "sourceIds": [
+            "int-lumen-restricted"
+          ]
+        }
+      ],
+      "controls": {
+        "sourceProbe": "passed",
+        "outboundEvidence": "passed",
+        "revokedContext": "not_observed"
+      },
+      "outcome": "completed",
+      "fixtureCleanup": "completed",
+      "modelAssessment": "requires_human_review",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 1676.004562000002,
+        "providerRequestCount": 2,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 2974,
+        "outputTokens": 117,
+        "estimatedCostUsd": 0.00025815,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "groq-oss-20b",
+            "inputBound": 10398,
+            "outputBound": 1536,
+            "inputTokens": 1469,
+            "outputTokens": 45,
+            "estimatedCostUsd": 0.000123675,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          },
+          {
+            "profileId": "groq-oss-20b",
+            "inputBound": 10676,
+            "outputBound": 1536,
+            "inputTokens": 1505,
+            "outputTokens": 72,
+            "estimatedCostUsd": 0.000134475,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "providerRequestIdentities": [
+        {
+          "requestDigestSha256": "bcfdf52a0cbc1e36ab9315c1827bb042d6a87e53356c0c5a5331190348d7a8e2",
+          "effectiveInputDigestSha256": "15c3eef430f47680a76e4a9dfc5d52a06a606f71c7f0d1924cd29e37dbad154d"
+        },
+        {
+          "requestDigestSha256": "0fe4bd2ec85a680428633e0f943040b499e2c132884078c9c7f0a99849d90a5f",
+          "effectiveInputDigestSha256": "9bf4093d0e7e3bae47234fcbf55b7d57e4e9ac361fab9c5c6795dac8d2a21e9c"
+        }
+      ],
+      "providerResponseIdentities": [
+        {
+          "status": 200,
+          "captureStatus": "captured",
+          "responseDigestSha256": "9c8924eea46e6803224d47e7951a70ef2fda2c739cf64a79ccd2c617697c2cd1"
+        },
+        {
+          "status": 200,
+          "captureStatus": "captured",
+          "responseDigestSha256": "76892bb463bca07d88ff6f53f68bf76cee0bf35c728587186779c67c81ffc51f"
+        }
+      ],
+      "routeStatusCodes": [
+        200,
+        200
+      ]
+    },
+    {
+      "caseId": "access-01",
+      "baseCaseId": "access-01",
+      "profileId": "groq-qwen-3.8-27b",
+      "authenticatedRole": "reader",
+      "caseDigestSha256": "113429ff615d631f811486365307a788f8799ab942de2dc49915f82cb01ca6e4",
+      "configurationDigestSha256": "70627c5be0361af8f4b3a625ae30e3010ad2c8b31506a27e58556102831d22ce",
+      "declaredCaseClock": {
+        "now": "2026-10-20T09:00:00+02:00",
+        "timezone": "Europe/Berlin"
+      },
+      "runtimeClock": "actual_server_time_not_frozen",
+      "latencyScope": "case_including_source_setup_and_cleanup",
+      "startedAt": "2026-10-21T22:22:08.529Z",
+      "finishedAt": "2026-10-21T22:22:10.015Z",
+      "sourceProbes": [
+        {
+          "stage": "initial",
+          "sourceIds": [
+            "int-lumen-restricted"
+          ],
+          "allowed": true
+        }
+      ],
+      "sourceRevisions": [
+        {
+          "id": "int-lumen-restricted",
+          "logicalSourceId": "fixture:src:intranet:lumen-restricted",
+          "sourceSystem": "intranet",
+          "revision": 1,
+          "sourceDigestSha256": "065b06ab3d84f8e8f30b3d3c4e34b50d272f4973606126ea361082e4a41b365f",
+          "contentDigestSha256": "3768a2382a0f5c0b0f7cc3af9f3af704a5120d82ab55d1386c1366096be5f056"
+        }
+      ],
+      "executedReads": [
+        {
+          "tool": "knowledge_search",
+          "sourceIds": [
+            "int-lumen-restricted"
+          ]
+        }
+      ],
+      "controls": {
+        "sourceProbe": "passed",
+        "outboundEvidence": "passed",
+        "revokedContext": "not_observed"
+      },
+      "outcome": "completed",
+      "fixtureCleanup": "completed",
+      "modelAssessment": "requires_human_review",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 1486.6669570000086,
+        "providerRequestCount": 2,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 3216,
+        "outputTokens": 185,
+        "estimatedCostUsd": 0.0033128,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "groq-qwen-3.8-27b",
+            "inputBound": 10398,
+            "outputBound": 1536,
+            "inputTokens": 1674,
+            "outputTokens": 84,
+            "estimatedCostUsd": 0.0016752,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          },
+          {
+            "profileId": "groq-qwen-3.8-27b",
+            "inputBound": 10766,
+            "outputBound": 1536,
+            "inputTokens": 1542,
+            "outputTokens": 101,
+            "estimatedCostUsd": 0.0016376,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "providerRequestIdentities": [
+        {
+          "requestDigestSha256": "8914f4a5510993cb7677d9f39ef9c58d94f5fb4d8128ca7e879d007cb3a262e0",
+          "effectiveInputDigestSha256": "c371dfa823e6e9142dcf9af1b21deb848f52def5e02685c910c23f4a9bc37ada"
+        },
+        {
+          "requestDigestSha256": "ca6bde027ce7b36885f78882ab804faef703864d695dc7f19a0ef2a2fb388ac4",
+          "effectiveInputDigestSha256": "8c1ee7ff908eed1eb4e925a65fe5bd03dff33915d758d77ed2e20df95c2509ca"
+        }
+      ],
+      "providerResponseIdentities": [
+        {
+          "status": 200,
+          "captureStatus": "captured",
+          "responseDigestSha256": "911273a9108f47f3710f1a2f044de71fcd4ec072d0cc23041942d57032076bbf"
+        },
+        {
+          "status": 200,
+          "captureStatus": "captured",
+          "responseDigestSha256": "73f7176823ad6e78bbeec5e2f6dce8ea0ca919bec31102be4840cf1c65dd3238"
+        }
+      ],
+      "routeStatusCodes": [
+        200,
+        200
+      ]
+    },
+    {
+      "caseId": "access-01",
+      "baseCaseId": "access-01",
+      "profileId": "gwdg-qwen3-30b",
+      "authenticatedRole": "reader",
+      "caseDigestSha256": "113429ff615d631f811486365307a788f8799ab942de2dc49915f82cb01ca6e4",
+      "configurationDigestSha256": "70627c5be0361af8f4b3a625ae30e3010ad2c8b31506a27e58556102831d22ce",
+      "declaredCaseClock": {
+        "now": "2026-10-20T09:00:00+02:00",
+        "timezone": "Europe/Berlin"
+      },
+      "runtimeClock": "actual_server_time_not_frozen",
+      "latencyScope": "case_including_source_setup_and_cleanup",
+      "startedAt": "2026-10-21T22:22:10.022Z",
+      "finishedAt": "2026-10-21T22:22:12.770Z",
+      "sourceProbes": [
+        {
+          "stage": "initial",
+          "sourceIds": [
+            "int-lumen-restricted"
+          ],
+          "allowed": true
+        }
+      ],
+      "sourceRevisions": [
+        {
+          "id": "int-lumen-restricted",
+          "logicalSourceId": "fixture:src:intranet:lumen-restricted",
+          "sourceSystem": "intranet",
+          "revision": 1,
+          "sourceDigestSha256": "065b06ab3d84f8e8f30b3d3c4e34b50d272f4973606126ea361082e4a41b365f",
+          "contentDigestSha256": "3768a2382a0f5c0b0f7cc3af9f3af704a5120d82ab55d1386c1366096be5f056"
+        }
+      ],
+      "executedReads": [],
+      "controls": {
+        "sourceProbe": "passed",
+        "outboundEvidence": "passed",
+        "revokedContext": "not_observed"
+      },
+      "outcome": "completed",
+      "fixtureCleanup": "completed",
+      "modelAssessment": "requires_human_review",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 2747.958071000001,
+        "providerRequestCount": 1,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 1839,
+        "outputTokens": 73,
+        "estimatedCostUsd": 0.0017632,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "gwdg-qwen3-30b",
+            "inputBound": 10398,
+            "outputBound": 1536,
+            "inputTokens": 1839,
+            "outputTokens": 73,
+            "estimatedCostUsd": 0.0017632,
+            "pricingBasis": "operator_estimate",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "providerRequestIdentities": [
+        {
+          "requestDigestSha256": "ecf691a85046101c5cbfe8ac2619985f831ddd88c983253453275cecc88ce73f",
+          "effectiveInputDigestSha256": "41360fb70b646e5e316959744b2d449a0a313cf85b0657bc0fcd64d8ca608b45"
+        }
+      ],
+      "providerResponseIdentities": [
+        {
+          "status": 200,
+          "captureStatus": "captured",
+          "responseDigestSha256": "133a6867d2741966b625ff06d6b78a46162f39c7f6c8226126e96307ba5995bc"
+        }
+      ],
+      "routeStatusCodes": [
+        200
+      ]
+    },
+    {
+      "caseId": "access-01",
+      "baseCaseId": "access-01",
+      "profileId": "deepinfra-deepseek-v4.1-flash",
+      "authenticatedRole": "reader",
+      "caseDigestSha256": "113429ff615d631f811486365307a788f8799ab942de2dc49915f82cb01ca6e4",
+      "configurationDigestSha256": "70627c5be0361af8f4b3a625ae30e3010ad2c8b31506a27e58556102831d22ce",
+      "declaredCaseClock": {
+        "now": "2026-10-20T09:00:00+02:00",
+        "timezone": "Europe/Berlin"
+      },
+      "runtimeClock": "actual_server_time_not_frozen",
+      "latencyScope": "case_including_source_setup_and_cleanup",
+      "startedAt": "2026-10-21T22:22:12.776Z",
+      "finishedAt": "2026-10-21T22:22:15.901Z",
+      "sourceProbes": [
+        {
+          "stage": "initial",
+          "sourceIds": [
+            "int-lumen-restricted"
+          ],
+          "allowed": true
+        }
+      ],
+      "sourceRevisions": [
+        {
+          "id": "int-lumen-restricted",
+          "logicalSourceId": "fixture:src:intranet:lumen-restricted",
+          "sourceSystem": "intranet",
+          "revision": 1,
+          "sourceDigestSha256": "065b06ab3d84f8e8f30b3d3c4e34b50d272f4973606126ea361082e4a41b365f",
+          "contentDigestSha256": "3768a2382a0f5c0b0f7cc3af9f3af704a5120d82ab55d1386c1366096be5f056"
+        }
+      ],
+      "executedReads": [
+        {
+          "tool": "knowledge_search",
+          "sourceIds": [
+            "int-lumen-restricted"
+          ]
+        },
+        {
+          "tool": "knowledge_search",
+          "sourceIds": [
+            "int-lumen-restricted"
+          ]
+        }
+      ],
+      "controls": {
+        "sourceProbe": "passed",
+        "outboundEvidence": "passed",
+        "revokedContext": "not_observed"
+      },
+      "outcome": "completed",
+      "fixtureCleanup": "completed",
+      "modelAssessment": "requires_human_review",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 3125.2880949999962,
+        "providerRequestCount": 2,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 3902,
+        "outputTokens": 231,
+        "estimatedCostUsd": 0.000919,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "deepinfra-deepseek-v4.1-flash",
+            "inputBound": 10398,
+            "outputBound": 1536,
+            "inputTokens": 1932,
+            "outputTokens": 115,
+            "estimatedCostUsd": 0.0004554,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          },
+          {
+            "profileId": "deepinfra-deepseek-v4.1-flash",
+            "inputBound": 11501,
+            "outputBound": 1536,
+            "inputTokens": 1970,
+            "outputTokens": 116,
+            "estimatedCostUsd": 0.0004636,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "providerRequestIdentities": [
+        {
+          "requestDigestSha256": "211f90a25c496d548a4c8b8fbed1288fa7d4893aa9b3c0d21f260ada219ba9a4",
+          "effectiveInputDigestSha256": "5dd0f0610da9fe0fab028793582bac4237c9287745ee83231dbd3c0199c5e605"
+        },
+        {
+          "requestDigestSha256": "7a90859b2c65c247cebb2a5a06e6e6f2d67805ea96b567510254825a216d8b96",
+          "effectiveInputDigestSha256": "1b1160ce3027c6e7ec5194dffaafdbaf5cf1a1e056eddc2c652381c4ab4aa1f0"
+        }
+      ],
+      "providerResponseIdentities": [
+        {
+          "status": 200,
+          "captureStatus": "partial",
+          "responseDigestSha256": "7124a33ec5468c9367b32d64320c184691127c0d6d10895081b5a6a4e55cc6bc"
+        },
+        {
+          "status": 200,
+          "captureStatus": "partial",
+          "responseDigestSha256": "0c4386363abe6e334261e015e2a9044989fc4708c7eb5765e9c1cfe18227c82a"
+        }
+      ],
+      "routeStatusCodes": [
+        200,
+        200
+      ]
+    }
+  ],
+  "retention": {
+    "mode": "verify",
+    "at": 1792621398651,
+    "baseline_nonbudget_rows_still_active": 553,
+    "missing_rows": 0,
+    "changed_rows": 0,
+    "budget_rows": 1,
+    "budget_fingerprint": "365637d32a716e51b695684ab984639ddea3cc1ff84e7675cd0f32d6bec4bbdc",
+    "same_database_and_volumes": true,
+    "baseline_expired_rows": 0,
+    "budget_changed": true,
+    "before_budget_fingerprint": "99f76bcc0013148e3ebf67f4f4edcca633a9bfde9daa90033afde33c6c04da63"
+  },
+  "budgetAfter": {
+    "initialized": true,
+    "windowStart": 1792540800000,
+    "windowEnd": 1792627200000,
+    "inputTokensUsed": 158952,
+    "outputTokensUsed": 12749,
+    "microUsdUsed": 178181,
+    "inputTokenLimit": 1250000,
+    "outputTokenLimit": 250000,
+    "microUsdLimit": 1000000,
+    "reservationsInWindow": 57,
+    "unresolvedReservations": 4,
+    "unknownUsageReservations": 4,
+    "archivedUnknown": {
+      "microUsd": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "reservations": 0
+    }
+  },
+  "limits": [
+    "permitted access-01 only; access-02 not executed",
+    "DeepInfra raw response capture partial; cause unestablished; no empty-safe-proposal inference",
+    "case latency includes fixture/route/cleanup; not first-token/API p95",
+    "actual server clock; not identical-input paired comparison",
+    "no gold/human grades, model ranking, institutional approval or M6 acceptance",
+    "GWDG tariff is provisional operator estimate; ledger charge differs from tariff estimate",
+    "cache unknown/M8-A10"
+  ]
+}
