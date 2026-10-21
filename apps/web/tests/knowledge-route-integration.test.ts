@@ -18,7 +18,7 @@ interface ProviderBody { model: string; messages: { role: string; content?: unkn
 type Completion = { text: string } | { tool: string; arguments: Record<string, unknown> };
 const activeFixtures: Fixture[] = [];
 
-async function setup(poisoned = false) {
+async function setup(poisoned = false, explicitAdmission = false) {
   const fixture = await createEvaluationKnowledgePolicyFixture({ poisoned });
   activeFixtures.push(fixture);
   vi.stubEnv("VERCEL", "");
@@ -44,6 +44,7 @@ async function setup(poisoned = false) {
   await ledger.initialize();
   const admission = createModelBudgetAdmission(ledger, configuration, prices);
   budget.get.mockResolvedValue(admission);
+  const injectedBudget = vi.fn(() => Promise.resolve(admission));
 
   const requests: ProviderBody[] = [];
   const destinations: string[] = [];
@@ -72,7 +73,9 @@ async function setup(poisoned = false) {
   const conversationId = randomUUID();
   const post = async (messages: WireMessage[], role: "reader" | "outsider" = "reader", profileId = "groq-oss-120b") => {
     const { POST } = await import("../src/app/api/chat/route");
-    return POST(new Request(`${fixture.webOrigin}/api/chat`, { method: "POST",
+    const { createChatPostHandler } = await import("../src/lib/server/chat-route");
+    const handler = explicitAdmission ? createChatPostHandler({ getBudgetAdmission: injectedBudget }) : POST;
+    return handler(new Request(`${fixture.webOrigin}/api/chat`, { method: "POST",
       headers: { host: new URL(fixture.webOrigin).host, origin: fixture.webOrigin,
         cookie: fixture.cookies[role], "content-type": "application/json" },
       body: JSON.stringify({ conversationId, profileId, messages }) }));
@@ -91,7 +94,7 @@ async function setup(poisoned = false) {
     const history: WireMessage[] = [user, reply.message, tool];
     return { history, result };
   };
-  return { fixture, ledger, admission, requests, destinations, rejectedDestinations, completions, post, retrieve };
+  return { fixture, ledger, admission, injectedBudget, requests, destinations, rejectedDestinations, completions, post, retrieve };
 }
 
 beforeEach(() => { vi.resetModules(); });
@@ -102,6 +105,24 @@ afterEach(async () => {
 });
 
 describe("authorized institutional retrieval through the actual chat route", () => {
+  it("uses explicit host admission while retaining actual authentication, context and provider checks", async () => {
+    const run = await setup(false, true);
+    budget.get.mockClear();
+    budget.get.mockRejectedValue(new Error("The operator must retain its preconstructed admission."));
+    const { history } = await run.retrieve();
+    run.completions.push({ text: "Die freigegebene Anleitung erklärt das WLAN-Profil." });
+    const response = await run.post(history);
+    expect(response.status).toBe(200);
+    expect(run.injectedBudget).toHaveBeenCalledTimes(2);
+    expect(budget.get).not.toHaveBeenCalled();
+    expect(JSON.stringify(run.requests[1])).toContain(run.fixture.sourceMarkers.allowedText);
+    const ledger = await run.ledger.snapshot();
+    expect(ledger.reservationsInWindow).toBe(2);
+    expect(ledger.inputTokensUsed).toBe(48);
+    expect(ledger.outputTokensUsed).toBe(14);
+    expect(ledger.unknownUsageReservations).toBe(0);
+  });
+
   it("replaces browser-carried document bodies with current signed source evidence before provider dispatch", async () => {
     const run = await setup();
     const { history, result } = await run.retrieve();

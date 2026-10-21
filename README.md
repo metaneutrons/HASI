@@ -169,6 +169,13 @@ status as evidence and has no execute tools; independent fixture observations
 grade the trace. The [first ten-call development run](docs/verification/2026-10-21/provider-unknown-outcome-run.md) records actual usage and semantic defects separately from passed structural controls; it does not establish full workflow or M6 acceptance.
 See [operator instructions and measurement limits](docs/evaluation/provider-observations.md).
 
+`pnpm evaluate:application-policy --profiles groq-oss-120b --cases access-01,access-02 --max-calls 4`
+plans the separately registered actual-route source/access/injection observations.
+Live execution additionally requires explicit operator opt-in and the existing shared
+durable budget. The [execution boundary and limits](docs/evaluation/application-policy-observations.md)
+separate source authorization, model proposals, backend rejection and human review;
+this is not completed adversarial or M6 acceptance.
+
 ### Local PostgreSQL server mode
 
 This one-process mode runs the server-backed demo against a local PostgreSQL database. Create a local database and a new 32-byte base64url `HASI_DEMO_SECRET`, then set these values in `apps/web/.env.local`:

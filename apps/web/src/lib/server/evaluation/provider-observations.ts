@@ -22,7 +22,7 @@ const reservationSchema = z.strictObject({
   outputTokens: nullableTokenCountSchema,
   estimatedCostUsd: nullableCostSchema,
   pricingBasis: z.enum(["published", "operator_estimate"]),
-  settlement: z.enum(["reserved", "reported", "unknown", "unconfirmed"]),
+  settlement: z.enum(["reserved", "reported", "released", "unknown", "unconfirmed"]),
 }).superRefine((reservation, context) => {
   if (reservation.settlement === "reported") {
     if (reservation.inputTokens === null || reservation.outputTokens === null || reservation.estimatedCostUsd === null) {
@@ -33,7 +33,7 @@ const reservationSchema = z.strictObject({
       context.addIssue({ code: "custom", message: "Reported usage cannot exceed its admitted bounds." });
     }
   } else if (reservation.inputTokens !== null || reservation.outputTokens !== null || reservation.estimatedCostUsd !== null) {
-    context.addIssue({ code: "custom", message: "Unsettled reservations cannot include reported usage." });
+    context.addIssue({ code: "custom", message: "Only reported reservations can include usage." });
   }
 });
 
@@ -54,30 +54,36 @@ export const providerMeasurementsSchema = z.strictObject({
   cacheStatus: z.literal("unknown"),
   reservations: z.array(reservationSchema).max(MAX_PROVIDER_REQUESTS),
 }).superRefine((measurements, context) => {
-  if (measurements.providerRequestCount > measurements.reservations.length) {
-    context.addIssue({ code: "custom", path: ["reservations"], message: "Provider requests require budget reservations." });
+  const requestEligibleReservations = measurements.reservations.filter((reservation) => reservation.settlement !== "released");
+  if (measurements.providerRequestCount > requestEligibleReservations.length) {
+    context.addIssue({ code: "custom", path: ["reservations"], message: "Provider requests require non-released budget reservations." });
+  }
+  if (measurements.providerRequestCount < measurements.reservations.filter(reservation => reservation.settlement === "reported").length) {
+    context.addIssue({ code: "custom", path: ["providerRequestCount"], message: "Each provider-reported settlement requires an observed request." });
   }
 
   if (measurements.usageStatus === "unknown") {
     if (measurements.inputTokens !== null || measurements.outputTokens !== null || measurements.estimatedCostUsd !== null) {
       context.addIssue({ code: "custom", message: "Unknown aggregate usage must be null." });
     }
-    if (!measurements.reservations.some((reservation) => reservation.settlement !== "reported")) {
+    if (!measurements.reservations.some((reservation) => ["reserved", "unknown", "unconfirmed"].includes(reservation.settlement))) {
       context.addIssue({ code: "custom", message: "Unknown aggregate usage requires an unsettled reservation." });
     }
   } else if (measurements.usageStatus === "complete") {
     if (measurements.inputTokens === null || measurements.outputTokens === null || measurements.estimatedCostUsd === null) {
       context.addIssue({ code: "custom", message: "Complete aggregate usage requires token counts and a cost." });
     }
-    const allReported = measurements.reservations.every((reservation) => reservation.settlement === "reported");
-    if (!allReported) {
-      context.addIssue({ code: "custom", message: "Complete aggregate usage requires all reservations to be reported." });
+    const reportedReservations = measurements.reservations.filter((reservation) => reservation.settlement === "reported");
+    const allSettled = reportedReservations.length > 0
+      && measurements.reservations.every((reservation) => reservation.settlement === "reported" || reservation.settlement === "released");
+    if (!allSettled) {
+      context.addIssue({ code: "custom", message: "Complete aggregate usage requires reported or released reservations." });
     }
-    if (allReported && measurements.inputTokens !== null && measurements.outputTokens !== null
+    if (allSettled && measurements.inputTokens !== null && measurements.outputTokens !== null
       && measurements.estimatedCostUsd !== null) {
-      const inputTotal = measurements.reservations.reduce((total, reservation) => total + (reservation.inputTokens ?? 0), 0);
-      const outputTotal = measurements.reservations.reduce((total, reservation) => total + (reservation.outputTokens ?? 0), 0);
-      const costTotal = measurements.reservations.reduce((total, reservation) => total + (reservation.estimatedCostUsd ?? 0), 0);
+      const inputTotal = reportedReservations.reduce((total, reservation) => total + (reservation.inputTokens ?? 0), 0);
+      const outputTotal = reportedReservations.reduce((total, reservation) => total + (reservation.outputTokens ?? 0), 0);
+      const costTotal = reportedReservations.reduce((total, reservation) => total + (reservation.estimatedCostUsd ?? 0), 0);
       if (!Number.isSafeInteger(inputTotal) || measurements.inputTokens !== inputTotal) {
         context.addIssue({ code: "custom", path: ["inputTokens"], message: "Aggregate input usage must equal its reservations." });
       }
@@ -88,9 +94,10 @@ export const providerMeasurementsSchema = z.strictObject({
         context.addIssue({ code: "custom", path: ["estimatedCostUsd"], message: "Aggregate cost must equal its reservations." });
       }
     }
-  } else if (measurements.providerRequestCount !== 0 || measurements.reservations.length !== 0
+  } else if (measurements.providerRequestCount !== 0
+    || measurements.reservations.some((reservation) => reservation.settlement !== "released")
     || measurements.inputTokens !== 0 || measurements.outputTokens !== 0 || measurements.estimatedCostUsd !== 0) {
-    context.addIssue({ code: "custom", message: "Not-dispatched usage must have no reservations or requests and zero totals." });
+    context.addIssue({ code: "custom", message: "Not-dispatched usage requires only released reservations, no requests, and zero totals." });
   }
 
   if (measurements.providerRequestCount === 0 && measurements.reservations.length === 0
@@ -117,7 +124,7 @@ interface InternalReservation {
   readonly inputRate: number;
   readonly outputRate: number;
   readonly pricingBasis: ModelPrice["basis"];
-  settlement: "reserved" | "reported" | "unknown" | "unconfirmed";
+  settlement: "reserved" | "reported" | "released" | "unknown" | "unconfirmed";
   inputTokens: number | null;
   outputTokens: number | null;
   estimatedCostUsd: number | null;
@@ -256,6 +263,24 @@ export function createProviderObservationMeter(input: {
             }
 
             const usageIsValid = isValidUsage(usage, observed);
+            if (usageIsValid && usage.inputTokens === 0 && usage.outputTokens === 0) {
+              try {
+                // The trusted router uses zero/zero only before dispatch; the budget delegate releases that hold.
+                await delegated.settle(usage);
+                observed.settlement = "released";
+                observed.inputTokens = null;
+                observed.outputTokens = null;
+                observed.estimatedCostUsd = null;
+              } catch (cause) {
+                observed.settlement = "unconfirmed";
+                observed.inputTokens = null;
+                observed.outputTokens = null;
+                observed.estimatedCostUsd = null;
+                throw cause;
+              }
+              return;
+            }
+
             if (!usageIsValid) {
               try {
                 await delegated.settle(undefined);
@@ -323,8 +348,11 @@ export function createProviderObservationMeter(input: {
         pricingBasis: reservation.pricingBasis,
         settlement: reservation.settlement,
       }));
-      const notDispatched = copiedReservations.length === 0 && request.providerRequestCount === 0;
-      const complete = !notDispatched && copiedReservations.every((reservation) => reservation.settlement === "reported");
+      const reportedReservations = copiedReservations.filter((reservation) => reservation.settlement === "reported");
+      const notDispatched = request.providerRequestCount === 0
+        && copiedReservations.every((reservation) => reservation.settlement === "released");
+      const complete = !notDispatched && reportedReservations.length > 0
+        && copiedReservations.every((reservation) => reservation.settlement === "reported" || reservation.settlement === "released");
       const result: ProviderMeasurements = {
         kind: "provider_reported",
         latencyMs: request.latencyMs,
@@ -332,10 +360,10 @@ export function createProviderObservationMeter(input: {
         currency: "USD",
         costKind: "token_usage_at_configured_rates",
         usageStatus: notDispatched ? "not_dispatched" : complete ? "complete" : "unknown",
-        inputTokens: notDispatched ? 0 : complete ? safeAggregateTotal(copiedReservations.map((reservation) => requiredReportedValue(reservation.inputTokens))) : null,
-        outputTokens: notDispatched ? 0 : complete ? safeAggregateTotal(copiedReservations.map((reservation) => requiredReportedValue(reservation.outputTokens))) : null,
+        inputTokens: notDispatched ? 0 : complete ? safeAggregateTotal(reportedReservations.map((reservation) => requiredReportedValue(reservation.inputTokens))) : null,
+        outputTokens: notDispatched ? 0 : complete ? safeAggregateTotal(reportedReservations.map((reservation) => requiredReportedValue(reservation.outputTokens))) : null,
         estimatedCostUsd: notDispatched ? 0 : complete
-          ? copiedReservations.reduce((total, reservation) => total + requiredReportedValue(reservation.estimatedCostUsd), 0)
+          ? reportedReservations.reduce((total, reservation) => total + requiredReportedValue(reservation.estimatedCostUsd), 0)
           : null,
         cacheStatus: "unknown",
         reservations: copiedReservations,
