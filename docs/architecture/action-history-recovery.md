@@ -52,6 +52,13 @@ access through a retained handle. Current authority is fenced around protected
 workspace reconstruction; a concurrent change aborts rather than returning a
 mixed snapshot. Deleting the message or conversation discards its reference.
 
+When a signed retained action location cannot currently resolve an authorized
+proposal, the host shows fixed guidance to check the outcome in the service
+before starting the action again. It returns no old action details or controls.
+This notice can retain the existing signed, read-only location for later
+reauthorization; browser text alone cannot create recovery authority. General
+unavailable model/source answers keep their separate redaction behavior.
+
 References are available only for cards that have already passed protected
 storage. IDs irreversibly removed by older code cannot be reconstructed from
 redacted text. Existing signed envelopes without a sidecar can be read and

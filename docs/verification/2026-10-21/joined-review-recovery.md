@@ -122,3 +122,23 @@ countercases prove that unknown CLI/terminal/model-body commands do not arm it,
 and rejected unauthorized requests do not consume an armed failure. The next
 valid completion fails once, then normal behavior resumes. Production router
 configuration and provider credentials are unchanged.
+
+## Safe guidance for unavailable historical actions
+
+The captured journey above precedes the resulting copy correction. A retained,
+signed action location without a currently authorized proposal now receives a
+fixed host notice telling the user to check the result in the service before
+starting the action again. It does not suggest simply repeating an action.
+Only id/role/text/timestamp are returned: no cached target, arguments, model,
+tool, proposal/status, result or controls. The same current-binding/account
+policy still denies receipt access; no compatibility exception is added.
+
+Both known host placeholders can retain only an already signed reference at
+its original session/message location. Existing field validation, unique-location
+handling and read-only marking remain. A client-only notice creates no reference
+or proposal read and remains the ordinary unavailable-answer placeholder.
+Forty-six focused protected-store/native-history/recovery tests pass, including
+denial→save→later authorized recovery and forged notice/sidecar countercases.
+The optimized build and exact-head CI remain separate integration gates. This
+copy correction was not present in the earlier joined browser capture and does
+not turn its absent receipt into a claimed visible receipt.

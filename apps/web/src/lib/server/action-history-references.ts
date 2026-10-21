@@ -4,6 +4,11 @@ import { z } from "zod";
 import { MAX_CHAT_MESSAGES, MAX_CHAT_SESSIONS, type ChatMessage, type ChatWorkspace } from "../chat-sessions";
 
 export const UNAVAILABLE_ANSWER = "Diese frühere Antwort ist nicht mehr verfügbar. Bitte stelle die Frage erneut.";
+export const UNAVAILABLE_ACTION_RECEIPT = "Der Beleg für diese frühere Aktion ist derzeit nicht verfügbar. Bitte prüfe das Ergebnis im zuständigen Dienst, bevor du die Aktion erneut startest.";
+
+function isUnavailablePlaceholder(text: string): boolean {
+  return text === UNAVAILABLE_ANSWER || text === UNAVAILABLE_ACTION_RECEIPT;
+}
 
 const actionReferenceSchema = z.strictObject({
   sessionId: z.string().min(1).max(128),
@@ -50,7 +55,7 @@ export function retainedActionReferences(workspace: ChatWorkspace, references: r
     const message = messages.get(actionReferenceKey(reference.sessionId, reference.messageId));
     if (!message) return [];
     if (message.proposal?.id === reference.proposalId && Object.keys(message).every(key => cardFields.has(key))) return [reference];
-    if (message.text === UNAVAILABLE_ANSWER && Object.keys(message).every(key => placeholderFields.has(key))) {
+    if (isUnavailablePlaceholder(message.text) && Object.keys(message).every(key => placeholderFields.has(key))) {
       return [{ ...reference, readOnly: true }];
     }
     return [];
@@ -67,7 +72,7 @@ export function updatedActionReferences(workspace: ChatWorkspace, retained: read
       const [sessionId, messageId] = JSON.parse(key) as [string, string];
       references.push({ sessionId, messageId, proposalId: message.proposal.id,
         readOnly: reference?.proposalId === message.proposal.id ? reference.readOnly : false });
-    } else if (reference && message.text === UNAVAILABLE_ANSWER) references.push({ ...reference, readOnly: true });
+    } else if (reference && isUnavailablePlaceholder(message.text)) references.push({ ...reference, readOnly: true });
   }
   return references;
 }

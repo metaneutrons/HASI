@@ -28,6 +28,7 @@ const EVIDENCE_TEXT = "OLD_EVIDENCE_TEXT_SENTINEL";
 const TARGET_TEXT = "OLD_TARGET_TEXT_SENTINEL";
 const ARGUMENT_TEXT = "OLD_ARGUMENT_TEXT_SENTINEL";
 const PLACEHOLDER = "Diese frühere Antwort ist nicht mehr verfügbar. Bitte stelle die Frage erneut.";
+const ACTION_RECEIPT_UNAVAILABLE = "Der Beleg für diese frühere Aktion ist derzeit nicht verfügbar. Bitte prüfe das Ergebnis im zuständigen Dienst, bevor du die Aktion erneut startest.";
 
 interface StoredEntry {
   readonly revision: string;
@@ -239,8 +240,10 @@ describe("ProtectedWorkspaceStore action-history recovery", () => {
     fixture.setProposals([]);
     const denied = await fixture.service.load();
     const deniedSession = required(denied.workspace.sessions.find(session => session.id === sessionId));
-    expect(deniedSession.snapshot.messages[3]).toMatchObject({ id: actionMessageId, role: "assistant", text: PLACEHOLDER });
-    expect(deniedSession.snapshot.messages[3]).not.toHaveProperty("proposal");
+    expect(deniedSession.snapshot.messages[3]).toMatchObject({ id: actionMessageId, role: "assistant", text: ACTION_RECEIPT_UNAVAILABLE });
+    for (const field of ["proposal", "tool", "model", "confirmed", "serviceConnection", "evidence"]) {
+      expect(deniedSession.snapshot.messages[3]).not.toHaveProperty(field);
+    }
     expect(deniedSession.snapshot.messages[2]?.text).toContain("nicht mehr verfügbar");
     expect(deniedSession.snapshot.messages[2]).not.toHaveProperty("sources");
     expect(JSON.stringify(deniedSession.snapshot.history)).not.toContain(EVIDENCE_TEXT);
@@ -317,8 +320,15 @@ describe("ProtectedWorkspaceStore action-history recovery", () => {
     fixture.setProposals([]);
     const denied = await fixture.service.load();
     const edit = required(denied.workspace.sessions.find(session => session.id === sessionId));
+    const unavailableReceipt = required(edit.snapshot.messages.find(message => message.id === actionMessageId));
+    expect(unavailableReceipt).toMatchObject({ id: actionMessageId, role: "assistant", text: ACTION_RECEIPT_UNAVAILABLE });
+    for (const field of ["proposal", "tool", "model", "confirmed", "serviceConnection", "evidence"]) {
+      expect(unavailableReceipt).not.toHaveProperty(field);
+    }
+    expect(unavailableReceipt.text).not.toContain(TARGET_TEXT);
     edit.snapshot.activeProposal = id;
     const savedWhileDenied = await fixture.service.save(denied.revision, denied.workspace);
+    expect(storedReferences(fixture)).toEqual([{ sessionId, messageId: actionMessageId, proposalId: id, readOnly: true }]);
 
     fixture.setAuthority(AUTHORITY_C);
     const renewed = proposal(id, currentStatus, "CURRENT");
@@ -400,6 +410,33 @@ describe("ProtectedWorkspaceStore action-history recovery", () => {
     fixture.setProposals([proposal(id, "pending", "CURRENT")]);
     const later = await fixture.service.load();
     expect(later.workspace.sessions.flatMap(session => session.snapshot.messages).some(message => message.proposal?.id === id)).toBe(false);
+    expect(fixture.resolveNative.mock.calls.at(-1)?.[1] ?? []).not.toContain(id);
+  });
+
+  it("does not accept a client-only action-receipt notice as a recovery reference", async () => {
+    const id = randomUUID();
+    const seeded = actionWorkspace(proposal(id));
+    const session = required(seeded.workspace.sessions.find(item => item.id === seeded.sessionId));
+    session.snapshot.messages[seeded.actionIndex] = {
+      id: seeded.actionMessageId,
+      role: "assistant",
+      text: ACTION_RECEIPT_UNAVAILABLE,
+    };
+    const fixture = makeFixture();
+
+    const saved = await fixture.service.save(null, seeded.workspace);
+    const savedSession = required(saved.workspace.sessions.find(item => item.id === seeded.sessionId));
+    const message = required(savedSession.snapshot.messages.find(item => item.id === seeded.actionMessageId));
+    expect(message).toMatchObject({ id: seeded.actionMessageId, role: "assistant", text: PLACEHOLDER });
+    expect(storedReferences(fixture)).toEqual([]);
+
+    fixture.setProposals([proposal(id, "confirmed", "CURRENT")]);
+    const reloaded = await fixture.service.load();
+    const reloadedSession = required(reloaded.workspace.sessions.find(item => item.id === seeded.sessionId));
+    const reloadedMessage = required(reloadedSession.snapshot.messages.find(item => item.id === seeded.actionMessageId));
+    expect(reloadedMessage).toMatchObject({ id: seeded.actionMessageId, role: "assistant", text: PLACEHOLDER });
+    expect(reloadedMessage).not.toHaveProperty("proposal");
+    expect(storedReferences(fixture)).toEqual([]);
     expect(fixture.resolveNative.mock.calls.at(-1)?.[1] ?? []).not.toContain(id);
   });
 
