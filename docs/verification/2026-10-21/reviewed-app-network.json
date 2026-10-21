@@ -1,0 +1,157 @@
+{
+  "truncated": false,
+  "requests": [
+    {
+      "method": "PUT",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "GET",
+      "path": "/api/session"
+    },
+    {
+      "method": "GET",
+      "path": "/api/session"
+    },
+    {
+      "method": "GET",
+      "path": "/api/session"
+    },
+    {
+      "method": "GET",
+      "path": "/api/session"
+    },
+    {
+      "method": "GET",
+      "path": "/api/session"
+    },
+    {
+      "method": "GET",
+      "path": "/api/session"
+    },
+    {
+      "method": "GET",
+      "path": "/api/session"
+    },
+    {
+      "method": "POST",
+      "path": "/api/availability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/availability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/availability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/availability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/availability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/availability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/availability"
+    },
+    {
+      "method": "GET",
+      "path": "/api/session"
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat/timestamps"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "GET",
+      "path": "/api/plugin-apps/de.hsh.hasi.anny/resources"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tools/call",
+      "tool": "anny.view_resources"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "GET",
+      "path": "/api/plugin-apps/de.hsh.hasi.anny/resources"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tools/call",
+      "tool": "anny.view_resources"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tools/call",
+      "tool": "anny.view_resources"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tools/call",
+      "tool": "anny.view_resources"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/workspace"
+    },
+    {
+      "method": "GET",
+      "path": "/api/plugin-apps/de.hsh.hasi.anny/resources"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/workspace"
+    }
+  ]
+}

@@ -11,13 +11,13 @@
     * { box-sizing: border-box; }
     body { margin: 0; padding: 16px; }
     main { max-width: 940px; margin: 0 auto; }
-    header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
-    header > div { min-width: 0; }
+    header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+    header > div { min-width: 0; flex: 1 1 16rem; }
     h1 { overflow-wrap: anywhere; margin: 3px 0 5px; font-size: clamp(1.25rem, 4vw, 1.7rem); line-height: 1.2; }
     .eyebrow { margin: 0; color: #586579; font-size: .78rem; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
     .intro { margin: 0; color: #586579; font-size: .9rem; }
     button, input, select { min-height: 44px; border: 1px solid #c7ced8; border-radius: 10px; background: #fff; color: inherit; font: inherit; }
-    button { padding: 0 14px; font-weight: 650; cursor: pointer; }
+    button { min-width: 0; max-width: 100%; padding: 6px 14px; font-weight: 650; cursor: pointer; overflow-wrap: anywhere; }
     button:disabled { cursor: default; opacity: .5; }
     input, select { width: 100%; padding: 8px 11px; }
     .filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(155px, .45fr); gap: 10px; margin-bottom: 10px; }
@@ -33,10 +33,10 @@
     .facts { display: grid; gap: 5px; }
     .facts p { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px; margin: 0; font-size: .78rem; overflow-wrap: anywhere; }
     .fact-label { color: #6a7483; }
-    #pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px 0 4px; }
+    #pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 16px 0 4px; }
     #pager[hidden] { display: none; }
     #current-page { min-width: 52px; text-align: center; color: #586579; font-size: .85rem; }
-    @media (max-width: 560px) { body { padding: 12px; } header { align-items: center; } .filters, #cards { grid-template-columns: 1fr; } header button { padding: 0 10px; } }
+    @media (max-width: 560px) { body { padding: 12px; } header { align-items: center; } .filters, #cards { grid-template-columns: 1fr; } header button { padding-inline: 10px; } }
     :root[data-theme="dark"] { background: #10151d; color: #edf1f7; }
       :root[data-theme="dark"] :is(.eyebrow, .intro, #status, #current-page) { color: #aeb9c8; }
       :root[data-theme="dark"] :is(#period, #availability-note) { color: #c5ceda; }

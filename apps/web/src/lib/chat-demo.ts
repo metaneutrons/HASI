@@ -433,7 +433,7 @@ function parseOfficeType(text: string): OfficeType | undefined {
 export function parseStandaloneOfficePreference(text: string): OfficeType | undefined {
   if (text.length > 2_000) return undefined;
   const normalized = normalize(text).trim().replace(/[.!?]+$/u, "").trim();
-  if (!/^(?:(?:bitte|lieber)\s+)?(?:(?:ein|einen)\s+)?(?:einzelburo|1er[- ]?buro|buro\s+mit\s+(?:einem|1)\s+arbeitsplatz|platz\s+in\s+einem\s+geteilten\s+buro|geteiltes buro|gemeinsames buro|shared office|beides|(?:mir\s+)?egal|keine praferenz)(?:\s+bitte)?$/u.test(normalized)) return undefined;
+  if (!/^(?:(?:bitte|lieber)\s+)?(?:(?:ein|einen)\s+)?(?:einzelburo|1er[- ]?buro|buro\s+mit\s+(?:einem|1)\s+arbeitsplatz|platz\s+in\s+einem\s+geteilten\s+buro|geteiltes buro|gemeinsames buro|shared office|beides(?:\s+(?:ist\s+passend|passt))?|(?:mir\s+)?egal|keine praferenz)(?:\s+bitte)?$/u.test(normalized)) return undefined;
   return parseOfficeType(normalized);
 }
 

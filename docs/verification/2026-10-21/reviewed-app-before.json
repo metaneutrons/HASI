@@ -1,0 +1,354 @@
+[
+  {
+    "width": 320,
+    "px": 16,
+    "child": {
+      "theme": "dark",
+      "rootPx": "16px",
+      "width": 260,
+      "scrollWidth": 260,
+      "status": "2 Treffer · Seite 1 von 1",
+      "period": "Zeitraum aus dem Chat: 22.10.2026, 10:00 bis 22.10.2026, 16:00",
+      "controls": [
+        {
+          "id": "reload",
+          "height": 44,
+          "width": 122.6953125
+        },
+        {
+          "id": "search",
+          "height": 44,
+          "width": 236
+        },
+        {
+          "id": "kind",
+          "height": 44,
+          "width": 236
+        }
+      ],
+      "outside": []
+    },
+    "host": {
+      "width": 320,
+      "scrollWidth": 320,
+      "rootPx": "16px"
+    }
+  },
+  {
+    "width": 320,
+    "px": 32,
+    "child": {
+      "theme": "dark",
+      "rootPx": "32px",
+      "width": 236,
+      "scrollWidth": 243,
+      "status": "2 Treffer · Seite 1 von 1",
+      "period": "Zeitraum aus dem Chat: 22.10.2026, 10:00 bis 22.10.2026, 16:00",
+      "controls": [
+        {
+          "id": "reload",
+          "height": 44,
+          "width": 215.3515625
+        },
+        {
+          "id": "search",
+          "height": 48.5,
+          "width": 212
+        },
+        {
+          "id": "kind",
+          "height": 50.5,
+          "width": 212
+        }
+      ],
+      "outside": [
+        "reload"
+      ]
+    },
+    "host": {
+      "width": 320,
+      "scrollWidth": 320,
+      "rootPx": "32px"
+    }
+  },
+  {
+    "width": 375,
+    "px": 16,
+    "child": {
+      "theme": "dark",
+      "rootPx": "16px",
+      "width": 315,
+      "scrollWidth": 315,
+      "status": "2 Treffer · Seite 1 von 1",
+      "period": "Zeitraum aus dem Chat: 22.10.2026, 10:00 bis 22.10.2026, 16:00",
+      "controls": [
+        {
+          "id": "reload",
+          "height": 44,
+          "width": 122.6953125
+        },
+        {
+          "id": "search",
+          "height": 44,
+          "width": 291
+        },
+        {
+          "id": "kind",
+          "height": 44,
+          "width": 291
+        }
+      ],
+      "outside": []
+    },
+    "host": {
+      "width": 375,
+      "scrollWidth": 375,
+      "rootPx": "16px"
+    }
+  },
+  {
+    "width": 375,
+    "px": 32,
+    "child": {
+      "theme": "dark",
+      "rootPx": "32px",
+      "width": 291,
+      "scrollWidth": 291,
+      "status": "2 Treffer · Seite 1 von 1",
+      "period": "Zeitraum aus dem Chat: 22.10.2026, 10:00 bis 22.10.2026, 16:00",
+      "controls": [
+        {
+          "id": "reload",
+          "height": 44,
+          "width": 215.3515625
+        },
+        {
+          "id": "search",
+          "height": 48.5,
+          "width": 267
+        },
+        {
+          "id": "kind",
+          "height": 50.5,
+          "width": 267
+        }
+      ],
+      "outside": []
+    },
+    "host": {
+      "width": 375,
+      "scrollWidth": 375,
+      "rootPx": "32px"
+    }
+  },
+  {
+    "width": 390,
+    "px": 16,
+    "child": {
+      "theme": "dark",
+      "rootPx": "16px",
+      "width": 330,
+      "scrollWidth": 330,
+      "status": "2 Treffer · Seite 1 von 1",
+      "period": "Zeitraum aus dem Chat: 22.10.2026, 10:00 bis 22.10.2026, 16:00",
+      "controls": [
+        {
+          "id": "reload",
+          "height": 44,
+          "width": 122.6953125
+        },
+        {
+          "id": "search",
+          "height": 44,
+          "width": 306
+        },
+        {
+          "id": "kind",
+          "height": 44,
+          "width": 306
+        }
+      ],
+      "outside": []
+    },
+    "host": {
+      "width": 390,
+      "scrollWidth": 390,
+      "rootPx": "16px"
+    }
+  },
+  {
+    "width": 390,
+    "px": 32,
+    "child": {
+      "theme": "dark",
+      "rootPx": "32px",
+      "width": 306,
+      "scrollWidth": 306,
+      "status": "2 Treffer · Seite 1 von 1",
+      "period": "Zeitraum aus dem Chat: 22.10.2026, 10:00 bis 22.10.2026, 16:00",
+      "controls": [
+        {
+          "id": "reload",
+          "height": 44,
+          "width": 215.3515625
+        },
+        {
+          "id": "search",
+          "height": 48.5,
+          "width": 282
+        },
+        {
+          "id": "kind",
+          "height": 50.5,
+          "width": 282
+        }
+      ],
+      "outside": []
+    },
+    "host": {
+      "width": 390,
+      "scrollWidth": 390,
+      "rootPx": "32px"
+    }
+  },
+  {
+    "width": 768,
+    "px": 16,
+    "child": {
+      "theme": "dark",
+      "rootPx": "16px",
+      "width": 486,
+      "scrollWidth": 486,
+      "status": "2 Treffer · Seite 1 von 1",
+      "period": "Zeitraum aus dem Chat: 22.10.2026, 10:00 bis 22.10.2026, 16:00",
+      "controls": [
+        {
+          "id": "reload",
+          "height": 44,
+          "width": 122.6953125
+        },
+        {
+          "id": "search",
+          "height": 44,
+          "width": 462
+        },
+        {
+          "id": "kind",
+          "height": 44,
+          "width": 462
+        }
+      ],
+      "outside": []
+    },
+    "host": {
+      "width": 768,
+      "scrollWidth": 768,
+      "rootPx": "16px"
+    }
+  },
+  {
+    "width": 768,
+    "px": 32,
+    "child": {
+      "theme": "dark",
+      "rootPx": "32px",
+      "width": 462,
+      "scrollWidth": 462,
+      "status": "2 Treffer · Seite 1 von 1",
+      "period": "Zeitraum aus dem Chat: 22.10.2026, 10:00 bis 22.10.2026, 16:00",
+      "controls": [
+        {
+          "id": "reload",
+          "height": 44,
+          "width": 215.3515625
+        },
+        {
+          "id": "search",
+          "height": 48.5,
+          "width": 438
+        },
+        {
+          "id": "kind",
+          "height": 50.5,
+          "width": 438
+        }
+      ],
+      "outside": []
+    },
+    "host": {
+      "width": 768,
+      "scrollWidth": 768,
+      "rootPx": "32px"
+    }
+  },
+  {
+    "width": 1280,
+    "px": 16,
+    "child": {
+      "theme": "dark",
+      "rootPx": "16px",
+      "width": 762,
+      "scrollWidth": 762,
+      "status": "2 Treffer · Seite 1 von 1",
+      "period": "Zeitraum aus dem Chat: 22.10.2026, 10:00 bis 22.10.2026, 16:00",
+      "controls": [
+        {
+          "id": "reload",
+          "height": 44,
+          "width": 130.6953125
+        },
+        {
+          "id": "search",
+          "height": 44,
+          "width": 496.546875
+        },
+        {
+          "id": "kind",
+          "height": 44,
+          "width": 223.4453125
+        }
+      ],
+      "outside": []
+    },
+    "host": {
+      "width": 1280,
+      "scrollWidth": 1280,
+      "rootPx": "16px"
+    }
+  },
+  {
+    "width": 1280,
+    "px": 32,
+    "child": {
+      "theme": "dark",
+      "rootPx": "32px",
+      "width": 738,
+      "scrollWidth": 738,
+      "status": "2 Treffer · Seite 1 von 1",
+      "period": "Zeitraum aus dem Chat: 22.10.2026, 10:00 bis 22.10.2026, 16:00",
+      "controls": [
+        {
+          "id": "reload",
+          "height": 44,
+          "width": 223.3515625
+        },
+        {
+          "id": "search",
+          "height": 49.5,
+          "width": 479.9921875
+        },
+        {
+          "id": "kind",
+          "height": 50.5,
+          "width": 216
+        }
+      ],
+      "outside": []
+    },
+    "host": {
+      "width": 1280,
+      "scrollWidth": 1280,
+      "rootPx": "32px"
+    }
+  }
+]

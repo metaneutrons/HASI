@@ -1,0 +1,18 @@
+{
+  "base": "a7653f736ea91f816a0657654f84f16d1501ae7a",
+  "sourceSha256": {
+    "apps/anny-plugin/src/app-view-template.html": "f8aadc0c0ca1c4080678c1de2c05316fb48e1548d536fe9fe4a0723e862a91d9",
+    "apps/anny-plugin/src/app-view.generated.html": "0c4bd34f8c35d9d224e3d90ee8938f885cfb62efba2d45e6bd324f09d5b887be",
+    "apps/anny-plugin/src/app-view-metadata.generated.ts": "f10da752d660107c5b28564774ba3fe7dcb277cd9258ca281004ccaaf189cd2e",
+    "apps/web/src/components/plugin-result-app.tsx": "0f7f1e2c72064ae4f557e6fac4c451e5b554efc8b20a306703725f56f7acdc5d",
+    "apps/web/src/components/plugin-app-view.tsx": "8115e043b444d5a7783d6f53b0fade7a791fa03b03144cea4f4b32ae731f8b4f"
+  },
+  "originalResourceSha256": "f370ebc6f9f271c7c0929afc4904a0d9dd153fcfcbee8fd85017bd361293f070",
+  "correctedResourceSha256": "0c4bd34f8c35d9d224e3d90ee8938f885cfb62efba2d45e6bd324f09d5b887be",
+  "oldCaseCount": 10,
+  "oldFailedCases": 1,
+  "correctedCaseCount": 20,
+  "correctedFailedCases": 0,
+  "allCorrectedVisibleControlsAtLeast44px": true,
+  "realProviderCalls": 0
+}

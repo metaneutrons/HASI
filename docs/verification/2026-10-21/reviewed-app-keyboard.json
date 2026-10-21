@@ -1,0 +1,21 @@
+[
+  {
+    "step": "enter",
+    "focus": "reload",
+    "outline": "auto"
+  },
+  {
+    "step": "next",
+    "focus": "search"
+  },
+  {
+    "step": "kind",
+    "focus": "kind",
+    "query": "Amrum"
+  },
+  {
+    "step": "return",
+    "focus": "SUMMARY",
+    "text": "Interaktive Plugin-Ansicht öffnen"
+  }
+]

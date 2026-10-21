@@ -118,6 +118,8 @@ describe("bounded German chat demo parser", () => {
     const single = mergeRoomRequest("Einzelbüro", previous);
     const shared = mergeRoomRequest("geteiltes Büro", previous);
     const any = mergeRoomRequest("egal, keine Präferenz", previous);
+    const bothAreFine = mergeRoomRequest("Beides ist passend.", { ...previous, query: "Grace Hopper" });
+    const bothFit = mergeRoomRequest("Beides passt!", previous);
 
     expect(single).toMatchObject({ ...previous, kind: "workplace", officeType: "single" });
     expect(single.query).toBeUndefined();
@@ -125,6 +127,9 @@ describe("bounded German chat demo parser", () => {
     expect(shared.query).toBeUndefined();
     expect(any).toMatchObject({ ...previous, kind: "workplace", officeType: "any" });
     expect(any.query).toBeUndefined();
+    expect(bothAreFine).toMatchObject({ ...previous, query: "Grace Hopper", kind: "workplace", officeType: "any" });
+    expect(bothFit).toMatchObject({ ...previous, kind: "workplace", officeType: "any" });
+    expect(bothFit.query).toBeUndefined();
   });
 
   it("understands the offered office description without confusing it with requested desk quantity", () => {

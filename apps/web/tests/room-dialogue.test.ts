@@ -31,6 +31,33 @@ describe("planRoomDialogue", () => {
     expect(plan.needsAvailability).toBe(true);
     expect(plan.resources.map(item => item.id)).toEqual(["single", "shared"]);
   });
+  it("plans the complete workplace search after the standalone ‘both are suitable’ refinement", () => {
+    const now = new Date("2026-10-20T08:00:00Z");
+    const initial = mergeRoomRequest(
+      "Ich brauche morgen einen Arbeitsplatz in 1J von 10 bis 16 Uhr.",
+      {},
+      now,
+    );
+    const refined = mergeRoomRequest("Beides ist passend.", initial, now);
+
+    expect(initial).toMatchObject({
+      kind: "workplace",
+      date: "2026-10-21",
+      time: "10:00",
+      durationMinutes: 360,
+      location: "1J",
+    });
+    expect(initial.query).toBeUndefined();
+    expect(refined).toMatchObject({ ...initial, officeType: "any" });
+    expect(refined.query).toBeUndefined();
+
+    const plan = planRoomDialogue(refined, [
+      resource("single", "workplace", "Desk A", 1),
+      resource("shared", "workplace", "Desk B", 2),
+    ]);
+    expect(plan.needsAvailability).toBe(true);
+    expect(plan.resources.map(item => item.id)).toEqual(["single", "shared"]);
+  });
   it("answers group and invalid questions before consulting the catalog", () => {
     const group = planRoomDialogue(
       { kind: "workplace", capacity: 3 },
