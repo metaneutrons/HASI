@@ -4,7 +4,8 @@ import { forwardProposalStatus, readProposalSnapshot, sameProposalDetails } from
 /** Closed UI help replies, never a general booking/topic classifier. */
 export function asksForActionControls(text: string): boolean {
   if (text.length > 240) return false;
-  const normalized = text.trim().toLocaleLowerCase("de-DE").replace(/[.!?]+$/u, "").replace(/\s+/gu, " ");
+  const normalized = text.trim().toLocaleLowerCase("de-DE").replace(/[.!?]+$/u, "").replace(/\s+/gu, " ")
+    .replace(/^was soll das(?: denn)?[,.!?]?\s+/u, "");
   if (/^(?:i (?:don't|do not|cannot|can't) (?:see|find) (?:a|the|any) (?:confirmation |confirm )?button|where is the (?:confirmation |confirm )?button)$/u.test(normalized)) return true;
   return /^(?:(?:ich )?(?:sehe|finde) (?:hier )?kein(?:e|en)? (?:schaltfläche|schaltflaeche|button|bestätigung|bestaetigung|bestätigungsschaltfläche|bestätigungsbutton)|wo (?:ist|finde ich) (?:die |den )?(?:schaltfläche|schaltflaeche|button|bestätigung|bestaetigung|bestätigungsschaltfläche|bestätigungsbutton)|(?:ich )?(?:möchte|moechte|will) (?:direkt )?(?:hier|von hier) buchen)$/u.test(normalized);
 }

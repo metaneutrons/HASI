@@ -67,8 +67,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Nutzung: die AcademicCloud auf einem Handy",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie nutze ich die Academic Cloud auf einem Smartphone?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -80,7 +80,7 @@
         "academic-cloud"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die Mobilübung A9D22D für Nutzung: die AcademicCloud auf einem Handy richtet ein ausschließlich fiktives Gerät MOBIL-A9D22D ein. Öffne im Testhandbuch die App-Übersicht, prüfe die simulierte Anmeldung und vergleiche die Vorschau für Datei- und Chatfunktionen. Installiere keine echte App, trage keine persönlichen Kontodaten ein und übernimm kein reales Geräteprofil.",
-      "citationId": "knowledge:service_it:svc-catalog-905b48a9d22d:1",
+      "citationId": "knowledge:service_it:svc-catalog-905b48a9d22d:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -88,8 +88,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Nutzung: die AcademicCloud für Desktop Anwendungen",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie nutze ich die Academic Cloud für Desktop-Anwendungen?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -101,7 +101,7 @@
         "academic-cloud"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Desktop-Fall 0B9CE9 zu Nutzung: die AcademicCloud für Desktop Anwendungen nutzt ausschließlich das Testgerät PC-0B9CE9. Prüfe in der Vorschau, ob die Demo-App gestartet ist, öffne einen leeren Testordner und kontrolliere den simulierten Synchronisationsstatus. Lege keine realen Dateien ab und verknüpfe kein produktives Benutzerprofil.",
-      "citationId": "knowledge:service_it:svc-catalog-b237980b9ce9:1",
+      "citationId": "knowledge:service_it:svc-catalog-b237980b9ce9:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -109,8 +109,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Nutzung: die AcademicCloud im Web-Browser",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie nutze ich die Academic Cloud im Webbrowser?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -122,7 +122,7 @@
         "academic-cloud"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Browserfall 05A9B9 zu Nutzung: die AcademicCloud im Web-Browser startet an der reservierten Demo-Adresse https://cloud-demo.invalid. Prüfe in der Vorschau, ob die Weboberfläche den Testarbeitsraum CLOUD-05A9B9 öffnet, und kontrolliere anschließend nur die simulierten Datei- und Chatbereiche. Es findet keine echte Anmeldung statt und es werden keine Dateien hochgeladen.",
-      "citationId": "knowledge:service_it:svc-catalog-dcd6df05a9b9:1",
+      "citationId": "knowledge:service_it:svc-catalog-dcd6df05a9b9:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -130,8 +130,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Freigabe: Dateien und Ordner in der AcadamicCloud",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie gebe ich Dateien und Ordner in der Academic Cloud frei?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -143,7 +143,7 @@
         "academic-cloud"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Freigabefall D508E5 zu Freigabe: Dateien und Ordner in der AcadamicCloud verwendet den Testordner CLOUD-D508E5. Wähle in der Vorschau eine fiktive Leseberechtigung für die Demo-Rolle, kontrolliere den Umfang für Datei und Unterordner und entferne den Testlink wieder. Es werden keine echten Dateien hochgeladen und keine externe Freigabe eingerichtet.",
-      "citationId": "knowledge:service_it:svc-catalog-d9dc61d508e5:1",
+      "citationId": "knowledge:service_it:svc-catalog-d9dc61d508e5:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -151,8 +151,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Nutzung: die AcademicCloud",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie nutze ich die Academic Cloud?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -164,7 +164,7 @@
         "academic-cloud"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Cloud-Überblick 54F1F6 zu Nutzung: die AcademicCloud vergleicht im fiktiven Arbeitsraum CLOUD-54F1F6 die Bereiche Dateien, Chat und Zusammenarbeit. Öffne nur die Vorschau, ordne die passende Testfunktion dem Bedarf zu und beende den Durchlauf ohne Freigabe. Es werden keine echten Konten, Dateien, Nachrichten oder Mitgliedschaften angelegt.",
-      "citationId": "knowledge:service_it:svc-catalog-d735c154f1f6:1",
+      "citationId": "knowledge:service_it:svc-catalog-d735c154f1f6:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -172,8 +172,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: lange ist der Account der Studierenden gültig",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie lange ist der Account der Studierenden gültig?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -186,7 +186,7 @@
         "campuscard"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Übungsfall 868128 behandelt Ablauf: lange ist der Account der Studierenden gültig mit der fiktiven Karte CARD-868128. Öffne die Vorschau des Karten-Demoprofils, wähle die passende Testfunktion und prüfe eine Anzeige mit erfundenen Demo-Punkten. Ausgabe, Aufladung, Bibliotheksfreigabe und Validierung sind ausschließlich simuliert; es werden keine realen Kartendaten oder Beträge verändert.",
-      "citationId": "knowledge:service_it:svc-catalog-2c3445868128:1",
+      "citationId": "knowledge:service_it:svc-catalog-2c3445868128:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -194,8 +194,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Erstellung: mir einen Adobe Account",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie erstelle ich einen Adobe-Account?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -208,7 +208,7 @@
         "software"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Softwarefall 3D7A38 behandelt Erstellung: mir einen Adobe Account in einer isolierten Lizenz-Sandbox. Öffne das fiktive Profil SOFTWARE-3D7A38, prüfe den angezeigten Produktnamen und wähle nur eine Vorschau oder Testinstallation. Die Demo bestätigt keine reale Bezugsberechtigung, Lizenz oder Rabattregel; keine Installation auf einem produktiven Gerät starten.",
-      "citationId": "knowledge:service_it:svc-catalog-cd08783d7a38:1",
+      "citationId": "knowledge:service_it:svc-catalog-cd08783d7a38:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -216,8 +216,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlersuche: bekomme ich eine \"Update-Fehler\" Fehlermeldung von Adobe Acrobat",
-      "revision": 1,
+      "title": "Demo-FAQ: Warum erhalte ich in Adobe Acrobat eine Update-Fehlermeldung?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -229,7 +229,7 @@
         "software"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Softwarefall D3BC65 behandelt Fehlersuche: bekomme ich eine \"Update-Fehler\" Fehlermeldung von Adobe Acrobat in einer isolierten Lizenz-Sandbox. Öffne das fiktive Profil SOFTWARE-D3BC65, prüfe den angezeigten Produktnamen und wähle nur eine Vorschau oder Testinstallation. Die Demo bestätigt keine reale Bezugsberechtigung, Lizenz oder Rabattregel; keine Installation auf einem produktiven Gerät starten.",
-      "citationId": "knowledge:service_it:svc-catalog-e1e938d3bc65:1",
+      "citationId": "knowledge:service_it:svc-catalog-e1e938d3bc65:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -257,8 +257,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: setze ich mein Adobe Passwort zurück",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie setze ich mein Adobe-Passwort zurück?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -271,7 +271,7 @@
         "software"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Softwarefall FF1B90 behandelt Ablauf: setze ich mein Adobe Passwort zurück in einer isolierten Lizenz-Sandbox. Öffne das fiktive Profil SOFTWARE-FF1B90, prüfe den angezeigten Produktnamen und wähle nur eine Vorschau oder Testinstallation. Die Demo bestätigt keine reale Bezugsberechtigung, Lizenz oder Rabattregel; keine Installation auf einem produktiven Gerät starten.",
-      "citationId": "knowledge:service_it:svc-catalog-2c9a21ff1b90:1",
+      "citationId": "knowledge:service_it:svc-catalog-2c9a21ff1b90:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -300,8 +300,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Aktualisierung: meine Matlab Lizenz",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie aktualisiere ich meine Matlab-Lizenz?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -313,7 +313,7 @@
         "software"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Softwarefall 52E57F behandelt Aktualisierung: meine Matlab Lizenz in einer isolierten Lizenz-Sandbox. Öffne das fiktive Profil SOFTWARE-52E57F, prüfe den angezeigten Produktnamen und wähle nur eine Vorschau oder Testinstallation. Die Demo bestätigt keine reale Bezugsberechtigung, Lizenz oder Rabattregel; keine Installation auf einem produktiven Gerät starten.",
-      "citationId": "knowledge:service_it:svc-catalog-cf087b52e57f:1",
+      "citationId": "knowledge:service_it:svc-catalog-cf087b52e57f:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -383,8 +383,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: komme ich ins WagtailBackend",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie komme ich ins Wagtail-Backend?",
+      "revision": 2,
       "demoAudience": [
         "admin"
       ],
@@ -394,7 +394,7 @@
         "wagtail"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die fiktive Redaktion übt Ablauf: komme ich ins WagtailBackend im CMS-Labor https://cms-demo.invalid. Erstelle einen Entwurf mit der Referenz 53DF4B, prüfe Titel, Vorschau und Sprache und kontrolliere bei Medien die erfundene Beschreibung. Änderungen bleiben im Testbereich und werden nicht veröffentlicht; es werden weder echte Seiten noch echte Formulare bearbeitet.",
-      "citationId": "knowledge:service_it:svc-catalog-fe0ca353df4b:1",
+      "citationId": "knowledge:service_it:svc-catalog-fe0ca353df4b:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -528,8 +528,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlerbild: E-Mails nicht automatisch auf mein privates Postfach weiterleiten lassen",
-      "revision": 1,
+      "title": "Demo-FAQ: Warum lassen sich E-Mails nicht automatisch an mein privates Postfach weiterleiten?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -541,7 +541,7 @@
         "email"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Postfachfall B9E13F übt Fehlerbild: E-Mails nicht automatisch auf mein privates Postfach weiterleiten lassen im erfundenen Mail-Labor https://mail-demo.invalid. Prüfe den Status des Testpostfachs MAIL-B9E13F, vergleiche die Vorschau im zweiten Demo-Client und ändere nur eine simulierte Einstellung. Es werden keine echten Nachrichten weitergeleitet, versandt, gelöscht oder in ein persönliches Konto verschoben.",
-      "citationId": "knowledge:service_it:svc-catalog-f2adceb9e13f:1",
+      "citationId": "knowledge:service_it:svc-catalog-f2adceb9e13f:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -570,8 +570,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: lege ich mein Microsoft 365-Konto an",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie lege ich mein Microsoft-365-Konto an?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -584,7 +584,7 @@
         "microsoft"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Testtenant OFFICE-162ED2 übt der Fall 162ED2 Ablauf: lege ich mein Microsoft 365-Konto an. Kontrolliere zuerst die Demo-Kontoeinstellung, öffne danach nur den vorgesehenen Funktionsbereich und vergleiche die Vorschau mit der gewünschten Testrolle. Dateien, Gruppen, Meetings und Lizenzen sind fiktiv; es wird kein reales Konto registriert, keine Lizenz zugesagt und nichts an echte Personen freigegeben.",
-      "citationId": "knowledge:service_it:svc-catalog-ad7b8d162ed2:1",
+      "citationId": "knowledge:service_it:svc-catalog-ad7b8d162ed2:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -592,8 +592,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: hinterlege ich Sicherheitsinformationen für meinen Azure Account",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie hinterlege ich Sicherheitsinformationen für mein Azure-Konto?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -607,7 +607,7 @@
         "security"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Testtenant OFFICE-D36248 übt der Fall D36248 Ablauf: hinterlege ich Sicherheitsinformationen für meinen Azure Account. Kontrolliere zuerst die Demo-Kontoeinstellung, öffne danach nur den vorgesehenen Funktionsbereich und vergleiche die Vorschau mit der gewünschten Testrolle. Dateien, Gruppen, Meetings und Lizenzen sind fiktiv; es wird kein reales Konto registriert, keine Lizenz zugesagt und nichts an echte Personen freigegeben.",
-      "citationId": "knowledge:service_it:svc-catalog-c55e64d36248:1",
+      "citationId": "knowledge:service_it:svc-catalog-c55e64d36248:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -615,8 +615,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlerbild: nicht korrekt drucken",
-      "revision": 1,
+      "title": "Demo-FAQ: Warum wird nicht korrekt gedruckt?",
+      "revision": 2,
       "demoAudience": [
         "employee",
         "admin"
@@ -627,7 +627,7 @@
         "druck"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die Druckübung 80D4CB nutzt die fiktive Warteschlange PRINT-80D4CB. Sende eine einseitige Testseite ohne persönliche Daten, prüfe Druckvorschau und Warteschlangenstatus und entferne den Demojob anschließend. Gerät, Standort, Toner und Ergebnis sind erfunden; weder ein realer Drucker noch ein echter Druckauftrag werden verändert.",
-      "citationId": "knowledge:service_it:svc-catalog-c9de2280d4cb:1",
+      "citationId": "knowledge:service_it:svc-catalog-c9de2280d4cb:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -635,8 +635,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: und wo kann ich meine CampusCard aufladen",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie und wo kann ich meine CampusCard aufladen?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -648,7 +648,7 @@
         "campuscard"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Übungsfall 088185 behandelt Ablauf: und wo kann ich meine CampusCard aufladen mit der fiktiven Karte CARD-088185. Öffne die Vorschau des Karten-Demoprofils, wähle die passende Testfunktion und prüfe eine Anzeige mit erfundenen Demo-Punkten. Ausgabe, Aufladung, Bibliotheksfreigabe und Validierung sind ausschließlich simuliert; es werden keine realen Kartendaten oder Beträge verändert.",
-      "citationId": "knowledge:service_it:svc-catalog-783e75088185:1",
+      "citationId": "knowledge:service_it:svc-catalog-783e75088185:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -656,8 +656,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Zugang: die CampusCard (Studierendenausweis)",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie erhalte ich die CampusCard (Studierendenausweis)?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -669,7 +669,7 @@
         "campuscard"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Übungsfall 5C8CB8 behandelt Zugang: die CampusCard (Studierendenausweis) mit der fiktiven Karte CARD-5C8CB8. Öffne die Vorschau des Karten-Demoprofils, wähle die passende Testfunktion und prüfe eine Anzeige mit erfundenen Demo-Punkten. Ausgabe, Aufladung, Bibliotheksfreigabe und Validierung sind ausschließlich simuliert; es werden keine realen Kartendaten oder Beträge verändert.",
-      "citationId": "knowledge:service_it:svc-catalog-e4f5aa5c8cb8:1",
+      "citationId": "knowledge:service_it:svc-catalog-e4f5aa5c8cb8:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -740,8 +740,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: verhalte ich mich beim Verlust der CampusCard",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie verhalte ich mich beim Verlust meiner CampusCard?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -753,7 +753,7 @@
         "campuscard"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Fall 96F6F5 wird die erfundene Karte CARD-96F6F5 als verloren simuliert. Markiere nur diesen Demo-Datensatz als gesperrt, notiere den erfundenen Zeitpunkt und prüfe, ob die Übungsanzeige keine echte Kartenkennung enthält. Für eine Ersatzkarte wird im Szenario ein separater Testvorgang angelegt; keine reale Karte sperren und kein Guthaben umbuchen.",
-      "citationId": "knowledge:service_it:svc-catalog-fba0df96f6f5:1",
+      "citationId": "knowledge:service_it:svc-catalog-fba0df96f6f5:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -761,8 +761,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlersuche: ist mein Citavi Word Add-In ausgegraut",
-      "revision": 1,
+      "title": "Demo-FAQ: Warum ist mein Citavi-Word-Add-in ausgegraut?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -774,7 +774,7 @@
         "microsoft"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Testtenant OFFICE-1D6690 übt der Fall 1D6690 Fehlersuche: ist mein Citavi Word Add-In ausgegraut. Kontrolliere zuerst die Demo-Kontoeinstellung, öffne danach nur den vorgesehenen Funktionsbereich und vergleiche die Vorschau mit der gewünschten Testrolle. Dateien, Gruppen, Meetings und Lizenzen sind fiktiv; es wird kein reales Konto registriert, keine Lizenz zugesagt und nichts an echte Personen freigegeben.",
-      "citationId": "knowledge:service_it:svc-catalog-d424601d6690:1",
+      "citationId": "knowledge:service_it:svc-catalog-d424601d6690:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -803,8 +803,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Zugang: zum Collaboard über die Academic Cloud",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie erhalte ich Zugang zum Collaboard über die Academic Cloud?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -816,7 +816,7 @@
         "academic-cloud"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Boardfall 1DD826 simuliert Zugang: zum Collaboard über die Academic Cloud auf dem Testboard BOARD-1DD826. Lege eine leere Vorschau an, prüfe die Demo-Rolle für Betrachtung oder Bearbeitung und kontrolliere den Freigabeumfang vor dem Beenden. Es werden keine realen Boards oder Einladungen erstellt und keine Dateien geteilt.",
-      "citationId": "knowledge:service_it:svc-catalog-f4a9091dd826:1",
+      "citationId": "knowledge:service_it:svc-catalog-f4a9091dd826:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -824,8 +824,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Erstellung: mir einen WLAN-Account",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie erstelle ich einen WLAN-Account?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -838,7 +838,7 @@
         "wlan"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Diese Anleitung simuliert Erstellung: mir einen WLAN-Account mit dem fiktiven Profil WLAN-LAB-9ABB0B. Kontrolliere am Testgerät Flugmodus und gespeichertes Demo-Profil, entferne bei Bedarf nur den Laboreintrag und starte einen neuen Verbindungstest. Das Profil ist kein Hochschulnetz und benötigt weder echte Kennung noch Passwort; bei einem zweiten Testgerät wird nur der Fehlervergleich dokumentiert.",
-      "citationId": "knowledge:service_it:svc-catalog-af62229abb0b:1",
+      "citationId": "knowledge:service_it:svc-catalog-af62229abb0b:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -867,8 +867,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Information: Hochschul-Mitglieder Rabatte auf IT-Hardware von Dell",
-      "revision": 1,
+      "title": "Demo-FAQ: Erhalten Hochschulmitglieder Rabatte auf IT-Hardware von Dell?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -879,7 +879,7 @@
         "kind:faq"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Softwarefall 200DAD behandelt Information: Hochschul-Mitglieder Rabatte auf IT-Hardware von Dell in einer isolierten Lizenz-Sandbox. Öffne das fiktive Profil SOFTWARE-200DAD, prüfe den angezeigten Produktnamen und wähle nur eine Vorschau oder Testinstallation. Die Demo bestätigt keine reale Bezugsberechtigung, Lizenz oder Rabattregel; keine Installation auf einem produktiven Gerät starten.",
-      "citationId": "knowledge:service_it:svc-catalog-d64fae200dad:1",
+      "citationId": "knowledge:service_it:svc-catalog-d64fae200dad:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -887,8 +887,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Zugang: die CampusCard bzw. den Dienstausweis",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie erhalte ich die CampusCard beziehungsweise den Dienstausweis?",
+      "revision": 2,
       "demoAudience": [
         "employee",
         "admin"
@@ -899,7 +899,7 @@
         "campuscard"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Übungsfall EE58B0 behandelt Zugang: die CampusCard bzw. den Dienstausweis mit der fiktiven Karte CARD-EE58B0. Öffne die Vorschau des Karten-Demoprofils, wähle die passende Testfunktion und prüfe eine Anzeige mit erfundenen Demo-Punkten. Ausgabe, Aufladung, Bibliotheksfreigabe und Validierung sind ausschließlich simuliert; es werden keine realen Kartendaten oder Beträge verändert.",
-      "citationId": "knowledge:service_it:svc-catalog-98ac99ee58b0:1",
+      "citationId": "knowledge:service_it:svc-catalog-98ac99ee58b0:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -907,8 +907,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Funktionen von mein Dienstausweis",
-      "revision": 1,
+      "title": "Demo-FAQ: Welche Funktionen hat mein Dienstausweis?",
+      "revision": 2,
       "demoAudience": [
         "employee",
         "admin"
@@ -919,7 +919,7 @@
         "campuscard"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Übungsfall 4657B0 behandelt Funktionen von mein Dienstausweis mit der fiktiven Karte CARD-4657B0. Öffne die Vorschau des Karten-Demoprofils, wähle die passende Testfunktion und prüfe eine Anzeige mit erfundenen Demo-Punkten. Ausgabe, Aufladung, Bibliotheksfreigabe und Validierung sind ausschließlich simuliert; es werden keine realen Kartendaten oder Beträge verändert.",
-      "citationId": "knowledge:service_it:svc-catalog-5ff4164657b0:1",
+      "citationId": "knowledge:service_it:svc-catalog-5ff4164657b0:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -968,8 +968,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einrichtung: einen Drucker auf einem Mac ein",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie richte ich einen Drucker auf einem Mac ein?",
+      "revision": 2,
       "demoAudience": [
         "employee",
         "admin"
@@ -980,7 +980,7 @@
         "druck"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die Druckübung 490FA7 nutzt die fiktive Warteschlange PRINT-490FA7. Sende eine einseitige Testseite ohne persönliche Daten, prüfe Druckvorschau und Warteschlangenstatus und entferne den Demojob anschließend. Gerät, Standort, Toner und Ergebnis sind erfunden; weder ein realer Drucker noch ein echter Druckauftrag werden verändert.",
-      "citationId": "knowledge:service_it:svc-catalog-a5d709490fa7:1",
+      "citationId": "knowledge:service_it:svc-catalog-a5d709490fa7:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1009,8 +1009,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Hintergrund: ist die Bezahlfunktion meiner CampusCard gesperrt",
-      "revision": 1,
+      "title": "Demo-FAQ: Warum ist die Bezahlfunktion meiner CampusCard gesperrt?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1022,7 +1022,7 @@
         "campuscard"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Fall 07C30F wird die erfundene Karte CARD-07C30F als verloren simuliert. Markiere nur diesen Demo-Datensatz als gesperrt, notiere den erfundenen Zeitpunkt und prüfe, ob die Übungsanzeige keine echte Kartenkennung enthält. Für eine Ersatzkarte wird im Szenario ein separater Testvorgang angelegt; keine reale Karte sperren und kein Guthaben umbuchen.",
-      "citationId": "knowledge:service_it:svc-catalog-9360a307c30f:1",
+      "citationId": "knowledge:service_it:svc-catalog-9360a307c30f:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1093,8 +1093,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einrichtung: einen zweiten Faktor für die Nutzung von VPN ein",
-      "revision": 2,
+      "title": "Demo-FAQ: Wie richte ich einen zweiten Faktor für die VPN-Nutzung ein?",
+      "revision": 3,
       "demoAudience": [
         "student",
         "employee",
@@ -1106,7 +1106,7 @@
         "vpn"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für einen zweiten Faktor benötigst du die freigegebene Einrichtungsanleitung und die für dein Konto zugelassene Methode. Diese Demo enthält weder eine MFA-Registrierung noch gültige Einrichtungscodes. Notiere, ob die Einrichtung selbst scheitert oder eine bereits eingerichtete Methode bei der VPN-Anmeldung nicht funktioniert. Teile keine Passwörter, Wiederherstellungscodes oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
-      "citationId": "knowledge:service_it:svc-catalog-9b30ce8b226d:2",
+      "citationId": "knowledge:service_it:svc-catalog-9b30ce8b226d:3",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1176,8 +1176,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlersuche: funktioniert mein VPN nicht",
-      "revision": 2,
+      "title": "Demo-FAQ: Warum funktioniert mein VPN nicht?",
+      "revision": 3,
       "demoAudience": [
         "student",
         "employee",
@@ -1189,7 +1189,7 @@
         "vpn"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Prüfe zuerst, ob gewöhnliche Internetseiten ohne VPN erreichbar sind. Notiere den genauen Wortlaut der Fehlermeldung samt Fehlercode, das Betriebssystem sowie Name und Version des VPN-Clients. Halte fest, ob der VPN-Verbindungsaufbau selbst fehlschlägt oder ob die Anmeldung beziehungsweise Verbindung gelingt, aber eine benötigte Ressource nicht erreichbar ist. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
-      "citationId": "knowledge:service_it:svc-catalog-6c79c1e68f04:2",
+      "citationId": "knowledge:service_it:svc-catalog-6c79c1e68f04:3",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1216,8 +1216,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlerfall: ich mich nicht bei Adobe anmelden kann, weil die Höchstzahl der Geräte erreicht ist",
-      "revision": 1,
+      "title": "Demo-FAQ: Was kann ich tun, wenn ich mich nicht bei Adobe anmelden kann, weil die Höchstzahl der Geräte erreicht ist?",
+      "revision": 2,
       "demoAudience": [
         "employee",
         "admin"
@@ -1228,7 +1228,7 @@
         "software"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Softwarefall 8BCA7C behandelt Fehlerfall: ich mich nicht bei Adobe anmelden kann, weil die Höchstzahl der Geräte erreicht ist in einer isolierten Lizenz-Sandbox. Öffne das fiktive Profil SOFTWARE-8BCA7C, prüfe den angezeigten Produktnamen und wähle nur eine Vorschau oder Testinstallation. Die Demo bestätigt keine reale Bezugsberechtigung, Lizenz oder Rabattregel; keine Installation auf einem produktiven Gerät starten.",
-      "citationId": "knowledge:service_it:svc-catalog-1e41b78bca7c:1",
+      "citationId": "knowledge:service_it:svc-catalog-1e41b78bca7c:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1236,8 +1236,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Erstellung: ein Formular",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie erstelle ich ein Formular?",
+      "revision": 2,
       "demoAudience": [
         "admin"
       ],
@@ -1248,7 +1248,7 @@
         "form"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die fiktive Redaktion übt Erstellung: ein Formular im CMS-Labor https://cms-demo.invalid. Erstelle einen Entwurf mit der Referenz 4CB7C4, prüfe Titel, Vorschau und Sprache und kontrolliere bei Medien die erfundene Beschreibung. Änderungen bleiben im Testbereich und werden nicht veröffentlicht; es werden weder echte Seiten noch echte Formulare bearbeitet.",
-      "citationId": "knowledge:service_it:svc-catalog-165a894cb7c4:1",
+      "citationId": "knowledge:service_it:svc-catalog-165a894cb7c4:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1256,8 +1256,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: funktioniert die Postfach-Freigabe in Outlook",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie funktioniert die Postfachfreigabe in Outlook?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1269,7 +1269,7 @@
         "email"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Postfachfall 799528 übt Ablauf: funktioniert die Postfach-Freigabe in Outlook im erfundenen Mail-Labor https://mail-demo.invalid. Prüfe den Status des Testpostfachs MAIL-799528, vergleiche die Vorschau im zweiten Demo-Client und ändere nur eine simulierte Einstellung. Es werden keine echten Nachrichten weitergeleitet, versandt, gelöscht oder in ein persönliches Konto verschoben.",
-      "citationId": "knowledge:service_it:svc-catalog-e3f414799528:1",
+      "citationId": "knowledge:service_it:svc-catalog-e3f414799528:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1300,8 +1300,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlerfall: ich versehentlich Dateien gelöscht habe",
-      "revision": 1,
+      "title": "Demo-FAQ: Was kann ich tun, wenn ich versehentlich Dateien gelöscht habe?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1313,7 +1313,7 @@
         "netzlaufwerk"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Laborfall 42FDDA beschreibt Fehlerfall: ich versehentlich Dateien gelöscht habe eine erfundene Dateiablage. Arbeite ausschließlich im Testordner ABLAGE-42FDDA; das Beispielkontingent von 250 MB und der angezeigte Verbrauch von 230 MB sind ausdrücklich frei erfundene Werte. Prüfe Dateipfad und Papierkorb, sichere eine Testkopie und beende den Lauf mit einer Vorschau. Es werden keine realen Dateien verschoben oder wiederhergestellt.",
-      "citationId": "knowledge:service_it:svc-catalog-130fd142fdda:1",
+      "citationId": "knowledge:service_it:svc-catalog-130fd142fdda:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1403,8 +1403,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fall: Zugangsdaten wurden kompromittiert, was nun",
-      "revision": 1,
+      "title": "Demo-FAQ: Meine Zugangsdaten wurden kompromittiert – was sollte ich tun?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1416,7 +1416,7 @@
         "security"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Sicherheitsfall 13EA47 behandelt Fall: Zugangsdaten wurden kompromittiert, was nun an einem vollständig erfundenen Beispiel. Nutze nur die Datei PHISHING-13EA47.eml und das reservierte Testziel https://warnung-demo.invalid, sichere eine Kopie der Demo-Anzeige und notiere beobachtete Merkmale ohne echte Zugangsdaten. Ein möglicher Vorfall wird hier weder gemeldet noch technisch untersucht; die Übung enthält keine reale Person oder Kontaktstelle.",
-      "citationId": "knowledge:service_it:svc-catalog-0d68a013ea47:1",
+      "citationId": "knowledge:service_it:svc-catalog-0d68a013ea47:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1444,8 +1444,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Vorfall: einer Datenschutzpanne / einem Informationssicherheitsvorfall",
-      "revision": 1,
+      "title": "Demo-FAQ: Was ist bei einer Datenschutzpanne oder einem Informationssicherheitsvorfall zu tun?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1457,7 +1457,7 @@
         "security"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Sicherheitsfall C7B2AE behandelt Vorfall: einer Datenschutzpanne / einem Informationssicherheitsvorfall an einem vollständig erfundenen Beispiel. Nutze nur die Datei PHISHING-C7B2AE.eml und das reservierte Testziel https://warnung-demo.invalid, sichere eine Kopie der Demo-Anzeige und notiere beobachtete Merkmale ohne echte Zugangsdaten. Ein möglicher Vorfall wird hier weder gemeldet noch technisch untersucht; die Übung enthält keine reale Person oder Kontaktstelle.",
-      "citationId": "knowledge:service_it:svc-catalog-f9492fc7b2ae:1",
+      "citationId": "knowledge:service_it:svc-catalog-f9492fc7b2ae:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1486,8 +1486,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Funktionen: zur Verwaltung von Vereinbarung und Gästen stehen auf dem Gäste-Portal zur Verfügung",
-      "revision": 1,
+      "title": "Demo-FAQ: Welche Funktionen stehen im Gäste-Portal zur Verwaltung von Vereinbarungen und Gästen zur Verfügung?",
+      "revision": 2,
       "demoAudience": [
         "employee",
         "admin"
@@ -1498,7 +1498,7 @@
         "guest"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die Übung 182567 simuliert Funktionen: zur Verwaltung von Vereinbarung und Gästen stehen auf dem Gäste-Portal zur Verfügung mit dem Profil GAST-182567. Wähle nur eine fiktive Laufzeit und minimale Demo-Rolle, kontrolliere in der Vorschau, dass keine echte Person oder E-Mail-Adresse eingetragen ist, und widerrufe das Testprofil am Ende. Es wird keine echte Einladung oder WLAN-Berechtigung beantragt.",
-      "citationId": "knowledge:service_it:svc-catalog-2d5581182567:1",
+      "citationId": "knowledge:service_it:svc-catalog-2d5581182567:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1590,8 +1590,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Möglichkeit: eine Möglichkeit LabVIEW über die Hochschule zu beziehen",
-      "revision": 1,
+      "title": "Demo-FAQ: Kann ich LabVIEW über die Hochschule beziehen?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1602,7 +1602,7 @@
         "kind:faq"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Softwarefall A44289 behandelt Möglichkeit: eine Möglichkeit LabVIEW über die Hochschule zu beziehen in einer isolierten Lizenz-Sandbox. Öffne das fiktive Profil SOFTWARE-A44289, prüfe den angezeigten Produktnamen und wähle nur eine Vorschau oder Testinstallation. Die Demo bestätigt keine reale Bezugsberechtigung, Lizenz oder Rabattregel; keine Installation auf einem produktiven Gerät starten.",
-      "citationId": "knowledge:service_it:svc-catalog-35b784a44289:1",
+      "citationId": "knowledge:service_it:svc-catalog-35b784a44289:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1610,8 +1610,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: aktiviere ich eine neue Sprache in Wagtail",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie aktiviere ich eine neue Sprache in Wagtail?",
+      "revision": 2,
       "demoAudience": [
         "admin"
       ],
@@ -1621,7 +1621,7 @@
         "wagtail"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die fiktive Redaktion übt Ablauf: aktiviere ich eine neue Sprache in Wagtail im CMS-Labor https://cms-demo.invalid. Erstelle einen Entwurf mit der Referenz 987E52, prüfe Titel, Vorschau und Sprache und kontrolliere bei Medien die erfundene Beschreibung. Änderungen bleiben im Testbereich und werden nicht veröffentlicht; es werden weder echte Seiten noch echte Formulare bearbeitet.",
-      "citationId": "knowledge:service_it:svc-catalog-6eb12c987e52:1",
+      "citationId": "knowledge:service_it:svc-catalog-6eb12c987e52:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1629,8 +1629,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Anmeldung: in der Academic Cloud an",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie melde ich mich in der Academic Cloud an?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1642,7 +1642,7 @@
         "academic-cloud"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Zugangsfall E333E6 für Anmeldung: in der Academic Cloud an nutzt das fiktive Profil CLOUD-E333E6. Prüfe im Demo-Ablauf die Statusfolge „Kennung erkannt“, „Testprüfung“ und „Arbeitsraum geöffnet“. Verwende weder ein echtes Passwort noch einen echten zweiten Faktor; der Test bestätigt keinen realen Zugang.",
-      "citationId": "knowledge:service_it:svc-catalog-fbc5bfe333e6:1",
+      "citationId": "knowledge:service_it:svc-catalog-fbc5bfe333e6:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1650,8 +1650,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlersuche: werden meine E-Mails plötzlich anders sortiert",
-      "revision": 1,
+      "title": "Demo-FAQ: Warum werden meine E-Mails plötzlich anders sortiert?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1663,7 +1663,7 @@
         "email"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Postfachfall B911E0 übt Fehlersuche: werden meine E-Mails plötzlich anders sortiert im erfundenen Mail-Labor https://mail-demo.invalid. Prüfe den Status des Testpostfachs MAIL-B911E0, vergleiche die Vorschau im zweiten Demo-Client und ändere nur eine simulierte Einstellung. Es werden keine echten Nachrichten weitergeleitet, versandt, gelöscht oder in ein persönliches Konto verschoben.",
-      "citationId": "knowledge:service_it:svc-catalog-18b7ebb911e0:1",
+      "citationId": "knowledge:service_it:svc-catalog-18b7ebb911e0:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1711,8 +1711,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Überblick: Toolboxen stehen zur Verfügung",
-      "revision": 1,
+      "title": "Demo-FAQ: Welche Toolboxen stehen zur Verfügung?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1724,7 +1724,7 @@
         "software"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Softwarefall B75CC7 behandelt Überblick: Toolboxen stehen zur Verfügung in einer isolierten Lizenz-Sandbox. Öffne das fiktive Profil SOFTWARE-B75CC7, prüfe den angezeigten Produktnamen und wähle nur eine Vorschau oder Testinstallation. Die Demo bestätigt keine reale Bezugsberechtigung, Lizenz oder Rabattregel; keine Installation auf einem produktiven Gerät starten.",
-      "citationId": "knowledge:service_it:svc-catalog-a9a453b75cc7:1",
+      "citationId": "knowledge:service_it:svc-catalog-a9a453b75cc7:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1732,8 +1732,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlerfall: Matlab Dateien \"false positive\" Meldungen ausgeben",
-      "revision": 1,
+      "title": "Demo-FAQ: Matlab-Dateien: Umgang mit False-Positive-Meldungen",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1745,7 +1745,7 @@
         "software"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Softwarefall 347D9F behandelt Fehlerfall: Matlab Dateien \"false positive\" Meldungen ausgeben in einer isolierten Lizenz-Sandbox. Öffne das fiktive Profil SOFTWARE-347D9F, prüfe den angezeigten Produktnamen und wähle nur eine Vorschau oder Testinstallation. Die Demo bestätigt keine reale Bezugsberechtigung, Lizenz oder Rabattregel; keine Installation auf einem produktiven Gerät starten.",
-      "citationId": "knowledge:service_it:svc-catalog-c03be5347d9f:1",
+      "citationId": "knowledge:service_it:svc-catalog-c03be5347d9f:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1753,8 +1753,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Erstellung: eine Meldung",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie erstelle ich eine Meldung?",
+      "revision": 2,
       "demoAudience": [
         "admin"
       ],
@@ -1764,7 +1764,7 @@
         "wagtail"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die fiktive Redaktion übt Erstellung: eine Meldung im CMS-Labor https://cms-demo.invalid. Erstelle einen Entwurf mit der Referenz 461758, prüfe Titel, Vorschau und Sprache und kontrolliere bei Medien die erfundene Beschreibung. Änderungen bleiben im Testbereich und werden nicht veröffentlicht; es werden weder echte Seiten noch echte Formulare bearbeitet.",
-      "citationId": "knowledge:service_it:svc-catalog-024862461758:1",
+      "citationId": "knowledge:service_it:svc-catalog-024862461758:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1940,8 +1940,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einrichtung: die MFA-Methode per MS Authenticator ein",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie richte ich die MFA-Methode mit dem Microsoft Authenticator ein?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1953,7 +1953,7 @@
         "mfa"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die Übung 0303CC simuliert Einrichtung: die MFA-Methode per MS Authenticator ein mit dem Testprofil MFA-0303CC. Wähle in der Oberfläche eine fiktive Methode, prüfe die Bestätigung mit einem ausdrücklich synthetischen Demo-Code und entferne anschließend das Testprofil. Keine echte Passkey-, Schlüssel-, Authenticator- oder KeePass-Registrierung ausführen und keine Codes aus einem persönlichen Gerät übernehmen.",
-      "citationId": "knowledge:service_it:svc-catalog-afd48f0303cc:1",
+      "citationId": "knowledge:service_it:svc-catalog-afd48f0303cc:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1961,8 +1961,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einrichtung: die MFA-Methode per KeePass ein",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie richte ich die MFA-Methode mit KeePass ein?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1974,7 +1974,7 @@
         "mfa"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die Übung 4847F1 simuliert Einrichtung: die MFA-Methode per KeePass ein mit dem Testprofil MFA-4847F1. Wähle in der Oberfläche eine fiktive Methode, prüfe die Bestätigung mit einem ausdrücklich synthetischen Demo-Code und entferne anschließend das Testprofil. Keine echte Passkey-, Schlüssel-, Authenticator- oder KeePass-Registrierung ausführen und keine Codes aus einem persönlichen Gerät übernehmen.",
-      "citationId": "knowledge:service_it:svc-catalog-65baa54847f1:1",
+      "citationId": "knowledge:service_it:svc-catalog-65baa54847f1:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -1982,8 +1982,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einrichtung: die MFA-Methode per TOTP ein",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie richte ich die MFA-Methode mit TOTP ein?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -1995,7 +1995,7 @@
         "mfa"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die Übung 68CD73 simuliert Einrichtung: die MFA-Methode per TOTP ein mit dem Testprofil MFA-68CD73. Wähle in der Oberfläche eine fiktive Methode, prüfe die Bestätigung mit einem ausdrücklich synthetischen Demo-Code und entferne anschließend das Testprofil. Keine echte Passkey-, Schlüssel-, Authenticator- oder KeePass-Registrierung ausführen und keine Codes aus einem persönlichen Gerät übernehmen.",
-      "citationId": "knowledge:service_it:svc-catalog-6dd93d68cd73:1",
+      "citationId": "knowledge:service_it:svc-catalog-6dd93d68cd73:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2044,8 +2044,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einbindung: ein Netzlaufwerk unter Linux ein",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie binde ich ein Netzlaufwerk unter Linux ein?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2057,7 +2057,7 @@
         "netzlaufwerk"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Laborfall 165709 beschreibt Einbindung: ein Netzlaufwerk unter Linux ein eine erfundene Dateiablage. Arbeite ausschließlich im Testordner ABLAGE-165709; das Beispielkontingent von 250 MB und der angezeigte Verbrauch von 230 MB sind ausdrücklich frei erfundene Werte. Prüfe Dateipfad und Papierkorb, sichere eine Testkopie und beende den Lauf mit einer Vorschau. Es werden keine realen Dateien verschoben oder wiederhergestellt.",
-      "citationId": "knowledge:service_it:svc-catalog-776d1f165709:1",
+      "citationId": "knowledge:service_it:svc-catalog-776d1f165709:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2065,8 +2065,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einbindung: ein Netzlaufwerk unter MacOS ein",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie binde ich ein Netzlaufwerk unter macOS ein?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2078,7 +2078,7 @@
         "netzlaufwerk"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Laborfall 4EC247 beschreibt Einbindung: ein Netzlaufwerk unter MacOS ein eine erfundene Dateiablage. Arbeite ausschließlich im Testordner ABLAGE-4EC247; das Beispielkontingent von 250 MB und der angezeigte Verbrauch von 230 MB sind ausdrücklich frei erfundene Werte. Prüfe Dateipfad und Papierkorb, sichere eine Testkopie und beende den Lauf mit einer Vorschau. Es werden keine realen Dateien verschoben oder wiederhergestellt.",
-      "citationId": "knowledge:service_it:svc-catalog-c23c654ec247:1",
+      "citationId": "knowledge:service_it:svc-catalog-c23c654ec247:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2086,8 +2086,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Überblick: Netzlaufwerke stehen Bediensteten zur Verfügung",
-      "revision": 1,
+      "title": "Demo-FAQ: Welche Netzlaufwerke stehen Bediensteten zur Verfügung?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2099,7 +2099,7 @@
         "netzlaufwerk"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Laborfall 8022ED beschreibt Überblick: Netzlaufwerke stehen Bediensteten zur Verfügung eine erfundene Dateiablage. Arbeite ausschließlich im Testordner ABLAGE-8022ED; das Beispielkontingent von 250 MB und der angezeigte Verbrauch von 230 MB sind ausdrücklich frei erfundene Werte. Prüfe Dateipfad und Papierkorb, sichere eine Testkopie und beende den Lauf mit einer Vorschau. Es werden keine realen Dateien verschoben oder wiederhergestellt.",
-      "citationId": "knowledge:service_it:svc-catalog-f963d08022ed:1",
+      "citationId": "knowledge:service_it:svc-catalog-f963d08022ed:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2107,8 +2107,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Überblick: Netzlaufwerke stehen Studierenden zur Verfügung",
-      "revision": 1,
+      "title": "Demo-FAQ: Welche Netzlaufwerke stehen Studierenden zur Verfügung?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2120,7 +2120,7 @@
         "netzlaufwerk"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Laborfall FD97A5 beschreibt Überblick: Netzlaufwerke stehen Studierenden zur Verfügung eine erfundene Dateiablage. Arbeite ausschließlich im Testordner ABLAGE-FD97A5; das Beispielkontingent von 250 MB und der angezeigte Verbrauch von 230 MB sind ausdrücklich frei erfundene Werte. Prüfe Dateipfad und Papierkorb, sichere eine Testkopie und beende den Lauf mit einer Vorschau. Es werden keine realen Dateien verschoben oder wiederhergestellt.",
-      "citationId": "knowledge:service_it:svc-catalog-9b73cdfd97a5:1",
+      "citationId": "knowledge:service_it:svc-catalog-9b73cdfd97a5:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2128,8 +2128,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einbindung: ein Netzlaufwerk unter Windows ein",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie binde ich ein Netzlaufwerk unter Windows ein?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2142,7 +2142,7 @@
         "netzlaufwerk"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Laborfall 0E966F beschreibt Einbindung: ein Netzlaufwerk unter Windows ein eine erfundene Dateiablage. Arbeite ausschließlich im Testordner ABLAGE-0E966F; das Beispielkontingent von 250 MB und der angezeigte Verbrauch von 230 MB sind ausdrücklich frei erfundene Werte. Prüfe Dateipfad und Papierkorb, sichere eine Testkopie und beende den Lauf mit einer Vorschau. Es werden keine realen Dateien verschoben oder wiederhergestellt.",
-      "citationId": "knowledge:service_it:svc-catalog-426ce10e966f:1",
+      "citationId": "knowledge:service_it:svc-catalog-426ce10e966f:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2150,8 +2150,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Möglichkeit: beim Umgang mit den Netzlaufwerken etwas zu beachten",
-      "revision": 1,
+      "title": "Demo-FAQ: Was muss ich beim Umgang mit Netzlaufwerken beachten?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2163,7 +2163,7 @@
         "netzlaufwerk"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Laborfall 2304C7 beschreibt Möglichkeit: beim Umgang mit den Netzlaufwerken etwas zu beachten eine erfundene Dateiablage. Arbeite ausschließlich im Testordner ABLAGE-2304C7; das Beispielkontingent von 250 MB und der angezeigte Verbrauch von 230 MB sind ausdrücklich frei erfundene Werte. Prüfe Dateipfad und Papierkorb, sichere eine Testkopie und beende den Lauf mit einer Vorschau. Es werden keine realen Dateien verschoben oder wiederhergestellt.",
-      "citationId": "knowledge:service_it:svc-catalog-2df8392304c7:1",
+      "citationId": "knowledge:service_it:svc-catalog-2df8392304c7:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2171,8 +2171,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Überblick: Arten von Netzlaufwerke gibt es",
-      "revision": 1,
+      "title": "Demo-FAQ: Welche Arten von Netzlaufwerken gibt es?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2184,7 +2184,7 @@
         "netzlaufwerk"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Laborfall A08E8A beschreibt Überblick: Arten von Netzlaufwerke gibt es eine erfundene Dateiablage. Arbeite ausschließlich im Testordner ABLAGE-A08E8A; das Beispielkontingent von 250 MB und der angezeigte Verbrauch von 230 MB sind ausdrücklich frei erfundene Werte. Prüfe Dateipfad und Papierkorb, sichere eine Testkopie und beende den Lauf mit einer Vorschau. Es werden keine realen Dateien verschoben oder wiederhergestellt.",
-      "citationId": "knowledge:service_it:svc-catalog-96f876a08e8a:1",
+      "citationId": "knowledge:service_it:svc-catalog-96f876a08e8a:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2213,8 +2213,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Erstellung: einen Zoom-Account",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie erstelle ich einen Zoom-Account?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2227,7 +2227,7 @@
         "software"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Softwarefall 333AC9 behandelt Erstellung: einen Zoom-Account in einer isolierten Lizenz-Sandbox. Öffne das fiktive Profil SOFTWARE-333AC9, prüfe den angezeigten Produktnamen und wähle nur eine Vorschau oder Testinstallation. Die Demo bestätigt keine reale Bezugsberechtigung, Lizenz oder Rabattregel; keine Installation auf einem produktiven Gerät starten.",
-      "citationId": "knowledge:service_it:svc-catalog-0f04b6333ac9:1",
+      "citationId": "knowledge:service_it:svc-catalog-0f04b6333ac9:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2382,8 +2382,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: knacken Angreifer meine Passwörter",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie knacken Angreifer meine Passwörter?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2396,7 +2396,7 @@
         "security"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Sicherheitsfall 56B895 behandelt Ablauf: knacken Angreifer meine Passwörter an einem vollständig erfundenen Beispiel. Nutze nur die Datei PHISHING-56B895.eml und das reservierte Testziel https://warnung-demo.invalid, sichere eine Kopie der Demo-Anzeige und notiere beobachtete Merkmale ohne echte Zugangsdaten. Ein möglicher Vorfall wird hier weder gemeldet noch technisch untersucht; die Übung enthält keine reale Person oder Kontaktstelle.",
-      "citationId": "knowledge:service_it:svc-catalog-50723556b895:1",
+      "citationId": "knowledge:service_it:svc-catalog-50723556b895:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2426,8 +2426,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: könnte eine Phishing-Attacke aussehen",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie könnte eine Phishing-Attacke aussehen?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2439,7 +2439,7 @@
         "security"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Sicherheitsfall E76391 behandelt Ablauf: könnte eine Phishing-Attacke aussehen an einem vollständig erfundenen Beispiel. Nutze nur die Datei PHISHING-E76391.eml und das reservierte Testziel https://warnung-demo.invalid, sichere eine Kopie der Demo-Anzeige und notiere beobachtete Merkmale ohne echte Zugangsdaten. Ein möglicher Vorfall wird hier weder gemeldet noch technisch untersucht; die Übung enthält keine reale Person oder Kontaktstelle.",
-      "citationId": "knowledge:service_it:svc-catalog-b4da85e76391:1",
+      "citationId": "knowledge:service_it:svc-catalog-b4da85e76391:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2550,8 +2550,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlerbild: mich nach der Aktualisierung von GlobalProtect nicht mehr anmelden",
-      "revision": 2,
+      "title": "Demo-FAQ: Warum kann ich mich nach der Aktualisierung von GlobalProtect nicht mehr anmelden?",
+      "revision": 3,
       "demoAudience": [
         "employee",
         "admin"
@@ -2562,7 +2562,7 @@
         "vpn"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Prüfe zuerst, ob gewöhnliche Internetseiten ohne VPN erreichbar sind. Notiere den genauen Wortlaut der Fehlermeldung samt Fehlercode, das Betriebssystem sowie Name und Version des VPN-Clients. Halte fest, ob der VPN-Verbindungsaufbau selbst fehlschlägt oder ob die Anmeldung beziehungsweise Verbindung gelingt, aber eine benötigte Ressource nicht erreichbar ist. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
-      "citationId": "knowledge:service_it:svc-catalog-b2bfd3b4d323:2",
+      "citationId": "knowledge:service_it:svc-catalog-b2bfd3b4d323:3",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2570,8 +2570,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: registriere ich mich für Office 365 / Azure",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie registriere ich mich für Office 365 oder Azure?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2583,7 +2583,7 @@
         "microsoft"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Testtenant OFFICE-FD39C1 übt der Fall FD39C1 Ablauf: registriere ich mich für Office 365 / Azure. Kontrolliere zuerst die Demo-Kontoeinstellung, öffne danach nur den vorgesehenen Funktionsbereich und vergleiche die Vorschau mit der gewünschten Testrolle. Dateien, Gruppen, Meetings und Lizenzen sind fiktiv; es wird kein reales Konto registriert, keine Lizenz zugesagt und nichts an echte Personen freigegeben.",
-      "citationId": "knowledge:service_it:svc-catalog-73fe17fd39c1:1",
+      "citationId": "knowledge:service_it:svc-catalog-73fe17fd39c1:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2612,8 +2612,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Abonnement: einen RSS-Feed",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie abonniere ich einen RSS-Feed?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2625,7 +2625,7 @@
         "email"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der RSS-Fall 2C1A64 übt Abonnement: einen RSS-Feed mit dem fiktiven Feed https://feed-demo.invalid/rss.xml. Füge die Testadresse in eine lokale Vorschau ein, prüfe Titel und Aktualisierungsstatus und entferne den Eintrag danach wieder. Der Feed enthält keine echten Meldungen und wird nicht mit einem persönlichen Konto verknüpft.",
-      "citationId": "knowledge:service_it:svc-catalog-cc63aa2c1a64:1",
+      "citationId": "knowledge:service_it:svc-catalog-cc63aa2c1a64:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2654,8 +2654,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: wähle ich eine Seite im WagtailBackend bzw. WagtailAdmin Interface aus",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie wähle ich eine Seite im Wagtail-Backend aus?",
+      "revision": 2,
       "demoAudience": [
         "admin"
       ],
@@ -2665,7 +2665,7 @@
         "wagtail"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die fiktive Redaktion übt Ablauf: wähle ich eine Seite im WagtailBackend bzw. WagtailAdmin Interface aus im CMS-Labor https://cms-demo.invalid. Erstelle einen Entwurf mit der Referenz A47E49, prüfe Titel, Vorschau und Sprache und kontrolliere bei Medien die erfundene Beschreibung. Änderungen bleiben im Testbereich und werden nicht veröffentlicht; es werden weder echte Seiten noch echte Formulare bearbeitet.",
-      "citationId": "knowledge:service_it:svc-catalog-65a4c2a47e49:1",
+      "citationId": "knowledge:service_it:svc-catalog-65a4c2a47e49:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2673,8 +2673,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlerfall: Sentinel One ein Programm blockiert",
-      "revision": 1,
+      "title": "Demo-FAQ: Was kann ich tun, wenn Sentinel One ein Programm blockiert?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2686,7 +2686,7 @@
         "security"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Sicherheitsfall 23AC56 behandelt Fehlerfall: Sentinel One ein Programm blockiert an einem vollständig erfundenen Beispiel. Nutze nur die Datei PHISHING-23AC56.eml und das reservierte Testziel https://warnung-demo.invalid, sichere eine Kopie der Demo-Anzeige und notiere beobachtete Merkmale ohne echte Zugangsdaten. Ein möglicher Vorfall wird hier weder gemeldet noch technisch untersucht; die Übung enthält keine reale Person oder Kontaktstelle.",
-      "citationId": "knowledge:service_it:svc-catalog-97397e23ac56:1",
+      "citationId": "knowledge:service_it:svc-catalog-97397e23ac56:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2694,8 +2694,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einbindung: ein geteiltes Postfach (shared mailbox) in Outlook ein",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie binde ich ein geteiltes Postfach (Shared Mailbox) in Outlook ein?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2707,7 +2707,7 @@
         "email"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Postfachfall 4DB293 übt Einbindung: ein geteiltes Postfach (shared mailbox) in Outlook ein im erfundenen Mail-Labor https://mail-demo.invalid. Prüfe den Status des Testpostfachs MAIL-4DB293, vergleiche die Vorschau im zweiten Demo-Client und ändere nur eine simulierte Einstellung. Es werden keine echten Nachrichten weitergeleitet, versandt, gelöscht oder in ein persönliches Konto verschoben.",
-      "citationId": "knowledge:service_it:svc-catalog-12f7944db293:1",
+      "citationId": "knowledge:service_it:svc-catalog-12f7944db293:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2735,8 +2735,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: übersetze ich ein \"Schnipsel\" bzw. \"Snippet\"",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie übersetze ich ein Snippet?",
+      "revision": 2,
       "demoAudience": [
         "admin"
       ],
@@ -2746,7 +2746,7 @@
         "wagtail"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Die fiktive Redaktion übt Ablauf: übersetze ich ein \"Schnipsel\" bzw. \"Snippet\" im CMS-Labor https://cms-demo.invalid. Erstelle einen Entwurf mit der Referenz 942C46, prüfe Titel, Vorschau und Sprache und kontrolliere bei Medien die erfundene Beschreibung. Änderungen bleiben im Testbereich und werden nicht veröffentlicht; es werden weder echte Seiten noch echte Formulare bearbeitet.",
-      "citationId": "knowledge:service_it:svc-catalog-7a7d6f942c46:1",
+      "citationId": "knowledge:service_it:svc-catalog-7a7d6f942c46:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2774,8 +2774,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einrichtung: meinen SSO-Account ein",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie richte ich meinen SSO-Account ein?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2787,7 +2787,7 @@
         "account"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für Einrichtung: meinen SSO-Account ein beschreibt der Guide 881B1A einen abgegrenzten Testablauf im fiktiven Portal https://portal-demo.invalid. Prüfe zuerst die Demo-Kennung, führe anschließend genau einen Vorschau-Schritt aus und kontrolliere die erwartete Rückmeldung. Angaben, Zuständigkeiten und Ergebnisse sind erfunden; der Guide ist keine reale Verfahrens- oder Zugangsregel.",
-      "citationId": "knowledge:service_it:svc-catalog-86c373881b1a:1",
+      "citationId": "knowledge:service_it:svc-catalog-86c373881b1a:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2795,8 +2795,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Hintergrund: versucht mein PC beim Öffnen von hinterlegten Mailadressen ein anderes Programm zu starten",
-      "revision": 1,
+      "title": "Demo-FAQ: Warum versucht mein PC beim Öffnen gespeicherter Mailadressen ein anderes Programm zu starten?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2808,7 +2808,7 @@
         "email"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Postfachfall 651E05 übt Hintergrund: versucht mein PC beim Öffnen von hinterlegten Mailadressen ein anderes Programm zu starten im erfundenen Mail-Labor https://mail-demo.invalid. Prüfe den Status des Testpostfachs MAIL-651E05, vergleiche die Vorschau im zweiten Demo-Client und ändere nur eine simulierte Einstellung. Es werden keine echten Nachrichten weitergeleitet, versandt, gelöscht oder in ein persönliches Konto verschoben.",
-      "citationId": "knowledge:service_it:svc-catalog-c3d7ce651e05:1",
+      "citationId": "knowledge:service_it:svc-catalog-c3d7ce651e05:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2816,8 +2816,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlerfall: ich die Kontingentgrenze bei meinem Home-Laufwerk überschritten habe",
-      "revision": 1,
+      "title": "Demo-FAQ: Was kann ich tun, wenn ich die Kontingentgrenze meines Home-Laufwerks überschritten habe?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2829,7 +2829,7 @@
         "netzlaufwerk"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Laborfall CAC0A3 beschreibt Fehlerfall: ich die Kontingentgrenze bei meinem Home-Laufwerk überschritten habe eine erfundene Dateiablage. Arbeite ausschließlich im Testordner ABLAGE-CAC0A3; das Beispielkontingent von 250 MB und der angezeigte Verbrauch von 230 MB sind ausdrücklich frei erfundene Werte. Prüfe Dateipfad und Papierkorb, sichere eine Testkopie und beende den Lauf mit einer Vorschau. Es werden keine realen Dateien verschoben oder wiederhergestellt.",
-      "citationId": "knowledge:service_it:svc-catalog-df98eacac0a3:1",
+      "citationId": "knowledge:service_it:svc-catalog-df98eacac0a3:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2837,8 +2837,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Funktionen von mein Studierendenausweis",
-      "revision": 1,
+      "title": "Demo-FAQ: Welche Funktionen hat mein Studierendenausweis?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2850,7 +2850,7 @@
         "campuscard"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Übungsfall ADD9FD behandelt Funktionen von mein Studierendenausweis mit der fiktiven Karte CARD-ADD9FD. Öffne die Vorschau des Karten-Demoprofils, wähle die passende Testfunktion und prüfe eine Anzeige mit erfundenen Demo-Punkten. Ausgabe, Aufladung, Bibliotheksfreigabe und Validierung sind ausschließlich simuliert; es werden keine realen Kartendaten oder Beträge verändert.",
-      "citationId": "knowledge:service_it:svc-catalog-598307add9fd:1",
+      "citationId": "knowledge:service_it:svc-catalog-598307add9fd:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -2966,8 +2966,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Überblick: Arten von Videokonferenzen sind in Teams möglich",
-      "revision": 1,
+      "title": "Demo-FAQ: Welche Arten von Videokonferenzen sind in Teams möglich?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -2980,7 +2980,7 @@
         "teams"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Testtenant OFFICE-BA0ED4 übt der Fall BA0ED4 Überblick: Arten von Videokonferenzen sind in Teams möglich. Kontrolliere zuerst die Demo-Kontoeinstellung, öffne danach nur den vorgesehenen Funktionsbereich und vergleiche die Vorschau mit der gewünschten Testrolle. Dateien, Gruppen, Meetings und Lizenzen sind fiktiv; es wird kein reales Konto registriert, keine Lizenz zugesagt und nichts an echte Personen freigegeben.",
-      "citationId": "knowledge:service_it:svc-catalog-c9cb01ba0ed4:1",
+      "citationId": "knowledge:service_it:svc-catalog-c9cb01ba0ed4:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3109,8 +3109,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Fehlersuche: werden meine gesendeten Mails in Thunderbird doppelt angezeigt",
-      "revision": 1,
+      "title": "Demo-FAQ: Warum werden meine gesendeten E-Mails in Thunderbird doppelt angezeigt?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3122,7 +3122,7 @@
         "email"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Postfachfall 12FB30 übt Fehlersuche: werden meine gesendeten Mails in Thunderbird doppelt angezeigt im erfundenen Mail-Labor https://mail-demo.invalid. Prüfe den Status des Testpostfachs MAIL-12FB30, vergleiche die Vorschau im zweiten Demo-Client und ändere nur eine simulierte Einstellung. Es werden keine echten Nachrichten weitergeleitet, versandt, gelöscht oder in ein persönliches Konto verschoben.",
-      "citationId": "knowledge:service_it:svc-catalog-c8644c12fb30:1",
+      "citationId": "knowledge:service_it:svc-catalog-c8644c12fb30:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3152,8 +3152,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Überblick: Accounts gibt es und was ist ihr Nutzen",
-      "revision": 1,
+      "title": "Demo-FAQ: Welche Account-Arten gibt es und wofür werden sie verwendet?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3165,7 +3165,7 @@
         "account"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für Überblick: Accounts gibt es und was ist ihr Nutzen beschreibt der Guide 72B646 einen abgegrenzten Testablauf im fiktiven Portal https://portal-demo.invalid. Prüfe zuerst die Demo-Kennung, führe anschließend genau einen Vorschau-Schritt aus und kontrolliere die erwartete Rückmeldung. Angaben, Zuständigkeiten und Ergebnisse sind erfunden; der Guide ist keine reale Verfahrens- oder Zugangsregel.",
-      "citationId": "knowledge:service_it:svc-catalog-c6188672b646:1",
+      "citationId": "knowledge:service_it:svc-catalog-c6188672b646:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3215,8 +3215,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: führe ich ein Upgrade von 'Office 2019' auf 'Office 365' durch",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie führe ich ein Upgrade von Office 2019 auf Office 365 durch?",
+      "revision": 2,
       "demoAudience": [
         "admin"
       ],
@@ -3226,7 +3226,7 @@
         "microsoft"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Testtenant OFFICE-7958E6 übt der Fall 7958E6 Ablauf: führe ich ein Upgrade von 'Office 2019' auf 'Office 365' durch. Kontrolliere zuerst die Demo-Kontoeinstellung, öffne danach nur den vorgesehenen Funktionsbereich und vergleiche die Vorschau mit der gewünschten Testrolle. Dateien, Gruppen, Meetings und Lizenzen sind fiktiv; es wird kein reales Konto registriert, keine Lizenz zugesagt und nichts an echte Personen freigegeben.",
-      "citationId": "knowledge:service_it:svc-catalog-937e057958e6:1",
+      "citationId": "knowledge:service_it:svc-catalog-937e057958e6:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3277,8 +3277,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Überblick: Optionen gibt es neben dem persönlichen Postfach und welche davon benötige ich",
-      "revision": 1,
+      "title": "Demo-FAQ: Welche Alternativen gibt es zum persönlichen Postfach und welche davon benötige ich?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3290,7 +3290,7 @@
         "email"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Postfachfall 08ACC5 übt Überblick: Optionen gibt es neben dem persönlichen Postfach und welche davon benötige ich im erfundenen Mail-Labor https://mail-demo.invalid. Prüfe den Status des Testpostfachs MAIL-08ACC5, vergleiche die Vorschau im zweiten Demo-Client und ändere nur eine simulierte Einstellung. Es werden keine echten Nachrichten weitergeleitet, versandt, gelöscht oder in ein persönliches Konto verschoben.",
-      "citationId": "knowledge:service_it:svc-catalog-f86c6108acc5:1",
+      "citationId": "knowledge:service_it:svc-catalog-f86c6108acc5:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3380,8 +3380,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einrichtung: einen VPN Client unter Android ein",
-      "revision": 2,
+      "title": "Demo-FAQ: Wie richte ich einen VPN-Client unter Android ein?",
+      "revision": 3,
       "demoAudience": [
         "student",
         "employee",
@@ -3393,7 +3393,7 @@
         "vpn"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für die VPN-Einrichtung müssen Betriebssystem und Version, ein freigegebener VPN-Client sowie die dafür vorgesehenen Verbindungsparameter zusammenpassen. Diese Demo enthält keinen verifizierten Download, keine Serveradresse und kein Geräteprofil. Notiere Betriebssystem und Version sowie den Schritt, an dem du nicht weiterkommst, und verwende für konkrete Einstellungen die freigegebene Anleitung des zuständigen Dienstes. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
-      "citationId": "knowledge:service_it:svc-catalog-94f501ccd7be:2",
+      "citationId": "knowledge:service_it:svc-catalog-94f501ccd7be:3",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3401,8 +3401,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einrichtung: GlobalProtect auf meinem Chromebook ein",
-      "revision": 2,
+      "title": "Demo-FAQ: Wie richte ich GlobalProtect auf meinem Chromebook ein?",
+      "revision": 3,
       "demoAudience": [
         "student",
         "employee",
@@ -3414,7 +3414,7 @@
         "vpn"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für die VPN-Einrichtung müssen Betriebssystem und Version, ein freigegebener VPN-Client sowie die dafür vorgesehenen Verbindungsparameter zusammenpassen. Diese Demo enthält keinen verifizierten Download, keine Serveradresse und kein Geräteprofil. Notiere Betriebssystem und Version sowie den Schritt, an dem du nicht weiterkommst, und verwende für konkrete Einstellungen die freigegebene Anleitung des zuständigen Dienstes. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
-      "citationId": "knowledge:service_it:svc-catalog-8269e07ac91e:2",
+      "citationId": "knowledge:service_it:svc-catalog-8269e07ac91e:3",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3422,8 +3422,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einrichtung: einen VPN Client unter Windows S ein",
-      "revision": 2,
+      "title": "Demo-FAQ: Wie richte ich einen VPN-Client unter Windows S ein?",
+      "revision": 3,
       "demoAudience": [
         "student",
         "employee",
@@ -3436,7 +3436,7 @@
         "vpn"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für die VPN-Einrichtung müssen Betriebssystem und Version, ein freigegebener VPN-Client sowie die dafür vorgesehenen Verbindungsparameter zusammenpassen. Diese Demo enthält keinen verifizierten Download, keine Serveradresse und kein Geräteprofil. Notiere Betriebssystem und Version sowie den Schritt, an dem du nicht weiterkommst, und verwende für konkrete Einstellungen die freigegebene Anleitung des zuständigen Dienstes. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
-      "citationId": "knowledge:service_it:svc-catalog-4d9b0bb1f7e7:2",
+      "citationId": "knowledge:service_it:svc-catalog-4d9b0bb1f7e7:3",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3444,8 +3444,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einrichtung: einen VPN Client unter macOS ein",
-      "revision": 2,
+      "title": "Demo-FAQ: Wie richte ich einen VPN-Client unter macOS ein?",
+      "revision": 3,
       "demoAudience": [
         "student",
         "employee",
@@ -3457,7 +3457,7 @@
         "vpn"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für die VPN-Einrichtung müssen Betriebssystem und Version, ein freigegebener VPN-Client sowie die dafür vorgesehenen Verbindungsparameter zusammenpassen. Diese Demo enthält keinen verifizierten Download, keine Serveradresse und kein Geräteprofil. Notiere Betriebssystem und Version sowie den Schritt, an dem du nicht weiterkommst, und verwende für konkrete Einstellungen die freigegebene Anleitung des zuständigen Dienstes. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
-      "citationId": "knowledge:service_it:svc-catalog-4760a271d1e7:2",
+      "citationId": "knowledge:service_it:svc-catalog-4760a271d1e7:3",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3465,8 +3465,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Einrichtung: einen VPN Client unter Windows ein",
-      "revision": 2,
+      "title": "Demo-FAQ: Wie richte ich einen VPN-Client unter Windows ein?",
+      "revision": 3,
       "demoAudience": [
         "student",
         "employee",
@@ -3479,7 +3479,7 @@
         "vpn"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Für die VPN-Einrichtung müssen Betriebssystem und Version, ein freigegebener VPN-Client sowie die dafür vorgesehenen Verbindungsparameter zusammenpassen. Diese Demo enthält keinen verifizierten Download, keine Serveradresse und kein Geräteprofil. Notiere Betriebssystem und Version sowie den Schritt, an dem du nicht weiterkommst, und verwende für konkrete Einstellungen die freigegebene Anleitung des zuständigen Dienstes. Teile keine Passwörter oder MFA-Codes. Diese allgemeinen Hinweise sind keine institutionelle Anleitung.",
-      "citationId": "knowledge:service_it:svc-catalog-45e0e1ce9803:2",
+      "citationId": "knowledge:service_it:svc-catalog-45e0e1ce9803:3",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3530,8 +3530,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Ablauf: lauten meine Datenbankzugangsdaten",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie lauten meine Datenbankzugangsdaten?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3543,7 +3543,7 @@
         "webhosting"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Fall 7E24A4 wird Ablauf: lauten meine Datenbankzugangsdaten auf dem erfundenen Webspace WEB-7E24A4 nachvollzogen. Verwende ausschließlich beispielhafte Dateien unter https://webspace-demo.invalid, prüfe zuerst eine Sicherungskopie und ändere dann eine einzelne Testseite. Die fiktive Grenze von 512 MB und die Beispielaufbewahrung von 30 Tagen sind keine realen Tarife oder Fristen.",
-      "citationId": "knowledge:service_it:svc-catalog-0168d67e24a4:1",
+      "citationId": "knowledge:service_it:svc-catalog-0168d67e24a4:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3572,8 +3572,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Nutzung: meinen neuen Webspace",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie nutze ich meinen neuen Webspace?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3585,7 +3585,7 @@
         "webhosting"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Fall 9EC369 wird Nutzung: meinen neuen Webspace auf dem erfundenen Webspace WEB-9EC369 nachvollzogen. Verwende ausschließlich beispielhafte Dateien unter https://webspace-demo.invalid, prüfe zuerst eine Sicherungskopie und ändere dann eine einzelne Testseite. Die fiktive Grenze von 512 MB und die Beispielaufbewahrung von 30 Tagen sind keine realen Tarife oder Fristen.",
-      "citationId": "knowledge:service_it:svc-catalog-a9c5ae9ec369:1",
+      "citationId": "knowledge:service_it:svc-catalog-a9c5ae9ec369:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3614,8 +3614,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Hintergrund: ist die Laufzeit eines Webspace begrenzt",
-      "revision": 1,
+      "title": "Demo-FAQ: Warum ist die Laufzeit eines Webspace begrenzt?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3627,7 +3627,7 @@
         "webhosting"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Fall C7B37B wird Hintergrund: ist die Laufzeit eines Webspace begrenzt auf dem erfundenen Webspace WEB-C7B37B nachvollzogen. Verwende ausschließlich beispielhafte Dateien unter https://webspace-demo.invalid, prüfe zuerst eine Sicherungskopie und ändere dann eine einzelne Testseite. Die fiktive Grenze von 512 MB und die Beispielaufbewahrung von 30 Tagen sind keine realen Tarife oder Fristen.",
-      "citationId": "knowledge:service_it:svc-catalog-028f64c7b37b:1",
+      "citationId": "knowledge:service_it:svc-catalog-028f64c7b37b:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3635,8 +3635,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Überblick: Leistungen bietet mir das Webhosting",
-      "revision": 1,
+      "title": "Demo-FAQ: Welche Leistungen bietet mir das Webhosting?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3648,7 +3648,7 @@
         "webhosting"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Fall 58D91B wird Überblick: Leistungen bietet mir das Webhosting auf dem erfundenen Webspace WEB-58D91B nachvollzogen. Verwende ausschließlich beispielhafte Dateien unter https://webspace-demo.invalid, prüfe zuerst eine Sicherungskopie und ändere dann eine einzelne Testseite. Die fiktive Grenze von 512 MB und die Beispielaufbewahrung von 30 Tagen sind keine realen Tarife oder Fristen.",
-      "citationId": "knowledge:service_it:svc-catalog-d1c1bb58d91b:1",
+      "citationId": "knowledge:service_it:svc-catalog-d1c1bb58d91b:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3656,8 +3656,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Änderung: das Passwort von meinem Webspace",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie ändere ich das Passwort meines Webspace?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3670,7 +3670,7 @@
         "webhosting"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Fall 546C8A wird Änderung: das Passwort von meinem Webspace auf dem erfundenen Webspace WEB-546C8A nachvollzogen. Verwende ausschließlich beispielhafte Dateien unter https://webspace-demo.invalid, prüfe zuerst eine Sicherungskopie und ändere dann eine einzelne Testseite. Die fiktive Grenze von 512 MB und die Beispielaufbewahrung von 30 Tagen sind keine realen Tarife oder Fristen.",
-      "citationId": "knowledge:service_it:svc-catalog-e441d0546c8a:1",
+      "citationId": "knowledge:service_it:svc-catalog-e441d0546c8a:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3678,8 +3678,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Änderung: mein Passwort beim ersten Zugriff auf den Webspace",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie ändere ich mein Passwort beim ersten Zugriff auf den Webspace?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3692,7 +3692,7 @@
         "webhosting"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Im Fall 19D838 wird Änderung: mein Passwort beim ersten Zugriff auf den Webspace auf dem erfundenen Webspace WEB-19D838 nachvollzogen. Verwende ausschließlich beispielhafte Dateien unter https://webspace-demo.invalid, prüfe zuerst eine Sicherungskopie und ändere dann eine einzelne Testseite. Die fiktive Grenze von 512 MB und die Beispielaufbewahrung von 30 Tagen sind keine realen Tarife oder Fristen.",
-      "citationId": "knowledge:service_it:svc-catalog-b25ab919d838:1",
+      "citationId": "knowledge:service_it:svc-catalog-b25ab919d838:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3765,8 +3765,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Hintergrund: benötige ich extra WLAN-Account(s)",
-      "revision": 1,
+      "title": "Demo-FAQ: Warum benötige ich einen zusätzlichen WLAN-Account?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3779,7 +3779,7 @@
         "wlan"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Diese Anleitung simuliert Hintergrund: benötige ich extra WLAN-Account(s) mit dem fiktiven Profil WLAN-LAB-348FB1. Kontrolliere am Testgerät Flugmodus und gespeichertes Demo-Profil, entferne bei Bedarf nur den Laboreintrag und starte einen neuen Verbindungstest. Das Profil ist kein Hochschulnetz und benötigt weder echte Kennung noch Passwort; bei einem zweiten Testgerät wird nur der Fehlervergleich dokumentiert.",
-      "citationId": "knowledge:service_it:svc-catalog-7b90fe348fb1:1",
+      "citationId": "knowledge:service_it:svc-catalog-7b90fe348fb1:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3808,8 +3808,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Änderung: das Ziel für meine Domain",
-      "revision": 1,
+      "title": "Demo-FAQ: Wie ändere ich das Ziel meiner Domain?",
+      "revision": 2,
       "demoAudience": [
         "employee",
         "admin"
@@ -3820,7 +3820,7 @@
         "short-url"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der URL-Fall E0D4AA zeigt Änderung: das Ziel für meine Domain mit short-demo.invalid und ziel-demo.invalid. Vergleiche zuerst die vollständige Zieladresse, öffne eine sichere Vorschau und ändere anschließend nur den fiktiven Eintrag URL-E0D4AA. Beide Domains sind reservierte Testnamen; eine reale Weiterleitung oder DNS-Änderung findet nicht statt.",
-      "citationId": "knowledge:service_it:svc-catalog-9c46cce0d4aa:1",
+      "citationId": "knowledge:service_it:svc-catalog-9c46cce0d4aa:2",
       "publicationStatus": "syntheticdemo"
     },
     {
@@ -3828,8 +3828,8 @@
       "sourceSystem": "service_it",
       "synthetic": true,
       "language": "de",
-      "title": "Demo-FAQ: Möglichkeit: Zoom auch als Chat-Software verwenden",
-      "revision": 1,
+      "title": "Demo-FAQ: Kann ich Zoom auch als Chat-Software verwenden?",
+      "revision": 2,
       "demoAudience": [
         "student",
         "employee",
@@ -3841,7 +3841,7 @@
         "software"
       ],
       "text": "SYNTHETISCHES DEMO-BEISPIEL: Alle Namen, Werte, Wege und Abläufe in diesem Text sind erfunden. Der Eintrag beschreibt keine tatsächliche Hochschulregel. Der Softwarefall AFBF68 behandelt Möglichkeit: Zoom auch als Chat-Software verwenden in einer isolierten Lizenz-Sandbox. Öffne das fiktive Profil SOFTWARE-AFBF68, prüfe den angezeigten Produktnamen und wähle nur eine Vorschau oder Testinstallation. Die Demo bestätigt keine reale Bezugsberechtigung, Lizenz oder Rabattregel; keine Installation auf einem produktiven Gerät starten.",
-      "citationId": "knowledge:service_it:svc-catalog-f1e57dafbf68:1",
+      "citationId": "knowledge:service_it:svc-catalog-f1e57dafbf68:2",
       "publicationStatus": "syntheticdemo"
     },
     {

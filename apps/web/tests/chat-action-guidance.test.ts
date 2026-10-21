@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { asksForActionControls, currentActionControls } from "../src/lib/chat-action-guidance";
 
 describe("bounded native action control help", () => {
-  it.each(["ich sehe keine schaltfläche", "Ich finde keinen Button.", "Wo ist die Bestätigung?", "Ich will direkt von hier buchen!", "Ich sehe keine Bestätigungsschaltfläche", "I don't see a button", "Where is the confirmation button?"])("recognizes %s", text => {
+  it.each(["ich sehe keine schaltfläche", "Ich finde keinen Button.", "Wo ist die Bestätigung?", "Ich will direkt von hier buchen!", "was soll das denn, ich will direkt von hier buchen", "Was soll das denn? Ich will hier buchen!", "Ich sehe keine Bestätigungsschaltfläche", "I don't see a button", "Where is the confirmation button?"])("recognizes %s", text => {
     expect(asksForActionControls(text)).toBe(true);
   });
-  it.each(["Mein VPN funktioniert nicht", "Ich sehe keine Schaltfläche und mein VPN funktioniert nicht", "Bitte buche morgen 1J", "ja", "Wo ist mein Büro?", "x".repeat(241)])("leaves other tasks to their workflow: %s", text => {
+  it.each(["Mein VPN funktioniert nicht", "Ich sehe keine Schaltfläche und mein VPN funktioniert nicht", "Bitte buche morgen 1J", "ja", "Wo ist mein Büro?", "was soll das denn, buche morgen einen Raum", "was soll das denn, ich will direkt von hier buchen und mein VPN geht nicht", "x".repeat(241)])("leaves other tasks to their workflow: %s", text => {
     expect(asksForActionControls(text)).toBe(false);
   });
 });
