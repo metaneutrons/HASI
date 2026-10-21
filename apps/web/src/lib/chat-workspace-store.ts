@@ -356,8 +356,10 @@ export function createChatWorkspaceStore(
     view = { ...view, workspace, busy };
     if (changed) workspaceVersion += 1;
     if (protectedPersistence) liveAvailability.capture(workspace, Date.now());
-    emit();
+    // Subscribers must observe pending work on the first synchronous edit,
+    // including the unload guard before the debounce has fired.
     if (changed) { clearTimeout(timer); timer = setTimeout(flush, 180); }
+    emit();
     expireAvailability();
   }
 
@@ -400,6 +402,11 @@ export function createChatWorkspaceStore(
     flush,
     dismissNotice() { view = { ...view, notice: null }; emit(); },
     hasPendingWrites() { return timer !== undefined || remotePendingCount > 0; },
+    flushPendingWrites() { if (timer !== undefined) flush(); },
+    needsNavigationConfirmation() {
+      return protectedPersistence !== undefined && (timer !== undefined || remotePendingCount > 0
+        || view.protectedPersistence?.state !== "saved");
+    },
     hasBusyChats() { return Object.values(view.busy).some(Boolean); },
     getAuthorityVersion() { return `${String(remoteGeneration)}:${String(view.accessEpoch)}`; },
     hasAuthorityChange() { return authorityChanges > 0; },

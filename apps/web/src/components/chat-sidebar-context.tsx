@@ -11,6 +11,7 @@ import {
 } from "@/lib/chat-workspace-store";
 import { chatStorageKey, parseChatWorkspace, type ChatWorkspace } from "@/lib/chat-sessions";
 import { refreshProtectedWorkspace } from "@/lib/protected-workspace-refresh";
+import { protectWorkspaceNavigation } from "@/lib/protected-workspace-navigation";
 
 const ChatWorkspaceStoreContext = createContext<ChatWorkspaceStore | null>(null);
 const WORKSPACE_ENDPOINT = "/api/chat/workspace";
@@ -165,6 +166,8 @@ function ProtectedStoreWorkspaceProvider({ store, children }: { store: ChatWorks
     }
   }, [ownerId, retrying, store]);
 
+  useEffect(() => protectWorkspaceNavigation(store, window, document), [store]);
+
   useEffect(() => {
     const onFocus = () => { void refreshRemote(); };
     const interval = window.setInterval(() => { void refreshRemote(); }, 30_000);
@@ -172,7 +175,6 @@ function ProtectedStoreWorkspaceProvider({ store, children }: { store: ChatWorks
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
-      store.flush();
     };
   }, [refreshRemote, store]);
 

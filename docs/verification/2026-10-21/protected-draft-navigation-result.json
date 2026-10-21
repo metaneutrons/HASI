@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-21",
+  "base": "5218d6283b07dbf1d50e2b9a6abc5922e12905ad",
+  "buildId": "c8V_vXssUREUtXoHP4mHy",
+  "sourceHashes": {
+    "apps/web/src/components/chat-sidebar-context.tsx": "76e00e67aba55adce3b7bcac56c43b611e4b1150b2440942ba3545e457291b70",
+    "apps/web/src/lib/chat-workspace-store.ts": "21bafea6c27a9a8fabadc474c606d38aeaaeedef0a6cc01f8632023a3e14602e",
+    "apps/web/src/lib/protected-workspace-navigation.ts": "ed94a15a5f39b9a61189ffa7ebed24d989e7d7a6ebbf6a5edc7767406a4849fe"
+  },
+  "browser": {
+    "family": "Chromium",
+    "version": "155.0.0.0",
+    "surface": "in-app browser",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "mobileEmulation": true
+    },
+    "nativeDeviceAcceptance": false
+  },
+  "fixture": {
+    "apiReplicas": 2,
+    "optimized": true,
+    "managed": false,
+    "artifactInputMode": "workspace-reference-fixture",
+    "externalDistributionAcceptance": false
+  },
+  "failedSave": {
+    "method": "PUT",
+    "error": "net::ERR_INTERNET_DISCONNECTED"
+  },
+  "interruptedReload": {
+    "dialogOpened": "beforeunload",
+    "dialogClosedResult": false,
+    "dismissal": "automatic browser harness dismissal",
+    "draftRetained": true,
+    "documentNavigationUnchanged": true
+  },
+  "recovery": [
+    {
+      "event": "Network.requestWillBeSent",
+      "method": "GET"
+    },
+    {
+      "event": "Network.responseReceived",
+      "status": 200
+    },
+    {
+      "event": "Network.requestWillBeSent",
+      "method": "PUT"
+    },
+    {
+      "event": "Network.responseReceived",
+      "status": 200
+    }
+  ],
+  "cleanReload": {
+    "dialogs": 0,
+    "frameNavigations": 1,
+    "draftRestored": true
+  },
+  "browserStorage": {
+    "protectedDraftInLocalStorage": false,
+    "protectedDraftInSessionStorage": false,
+    "width": 390,
+    "scrollWidth": 390
+  },
+  "cleanup": {
+    "scope": "4ce109b6-cd7c-488b-8504-2f540411ecd3",
+    "ownedRowsRemoved": 6,
+    "ownedRowsRemaining": 0,
+    "callerRowsPreserved": 29270,
+    "callerFingerprint": "6713ac81e384c21ff95354f9c9194f97776e7ec6632eec59428e2321db17058d",
+    "callerDatabaseRetained": true,
+    "processesStopped": true,
+    "syntheticModelCalls": 0,
+    "realProviderCalls": 0,
+    "sourceWrites": 0,
+    "isolatedHomeRemoved": true
+  },
+  "rawObservationsSha256": "2026880afe5134b2097c708000eaa6d0a11fffe056ca09769b22e464f531dcfb",
+  "screenshots": {
+    "offline-retained.png": "c979b71697b9843c9d3ffcf45fdadf10ff9c4c2d42fd8283d0ca0ec3e43d3bec",
+    "reloaded-draft.png": "8f49deda56daf0f7c2bceca35f05675cb3c6309f2a4989d3f9fc56966f80fa3a"
+  },
+  "focusedValidation": {
+    "testFiles": 5,
+    "testsPassed": 66,
+    "webTypes": true,
+    "affectedLint": true,
+    "optimizedBuild": true
+  },
+  "limitations": [
+    "No unload-delivery guarantee; confirming departure can lose unacknowledged input.",
+    "No OS/process-kill or offline persistence guarantee.",
+    "No native iPhone/Safari/Android/assistive-technology or complete M7 qualification.",
+    "Account disposal does not start new saves; existing autosave/auth policy is unchanged.",
+    "The local reference plugin is a workspace fixture, not independent artifact distribution."
+  ]
+}
