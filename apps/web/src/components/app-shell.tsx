@@ -361,7 +361,7 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
       main.style.setProperty("--mobile-nav-height", `${String(navigation.getBoundingClientRect().height)}px`);
     };
     const observer = new ResizeObserver(update);
-    observer.observe(navigation);
+    observer.observe(navigation, { box: "border-box" });
     update();
     return () => {
       observer.disconnect();
