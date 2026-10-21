@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-21",
+  "qualificationScope": "external-input-admission-and-managed-journey-startup-only",
+  "implementedRevision": "2cd140bd59d83eaa88e6718e69d393197a28f62c",
+  "sourceSha256": {
+    "scripts/serve-plugin-journey.ts": "74ce99e7812284e428994bd2b93f8ad1eae1f3fa323604cafae886478911d02f",
+    "scripts/plugin-journey-artifacts.ts": "3cdc5cc03d53938cf63b440949ebacb2a45c326326d4e11a2c664cd988b64cfb",
+    "scripts/managed-plugin-journey-runtime.ts": "ce699bb6ecb2b7f35f96be5356d1d5f63d97b13913fa29abcc841f76ed468f5d",
+    "scripts/plugin-gateway-qualification-artifacts.ts": "68f4007d38bac008318b5860b44d4135a25dc3de007fc5ee23ded20c764ec944",
+    "examples/reference-plugin/src/server.js": "6c15efc729f0e9f960e2fc4647aee762be48e91dfc0da725aaa22991d3ea1f85",
+    "examples/reference-plugin/src/state.js": "0940467a804b6b4efbd8104f55dfe7dfcbde36b01d717ba305b287506380a9d6",
+    "pnpm-lock.yaml": "d17165ca9989d72401f3eaa9718d1ffa43bc1adb486113602760f30db13317ba"
+  },
+  "platform": {
+    "node": "v24.21.0",
+    "operator": "Darwin/arm64",
+    "docker": "linux/arm64 29.2.1"
+  },
+  "fixtureProvenance": "Workspace-derived reference source copied into a separate owned local Git repository; packages produced before journey startup with the HASI reference packager. Not an independent publisher or publicly distributed release.",
+  "artifactInputMode": "external-prebuilt-pair",
+  "sourceIdentityAssurance": "operator-declared-metadata-only-not-verified-publisher-provenance",
+  "independentDistributionAcceptance": false,
+  "optimized": true,
+  "apiReplicas": 2,
+  "managedStatusAtObservation": "empty",
+  "releases": [
+    {
+      "id": "reference-v1",
+      "version": "1.0.0",
+      "sourceSha": "2a66654862ff1beaf3afdea385b5bacc9551eada",
+      "artifactSha256": "b508468023c3defb763bcb42d53c68db6bb4576d17506ebd4477ef704c44e818",
+      "artifactManifestSha256": "3802e78a8cc24e99a13440d9d5594a6b8e749722479a03f5fbd0a7d3e0913677",
+      "manifestDigest": "9d5e5c904a1295ab08015e79c2d61ea8269e377ea8d6d1c8148aa295992ae66a",
+      "manifestFileSha256": "39e1a8df440022d677032735fb38ff6395ec1178072e2981d15cc66e698d0396",
+      "imageId": "sha256:b4080be2c5be667919c44d97299556e0926bd4da5b7d2cde6183a0d653c6e27c",
+      "imageReference": "localhost/hasi-reference-qualification@sha256:b4080be2c5be667919c44d97299556e0926bd4da5b7d2cde6183a0d653c6e27c",
+      "releaseDigest": "64ac0cc6de0462f11e38520f9462421fdfca44714ecb64878ff5f5fc1c8b0a43"
+    },
+    {
+      "id": "reference-v2",
+      "version": "1.0.1",
+      "sourceSha": "afa8ddfbf8e99b6384c6c5436304d164a75dc307",
+      "artifactSha256": "a0bd765e1815035f45cb6a532d170c0f3e649d3dd2ae39b1de922ad4e649d8d8",
+      "artifactManifestSha256": "48496fc8d3cae8509fcd25119688eeb48a85023653fab11edef546fc25c33fa0",
+      "manifestDigest": "a6ebee08dcef094ba7fc689b4470e6c9df7958580a12d6209fde0936b2aac6d7",
+      "manifestFileSha256": "74454a1f7527458b045aacd7b382c6963f83dbf5d5cbe29a1d918eeddcdfdfbc",
+      "imageId": "sha256:e46711e106958800e464afa4d17e37a21e86998baee8b3c20f11d8e255e15ceb",
+      "imageReference": "localhost/hasi-reference-qualification@sha256:e46711e106958800e464afa4d17e37a21e86998baee8b3c20f11d8e255e15ceb",
+      "releaseDigest": "d018fd3a2ef0e54904fbcde7adefdcf65f7f1192980314b774ca01fd90c49002"
+    }
+  ],
+  "focusedTests": {
+    "count": 27,
+    "files": [
+      "tests/plugin-journey-artifacts.test.ts",
+      "tests/plugin-journey-config.test.ts",
+      "tests/managed-plugin-journey-runtime.test.ts"
+    ]
+  },
+  "counterprobe": {
+    "callerArtifactsReverified": 2,
+    "validCounterCopyVerified": true,
+    "corruptedOwnedCopyByBytes": 1,
+    "cliExit": 1,
+    "event": {
+      "event": "synthetic-plugin-journey-failed",
+      "stage": "preflight",
+      "operatorCredentialsUsed": false,
+      "productionStateUsed": false,
+      "diagnostic": "external_artifact_payload_invalid"
+    },
+    "journeyPreparationReached": false,
+    "realProviderCalls": 0
+  },
+  "modelCalls": 0,
+  "realProviderCalls": 0,
+  "cleanupObserved": {
+    "ownedProcessesStopped": true,
+    "callerOwnedTestDatabaseRetained": true,
+    "managedCleanup": {
+      "workerStopped": true,
+      "routeWithdrawn": true,
+      "containersRemoved": 0,
+      "networksRemoved": 3,
+      "imagesRemoved": 2,
+      "databaseNamespaceRetained": true,
+      "recoveryMaterialRemoved": true
+    }
+  },
+  "cleanupIndependentlyChecked": {
+    "workerAndApiProcessesAbsent": true,
+    "bothOwnedImagesAbsent": true
+  },
+  "limits": [
+    "No plugin installed or activated: installer status remained empty.",
+    "No MCP tool read, confirmed action, update/rollback, browser journey or source publisher attestation is claimed.",
+    "Full P5/P6 and M2/M7 acceptance remain open."
+  ],
+  "fixtureParentCleanup": {
+    "ownedPreparationDirectoryRemoved": true,
+    "isolatedHomeRemoved": true
+  }
+}
