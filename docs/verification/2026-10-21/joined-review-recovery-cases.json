@@ -1,0 +1,175 @@
+[
+  {
+    "label": "before-expiry-reload",
+    "alerts": [
+      "",
+      "",
+      "",
+      ""
+    ],
+    "at": "2026-10-21T19:16:17.084Z",
+    "confirmButtons": 1,
+    "draft": "Nicht senden: aktueller Entwurf vor der Erneuerung."
+  },
+  {
+    "label": "expired-reload",
+    "alerts": [
+      "",
+      "",
+      "",
+      ""
+    ],
+    "at": "2026-10-21T19:16:34.485Z",
+    "confirmButtons": 0,
+    "draft": "Nicht senden: aktueller Entwurf vor der Erneuerung."
+  },
+  {
+    "label": "returned-after-renewal",
+    "alerts": [
+      "",
+      "",
+      "",
+      ""
+    ],
+    "at": "2026-10-21T19:17:10.354Z",
+    "confirmButtons": 0,
+    "draft": "Nicht senden: aktueller Entwurf vor der Erneuerung."
+  },
+  {
+    "label": "during-failed-generation",
+    "alerts": [
+      "Geschützte Chats werden gespeichert …\nErneut versuchen",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Anfrage wird verarbeitet"
+    ],
+    "at": "2026-10-21T19:17:22.750Z",
+    "confirmButtons": 0,
+    "draft": "Nicht senden: Entwurf während des Modellfehlers."
+  },
+  {
+    "label": "after-provider-failure",
+    "alerts": [
+      "Geschützte Chats werden gespeichert …\nErneut versuchen",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Custom endpoint antwortet …",
+      "Der ausgewählte Modellanbieter konnte die Anfrage nicht abschließen. Bitte versuche es erneut oder wähle ausdrücklich die Dialog-Demo."
+    ],
+    "at": "2026-10-21T19:17:35.315Z",
+    "confirmButtons": 0,
+    "draft": "Nicht senden: Entwurf während des Modellfehlers."
+  },
+  {
+    "label": "reload-after-provider-failure",
+    "alerts": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "at": "2026-10-21T19:18:14.589Z",
+    "confirmButtons": 0,
+    "draft": "Nicht senden: Entwurf während des Modellfehlers."
+  },
+  {
+    "label": "explicit-retry-prepared",
+    "alerts": [
+      "Geschützte Chats werden gespeichert …\nErneut versuchen",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "at": "2026-10-21T19:18:49.742Z",
+    "confirmButtons": 1,
+    "draft": ""
+  },
+  {
+    "label": "fresh-preparation-reloaded",
+    "alerts": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "at": "2026-10-21T19:19:28.934Z",
+    "confirmButtons": 1,
+    "draft": ""
+  },
+  {
+    "label": "fresh-action-confirmed",
+    "alerts": [
+      "Geschützte Chats werden gespeichert …\nErneut versuchen",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "at": "2026-10-21T19:19:50.605Z",
+    "confirmButtons": 0,
+    "draft": ""
+  },
+  {
+    "label": "after-update-rollback",
+    "alerts": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "at": "2026-10-21T19:23:03.453Z",
+    "confirmButtons": 0,
+    "draft": "",
+    "confirmedReceiptVisible": false,
+    "unavailableAssistantMessages": 3
+  }
+]

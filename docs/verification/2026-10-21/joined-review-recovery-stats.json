@@ -1,0 +1,98 @@
+{
+  "afterUpdate": {
+    "event": "synthetic-model-stats",
+    "calls": 3,
+    "unavailableResponses": 1,
+    "resultObservations": {
+      "referenceReadResults": 0,
+      "omittedResults": 0,
+      "priorReferenceReadResults": 0,
+      "priorReferenceAnswers": 0,
+      "requestsWithPriorReferenceContext": 0
+    },
+    "realProviderCalls": 0,
+    "managed": {
+      "workerPid": 21834,
+      "scope": "f59fb6de-84ae-48fe-9e06-83136c955f4c",
+      "installationId": "hasi.reference",
+      "status": "active",
+      "currentReleaseDigest": "531e7257bb00845098bff43a9efceeb0523ae82ff9575c375868a58e10e4b516",
+      "previousReleaseDigest": "8a2df84691e518023fe9181a469d8118ea028eaa403269c8b0f0806cd4eb9df5",
+      "candidateReleaseDigest": null,
+      "releases": [
+        {
+          "id": "reference-v1",
+          "version": "1.0.0",
+          "sourceSha": "59e15b00c36fdef1cb4083c019dd56f0a628942b",
+          "artifactSha256": "6ca8a1eabf5c26acf414b253e78b20c6bf1a338d8255ba1e91c6ba91b6b389ee",
+          "artifactManifestSha256": "c455c9f52c35f6e177caf598a9cb66e08192dc4716d77fd5e0412534e8a4311c",
+          "manifestDigest": "9d5e5c904a1295ab08015e79c2d61ea8269e377ea8d6d1c8148aa295992ae66a",
+          "manifestFileSha256": "39e1a8df440022d677032735fb38ff6395ec1178072e2981d15cc66e698d0396",
+          "imageId": "sha256:4e5465251f19d6afd5bb3e867aa4974611defde6596d99eaa762be9d401a7ce0",
+          "imageReference": "localhost/hasi-reference-qualification@sha256:4e5465251f19d6afd5bb3e867aa4974611defde6596d99eaa762be9d401a7ce0",
+          "releaseDigest": "8a2df84691e518023fe9181a469d8118ea028eaa403269c8b0f0806cd4eb9df5"
+        },
+        {
+          "id": "reference-v2",
+          "version": "1.0.1",
+          "sourceSha": "40e30f3c1b3900e0505144e11d11326d2c3904f1",
+          "artifactSha256": "62e8b081a4d8934d026104d8b22ebee935c50812c42ddc81c25254c45a492c1f",
+          "artifactManifestSha256": "e98310335ea6510787d09f1df618a86c07379b9efa025767ff1c16f8f90d7d80",
+          "manifestDigest": "a6ebee08dcef094ba7fc689b4470e6c9df7958580a12d6209fde0936b2aac6d7",
+          "manifestFileSha256": "74454a1f7527458b045aacd7b382c6963f83dbf5d5cbe29a1d918eeddcdfdfbc",
+          "imageId": "sha256:990db76390f03044ff2c56e2b3d859b651f58757871db9941d94b908ef18c24a",
+          "imageReference": "localhost/hasi-reference-qualification@sha256:990db76390f03044ff2c56e2b3d859b651f58757871db9941d94b908ef18c24a",
+          "releaseDigest": "531e7257bb00845098bff43a9efceeb0523ae82ff9575c375868a58e10e4b516"
+        }
+      ]
+    }
+  },
+  "afterRollback": {
+    "event": "synthetic-model-stats",
+    "calls": 3,
+    "unavailableResponses": 1,
+    "resultObservations": {
+      "referenceReadResults": 0,
+      "omittedResults": 0,
+      "priorReferenceReadResults": 0,
+      "priorReferenceAnswers": 0,
+      "requestsWithPriorReferenceContext": 0
+    },
+    "realProviderCalls": 0,
+    "managed": {
+      "workerPid": 21834,
+      "scope": "f59fb6de-84ae-48fe-9e06-83136c955f4c",
+      "installationId": "hasi.reference",
+      "status": "active",
+      "currentReleaseDigest": "8a2df84691e518023fe9181a469d8118ea028eaa403269c8b0f0806cd4eb9df5",
+      "previousReleaseDigest": "531e7257bb00845098bff43a9efceeb0523ae82ff9575c375868a58e10e4b516",
+      "candidateReleaseDigest": null,
+      "releases": [
+        {
+          "id": "reference-v1",
+          "version": "1.0.0",
+          "sourceSha": "59e15b00c36fdef1cb4083c019dd56f0a628942b",
+          "artifactSha256": "6ca8a1eabf5c26acf414b253e78b20c6bf1a338d8255ba1e91c6ba91b6b389ee",
+          "artifactManifestSha256": "c455c9f52c35f6e177caf598a9cb66e08192dc4716d77fd5e0412534e8a4311c",
+          "manifestDigest": "9d5e5c904a1295ab08015e79c2d61ea8269e377ea8d6d1c8148aa295992ae66a",
+          "manifestFileSha256": "39e1a8df440022d677032735fb38ff6395ec1178072e2981d15cc66e698d0396",
+          "imageId": "sha256:4e5465251f19d6afd5bb3e867aa4974611defde6596d99eaa762be9d401a7ce0",
+          "imageReference": "localhost/hasi-reference-qualification@sha256:4e5465251f19d6afd5bb3e867aa4974611defde6596d99eaa762be9d401a7ce0",
+          "releaseDigest": "8a2df84691e518023fe9181a469d8118ea028eaa403269c8b0f0806cd4eb9df5"
+        },
+        {
+          "id": "reference-v2",
+          "version": "1.0.1",
+          "sourceSha": "40e30f3c1b3900e0505144e11d11326d2c3904f1",
+          "artifactSha256": "62e8b081a4d8934d026104d8b22ebee935c50812c42ddc81c25254c45a492c1f",
+          "artifactManifestSha256": "e98310335ea6510787d09f1df618a86c07379b9efa025767ff1c16f8f90d7d80",
+          "manifestDigest": "a6ebee08dcef094ba7fc689b4470e6c9df7958580a12d6209fde0936b2aac6d7",
+          "manifestFileSha256": "74454a1f7527458b045aacd7b382c6963f83dbf5d5cbe29a1d918eeddcdfdfbc",
+          "imageId": "sha256:990db76390f03044ff2c56e2b3d859b651f58757871db9941d94b908ef18c24a",
+          "imageReference": "localhost/hasi-reference-qualification@sha256:990db76390f03044ff2c56e2b3d859b651f58757871db9941d94b908ef18c24a",
+          "releaseDigest": "531e7257bb00845098bff43a9efceeb0523ae82ff9575c375868a58e10e4b516"
+        }
+      ]
+    }
+  }
+}

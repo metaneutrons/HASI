@@ -1,0 +1,11 @@
+{
+  "physicalRowsRemovedWithOwnedDatabase": 39,
+  "managedContainersRemoved": 4,
+  "managedNetworksRemoved": 3,
+  "managedImagesRemoved": 2,
+  "ownedDatabaseContainerRemoved": true,
+  "ownedDatabaseVolumeRemoved": true,
+  "ownedDatabaseNetworkRemoved": true,
+  "homeRemoved": true,
+  "privateRuntimeRemoved": true
+}

@@ -305,3 +305,21 @@ bounded evidence, not complete admin/chat/update/rollback acceptance. The
 adds actual rebuilt-style48-group evidence to P6-A3 after PR #189 delivery.
 It supersedes the preview-only limitation for those named navigation groups,
 without extending desktop/mobile coverage to every product state or M8 devices.
+
+## Targeted renewal/failure and actual review follow-up
+
+[Joined review/recovery](../2026-10-21/joined-review-recovery.md) adds actual
+installer-backed first-install and update comparisons, three local model calls
+including one terminal-injected503, same-chat draft retention through expiry,
+renewal/failure/reload, and one separately confirmed fresh action. The ordinary
+fresh-renewal path was already qualified by `renewal-fresh-confirmation.md`;
+this supersedes any implication that it remained setup-only. The historical
+unexplained503 is not assigned a cause by injecting a new known failure.
+
+The report also explains the reproduced historical receipt redaction after
+managed update/rollback as the existing current-binding read policy. One physical
+effect/source receipt/confirmed journal remains through those transitions;
+visible receipt recovery under a changed deployment binding is not claimed.
+No current-rights or global history fence is weakened. The actual-route hostile
+description and provider503/retry regressions are deterministic mocked-provider
+evidence for P3-A1/P6-A2, not real-model resilience or human M6 acceptance.
