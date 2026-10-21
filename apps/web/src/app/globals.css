@@ -619,15 +619,15 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .bookings-empty p { max-width: 375px; margin: 13px 0 19px; color: var(--muted); font-size: 0.9375rem; line-height: 1.6; }
 .bookings-help { margin-top: 17px; }
 
-.admin-hero { display: flex; min-width: 0; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 11px 0 31px; }
+.admin-hero { display: flex; min-width: 0; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 11px 0 31px; }
 .admin-hero .eyebrow { margin-bottom: 21px; }
 .admin-hero h1 { font-size: clamp(3.1rem, 5.4vw, 5.2rem); }
 .admin-hero-copy { min-width: 0; }
 .admin-hero-copy > p { max-width: 450px; margin: 17px 0 0; color: var(--muted); font-size: 0.875rem; line-height: 1.6; }
-.admin-hero-status { display: flex; min-width: 225px; align-items: center; gap: 11px; margin: 0 0 5px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.admin-hero-status { display: flex; min-width: 225px; max-width: 100%; align-items: center; gap: 11px; margin: 0 0 5px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
 .admin-status-icon { display: flex; width: 36px; height: 36px; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 11px; background: var(--green-soft); color: var(--green); }
 .admin-hero-status > span:nth-child(2) { display: grid; min-width: 0; flex: 1; gap: 3px; }
-.admin-hero-status strong { font-size: 0.875rem; font-weight: 650; }
+.admin-hero-status strong { font-size: 0.875rem; font-weight: 650; overflow-wrap: anywhere; }
 .admin-hero-status small { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 0.75rem; }
 .admin-hero-status .icon-button { width: 44px; min-width: 44px; height: 44px; }
 .admin-summary { display: grid; min-width: 0; min-height: 98px; grid-template-columns: 108px 1px minmax(120px, 0.8fr) minmax(190px, 1.2fr); align-items: center; gap: 22px; padding: 16px 20px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); }
