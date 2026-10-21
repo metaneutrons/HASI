@@ -4,6 +4,9 @@ This operator runs draft synthetic development cases through the same server-onl
 chat handler used by the web route. It is separate from fixed-evidence and
 unknown-action-outcome observations. It does not complete M6, approve a model,
 establish institutional access or replace human semantic review.
+The [Linux package proof](../verification/2026-10-21/application-policy-package.md)
+records four actual source/route paths with injected provider responses; it is
+not a live model comparison.
 
 ## Plan before execution
 
