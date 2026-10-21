@@ -1,10 +1,10 @@
 # hasi pilot plan
 
-Created: 2026-10-09. Updated: 2026-10-19. Scope, mobile usability, TypeScript,
+Created: 2026-10-09. Updated: 2026-10-21. Scope, mobile usability, TypeScript,
 mock identity for the prototype and independently updateable plugins are agreed
 requirements. The deployed synthetic-data prototype is an initial slice of the MVP.
 
-Tracking under V7 deferred API acceptance, V6 UI targets, V5 demo scope and adopted V4 qualification sequencing: [unified delivery index #47](https://github.com/metaneutrons/HASI/issues/47),
+Tracking under V9 deferred Groq-cache proof, V7 deferred API acceptance, V6 UI targets, V5 demo scope and adopted V4 qualification sequencing: [unified delivery index #47](https://github.com/metaneutrons/HASI/issues/47),
 [M2 with P1–P6 #49](https://github.com/metaneutrons/HASI/issues/49),
 [post-MVP roadmap #55](https://github.com/metaneutrons/HASI/issues/55),
 [D3 #17](https://github.com/metaneutrons/HASI/issues/17),
@@ -24,7 +24,10 @@ remain technical gates. V6 records Fabian's agreed M2/M7
 with model latency and rate limits measured separately. V7 records Fabian's
 subsequent decision to defer only the non-model API p95 ≤ 1,000 ms acceptance
 to M8-A9; it no longer blocks M2/M7. The target, measurement method and failed
-results remain intact. Local UI feedback ≤ 200 ms remains in M2/M7. The earlier
+results remain intact. Local UI feedback ≤ 200 ms remains in M2/M7. V9 records
+Fabian's 2026-10-21 decision to defer only Groq prompt-cache proof (CACHE-A1)
+to M8-A10. Its measurement contract remains intact; missing counters stay unknown.
+Ordinary model quality/security, usage/cost and budgets are not deferred. The earlier
 V3 preserved
 all criteria, evidence and status. It consolidates #14 into #47, #69–#74 into
 P1–P6 groups under #49, and #56–#63 into the source-specific entries under #55.
@@ -164,7 +167,7 @@ comparison; do not reopen accepted [#32–#34](https://github.com/metaneutrons/H
 | M5. anny write/cancel/reconcile behavior | Qualify server-bound proposals and action state against mock/reference contracts; do not issue live writes. | Customer eligibility rules represented in fixtures; stale/tampered confirmations rejected; retries are idempotent; cancellation and unknown-outcome reconciliation tested. | [#52](https://github.com/metaneutrons/HASI/issues/52) |
 | M6. Synthetic model and adversarial evaluation | Formal offline evaluation with synthetic fixed evidence/workflows, injected sources/tool output, rendering, network and model-switch tests. | Security cases pass per profile; quality, citations, tool arguments, latency and measured cost compared; no protected context or production writes. Complete before M7; qualify BUD-A1 before paid runs. | [#53](https://github.com/metaneutrons/HASI/issues/53) |
 | M7. Technical pilot and operations | Deliver all three technical mock integrations, qualify automated/browser/simulator journeys and agreed technical thresholds, and exercise operations. Institutional data approval is not a prerequisite. | Key flows in automated browsers and device simulation; connection-loss recovery, automated accessibility checks, independent service-health monitoring, incident procedures and rollback exercised; [local UI feedback target](../architecture/technical-basis.md#demo-performance-targets) ≤ 200 ms qualified; API p95 ≤ 1,000 ms acceptance deferred to M8-A9. The disposable demo requires no backup/restore acceptance; production continuity is M8-A8. Real-device and participant acceptance is M8-A7. | [#54](https://github.com/metaneutrons/HASI/issues/54) |
-| M8. Final institutional acceptance | Qualify real institutional identity, source permissions, Anny behavior, protected-data processing and accountable ownership after M1–M7 technical work. | All M8-A1–A9 evidence below and a recorded institutional go/no-go. No real writes or protected context before scoped authorization. | [#80](https://github.com/metaneutrons/HASI/issues/80) |
+| M8. Final institutional acceptance | Qualify real institutional identity, source permissions, Anny behavior, protected-data processing and accountable ownership after M1–M7 technical work. | All M8-A1–M8-A10 evidence below and a recorded institutional go/no-go. No real writes or protected context before scoped authorization. | [#80](https://github.com/metaneutrons/HASI/issues/80) |
 
 M1 contract design and offline M6 dataset/harness work can proceed in parallel.
 Technical M3 and M4 require M1/M2 technical boundaries and may use #79's
@@ -177,7 +180,8 @@ Production encrypted backup, off-host replication/failure monitoring and restore
 qualification are retained in M8-A8; the disposable demo has no such backup gate. All
 real-device and participant acceptance tests are transferred intact to M8-A7.
 V7 additionally transfers the 1-second API acceptance to M8-A9; the local UI
-target stays in M2/M7. M8 is the final institutional barrier; it does not
+target stays in M2/M7. V9 transfers only CACHE-A1 to M8-A10; it no longer
+blocks M6/M7. M8 is the final institutional barrier; it does not
 retroactively block technical milestones.
 
 ### Institutional acceptance (M8)
@@ -201,7 +205,8 @@ the final recorded acceptance follows the evidence. The exact criteria are:
   owners review real source cases and approve any controlled participant test.
 - **M8-A6 — Final authorization:** Evidence maps to the institutional contracts;
   denial, revocation and incident tests pass, including M8-A7 real-device
-  acceptance, M8-A8 production continuity and M8-A9 API performance; accountable
+  acceptance, M8-A8 production continuity, M8-A9 API performance and M8-A10
+  Groq-cache qualification; accountable
   owners record the
   institutional go/no-go. Scope-specific operator and institutional
   authorization must precede each real write or protected-context test; final
@@ -238,6 +243,17 @@ the final recorded acceptance follows the evidence. The exact criteria are:
   previous failures are not passes. Local UI feedback ≤ 200 ms remains an
   M2/M7 requirement; model latency/rate limits remain separately reported.
 
+- **M8-A10 — Groq prompt-cache proof (CACHE-A1):** Preserve the existing
+  [measurement contract](../verification/2026-10-18/groq-prompt-cache.md).
+  A positive provider cache-read counter, exact model/environment/request-prefix
+  conditions and preserved raw-to-SDK evidence must establish a real hit.
+  Missing counters remain unknown, not zero or a hit; do not infer token or
+  billing savings. Honor quotas, Retry-After and shared budgets; do not retry
+  indefinitely or send unapproved support messages. This is the unchanged
+  CACHE-A1 requirement transferred from M6 #53 by Fabian's 2026-10-21 V9
+  decision. It no longer blocks M6/M7; ordinary model comparison and security
+  evaluation remain in M6.
+
 #### Transfer of the original M1–M7 institutional requirements
 
 This transfer preserves the original acceptance scope. TestIdP, mocks and
@@ -264,9 +280,10 @@ durable budgets (BUD-A1) and frontend findings (WEB-A1) in [#49](https://github.
 The prior P1–P6 issues #69–#74 are source records; their criterion IDs,
 deferred tests, next actions and evidence remain separate qualification gates
 within #49 after transfer.
-The transferred Groq cache investigation (CACHE-A1) remains open within
-[M6 #53](https://github.com/metaneutrons/HASI/issues/53); it does not establish
-savings or complete M6. Former standalone issues #64–#67 are superseded, not
+The Groq cache investigation (CACHE-A1), originally transferred to M6, now
+belongs to [M8 #80](https://github.com/metaneutrons/HASI/issues/80) as M8-A10
+under V9. It remains unproven but no longer blocks M6/M7; its measurement and
+no-unsupported-savings requirements remain unchanged. Former standalone issues #64–#67 are superseded, not
 accepted; see the [successor mapping](consolidated-delivery.md#superseded-standalone-issues).
 
 

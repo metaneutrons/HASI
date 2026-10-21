@@ -1,0 +1,10 @@
+{
+  "observedExitCode": 0,
+  "runId": "08424c83-129d-4682-b5ac-c455afc5c9b0",
+  "evidenceSha256": "ebbebd8c177497c1253c89ae44609d6bbb703514fcb171a17b70cc8f339198e1",
+  "helperSha256": "dfaf9def8621aef754e239ddbb51877dfe5a1f7b105cf0e78fe9e0ed22e22845",
+  "sourceSha256Matches": true,
+  "qualification": true,
+  "cleanup": true,
+  "runtime": "Node24; explicit local Docker socket; isolated HOME"
+}

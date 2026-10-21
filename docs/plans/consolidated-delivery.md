@@ -1,6 +1,12 @@
 # HASI consolidated delivery plan
 
-Plan version: 8. Roadmap extension: 2026-10-20. Fabian added HsH library
+Plan version: 9. Groq-cache sequencing decision: 2026-10-21.
+Fabian deferred the positive Groq prompt-cache proof, **CACHE-A1**, from M6
+to final **M8-A10** under #80. Its measurement contract and missing-counter
+status are unchanged; it no longer blocks M6/M7. Model quality, adversarial
+evaluation, reported usage/cost and budget controls remain M6/M2 requirements.
+
+V8 roadmap extension: 2026-10-20. Fabian added HsH library
 catalogue search as a ninth post-MVP proposal under #55. This adds discovery
 scope only; it does not change M1–M8 acceptance, sequencing or issue granularity.
 
@@ -23,15 +29,15 @@ Test-IdP, mocks, synthetic data and browser/device simulation. Required CI and
 technical operational exercises remain required. The earlier V3 changed only
 issue granularity and was adopted on 2026-10-18.
 
-Decision state: **V8 adds library catalogue discovery under #55; V7 transfers only the 1-second API acceptance to M8-A9;
+Decision state: **V9 transfers only CACHE-A1 to M8-A10; V8 adds library catalogue discovery under #55; V7 transfers only the 1-second API acceptance to M8-A9;
 V6's local UI target remains in M2/M7; V5 retains
 the demo backup acceptance scope; V4 retains its
 qualification sequencing and final mobile-quality requirements.** Real iPhone/Safari, Android/Chrome,
 VoiceOver/TalkBack and participant acceptance remain mandatory in M8-A7; they
 are not claimed passed by simulation. Other P1–P6 security/runtime criteria,
-M1–M7 technical tests and budgets remain required. Acceptance transfers
-are limited to the explicit M8-A8 continuity and M8-A9 API-performance
-transfers. API measurements are not a passed M2/M7 prerequisite under V7. Source
+remaining M1–M7 technical tests except CACHE-A1, and budgets remain required. Acceptance transfers
+are limited to the explicit M8-A8 continuity, M8-A9 API-performance
+and M8-A10 Groq-cache transfers. API measurements are not a passed M2/M7 prerequisite under V7. Source
 records transferred under V3 remain `not_planned`, never accepted work.
 Third-party MCP Apps remain off by default after the P2 no-go decision. This
 plan authorizes neither real institutional writes/protected-data tests nor
@@ -149,10 +155,10 @@ never as completed work. All 37 issue records and their histories remain.
 | [#50](https://github.com/metaneutrons/HASI/issues/50) | M3 synthetic permission-aware knowledge qualification | M1/M2 technical boundaries and signed fixtures for Intranet and HTML/web acquisition; source rights remain M8 |
 | [#51](https://github.com/metaneutrons/HASI/issues/51) | M4 anny read contracts and behavior | M1/M2 technical boundaries; mock identities and reference contracts, not a real tenant |
 | [#52](https://github.com/metaneutrons/HASI/issues/52) | M5 confirmed anny write/cancel/reconcile behavior | Follows M4 against mocks/reference contracts; actual tenant and vendor conformance remain M8 |
-| [#53](https://github.com/metaneutrons/HASI/issues/53) | M6 synthetic/offline model and adversarial evaluation | Formal evaluation before M7; BUD-A1 before paid runs; DI-A1–DI-A4 via #81 before final provider comparison; CACHE-A1 remains separate |
+| [#53](https://github.com/metaneutrons/HASI/issues/53) | M6 synthetic/offline model and adversarial evaluation | Formal evaluation before M7; BUD-A1 before paid runs; DI-A1–DI-A4 via #81 before final provider comparison; CACHE-A1 is deferred to M8-A10 |
 | [#54](https://github.com/metaneutrons/HASI/issues/54) | M7 synthetic technical pilot and operations | M1–M6 technical gates, automated/browser/simulator UX, independent service-health monitoring and incident/rollback exercises; demo backup/restore is M8-A8 |
 | [#55](https://github.com/metaneutrons/HASI/issues/55) | Post-MVP roadmap and discovery register | Retains nine scoped proposals, source-specific next actions and reactivation gates; no connector is committed or implemented |
-| [#80](https://github.com/metaneutrons/HASI/issues/80) | M8 final institutional acceptance | After M1–M7; real identity, source rights, Anny tenant, protected-data approval and recorded go/no-go |
+| [#80](https://github.com/metaneutrons/HASI/issues/80) | M8 final institutional acceptance | After M1–M7; real identity, source rights, Anny tenant, protected-data approval, M8-A10 cache proof and recorded go/no-go |
 | [#17](https://github.com/metaneutrons/HASI/issues/17) | D3 first actual container publication | Separately requested Release Please release; exact-tag amd64/arm64 and real publication evidence |
 | [#79](https://github.com/metaneutrons/HASI/issues/79) | CI-qualified source deployment to Coolify | Exact main SHA, state/budget preservation, authenticated trigger, health checks and rollback |
 | [#81](https://github.com/metaneutrons/HASI/issues/81) | Bounded DeepInfra/DeepSeek-V4.1-Flash follow-up | After synthetic Service-IT; DI-A1–DI-A4; additive to #32–#34 and before final M6 comparison |
@@ -183,7 +189,7 @@ closed issue records; no criteria or acceptance status changes.
 | [#65](https://github.com/metaneutrons/HASI/issues/65) | #49 (P1–P6 groups) | Already closed as not planned; installation, UX, isolation and independent updates remain unaccepted. |
 | [#66](https://github.com/metaneutrons/HASI/issues/66) | #49, BUD-A1 | Already closed as not planned; budget reservations/accounting remain open. |
 | [#67](https://github.com/metaneutrons/HASI/issues/67) | #49, WEB-A1 | Already closed as not planned; engineering gaps remain open unless resolved or explicitly excepted. |
-| [#64](https://github.com/metaneutrons/HASI/issues/64) | #53, CACHE-A1 | Already closed as not planned; cache hit remains unproven and measurement obligations remain open. |
+| [#64](https://github.com/metaneutrons/HASI/issues/64) | #80, M8-A10 / CACHE-A1 (V9; originally #53) | Already closed as not planned; cache hit remains unproven and unchanged measurement obligations move to M8. |
 
 ## Unified delivery order and parallel work
 
@@ -250,8 +256,8 @@ identities and an independent test plugin; they do not require live M3–M5.
    requested next provider after the Service-IT slice; follow [#81](https://github.com/metaneutrons/HASI/issues/81) and
    [DI-A1–DI-A4](model-provider-routing.md#deepinfra-follow-up) without reopening
    #32–#34. Provider contract/model compatibility and credential readiness are
-   unverified. Complete BUD-A1 before paid evaluation. CACHE-A1 remains separate;
-   missing counters do not establish cache hits or savings.
+   unverified. Complete BUD-A1 before paid evaluation. CACHE-A1 is deferred to
+   M8-A10; missing counters do not establish cache hits or savings.
 7. **Accept M7 as the synthetic technical pilot.** Complete automated/browser/
    simulator UX and accessibility checks, independent service-health monitoring,
    incident handling and rollback using synthetic data. The disposable demo has
@@ -264,7 +270,8 @@ identities and an independent test plugin; they do not require live M3–M5.
    sources' access and rights, Anny customer delegation/eligibility and vendor
    conformance, protected-data processing approvals, named owners, reviewed real
    cases, the complete actual-device/participant matrix (M8-A7), production
-   continuity (M8-A8) and deferred API performance (M8-A9), followed by
+   continuity (M8-A8), deferred API performance (M8-A9) and Groq-cache proof
+   (M8-A10 / CACHE-A1), followed by
    recorded institutional go/no-go, must be present before
    rollout. Scope-specific authorization precedes any M8 real-write or protected-
    context test. See [M8 in the MVP plan](hasi-mvp.md#institutional-acceptance-m8).
@@ -493,7 +500,7 @@ without reopening accepted provider routing or inventing a coverage percentage:
   user workflows; preserve existing gates and distinguish configuration failures
   from application regressions. No blanket coverage target or mechanical tests
   are implied. Green current checks alone do not resolve the inventory, and an exception is not automatically authorized here.
-- **CACHE-A1 (M6 #53; transferred from #64):** Preserve the existing measurement contract. Only a documented
+- **CACHE-A1 (M8 #80, M8-A10 under V9; originally #53 from #64):** Preserve the existing measurement contract. Only a documented
   positive provider cache-read counter, exact model/environment/request-prefix
   conditions and preserved raw-to-SDK evidence establish a hit. Honor quotas and
   Retry-After. Missing counters remain unknown; no unlimited retries, support messages or unsupported savings claims.
@@ -572,8 +579,20 @@ technical M2/M7 acceptance. No passing result is inferred from the transfer.
 The ≤ 200 ms local UI requirement, correctness, authorization, budget limits,
 error/timeout handling and other technical gates remain in M2/M7. Further API
 optimization is optional earlier work; a successful repeat is mandatory before
-M8 acceptance. CACHE-A1 remains M6 work; this decision does not transfer the
-unproven Groq cache-hit requirement.
+M8 acceptance. At that V7 decision CACHE-A1 remained in M6; the later V9
+decision below transfers it separately without changing this API scope.
+
+## Groq-cache sequencing decision — 2026-10-21
+
+Fabian explicitly deferred the Groq cache test to M8. V9 transfers **CACHE-A1**
+from M6 #53 to **M8-A10** in #80. Retain the positive provider counter,
+model/environment/request-prefix identities and raw-to-SDK measurement contract;
+missing counters remain unknown and historical probes are not passes. No cache
+hit or token/billing savings is inferred. Preserve quota/Retry-After handling,
+the shared budget and the ban on unlimited retries or unapproved support messages.
+This transfer removes only the cache-proof prerequisite from M6/M7. Ordinary
+Groq model comparison, quality, workflow/access/injection cases, reported usage,
+latency and measured-cost evaluation remain M6 work. No other criterion is waived.
 
 ## Plan review and completion
 
@@ -609,8 +628,8 @@ M2 as awaiting qualification rather than closing unverified acceptance criteria.
 Review P1 contracts and journeys before P2 implementation, record the P2 Apps
 go/no-go, and review P5 isolation/distribution before admitting external
 executable code. #47 indexes the unified delivery; #49 owns M2, P1–P6 and the
-transferred budget/frontend obligations; #53 owns CACHE-A1; #55 holds the eight
-future proposals. Source records link their successor and retain the explicitly
+transferred budget/frontend obligations; #80 now owns CACHE-A1 under V9; #55
+holds the nine future proposals after V8. Source records link their successor and retain the explicitly
 unaccepted state in their preserved history.
 
 This plan is complete as a delivery initiative only when the relevant active
