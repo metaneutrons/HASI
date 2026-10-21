@@ -1,0 +1,875 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-21",
+  "baseCommit": "90c9129d59e2dad66c78285ecc7a148e74ca315d",
+  "candidatePanelSha256": "4a9a3f97125485fcc3f431467f2c066481373dbfca107042f1f4c34fca2d4d7f",
+  "environment": {
+    "browser": "Chrome 155.0.0.0 (in-app browser)",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "deviceScaleFactor": 1,
+      "mobileEmulation": true
+    },
+    "nativeAssistiveTechnology": false,
+    "runtime": {
+      "mode": "production",
+      "minified": true,
+      "reactVersion": "19.3.1",
+      "reactDomVersion": "19.3.1"
+    },
+    "api": "isolated loopback in-memory fixture",
+    "responseDelayMs": 180
+  },
+  "scope": "Actual PluginConfigPanel/PluginConfigFields; controlled HTTP responses, no real remote MCP process, credentials, database or model calls. Native AT remains M8.",
+  "before": [
+    {
+      "label": "connection-success-keyboard",
+      "active": {
+        "hit": true,
+        "rect": {
+          "bottom": 463.34375,
+          "height": 44,
+          "left": 14,
+          "right": 240.3125,
+          "top": 419.34375,
+          "width": 226.3125,
+          "x": 14,
+          "y": 419.34375
+        },
+        "tag": "BUTTON",
+        "text": "Aktive Verbindung testen "
+      },
+      "scrollWidth": 390,
+      "statuses": [],
+      "text": "HASI · Remote-Plugin-Administration\nSynthetische Loopback-Daten · echte PluginConfigPanel- und PluginConfigFields-Komponenten.\nKeine echten Zugangsdaten, keine Datenbank und kein Zugriff auf einen externen Plugin-Anbieter.\nSynthetische HASI-Suche:\nEinstellungen und Funktionsfreigaben\nKonfiguration, Zugangsdatenstatus und deaktivierte Funktionen\nServerseitige Konfiguration bereit\n\nDieser Status betrifft öffentliche Konfiguration und erforderliche Zugangsdaten. Erreichbarkeit, Nutzerrechte und Werkzeugfreigaben werden getrennt geprüft.\n\nVerbindungstest\nAktive Verbindung testen\n\nGeprüft wird die aktive serverseitige Konfiguration. Nicht gespeicherte Eingaben bleiben erhalten und werden nicht getestet.\n\nInstanz de.hsh.hasi.anny\nZuletzt geprüft 21. Okt. 2026, 18:59\nKonfiguration\nBereit\nErreichbarkeit und freigegebener MCP-Vertrag\nBestätigt\nDienstanmeldung\nNicht nachgewiesen\nNutzerberechtigung\nNicht geprüft\nNutzungsbereitschaft\nNicht geprüft\n\nEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.\n\nServerrevision 1\nAktive Revision 1\nZugangsdaten\nServerseitig verwaltet\n\nDieses Plug-in deklariert keine Zugangsdaten.\n\nÖffentliche Konfiguration\nEntwurf\nDemo\nDienstbezeichnung *\nMindestens drei Zeichen.\nMaximale Trefferzahl *\nGanzzahl zwischen 1 und 20.\nFunktionsfreigaben\nSperren werden serverseitig erzwungen\nRessourcen suchen\nanny.search_resources\nLesen\n\nMarkiere eine Funktion, um sie zu sperren. Sichtbarkeit im Modell oder in der App erteilt keine Nutzerberechtigung.\n\nEntwurf speichern\nEntwurf aktivieren\nUpdateprüfung\nUpdates prüfen\nLetzte Änderungen\nKonfiguration aktiviert\nsynthetic-loopback-seed\n21. Okt. 2026, 12:00\n\nÄnderungen werden zuerst als Entwurf gespeichert. Erst die separate Aktivierung setzt sie für den Dienst um.",
+      "width": 390
+    },
+    {
+      "label": "connection-failed-contract-keyboard",
+      "active": {
+        "hit": true,
+        "rect": {
+          "bottom": 463.34375,
+          "height": 44,
+          "left": 14,
+          "right": 240.3125,
+          "top": 419.34375,
+          "width": 226.3125,
+          "x": 14,
+          "y": 419.34375
+        },
+        "tag": "BUTTON",
+        "text": "Aktive Verbindung testen "
+      },
+      "scrollWidth": 390,
+      "statuses": [
+        {
+          "role": "status",
+          "text": "Nächste SchritteVerbindung: Synthetischer Verbindungsfehler; die Diensteinstanz ist nicht erreichbar."
+        }
+      ],
+      "text": "HASI · Remote-Plugin-Administration\nSynthetische Loopback-Daten · echte PluginConfigPanel- und PluginConfigFields-Komponenten.\nKeine echten Zugangsdaten, keine Datenbank und kein Zugriff auf einen externen Plugin-Anbieter.\nSynthetische HASI-Suche:\nEinstellungen und Funktionsfreigaben\nKonfiguration, Zugangsdatenstatus und deaktivierte Funktionen\nServerseitige Konfiguration bereit\n\nDieser Status betrifft öffentliche Konfiguration und erforderliche Zugangsdaten. Erreichbarkeit, Nutzerrechte und Werkzeugfreigaben werden getrennt geprüft.\n\nVerbindungstest\nAktive Verbindung testen\n\nGeprüft wird die aktive serverseitige Konfiguration. Nicht gespeicherte Eingaben bleiben erhalten und werden nicht getestet.\n\nInstanz de.hsh.hasi.anny\nZuletzt geprüft 21. Okt. 2026, 19:00\nKonfiguration\nBereit\nErreichbarkeit und freigegebener MCP-Vertrag\nFehlgeschlagen\nDienstanmeldung\nNicht nachgewiesen\nNutzerberechtigung\nNicht geprüft\nNutzungsbereitschaft\nBlockiert\n\nEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.\n\nNächste Schritte\nVerbindung: Synthetischer Verbindungsfehler; die Diensteinstanz ist nicht erreichbar.\nServerrevision 1\nAktive Revision 1\nZugangsdaten\nServerseitig verwaltet\n\nDieses Plug-in deklariert keine Zugangsdaten.\n\nÖffentliche Konfiguration\nEntwurf\nDemo\nDienstbezeichnung *\nMindestens drei Zeichen.\nMaximale Trefferzahl *\nGanzzahl zwischen 1 und 20.\nFunktionsfreigaben\nSperren werden serverseitig erzwungen\nRessourcen suchen\nanny.search_resources\nLesen\n\nMarkiere eine Funktion, um sie zu sperren. Sichtbarkeit im Modell oder in der App erteilt keine Nutzerberechtigung.\n\nEntwurf speichern\nEntwurf aktivieren\nUpdateprüfung\nUpdates prüfen\nLetzte Änderungen\nKonfiguration aktiviert\nsynthetic-loopback-seed\n21. Okt. 2026, 12:00\n\nÄnderungen werden zuerst als Entwurf gespeichert. Erst die separate Aktivierung setzt sie für den Dienst um.",
+      "width": 390
+    },
+    {
+      "label": "connection-reconnect-keyboard",
+      "active": {
+        "hit": true,
+        "rect": {
+          "bottom": 463.34375,
+          "height": 44,
+          "left": 14,
+          "right": 240.3125,
+          "top": 419.34375,
+          "width": 226.3125,
+          "x": 14,
+          "y": 419.34375
+        },
+        "tag": "BUTTON",
+        "text": "Aktive Verbindung testen "
+      },
+      "scrollWidth": 390,
+      "statuses": [],
+      "text": "HASI · Remote-Plugin-Administration\nSynthetische Loopback-Daten · echte PluginConfigPanel- und PluginConfigFields-Komponenten.\nKeine echten Zugangsdaten, keine Datenbank und kein Zugriff auf einen externen Plugin-Anbieter.\nSynthetische HASI-Suche:\nEinstellungen und Funktionsfreigaben\nKonfiguration, Zugangsdatenstatus und deaktivierte Funktionen\nServerseitige Konfiguration bereit\n\nDieser Status betrifft öffentliche Konfiguration und erforderliche Zugangsdaten. Erreichbarkeit, Nutzerrechte und Werkzeugfreigaben werden getrennt geprüft.\n\nVerbindungstest\nAktive Verbindung testen\n\nGeprüft wird die aktive serverseitige Konfiguration. Nicht gespeicherte Eingaben bleiben erhalten und werden nicht getestet.\n\nInstanz de.hsh.hasi.anny\nZuletzt geprüft 21. Okt. 2026, 19:00\nKonfiguration\nBereit\nErreichbarkeit und freigegebener MCP-Vertrag\nBestätigt\nDienstanmeldung\nNicht nachgewiesen\nNutzerberechtigung\nNicht geprüft\nNutzungsbereitschaft\nNicht geprüft\n\nEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.\n\nServerrevision 1\nAktive Revision 1\nZugangsdaten\nServerseitig verwaltet\n\nDieses Plug-in deklariert keine Zugangsdaten.\n\nÖffentliche Konfiguration\nEntwurf\nDemo\nDienstbezeichnung *\nMindestens drei Zeichen.\nMaximale Trefferzahl *\nGanzzahl zwischen 1 und 20.\nFunktionsfreigaben\nSperren werden serverseitig erzwungen\nRessourcen suchen\nanny.search_resources\nLesen\n\nMarkiere eine Funktion, um sie zu sperren. Sichtbarkeit im Modell oder in der App erteilt keine Nutzerberechtigung.\n\nEntwurf speichern\nEntwurf aktivieren\nUpdateprüfung\nUpdates prüfen\nLetzte Änderungen\nKonfiguration aktiviert\nsynthetic-loopback-seed\n21. Okt. 2026, 12:00\n\nÄnderungen werden zuerst als Entwurf gespeichert. Erst die separate Aktivierung setzt sie für den Dienst um.",
+      "width": 390
+    },
+    {
+      "label": "update-available-keyboard",
+      "active": {
+        "hit": true,
+        "rect": {
+          "bottom": 672.53125,
+          "height": 44,
+          "left": 242.4375,
+          "right": 376,
+          "top": 628.53125,
+          "width": 133.5625,
+          "x": 242.4375,
+          "y": 628.53125
+        },
+        "tag": "BUTTON",
+        "text": "Updates prüfen "
+      },
+      "scrollWidth": 390,
+      "statuses": [
+        {
+          "role": "status",
+          "text": "Ein Update ist verfügbar. Prüfe Konfiguration und Berechtigungen vor einer Aktivierung."
+        },
+        {
+          "role": "status",
+          "text": "Ein Update ist verfügbar. Prüfe Konfiguration und Berechtigungen vor einer Aktivierung."
+        }
+      ],
+      "text": "HASI · Remote-Plugin-Administration\nSynthetische Loopback-Daten · echte PluginConfigPanel- und PluginConfigFields-Komponenten.\nKeine echten Zugangsdaten, keine Datenbank und kein Zugriff auf einen externen Plugin-Anbieter.\nSynthetische HASI-Suche:\nEinstellungen und Funktionsfreigaben\nKonfiguration, Zugangsdatenstatus und deaktivierte Funktionen\nServerseitige Konfiguration bereit\n\nDieser Status betrifft öffentliche Konfiguration und erforderliche Zugangsdaten. Erreichbarkeit, Nutzerrechte und Werkzeugfreigaben werden getrennt geprüft.\n\nVerbindungstest\nAktive Verbindung testen\n\nGeprüft wird die aktive serverseitige Konfiguration. Nicht gespeicherte Eingaben bleiben erhalten und werden nicht getestet.\n\nInstanz de.hsh.hasi.anny\nZuletzt geprüft 21. Okt. 2026, 19:00\nKonfiguration\nBereit\nErreichbarkeit und freigegebener MCP-Vertrag\nBestätigt\nDienstanmeldung\nNicht nachgewiesen\nNutzerberechtigung\nNicht geprüft\nNutzungsbereitschaft\nNicht geprüft\n\nEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.\n\nServerrevision 1\nAktive Revision 1\nEin Update ist verfügbar. Prüfe Konfiguration und Berechtigungen vor einer Aktivierung.\nZugangsdaten\nServerseitig verwaltet\n\nDieses Plug-in deklariert keine Zugangsdaten.\n\nÖffentliche Konfiguration\nEntwurf\nDemo\nDienstbezeichnung *\nMindestens drei Zeichen.\nMaximale Trefferzahl *\nGanzzahl zwischen 1 und 20.\nFunktionsfreigaben\nSperren werden serverseitig erzwungen\nRessourcen suchen\nanny.search_resources\nLesen\n\nMarkiere eine Funktion, um sie zu sperren. Sichtbarkeit im Modell oder in der App erteilt keine Nutzerberechtigung.\n\nEntwurf speichern\nEntwurf aktivieren\nUpdateprüfung\nUpdates prüfen\nEin Update ist verfügbar. Prüfe Konfiguration und Berechtigungen vor einer Aktivierung.\nLetzte Änderungen\nKonfiguration aktiviert\nsynthetic-loopback-seed\n21. Okt. 2026, 12:00\n\nÄnderungen werden zuerst als Entwurf gespeichert. Erst die separate Aktivierung setzt sie für den Dienst um.",
+      "width": 390
+    },
+    {
+      "label": "update-http-error-keyboard",
+      "active": {
+        "hit": true,
+        "rect": {
+          "bottom": 672.53125,
+          "height": 44,
+          "left": 242.4375,
+          "right": 376,
+          "top": 628.53125,
+          "width": 133.5625,
+          "x": 242.4375,
+          "y": 628.53125
+        },
+        "tag": "BUTTON",
+        "text": "Updates prüfen "
+      },
+      "scrollWidth": 390,
+      "statuses": [
+        {
+          "role": "alert",
+          "text": "Die Konfiguration konnte nicht verarbeitet werden. Bitte versuche es erneut."
+        },
+        {
+          "role": "status",
+          "text": "Ein Update ist verfügbar. Prüfe Konfiguration und Berechtigungen vor einer Aktivierung."
+        }
+      ],
+      "text": "HASI · Remote-Plugin-Administration\nSynthetische Loopback-Daten · echte PluginConfigPanel- und PluginConfigFields-Komponenten.\nKeine echten Zugangsdaten, keine Datenbank und kein Zugriff auf einen externen Plugin-Anbieter.\nSynthetische HASI-Suche:\nEinstellungen und Funktionsfreigaben\nKonfiguration, Zugangsdatenstatus und deaktivierte Funktionen\nServerseitige Konfiguration bereit\n\nDieser Status betrifft öffentliche Konfiguration und erforderliche Zugangsdaten. Erreichbarkeit, Nutzerrechte und Werkzeugfreigaben werden getrennt geprüft.\n\nVerbindungstest\nAktive Verbindung testen\n\nGeprüft wird die aktive serverseitige Konfiguration. Nicht gespeicherte Eingaben bleiben erhalten und werden nicht getestet.\n\nInstanz de.hsh.hasi.anny\nZuletzt geprüft 21. Okt. 2026, 19:00\nKonfiguration\nBereit\nErreichbarkeit und freigegebener MCP-Vertrag\nBestätigt\nDienstanmeldung\nNicht nachgewiesen\nNutzerberechtigung\nNicht geprüft\nNutzungsbereitschaft\nNicht geprüft\n\nEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.\n\nServerrevision 1\nAktive Revision 1\nDie Konfiguration konnte nicht verarbeitet werden. Bitte versuche es erneut.\nZugangsdaten\nServerseitig verwaltet\n\nDieses Plug-in deklariert keine Zugangsdaten.\n\nÖffentliche Konfiguration\nEntwurf\nDemo\nDienstbezeichnung *\nMindestens drei Zeichen.\nMaximale Trefferzahl *\nGanzzahl zwischen 1 und 20.\nFunktionsfreigaben\nSperren werden serverseitig erzwungen\nRessourcen suchen\nanny.search_resources\nLesen\n\nMarkiere eine Funktion, um sie zu sperren. Sichtbarkeit im Modell oder in der App erteilt keine Nutzerberechtigung.\n\nEntwurf speichern\nEntwurf aktivieren\nUpdateprüfung\nUpdates prüfen\nEin Update ist verfügbar. Prüfe Konfiguration und Berechtigungen vor einer Aktivierung.\nLetzte Änderungen\nKonfiguration aktiviert\nsynthetic-loopback-seed\n21. Okt. 2026, 12:00\n\nÄnderungen werden zuerst als Entwurf gespeichert. Erst die separate Aktivierung setzt sie für den Dienst um.",
+      "width": 390
+    },
+    {
+      "label": "update-current-keyboard",
+      "active": {
+        "hit": true,
+        "rect": {
+          "bottom": 672.6875,
+          "height": 44,
+          "left": 242.4375,
+          "right": 376,
+          "top": 628.6875,
+          "width": 133.5625,
+          "x": 242.4375,
+          "y": 628.6875
+        },
+        "tag": "BUTTON",
+        "text": "Updates prüfen "
+      },
+      "scrollWidth": 390,
+      "statuses": [
+        {
+          "role": "status",
+          "text": "Das Plug-in ist aktuell."
+        },
+        {
+          "role": "status",
+          "text": "Das Plug-in ist aktuell."
+        }
+      ],
+      "text": "HASI · Remote-Plugin-Administration\nSynthetische Loopback-Daten · echte PluginConfigPanel- und PluginConfigFields-Komponenten.\nKeine echten Zugangsdaten, keine Datenbank und kein Zugriff auf einen externen Plugin-Anbieter.\nSynthetische HASI-Suche:\nEinstellungen und Funktionsfreigaben\nKonfiguration, Zugangsdatenstatus und deaktivierte Funktionen\nServerseitige Konfiguration bereit\n\nDieser Status betrifft öffentliche Konfiguration und erforderliche Zugangsdaten. Erreichbarkeit, Nutzerrechte und Werkzeugfreigaben werden getrennt geprüft.\n\nVerbindungstest\nAktive Verbindung testen\n\nGeprüft wird die aktive serverseitige Konfiguration. Nicht gespeicherte Eingaben bleiben erhalten und werden nicht getestet.\n\nInstanz de.hsh.hasi.anny\nZuletzt geprüft 21. Okt. 2026, 19:00\nKonfiguration\nBereit\nErreichbarkeit und freigegebener MCP-Vertrag\nBestätigt\nDienstanmeldung\nNicht nachgewiesen\nNutzerberechtigung\nNicht geprüft\nNutzungsbereitschaft\nNicht geprüft\n\nEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.\n\nServerrevision 1\nAktive Revision 1\nDas Plug-in ist aktuell.\nZugangsdaten\nServerseitig verwaltet\n\nDieses Plug-in deklariert keine Zugangsdaten.\n\nÖffentliche Konfiguration\nEntwurf\nDemo\nDienstbezeichnung *\nMindestens drei Zeichen.\nMaximale Trefferzahl *\nGanzzahl zwischen 1 und 20.\nFunktionsfreigaben\nSperren werden serverseitig erzwungen\nRessourcen suchen\nanny.search_resources\nLesen\n\nMarkiere eine Funktion, um sie zu sperren. Sichtbarkeit im Modell oder in der App erteilt keine Nutzerberechtigung.\n\nEntwurf speichern\nEntwurf aktivieren\nUpdateprüfung\nUpdates prüfen\nDas Plug-in ist aktuell.\nLetzte Änderungen\nKonfiguration aktiviert\nsynthetic-loopback-seed\n21. Okt. 2026, 12:00\n\nÄnderungen werden zuerst als Entwurf gespeichert. Erst die separate Aktivierung setzt sie für den Dienst um.",
+      "width": 390
+    },
+    {
+      "label": "connection-http-error-keyboard",
+      "active": {
+        "hit": true,
+        "rect": {
+          "bottom": 443.84375,
+          "height": 44,
+          "left": 14,
+          "right": 240.3125,
+          "top": 399.84375,
+          "width": 226.3125,
+          "x": 14,
+          "y": 399.84375
+        },
+        "tag": "BUTTON",
+        "text": "Aktive Verbindung testen "
+      },
+      "scrollWidth": 390,
+      "statuses": [
+        {
+          "role": "alert",
+          "text": "Der Verbindungstest konnte nicht abgeschlossen werden. Deine Eingaben bleiben erhalten."
+        },
+        {
+          "role": "status",
+          "text": "Das Plug-in ist aktuell."
+        },
+        {
+          "role": "status",
+          "text": "Das Plug-in ist aktuell."
+        }
+      ],
+      "text": "HASI · Remote-Plugin-Administration\nSynthetische Loopback-Daten · echte PluginConfigPanel- und PluginConfigFields-Komponenten.\nKeine echten Zugangsdaten, keine Datenbank und kein Zugriff auf einen externen Plugin-Anbieter.\nSynthetische HASI-Suche:\nEinstellungen und Funktionsfreigaben\nKonfiguration, Zugangsdatenstatus und deaktivierte Funktionen\nServerseitige Konfiguration bereit\n\nDieser Status betrifft öffentliche Konfiguration und erforderliche Zugangsdaten. Erreichbarkeit, Nutzerrechte und Werkzeugfreigaben werden getrennt geprüft.\n\nVerbindungstest\nAktive Verbindung testen\n\nGeprüft wird die aktive serverseitige Konfiguration. Nicht gespeicherte Eingaben bleiben erhalten und werden nicht getestet.\n\nDer Verbindungstest konnte nicht abgeschlossen werden. Deine Eingaben bleiben erhalten.\nServerrevision 1\nAktive Revision 1\nDas Plug-in ist aktuell.\nZugangsdaten\nServerseitig verwaltet\n\nDieses Plug-in deklariert keine Zugangsdaten.\n\nÖffentliche Konfiguration\nEntwurf\nDemo\nDienstbezeichnung *\nMindestens drei Zeichen.\nMaximale Trefferzahl *\nGanzzahl zwischen 1 und 20.\nFunktionsfreigaben\nSperren werden serverseitig erzwungen\nRessourcen suchen\nanny.search_resources\nLesen\n\nMarkiere eine Funktion, um sie zu sperren. Sichtbarkeit im Modell oder in der App erteilt keine Nutzerberechtigung.\n\nEntwurf speichern\nEntwurf aktivieren\nUpdateprüfung\nUpdates prüfen\nDas Plug-in ist aktuell.\nLetzte Änderungen\nKonfiguration aktiviert\nsynthetic-loopback-seed\n21. Okt. 2026, 12:00\n\nÄnderungen werden zuerst als Entwurf gespeichert. Erst die separate Aktivierung setzt sie für den Dienst um.",
+      "width": 390
+    },
+    {
+      "label": "connection-after-http-error-keyboard",
+      "active": {
+        "hit": true,
+        "rect": {
+          "bottom": 443.84375,
+          "height": 44,
+          "left": 14,
+          "right": 240.3125,
+          "top": 399.84375,
+          "width": 226.3125,
+          "x": 14,
+          "y": 399.84375
+        },
+        "tag": "BUTTON",
+        "text": "Aktive Verbindung testen "
+      },
+      "scrollWidth": 390,
+      "statuses": [
+        {
+          "role": "status",
+          "text": "Das Plug-in ist aktuell."
+        },
+        {
+          "role": "status",
+          "text": "Das Plug-in ist aktuell."
+        }
+      ],
+      "text": "HASI · Remote-Plugin-Administration\nSynthetische Loopback-Daten · echte PluginConfigPanel- und PluginConfigFields-Komponenten.\nKeine echten Zugangsdaten, keine Datenbank und kein Zugriff auf einen externen Plugin-Anbieter.\nSynthetische HASI-Suche:\nEinstellungen und Funktionsfreigaben\nKonfiguration, Zugangsdatenstatus und deaktivierte Funktionen\nServerseitige Konfiguration bereit\n\nDieser Status betrifft öffentliche Konfiguration und erforderliche Zugangsdaten. Erreichbarkeit, Nutzerrechte und Werkzeugfreigaben werden getrennt geprüft.\n\nVerbindungstest\nAktive Verbindung testen\n\nGeprüft wird die aktive serverseitige Konfiguration. Nicht gespeicherte Eingaben bleiben erhalten und werden nicht getestet.\n\nInstanz de.hsh.hasi.anny\nZuletzt geprüft 21. Okt. 2026, 19:02\nKonfiguration\nBereit\nErreichbarkeit und freigegebener MCP-Vertrag\nBestätigt\nDienstanmeldung\nNicht nachgewiesen\nNutzerberechtigung\nNicht geprüft\nNutzungsbereitschaft\nNicht geprüft\n\nEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.\n\nServerrevision 1\nAktive Revision 1\nDas Plug-in ist aktuell.\nZugangsdaten\nServerseitig verwaltet\n\nDieses Plug-in deklariert keine Zugangsdaten.\n\nÖffentliche Konfiguration\nEntwurf\nDemo\nDienstbezeichnung *\nMindestens drei Zeichen.\nMaximale Trefferzahl *\nGanzzahl zwischen 1 und 20.\nFunktionsfreigaben\nSperren werden serverseitig erzwungen\nRessourcen suchen\nanny.search_resources\nLesen\n\nMarkiere eine Funktion, um sie zu sperren. Sichtbarkeit im Modell oder in der App erteilt keine Nutzerberechtigung.\n\nEntwurf speichern\nEntwurf aktivieren\nUpdateprüfung\nUpdates prüfen\nDas Plug-in ist aktuell.\nLetzte Änderungen\nKonfiguration aktiviert\nsynthetic-loopback-seed\n21. Okt. 2026, 12:00\n\nÄnderungen werden zuerst als Entwurf gespeichert. Erst die separate Aktivierung setzt sie für den Dienst um.",
+      "width": 390
+    }
+  ],
+  "after": [
+    {
+      "label": "initial-empty-regions",
+      "at": "2026-10-21T17:09:07.470Z",
+      "focus": {
+        "tag": "SUMMARY",
+        "text": "Synthetische HASI-Suche: Einstellungen und FunktionsfreigabenKonfiguration, Zugangsdatenstatus und deaktivierte Funktionen",
+        "rect": {
+          "x": 14,
+          "y": 160.5,
+          "width": 362,
+          "height": 76
+        },
+        "hit": true
+      },
+      "statuses": [
+        {
+          "text": "",
+          "live": "polite",
+          "atomic": "true"
+        },
+        {
+          "text": "",
+          "live": "polite",
+          "atomic": "true"
+        }
+      ],
+      "alerts": [],
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "connection-success",
+      "at": "2026-10-21T17:09:11.749Z",
+      "focus": {
+        "tag": "BUTTON",
+        "text": "Aktive Verbindung testen ",
+        "rect": {
+          "x": 14,
+          "y": 419.34375,
+          "width": 226.3125,
+          "height": 44
+        },
+        "hit": true
+      },
+      "statuses": [
+        {
+          "text": "Instanz de.hsh.hasi.annyZuletzt geprüft 21. Okt. 2026, 19:09KonfigurationBereitErreichbarkeit und freigegebener MCP-VertragBestätigtDienstanmeldungNicht nachgewiesenNutzerberechtigungNicht geprüftNutzungsbereitschaftNicht geprüftEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.",
+          "live": "polite",
+          "atomic": "true"
+        },
+        {
+          "text": "",
+          "live": "polite",
+          "atomic": "true"
+        }
+      ],
+      "alerts": [],
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "connection-contract-failure",
+      "at": "2026-10-21T17:09:17.140Z",
+      "focus": {
+        "tag": "BUTTON",
+        "text": "Aktive Verbindung testen ",
+        "rect": {
+          "x": 14,
+          "y": 419.34375,
+          "width": 226.3125,
+          "height": 44
+        },
+        "hit": true
+      },
+      "statuses": [
+        {
+          "text": "Instanz de.hsh.hasi.annyZuletzt geprüft 21. Okt. 2026, 19:09KonfigurationBereitErreichbarkeit und freigegebener MCP-VertragFehlgeschlagenDienstanmeldungNicht nachgewiesenNutzerberechtigungNicht geprüftNutzungsbereitschaftBlockiertEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.Nächste SchritteVerbindung: Synthetischer Verbindungsfehler; die Diensteinstanz ist nicht erreichbar.",
+          "live": "polite",
+          "atomic": "true"
+        },
+        {
+          "text": "",
+          "live": "polite",
+          "atomic": "true"
+        }
+      ],
+      "alerts": [],
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "connection-reconnect",
+      "at": "2026-10-21T17:09:22.654Z",
+      "focus": {
+        "tag": "BUTTON",
+        "text": "Aktive Verbindung testen ",
+        "rect": {
+          "x": 14,
+          "y": 419.34375,
+          "width": 226.3125,
+          "height": 44
+        },
+        "hit": true
+      },
+      "statuses": [
+        {
+          "text": "Instanz de.hsh.hasi.annyZuletzt geprüft 21. Okt. 2026, 19:09KonfigurationBereitErreichbarkeit und freigegebener MCP-VertragBestätigtDienstanmeldungNicht nachgewiesenNutzerberechtigungNicht geprüftNutzungsbereitschaftNicht geprüftEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.",
+          "live": "polite",
+          "atomic": "true"
+        },
+        {
+          "text": "",
+          "live": "polite",
+          "atomic": "true"
+        }
+      ],
+      "alerts": [],
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "update-pending",
+      "at": "2026-10-21T17:09:26.041Z",
+      "focus": {
+        "tag": "BODY",
+        "text": "HASI · Remote-Plugin-AdministrationSynthetische Loopback-Daten · echte PluginConfigPanel- und PluginConfigFields-Komponenten.Keine echten Zugangsdaten, keine Datenbank und kein Zugriff auf einen externen Plugin-Anbieter.Synthetische HASI-Suche: Einstellungen und FunktionsfreigabenKonfiguration, Zugangsdatenstatus und deaktivierte FunktionenServerseitige Konfiguration bereitDieser Status betrifft öffentliche Konfiguration und erforderliche Zugangsdaten. Erreichbarkeit, Nutzerrechte und Werkzeugfreigaben werden getrennt geprüft. VerbindungstestAktive Verbindung testen Geprüft wird die aktive serverseitige Konfiguration. Nicht gespeicherte Eingaben bleiben erhalten und werden nicht getestet.Instanz de.hsh.hasi.annyZuletzt geprüft 21. Okt. 2026, 19:09KonfigurationBereitErreichbarkeit und freigegebener MCP-VertragBestätigtDienstanmeldungNicht nachgewiesenNutzerberechtigungNicht geprüftNutzungsbereitschaftNicht geprüftEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.Serverrevision 1Aktive Revision 1 ZugangsdatenServerseitig verwaltetDieses Plug-in deklariert keine Zugangsdaten.Öffentliche KonfigurationEntwurfDemoDienstbezeichnung *Mindestens drei Zeichen.Maximale Trefferzahl *Ganzzahl zwischen 1 und 20.FunktionsfreigabenSperren werden serverseitig erzwungenRessourcen suchenanny.search_resourcesLesenMarkiere eine Funktion, um sie zu sperren. Sichtbarkeit im Modell oder in der App erteilt keine Nutzerberechtigung.Entwurf speichern Entwurf aktivieren  Updateprüfung PrüfenUpdate wird geprüft.Letzte ÄnderungenKonfiguration aktiviertsynthetic-loopback-seed21. Okt. 2026, 12:00Änderungen werden zuerst als Entwurf gespeichert. Erst die separate Aktivierung setzt sie für den Dienst um.",
+        "rect": {
+          "x": 0,
+          "y": -944,
+          "width": 390,
+          "height": 1787.84375
+        },
+        "hit": false
+      },
+      "statuses": [
+        {
+          "text": "Instanz de.hsh.hasi.annyZuletzt geprüft 21. Okt. 2026, 19:09KonfigurationBereitErreichbarkeit und freigegebener MCP-VertragBestätigtDienstanmeldungNicht nachgewiesenNutzerberechtigungNicht geprüftNutzungsbereitschaftNicht geprüftEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.",
+          "live": "polite",
+          "atomic": "true"
+        },
+        {
+          "text": "Update wird geprüft.",
+          "live": "polite",
+          "atomic": "true"
+        }
+      ],
+      "alerts": [],
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "update-available",
+      "at": "2026-10-21T17:09:29.996Z",
+      "focus": {
+        "tag": "BUTTON",
+        "text": "Updates prüfen ",
+        "rect": {
+          "x": 242.4375,
+          "y": 628.34375,
+          "width": 133.5625,
+          "height": 44
+        },
+        "hit": true
+      },
+      "statuses": [
+        {
+          "text": "Instanz de.hsh.hasi.annyZuletzt geprüft 21. Okt. 2026, 19:09KonfigurationBereitErreichbarkeit und freigegebener MCP-VertragBestätigtDienstanmeldungNicht nachgewiesenNutzerberechtigungNicht geprüftNutzungsbereitschaftNicht geprüftEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.",
+          "live": "polite",
+          "atomic": "true"
+        },
+        {
+          "text": "Ein Update ist verfügbar. Prüfe Konfiguration und Berechtigungen vor einer Aktivierung.",
+          "live": "polite",
+          "atomic": "true"
+        }
+      ],
+      "alerts": [],
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "update-http-error",
+      "at": "2026-10-21T17:09:33.514Z",
+      "focus": {
+        "tag": "BUTTON",
+        "text": "Updates prüfen ",
+        "rect": {
+          "x": 242.4375,
+          "y": 628.53125,
+          "width": 133.5625,
+          "height": 44
+        },
+        "hit": true
+      },
+      "statuses": [
+        {
+          "text": "Instanz de.hsh.hasi.annyZuletzt geprüft 21. Okt. 2026, 19:09KonfigurationBereitErreichbarkeit und freigegebener MCP-VertragBestätigtDienstanmeldungNicht nachgewiesenNutzerberechtigungNicht geprüftNutzungsbereitschaftNicht geprüftEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.",
+          "live": "polite",
+          "atomic": "true"
+        },
+        {
+          "text": "",
+          "live": "polite",
+          "atomic": "true"
+        }
+      ],
+      "alerts": [
+        "Die Konfiguration konnte nicht verarbeitet werden. Bitte versuche es erneut."
+      ],
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "update-current",
+      "at": "2026-10-21T17:09:38.052Z",
+      "focus": {
+        "tag": "BUTTON",
+        "text": "Updates prüfen ",
+        "rect": {
+          "x": 242.4375,
+          "y": 628.34375,
+          "width": 133.5625,
+          "height": 44
+        },
+        "hit": true
+      },
+      "statuses": [
+        {
+          "text": "Instanz de.hsh.hasi.annyZuletzt geprüft 21. Okt. 2026, 19:09KonfigurationBereitErreichbarkeit und freigegebener MCP-VertragBestätigtDienstanmeldungNicht nachgewiesenNutzerberechtigungNicht geprüftNutzungsbereitschaftNicht geprüftEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.",
+          "live": "polite",
+          "atomic": "true"
+        },
+        {
+          "text": "Das Plug-in ist aktuell.",
+          "live": "polite",
+          "atomic": "true"
+        }
+      ],
+      "alerts": [],
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "connection-pending",
+      "at": "2026-10-21T17:09:46.944Z",
+      "focus": {
+        "tag": "BODY",
+        "text": "HASI · Remote-Plugin-AdministrationSynthetische Loopback-Daten · echte PluginConfigPanel- und PluginConfigFields-Komponenten.Keine echten Zugangsdaten, keine Datenbank und kein Zugriff auf einen externen Plugin-Anbieter.Synthetische HASI-Suche: Einstellungen und FunktionsfreigabenKonfiguration, Zugangsdatenstatus und deaktivierte FunktionenServerseitige Konfiguration bereitDieser Status betrifft öffentliche Konfiguration und erforderliche Zugangsdaten. Erreichbarkeit, Nutzerrechte und Werkzeugfreigaben werden getrennt geprüft. Verbindungstest Verbindung wird geprüftGeprüft wird die aktive serverseitige Konfiguration. Nicht gespeicherte Eingaben bleiben erhalten und werden nicht getestet.Verbindung wird geprüft.Serverrevision 1Aktive Revision 1 ZugangsdatenServerseitig verwaltetDieses Plug-in deklariert keine Zugangsdaten.Öffentliche KonfigurationEntwurfDemoDienstbezeichnung *Mindestens drei Zeichen.Maximale Trefferzahl *Ganzzahl zwischen 1 und 20.FunktionsfreigabenSperren werden serverseitig erzwungenRessourcen suchenanny.search_resourcesLesenMarkiere eine Funktion, um sie zu sperren. Sichtbarkeit im Modell oder in der App erteilt keine Nutzerberechtigung.Entwurf speichern Entwurf aktivieren  UpdateprüfungUpdates prüfen Das Plug-in ist aktuell.Letzte ÄnderungenKonfiguration aktiviertsynthetic-loopback-seed21. Okt. 2026, 12:00Änderungen werden zuerst als Entwurf gespeichert. Erst die separate Aktivierung setzt sie für den Dienst um.",
+        "rect": {
+          "x": 0,
+          "y": -621,
+          "width": 390,
+          "height": 1501.6875
+        },
+        "hit": true
+      },
+      "statuses": [
+        {
+          "text": "Verbindung wird geprüft.",
+          "live": "polite",
+          "atomic": "true"
+        },
+        {
+          "text": "Das Plug-in ist aktuell.",
+          "live": "polite",
+          "atomic": "true"
+        }
+      ],
+      "alerts": [],
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "connection-http-error",
+      "at": "2026-10-21T17:09:50.515Z",
+      "focus": {
+        "tag": "BUTTON",
+        "text": "Aktive Verbindung testen ",
+        "rect": {
+          "x": 14,
+          "y": 399.84375,
+          "width": 226.3125,
+          "height": 44
+        },
+        "hit": true
+      },
+      "statuses": [
+        {
+          "text": "",
+          "live": "polite",
+          "atomic": "true"
+        },
+        {
+          "text": "Das Plug-in ist aktuell.",
+          "live": "polite",
+          "atomic": "true"
+        }
+      ],
+      "alerts": [
+        "Der Verbindungstest konnte nicht abgeschlossen werden. Deine Eingaben bleiben erhalten."
+      ],
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "connection-http-reconnect",
+      "at": "2026-10-21T17:09:57.335Z",
+      "focus": {
+        "tag": "BUTTON",
+        "text": "Aktive Verbindung testen ",
+        "rect": {
+          "x": 14,
+          "y": 399.84375,
+          "width": 226.3125,
+          "height": 44
+        },
+        "hit": true
+      },
+      "statuses": [
+        {
+          "text": "Instanz de.hsh.hasi.annyZuletzt geprüft 21. Okt. 2026, 19:09KonfigurationBereitErreichbarkeit und freigegebener MCP-VertragBestätigtDienstanmeldungNicht nachgewiesenNutzerberechtigungNicht geprüftNutzungsbereitschaftNicht geprüftEin erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.",
+          "live": "polite",
+          "atomic": "true"
+        },
+        {
+          "text": "Das Plug-in ist aktuell.",
+          "live": "polite",
+          "atomic": "true"
+        }
+      ],
+      "alerts": [],
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  ],
+  "fixture": {
+    "counters": {
+      "configurationReads": 3,
+      "remoteConnectionCalls": 5,
+      "remoteConnectionSuccesses": 3,
+      "remoteConnectionFailures": 1,
+      "remoteConnectionErrors": 1,
+      "remoteUpdateCalls": 3,
+      "remoteUpdateSuccesses": 2,
+      "remoteUpdateErrors": 1,
+      "invalidRemoteBodies": 0,
+      "unknownRoutes": 0
+    },
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/admin/plugins/de.hsh.hasi.anny/configuration",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/plugins/de.hsh.hasi.anny/test-connection",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/plugins/de.hsh.hasi.anny/test-connection",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/plugins/de.hsh.hasi.anny/test-connection",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/plugins/de.hsh.hasi.anny/check-update",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/admin/plugins/de.hsh.hasi.anny/configuration",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/plugins/de.hsh.hasi.anny/check-update",
+        "status": 503
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/plugins/de.hsh.hasi.anny/check-update",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/admin/plugins/de.hsh.hasi.anny/configuration",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/__harness/remote-config",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/plugins/de.hsh.hasi.anny/test-connection",
+        "status": 503
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/plugins/de.hsh.hasi.anny/test-connection",
+        "status": 200
+      }
+    ],
+    "remoteConnectionMode": "error-reconnect",
+    "remoteUpdateMode": "current-only",
+    "remoteFeedbackDelayMs": 180,
+    "globalCssFile": "17biss_iokrrj.css",
+    "globalCssSourceHash": "c4b822edf2602132fa5e3fd4d11ed81c1f669079b80eb7daf9cc46ef21ccae17",
+    "sourceHashes": {
+      "pluginConfigPanel": "4a9a3f97125485fcc3f431467f2c066481373dbfca107042f1f4c34fca2d4d7f",
+      "pluginConfigFields": "93e01ae80c4fcffa271d4e6ac57791dd90d8251a4e20a6fbe2313587b117f4e9",
+      "pluginConfiguration": "59c34ebff7a3c4097585666c76dafeecc774801f64eeac88f467e1332549700b",
+      "actionFocusRecovery": "86ea9b23fd7158378caa61c83c6e4cf773d843d283a913514e931de5e2b1afcf",
+      "pluginSdkConfiguration": "5a1bc8124d4f0930f614d84f8ceedc4528cb8abea237c72440a80c333580cf3c",
+      "remoteAdminRoute": "fe3c9ee2051746764c85498f6494be71a244138fd798b766bcf87b9335275c3c",
+      "remoteRegistry": "ebd637ad15cf3b719b67327e348d4033b4d04da5822b5be43fc0196f0eb38c96"
+    },
+    "harnessSourceHashes": {
+      "entry": "d0b6ee5c009f5cbf8b92fcdbde2a796a90014638fabe7365c2bd6c6d6512eb38",
+      "server": "720ce6e88fcdfa79168d13631e926242ae96d3224baf95459023c4b97a144372",
+      "typecheck": "0dadd6987a5e1d3098fe52cdf0c03b7981013b1867faf80d20e56fc5107509bf",
+      "payloadValidation": "2293fe1d8756776e0bc644dc002cc27e66e6c667e7d280d061ed2136858f33e7"
+    },
+    "productionBundle": {
+      "mode": "production",
+      "minified": true,
+      "reactVersion": "19.3.1",
+      "reactDomVersion": "19.3.1"
+    },
+    "sourceCommit": "90c9129d59e2dad66c78285ecc7a148e74ca315d",
+    "globalCssHash": "8c9813f4472b43c268a7b4741ab9bba06c5f21c53ccbc8a2c9ec32637787bdba",
+    "bundleHashes": {
+      "bundle.js": "f2465033a1b4084e749586356b5feded312cef4d13bf649548e3e268ce156b90",
+      "bundle.css": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "accessibility": {
+    "axeVersion": "4.14.0",
+    "rules": [
+      "aria-allowed-attr",
+      "aria-roles",
+      "aria-valid-attr-value",
+      "aria-valid-attr",
+      "button-name",
+      "label",
+      "nested-interactive"
+    ],
+    "violations": [],
+    "incomplete": [],
+    "liveRegions": [
+      {
+        "backendDOMNodeId": 80,
+        "childIds": [
+          "427"
+        ],
+        "chromeRole": {
+          "type": "internalRole",
+          "value": 159
+        },
+        "ignored": false,
+        "name": {
+          "sources": [
+            {
+              "attribute": "aria-labelledby",
+              "type": "relatedElement"
+            },
+            {
+              "attribute": "aria-label",
+              "type": "attribute"
+            },
+            {
+              "attribute": "title",
+              "type": "attribute"
+            }
+          ],
+          "type": "computedString",
+          "value": ""
+        },
+        "nodeId": "80",
+        "parentId": "65",
+        "properties": [
+          {
+            "name": "live",
+            "value": {
+              "type": "token",
+              "value": "polite"
+            }
+          },
+          {
+            "name": "atomic",
+            "value": {
+              "type": "boolean",
+              "value": true
+            }
+          },
+          {
+            "name": "relevant",
+            "value": {
+              "type": "tokenList",
+              "value": "additions text"
+            }
+          }
+        ],
+        "role": {
+          "type": "role",
+          "value": "status"
+        }
+      },
+      {
+        "backendDOMNodeId": 153,
+        "childIds": [
+          "399"
+        ],
+        "chromeRole": {
+          "type": "internalRole",
+          "value": 159
+        },
+        "ignored": false,
+        "name": {
+          "sources": [
+            {
+              "attribute": "aria-labelledby",
+              "type": "relatedElement"
+            },
+            {
+              "attribute": "aria-label",
+              "type": "attribute"
+            },
+            {
+              "attribute": "title",
+              "type": "attribute"
+            }
+          ],
+          "type": "computedString",
+          "value": ""
+        },
+        "nodeId": "153",
+        "parentId": "139",
+        "properties": [
+          {
+            "name": "live",
+            "value": {
+              "type": "token",
+              "value": "polite"
+            }
+          },
+          {
+            "name": "atomic",
+            "value": {
+              "type": "boolean",
+              "value": true
+            }
+          },
+          {
+            "name": "relevant",
+            "value": {
+              "type": "tokenList",
+              "value": "additions text"
+            }
+          }
+        ],
+        "role": {
+          "type": "role",
+          "value": "status"
+        }
+      }
+    ]
+  },
+  "cleanup": {
+    "ownedTabClosed": true,
+    "fixtureProcessStoppedAndAbsenceVerified": true
+  },
+  "limits": [
+    "No native screen-reader announcement claim. Browser AX properties and text mutations were observed.",
+    "No full app or production remote-plugin latency claim.",
+    "Cached compiled CSS predates the separate welcome paragraph color edit; admin CSS is unchanged."
+  ]
+}

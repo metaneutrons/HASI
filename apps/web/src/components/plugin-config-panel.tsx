@@ -379,6 +379,7 @@ export function PluginConfigPanel({
     setBusy('update');
     setLoadError(null);
     setNotice(null);
+    setUpdateStatus(null);
     try {
       const response = await request<unknown>(`${apiBase}/check-update`, {
         method: 'POST',
@@ -400,12 +401,11 @@ export function PluginConfigPanel({
           secrets: refreshed.secrets,
           audit: refreshed.audit,
         } : current);
-        setNotice(update.message);
       } else {
         adoptDetails(refreshed);
         setNotice(stateBeforeCheck && refreshed.revision !== stateBeforeCheck.revision && hadPendingDraft
           ? 'Der Serverstand wurde aktualisiert. Aktionen mit der früheren Revision sind ungültig; der aktuelle Entwurf wurde neu geladen.'
-          : update.message);
+          : null);
       }
       completeFocusRecovery(focusToken, () => reloadConflictButtonRef.current ?? updateButtonRef.current);
     } catch (cause) {
@@ -490,39 +490,41 @@ export function PluginConfigPanel({
               </div>
               <p style={quietTextStyle}>Geprüft wird die aktive serverseitige Konfiguration. Nicht gespeicherte Eingaben bleiben erhalten und werden nicht getestet.</p>
               {connectionTestError && <div role="alert" style={{ ...noticeStyle('error'), marginTop: 8 }}>{connectionTestError}</div>}
-              {connectionTest && (
-                <div style={{ display: 'grid', minWidth: 0, gap: 8, marginTop: 9 }}>
-                  <div style={{ display: 'flex', minWidth: 0, flexWrap: 'wrap', gap: '4px 14px', color: 'var(--muted)', fontSize: 12 }}>
-                    <span>Instanz <strong style={{ color: 'var(--ink)', overflowWrap: 'anywhere' }}>{connectionTest.instanceId}</strong></span>
-                    <span>Zuletzt geprüft <time dateTime={connectionTest.checkedAt}>{formatAuditTime(connectionTest.checkedAt)}</time></span>
-                  </div>
-                  <ul style={listStyle}>
-                    <ConnectionDiagnostic label="Konfiguration" value={connectionTest.configured === 'ready' ? 'Bereit' : 'Unvollständig'} tone={connectionTest.configured === 'ready' ? 'success' : 'warning'} />
-                    <ConnectionDiagnostic label="Erreichbarkeit und freigegebener MCP-Vertrag" value={connectionTest.reachable === 'verified' ? 'Bestätigt' : 'Fehlgeschlagen'} tone={connectionTest.reachable === 'verified' ? 'success' : 'error'} />
-                    <ConnectionDiagnostic label="Dienstanmeldung" value={connectionTest.authenticated === 'rejected' ? 'Abgelehnt' : 'Nicht nachgewiesen'} tone={connectionTest.authenticated === 'rejected' ? 'error' : 'neutral'} />
-                    <ConnectionDiagnostic label="Nutzerberechtigung" value="Nicht geprüft" tone="neutral" />
-                    <ConnectionDiagnostic label="Nutzungsbereitschaft" value={connectionTest.userReady === 'blocked' ? 'Blockiert' : 'Nicht geprüft'} tone={connectionTest.userReady === 'blocked' ? 'warning' : 'neutral'} />
-                  </ul>
-                  <p style={{ ...quietTextStyle, fontSize: 12 }}>
-                    Ein erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.
-                  </p>
-                  {connectionTest.remedies.length > 0 && (
-                    <div role="status" style={noticeStyle(connectionTest.reachable === 'failed' || connectionTest.authenticated === 'rejected' ? 'warning' : 'neutral')}>
-                      <div style={{ minWidth: 0 }}>
-                        <strong>Nächste Schritte</strong>
-                        <ul style={{ ...listStyle, marginTop: 5 }}>
-                          {connectionTest.remedies.map((remedy, index) => (
-                            <li key={`${remedy.code}-${remedy.field ?? ''}-${String(index)}`} style={{ padding: '4px 0' }}>
-                              <strong>{remedy.field ? `Zugangsdaten: ${remedy.field}` : connectionRemedyTitle(remedy.code)}</strong>
-                              <span>: {remedy.message}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+              <div role="status" aria-live="polite" aria-atomic="true">
+                {busy === 'test' ? <span className="sr-only">Verbindung wird geprüft.</span> : connectionTest && (
+                  <div style={{ display: 'grid', minWidth: 0, gap: 8, marginTop: 9 }}>
+                    <div style={{ display: 'flex', minWidth: 0, flexWrap: 'wrap', gap: '4px 14px', color: 'var(--muted)', fontSize: 12 }}>
+                      <span>Instanz <strong style={{ color: 'var(--ink)', overflowWrap: 'anywhere' }}>{connectionTest.instanceId}</strong></span>
+                      <span>Zuletzt geprüft <time dateTime={connectionTest.checkedAt}>{formatAuditTime(connectionTest.checkedAt)}</time></span>
                     </div>
-                  )}
-                </div>
-              )}
+                    <ul style={listStyle}>
+                      <ConnectionDiagnostic label="Konfiguration" value={connectionTest.configured === 'ready' ? 'Bereit' : 'Unvollständig'} tone={connectionTest.configured === 'ready' ? 'success' : 'warning'} />
+                      <ConnectionDiagnostic label="Erreichbarkeit und freigegebener MCP-Vertrag" value={connectionTest.reachable === 'verified' ? 'Bestätigt' : 'Fehlgeschlagen'} tone={connectionTest.reachable === 'verified' ? 'success' : 'error'} />
+                      <ConnectionDiagnostic label="Dienstanmeldung" value={connectionTest.authenticated === 'rejected' ? 'Abgelehnt' : 'Nicht nachgewiesen'} tone={connectionTest.authenticated === 'rejected' ? 'error' : 'neutral'} />
+                      <ConnectionDiagnostic label="Nutzerberechtigung" value="Nicht geprüft" tone="neutral" />
+                      <ConnectionDiagnostic label="Nutzungsbereitschaft" value={connectionTest.userReady === 'blocked' ? 'Blockiert' : 'Nicht geprüft'} tone={connectionTest.userReady === 'blocked' ? 'warning' : 'neutral'} />
+                    </ul>
+                    <p style={{ ...quietTextStyle, fontSize: 12 }}>
+                      Ein erfolgreicher MCP-Test bestätigt weder die Prüfung des Diensttokens noch die Rechte eines konkreten Endnutzers.
+                    </p>
+                    {connectionTest.remedies.length > 0 && (
+                      <div style={noticeStyle(connectionTest.reachable === 'failed' || connectionTest.authenticated === 'rejected' ? 'warning' : 'neutral')}>
+                        <div style={{ minWidth: 0 }}>
+                          <strong>Nächste Schritte</strong>
+                          <ul style={{ ...listStyle, marginTop: 5 }}>
+                            {connectionTest.remedies.map((remedy, index) => (
+                              <li key={`${remedy.code}-${remedy.field ?? ''}-${String(index)}`} style={{ padding: '4px 0' }}>
+                                <strong>{remedy.field ? `Zugangsdaten: ${remedy.field}` : connectionRemedyTitle(remedy.code)}</strong>
+                                <span>: {remedy.message}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </section>}
 
             <div style={{ display: 'flex', minWidth: 0, flexWrap: 'wrap', gap: '6px 16px', color: 'var(--muted)', fontSize: 13 }}>
@@ -758,12 +760,14 @@ export function PluginConfigPanel({
                   {busy === 'update' ? <><span className="spinner" /> Prüfen</> : <>Updates prüfen <RefreshCw size={14} aria-hidden="true" /></>}
                 </button>
               </div>
-              {updateStatus && (
-                <div role="status" style={{ ...noticeStyle(updateStatus.status === 'current' ? 'success' : updateStatus.status === 'blocked' ? 'warning' : 'neutral'), marginTop: 6 }}>
-                  {updateStatus.status === 'current' ? <CircleCheck size={16} aria-hidden="true" /> : updateStatus.status === 'available' ? <Clock3 size={16} aria-hidden="true" /> : <CircleAlert size={16} aria-hidden="true" />}
-                  <span>{updateStatus.message}</span>
-                </div>
-              )}
+              <div role="status" aria-live="polite" aria-atomic="true">
+                {busy === 'update' ? <span className="sr-only">Update wird geprüft.</span> : updateStatus && (
+                  <div style={{ ...noticeStyle(updateStatus.status === 'current' ? 'success' : updateStatus.status === 'blocked' ? 'warning' : 'neutral'), marginTop: 6 }}>
+                    {updateStatus.status === 'current' ? <CircleCheck size={16} aria-hidden="true" /> : updateStatus.status === 'available' ? <Clock3 size={16} aria-hidden="true" /> : <CircleAlert size={16} aria-hidden="true" />}
+                    <span>{updateStatus.message}</span>
+                  </div>
+                )}
+              </div>
             </section>}
 
             {pluginDetails.audit.length > 0 && (
