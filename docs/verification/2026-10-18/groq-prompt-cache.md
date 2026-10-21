@@ -198,3 +198,15 @@ The separate JSON-schema compiler optimization reuses local validation programs.
 It supplies no evidence about Groq prompt caching, saved model tokens or billing.
 CACHE-A1 remains governed by the versioned plan and the current M6 issue until
 its genuine provider evidence or an explicit scope decision is recorded.
+
+
+## Documentation recheck — 2026-10-21
+
+The [official Groq caching page](https://console.groq.com/docs/prompt-caching)
+still lists GPT-OSS 120B/20B, automatic non-guaranteed prefix reuse and the
+`usage.prompt_tokens_details.cached_tokens` counter. The documented requirements
+remain exact prefixes and a model-dependent minimum of 128–1,024 tokens. This
+documentation-only check does not explain the stored raw responses with missing
+counters. Those observations remain unknown; no new live probe, cache hit or
+savings is claimed. CACHE-A1 still needs genuine provider evidence or an explicit
+scope decision.

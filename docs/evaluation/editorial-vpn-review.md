@@ -1,7 +1,15 @@
 # Editorial VPN development pair
 
-Status: new draft inputs; answers and human review remain pending. No semantic
-improvement or milestone acceptance is claimed from editing the corpus.
+Status: eight fresh answers for the two editorial development cases are prepared
+in a blinded local reviewer packet; claim-level human review remains pending.
+No semantic improvement or milestone acceptance is inferred from editing the
+corpus or generating answers. GitHub [M6 #53](https://github.com/metaneutrons/HASI/issues/53)
+records the current review handoff.
+
+Reviewer packet SHA-256: `59fafc2b639928adcd82acbed603ecf186e48ff337e28cea451623b313b26cf2`.
+The eight answers remain unchanged; provider identities and automatic outcomes
+are withheld from the first reviewer. The packet is development material, not a
+gold or held-out final evaluation.
 
 The operator requested ordinary article prose and centralized disclosure in the
 HASI website header. The corpus's synthetic classification, audience filtering

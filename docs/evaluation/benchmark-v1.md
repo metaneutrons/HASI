@@ -2,8 +2,10 @@
 
 Date: 2026-10-15. Status: proposed benchmark design, not a benchmark result.
 The example scenarios are synthetic drafts. The 200-case target below has not
-yet been collected or validated. No paid model runs or production API actions
-have been performed.
+yet been collected or validated. Subsequent bounded provider development runs
+are linked below and tracked in [M6 #53](https://github.com/metaneutrons/HASI/issues/53);
+they do not establish this proposed benchmark or human-reviewed results.
+No production API actions were performed by those comparisons.
 
 ## Decision to make
 
