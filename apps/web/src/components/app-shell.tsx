@@ -116,8 +116,8 @@ function AccountMenu({
   const detailsRef = useRef<HTMLDetailsElement>(null);
   return (
     <details className="account-control" ref={detailsRef}>
-      <summary className={`topbar-avatar topbar-avatar--${user.role}`} aria-label={`Konto: ${user.displayName}`}>
-        {initials(user.displayName)}
+      <summary className={`topbar-avatar topbar-avatar--${user.role}`} aria-label={`Konto ${initials(user.displayName)}: ${user.displayName}`}>
+        <span aria-hidden="true">{initials(user.displayName)}</span>
       </summary>
       <div className="account-menu">
         <span className={`account-avatar account-avatar--${user.role}`}>{initials(user.displayName)}</span>
@@ -140,7 +140,7 @@ function AccountMenu({
 
 function WordmarkLink() {
   return (
-    <Link className="brand-link" href="/" aria-label="HASI, zum Assistenten">
+    <Link className="brand-link" href="/">
       <HasiMark />
       <span className="brand-caption">Hochschule Hannover</span>
     </Link>
@@ -175,13 +175,13 @@ function LoginScreen() {
 
   return (
     <div className="welcome-page">
-      <div className="welcome-nav">
+      <header className="welcome-nav">
         <WordmarkLink />
         <div className="welcome-nav-actions">
           <span className="prototype-label"><span className="status-dot" /> {prototypeLabel}</span>
           <ThemeControl />
         </div>
-      </div>
+      </header>
       <PublicDemoNotice />
 
       <main className="welcome-main">
@@ -413,7 +413,7 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
           </div>
         </header>
 
-        <div className="app-content">{children}</div>
+        <main className="app-content">{children}</main>
 
         <nav className="mobile-nav" aria-label="Hauptnavigation">
           {navItems.map((item) => (

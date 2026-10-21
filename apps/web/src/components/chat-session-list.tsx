@@ -109,7 +109,7 @@ export function ChatSessionList({ view, store, close, onOpenChat, variant = "dra
         const inputPreview = session.snapshot.input.trim();
         const preview = lastMessage !== undefined && lastMessage !== "" ? lastMessage : inputPreview !== "" ? inputPreview : "Stelle deine erste Frage";
         return <div className={`chat-session-row${active ? " is-active" : ""}`} key={session.id} role="listitem">
-          <button type="button" className="chat-session-select" aria-current={active ? "true" : undefined} aria-label={`${session.title} öffnen`} onClick={() => { store.select(session.id); close?.(); onOpenChat?.(); }}>
+          <button type="button" className="chat-session-select" aria-current={active ? "true" : undefined} onClick={() => { store.select(session.id); close?.(); onOpenChat?.(); }}>
             <span className="chat-session-copy"><strong>{session.title}</strong><span>{busy ? "HASI antwortet …" : preview}</span></span>
           </button>
           <button type="button" className="icon-button chat-session-menu" aria-label={`Aktionen für ${session.title}`} aria-haspopup="menu" aria-expanded={menuOpen && menuFor === session.id} aria-controls={`${idPrefix}-actions`} onClick={event => { showMenu(event.currentTarget, session.id); }} onKeyDown={event => { if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); showMenu(event.currentTarget, session.id, event.key === "ArrowUp"); } }}><MoreHorizontal size={17} aria-hidden="true" /></button>

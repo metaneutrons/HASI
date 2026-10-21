@@ -433,7 +433,8 @@ export function PluginConfigPanel({
 
   return (
     <details ref={panelRef} className="plugin-config-panel" style={panelStyle} onToggle={handleToggle}>
-      <summary ref={summaryRef} style={summaryStyle} aria-label={`Plug-in-Einstellungen öffnen: ${name}`}>
+      <summary ref={summaryRef} style={summaryStyle}>
+        <span className="sr-only">{name}: </span>
         <span style={{ display: 'grid', minWidth: 0, gap: 3 }}>
           <strong style={{ fontSize: 14, fontWeight: 650 }}>Einstellungen und Funktionsfreigaben</strong>
           <span style={{ color: 'var(--muted)', fontSize: 12 }}>Konfiguration, Zugangsdatenstatus und deaktivierte Funktionen</span>

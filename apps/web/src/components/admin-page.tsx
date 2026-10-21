@@ -29,7 +29,7 @@ const effectLabels: Record<PluginTool["effect"], string> = {
 };
 
 function ToolEffectMark({ effect }: { effect: PluginTool["effect"] }) {
-  return <span className={`tool-effect tool-effect--${effect}`} aria-label={`Wirkung: ${effectLabels[effect]}`}>{effectLabels[effect]}</span>;
+  return <span className={`tool-effect tool-effect--${effect}`}><span className="sr-only">Wirkung: </span>{effectLabels[effect]}</span>;
 }
 
 function PluginCard({
