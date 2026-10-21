@@ -1,5 +1,6 @@
 import { createPublicKey, sign, verify, type KeyObject } from 'node:crypto';
 import { z } from 'zod';
+import { pluginReleaseInventoryDigest } from '@hasi/plugin-sdk/releases';
 import { digest, manifestSchema, managedStateValidator, type PluginManifest } from '@hasi/plugin-sdk';
 import { managedPluginCommandSchema, type ManagedPluginCommand, type ManagedPluginCommandResult, type ManagedPluginView } from '@hasi/plugin-sdk/deployment-admin';
 import type { JsonStore } from '@hasi/state';
@@ -13,7 +14,6 @@ const releaseSchema = z.strictObject({
   id: opaque, envelope: z.unknown(), manifest: manifestSchema,
   launch: z.custom<PluginContainerLaunchOptions>(value => typeof value === 'object' && value !== null),
   secretAssignments: z.array(z.strictObject({ name: opaque, secretRef: opaque })).max(32),
-  license: z.string().min(1).max(128), inventoryDigest: sha,
 });
 const installationSchema = z.strictObject({
   id: opaque, label: z.string().min(1).max(200), pluginId: opaque,
@@ -197,14 +197,14 @@ export class ManagedPluginInstaller implements ManagedPluginAdmin {
     if (!release) return null;
     const approved = entry.releases.find(item => item.verified.releaseDigest === release.releaseDigest);
     return { id: approved?.id ?? `revoked-${release.releaseDigest}`, version: release.version, publisher: release.publisherId, digest: release.releaseDigest, migration: release.stateMigration,
-      license: approved?.license ?? null, inventoryDigest: approved?.inventoryDigest ?? null, approved: approved !== undefined };
+      license: approved?.verified.provenance.license ?? null, inventoryDigest: approved ? pluginReleaseInventoryDigest(approved.verified.provenance) : null, approved: approved !== undefined };
   }
   private async describe(id: string): Promise<{ view: ManagedPluginView; state: PluginDeploymentSnapshot; entry: ApprovedInstallation }> {
     const entry = await this.installation(id);
     const state = await this.coordinator.get(id);
     const selected = entry.releases.find(item => item.verified.releaseDigest === (state.candidate?.releaseDigest ?? state.current?.releaseDigest)) ?? entry.releases[0];
     const settings = await this.configuration(id, selected?.verified.releaseDigest);
-    const catalogIdentity = entry.releases.map(release => ({ id: release.id, digest: release.verified.releaseDigest, launch: release.launch, secrets: release.secretAssignments, inventory: release.inventoryDigest, license: release.license }));
+    const catalogIdentity = entry.releases.map(release => ({ id: release.id, digest: release.verified.releaseDigest, launch: release.launch, secrets: release.secretAssignments, inventory: pluginReleaseInventoryDigest(release.verified.provenance), license: release.verified.provenance.license }));
     const view: ManagedPluginView = { id, label: entry.label, stateToken: digest({ state, catalogIdentity, restorePlans: entry.restorePlans, settings: { ...settings, schema: settings.schema ?? null } }), status: state.status,
       configurationRevision: state.configurationRevision, configurationReady: settings.ready, current: this.releaseView(state.current, entry), previous: this.releaseView(state.previous, entry), candidate: this.releaseView(state.candidate, entry),
       releases: entry.releases.flatMap(item => { const view = this.releaseView(item.verified, entry); return view?.approved ? [view] : []; }),

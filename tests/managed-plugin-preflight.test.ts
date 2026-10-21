@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { generateKeyPairSync, sign } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import { digest, type PluginManifest } from '@hasi/plugin-sdk';
+import { TEST_PLUGIN_PROVENANCE } from './plugin-release-fixtures.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   pluginReleaseSigningBytes,
@@ -38,7 +39,7 @@ const publisher: PublisherApproval = {
   sourceRegistryPrefix: 'registry.example.test/hasi', allowedPluginIds: ['reference'],
 };
 const unsignedRelease: UnsignedPluginRelease = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   pluginId: manifest.id,
   version: manifest.version,
   manifestDigest: digest(manifest),
@@ -46,6 +47,7 @@ const unsignedRelease: UnsignedPluginRelease = {
   publisherId: publisher.publisherId,
   configSchemaVersion: 1,
   stateMigration: 'none',
+  provenance: TEST_PLUGIN_PROVENANCE,
 };
 const release = verifyPluginRelease({
   ...unsignedRelease,

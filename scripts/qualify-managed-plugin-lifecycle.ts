@@ -1,13 +1,14 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createHash, generateKeyPairSync, randomUUID, sign, type KeyObject } from 'node:crypto';
 import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { PostgresJsonStore } from '@hasi/state';
 import { digest, manifestSchema, type PluginManifest } from '@hasi/plugin-sdk';
+import { PLUGIN_IMAGE_PROVENANCE_LABEL, pluginImageProvenanceLabel, type PluginReleaseProvenance } from '@hasi/plugin-sdk/releases';
 import { managedPluginCommandSchema, managedPluginViewSchema, type ManagedPluginView } from '@hasi/plugin-sdk/deployment-admin';
 import { createApi, PluginAccountService, type Persona } from '../apps/api/src/index.js';
 import { OidcIdentityProvider } from '../apps/api/src/oidc.js';
@@ -30,6 +31,7 @@ import { assertNoPostgresEnvironment, qualificationDatabase } from './plugin-gat
 import { DemoPluginAccountAdapter } from '../packages/demo-runtime/src/plugin-account-adapter.js';
 import { validateObservedManagedContainer } from './managed-lifecycle-container-ownership.js';
 import { createManagedReferenceManifest } from './reference-managed-state-profile.js';
+import { artifactPluginProvenance, type ArtifactSourceIdentity } from './plugin-release-provenance.js';
 import {
   deriveManagedReferenceStateKey, deriveManagedStateLeaseKey, readManagedReferenceEvidence,
   validateManagedReferenceStateValue, validateManagedStateLeaseValue,
@@ -171,6 +173,8 @@ interface ArtifactRelease {
   artifact: Artifact;
   sourceTreeSha256: string;
   sourceFiles: Record<string, string>;
+  sourceIdentity: ArtifactSourceIdentity;
+  provenance: PluginReleaseProvenance;
   envelope: PluginReleaseEnvelope;
   releaseDigest: string;
   imageId: string;
@@ -179,6 +183,19 @@ interface ArtifactRelease {
 }
 interface ImageRecord { tag: string; id?: string }
 interface OwnedContainer { id: string; operationId?: string }
+type CrashProposalStatus = 'pending' | 'executing' | 'confirmed' | 'failed' | 'outcome_unknown' | 'invalid';
+interface CrashEvidenceCounts {
+  readonly marks: number;
+  readonly sourceRows: number;
+  readonly journalRows: number;
+  readonly confirmedJournalRows: number;
+}
+
+function crashProposalStatus(value: unknown): CrashProposalStatus {
+  return value === 'pending' || value === 'executing' || value === 'confirmed' || value === 'failed'
+    || value === 'outcome_unknown' ? value : 'invalid';
+}
+
 interface PgResult<T> { rows: T[]; rowCount: number | null }
 interface PgClient { query<T extends Record<string, unknown>>(text: string, values?: readonly unknown[]): Promise<PgResult<T>>; release(): void }
 interface PgPool { connect(): Promise<PgClient>; end(): Promise<void> }
@@ -443,6 +460,7 @@ async function writeInstrumentedReferenceSource(root: string, version: '1.0.0' |
   directory: string;
   fileHashes: Record<string, string>;
   treeSha256: string;
+  sourceIdentity: ArtifactSourceIdentity;
 }> {
   const directory = join(root, `source-${version}`);
   await mkdir(join(directory, 'src'), { recursive: true });
@@ -468,7 +486,27 @@ async function writeInstrumentedReferenceSource(root: string, version: '1.0.0' |
 
   const fileHashes: Record<string, string> = {};
   for (const name of SOURCE_FILES) fileHashes[name] = sha256(await readFile(join(directory, name)));
-  return { directory, fileHashes, treeSha256: digest(fileHashes) };
+  const gitEnvironment = {
+    PATH: process.env.PATH ?? '/usr/bin:/bin',
+    GIT_CONFIG_GLOBAL: '/dev/null',
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_TERMINAL_PROMPT: '0',
+  };
+  const git = (args: readonly string[]) => execFileSync('git', [...args], {
+    cwd: directory, env: gitEnvironment, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
+  git(['init', '--quiet']);
+  git(['add', '--all']);
+  git(['-c', 'user.name=HASI local qualification', '-c', 'user.email=qualification@example.test',
+    'commit', '--quiet', '-m', `test: instrument reference plugin ${version}`]);
+  const revision = git(['rev-parse', '--verify', 'HEAD']);
+  git(['tag', `v${version}`]);
+  return {
+    directory,
+    fileHashes,
+    treeSha256: digest(fileHashes),
+    sourceIdentity: { repository: pathToFileURL(directory).href, revision },
+  };
 }
 
 async function buildRelease(input: {
@@ -488,6 +526,10 @@ async function buildRelease(input: {
   const artifact = await f.readArtifactManifest(outputDirectory, evidence);
   const manifest = manifestSchema.parse(JSON.parse(await readFile(join(outputDirectory, 'src/manifest.json'), 'utf8')) as unknown);
   assert(manifest.id === PLUGIN_ID && manifest.version === input.version, 'reference_artifact_identity_invalid');
+  const provenance = artifactPluginProvenance(evidence, source.sourceIdentity);
+  const provenanceLabel = pluginImageProvenanceLabel({
+    pluginId: PLUGIN_ID, version: manifest.version, manifestDigest: digest(manifest), provenance,
+  });
 
   const dockerfile = join(input.root, `Dockerfile-${input.suffix}`);
   await writeFile(dockerfile, f.pluginLauncherDockerfile(), { flag: 'wx' });
@@ -496,15 +538,17 @@ async function buildRelease(input: {
   const image: ImageRecord = { tag };
   input.images.push(image);
   f.runDocker(['build', '--network=none', '--pull=false', '--label', `${OWNER_LABEL}=${input.ownerId}`,
+    '--label', `${PLUGIN_IMAGE_PROVENANCE_LABEL}=${provenanceLabel}`,
     '--tag', tag, '--file', dockerfile, outputDirectory], 'managed_offline_image_build_failed', 180_000);
-  const imageIdentity = f.dockerImageIdentity(tag, input.ownerId);
+  const imageIdentity = f.dockerImageIdentity(tag, input.ownerId, provenanceLabel);
   image.id = imageIdentity.id;
 
   const unsigned: UnsignedPluginRelease = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     pluginId: PLUGIN_ID,
     version: manifest.version,
     manifestDigest: digest(manifest),
+    provenance,
     image: imageIdentity.repoDigest,
     publisherId: input.publisher.publisherId,
     configSchemaVersion: 1,
@@ -532,6 +576,8 @@ async function buildRelease(input: {
     artifact,
     sourceTreeSha256: source.treeSha256,
     sourceFiles: source.fileHashes,
+    sourceIdentity: source.sourceIdentity,
+    provenance,
     envelope,
     releaseDigest: verified.releaseDigest,
     imageId: imageIdentity.id,
@@ -808,7 +854,20 @@ async function main(): Promise<Record<string, unknown>> {
   let stateContext: ManagedReferenceEvidenceContext | undefined;
   let accountContext: ManagedReferenceAccountContext | undefined;
   const accountChallenges = new Map<string, ManagedReferenceChallengeContext>();
-  const crashObservation: { confirmationHttpStatus?: number; durableProposalStatus?: string } = {};
+  const crashObservation: {
+    confirmationHttpStatus?: number;
+    durableProposalStatus?: string;
+    reconciliationHttpStatus?: number;
+    reconciliationDurationMs?: number;
+    reconciliationProposalStatus?: CrashProposalStatus;
+    durableReconciliationStatus?: CrashProposalStatus;
+    reconciliationEvidenceBefore?: CrashEvidenceCounts | 'unavailable';
+    reconciliationEvidenceAfter?: CrashEvidenceCounts | 'unavailable';
+    followupStatusHttpStatus?: number;
+    followupStatusDurationMs?: number;
+    followupProposalStatus?: CrashProposalStatus;
+    registryStatusObservations?: { outcome: string; durationMs: number; errorCode?: number }[];
+  } = {};
   const managedStageOutcomes: Record<'v1' | 'v2', {
     afterStage?: ManagedPluginView['status'];
     afterApproval?: ManagedPluginView['status'];
@@ -953,7 +1012,7 @@ async function main(): Promise<Record<string, unknown>> {
     const releaseV1 = releases[0]; const releaseV2 = releases[1];
     assert(releaseV1 && releaseV2 && releaseV1.releaseDigest !== releaseV2.releaseDigest && releaseV1.manifest.version === '1.0.0' && releaseV2.manifest.version === '1.1.0', 'managed_release_pair_invalid');
     const sourceCatalog = [releaseV1, releaseV2].map(release => ({ id: release.id, envelope: release.envelope, manifest: release.manifest,
-      launch: release.launch, secretAssignments, license: 'GPL-3.0-only', inventoryDigest: release.artifact.artifactSha256 }));
+      launch: release.launch, secretAssignments }));
     const installerConfig = {
       version: 1, scope, ownerId, rpcPort, gatewayPort, socketPath: dockerSocket,
       internalNetworks: networks, relayNetwork,
@@ -1051,6 +1110,17 @@ async function main(): Promise<Record<string, unknown>> {
     accountContext = { scope, installationId, subject: studentSubject, publicKey: authorityKeys.publicKey };
     const evidenceContext = stateContext;
     const evidence = () => readManagedReferenceEvidence(store, evidenceContext);
+    const captureCrashEvidence = async (): Promise<CrashEvidenceCounts | 'unavailable'> => {
+      try {
+        const snapshot = await evidence();
+        return {
+          marks: snapshot.marks,
+          sourceRows: snapshot.sourceRows,
+          journalRows: snapshot.journalRows,
+          confirmedJournalRows: snapshot.confirmedJournalRows,
+        };
+      } catch { return 'unavailable'; }
+    };
     const adapter = new DemoPluginAccountAdapter({ mode: 'test', privateKey: authorityKeys.privateKey,
       store, scope, installationId, resolveProjection: ({ subject }) => subject === studentSubject
         ? { permissions: ['reference:read', 'reference:prepare', 'reference:execute'], claims: { 'reference.account': ACCOUNT } }
@@ -1066,6 +1136,22 @@ async function main(): Promise<Record<string, unknown>> {
       managedContracts: new Map([[installationId, { initialManifest: v1.manifest, read: () => contractClient.read(installationId) }]]),
       fetch: countedFetch,
     });
+    const registryReconcile = registry.reconcile.bind(registry);
+    registry.reconcile = async (...args) => {
+      const startedAt = Date.now();
+      try {
+        const result = await registryReconcile(...args);
+        (crashObservation.registryStatusObservations ??= []).push({ outcome: result.status, durationMs: Date.now() - startedAt });
+        return result;
+      } catch (error) {
+        const names = ['McpError', 'TimeoutError', 'ZodError', 'RequestError'];
+        const outcome = error instanceof Error && names.includes(error.name) ? error.name : 'other-error';
+        const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined;
+        (crashObservation.registryStatusObservations ??= []).push({ outcome, durationMs: Date.now() - startedAt,
+          ...(typeof code === 'number' && Number.isSafeInteger(code) && Math.abs(code) <= 1_000_000 ? { errorCode: code } : {}) });
+        throw error;
+      }
+    };
     const identity = new OidcIdentityProvider({ mode: 'test', issuer: identityProvider.issuer, clientId: API_CLIENT_ID,
       redirectUri: `${apiOrigin}/api/auth/callback`, store,
       mapIdentity: async verified => {
@@ -1213,9 +1299,51 @@ async function main(): Promise<Record<string, unknown>> {
       await delay(250);
     }
     assert(restartedRead?.version === '1.1.0' && restartedRead.actionCount === 2, 'managed_restart_did_not_recover_source');
+    crashObservation.reconciliationEvidenceBefore = await captureCrashEvidence();
+    const reconciliationStartedAt = Date.now();
     const reconciled = await apiCall('POST', `/api/proposals/${crashingPending}/reconcile`, studentCookie, {});
+    crashObservation.reconciliationHttpStatus = reconciled.statusCode;
+    crashObservation.reconciliationDurationMs = Math.max(0, Date.now() - reconciliationStartedAt);
+    crashObservation.reconciliationEvidenceAfter = await captureCrashEvidence();
+    if (reconciled.statusCode === 200) {
+      try {
+        const body = asRecord(parseJsonBody(reconciled, 'managed_crash_reconciliation_invalid'), 'managed_crash_reconciliation_invalid');
+        const proposal = asRecord(body.proposal, 'managed_crash_reconciliation_invalid');
+        crashObservation.reconciliationProposalStatus = crashProposalStatus(proposal.status);
+      } catch { crashObservation.reconciliationProposalStatus = 'invalid'; }
+    }
+    try {
+      const diagnosticRecord = await store.read(`proposal:${crashingPending}`);
+      crashObservation.durableReconciliationStatus = diagnosticRecord
+        ? crashProposalStatus(asRecord(diagnosticRecord.value, 'managed_crash_reconciliation_invalid').status)
+        : 'invalid';
+    } catch { crashObservation.durableReconciliationStatus = 'invalid'; }
     assert(reconciled.statusCode === 200, 'managed_crash_reconciliation_failed');
-    const reconciliation = asRecord(parseJsonBody(reconciled, 'managed_crash_reconciliation_invalid').proposal, 'managed_crash_reconciliation_invalid');
+    let reconciliation = asRecord(parseJsonBody(reconciled, 'managed_crash_reconciliation_invalid').proposal, 'managed_crash_reconciliation_invalid');
+    assert(reconciliation.id === crashingPending, 'managed_crash_reconciliation_invalid');
+    if (reconciliation.status === 'outcome_unknown') {
+      // A status response can be lost after the journal commit. Model a second
+      // explicit status check, never an execution retry, only after proving the
+      // exact original source receipt and journal have already been confirmed.
+      const settled = await evidence();
+      const settledReceipt = settled.receipts.find(receipt => receipt.binding.executionId === crashedProposal.executionId);
+      assert(settled.marks === 2 && settled.sourceRows === 2 && settled.confirmedJournalRows === 2
+        && settledReceipt?.journalStatus === 'confirmed' && digest(settledReceipt.binding) === digest(crashedReceipt.binding),
+      'managed_crash_reconciliation_invalid');
+      const unknownRecord = await store.read(`proposal:${crashingPending}`);
+      const unknown = asRecord(unknownRecord?.value, 'managed_crash_proposal_missing');
+      assert(unknown.status === 'outcome_unknown' && unknown.id === crashingPending
+        && unknown.subject === studentSubject && unknown.executionId === crashedProposal.executionId,
+      'managed_crash_reconciliation_identity_changed');
+      await delay(10_050); // Honor the normal server-enforced status cooldown.
+      const followupStartedAt = Date.now();
+      const followup = await apiCall('POST', `/api/proposals/${crashingPending}/reconcile`, studentCookie, {});
+      crashObservation.followupStatusHttpStatus = followup.statusCode;
+      crashObservation.followupStatusDurationMs = Date.now() - followupStartedAt;
+      assert(followup.statusCode === 200, 'managed_crash_reconciliation_failed');
+      reconciliation = asRecord(parseJsonBody(followup, 'managed_crash_reconciliation_invalid').proposal, 'managed_crash_reconciliation_invalid');
+      crashObservation.followupProposalStatus = crashProposalStatus(reconciliation.status);
+    }
     assert(reconciliation.status === 'confirmed' && reconciliation.id === crashingPending,
       'managed_crash_reconciliation_invalid');
     // Execution IDs are intentionally absent from the public proposal shape.
@@ -1335,6 +1463,7 @@ async function main(): Promise<Record<string, unknown>> {
         installerConfigurationSha256: configSha256,
         artifacts: releases.map(release => ({ id: release.id, version: release.manifest.version,
           instrumentedSourceTreeSha256: release.sourceTreeSha256, instrumentedSourceFiles: release.sourceFiles,
+          sourceIdentity: release.sourceIdentity,
           artifactSha256: release.evidence.artifactSha256,
           artifactManifestSha256: release.evidence.artifactManifestSha256,
           manifestDigest: release.evidence.manifestDigest,
@@ -1351,6 +1480,7 @@ async function main(): Promise<Record<string, unknown>> {
       stageOutcomes: managedStageOutcomes, crashObservation,
       identities: { installerConfigurationSha256: configSha256,
         artifacts: releases.map(release => ({ id: release.id, version: release.manifest.version,
+          sourceIdentity: release.sourceIdentity,
           artifactSha256: release.evidence.artifactSha256, manifestDigest: release.evidence.manifestDigest,
           imageId: release.imageId, immutableImage: release.imageReference, releaseDigest: release.releaseDigest })) } };
   } finally {

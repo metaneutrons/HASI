@@ -6,6 +6,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { PostgresJsonStore } from '@hasi/state';
 import { digest, manifestSchema, type PluginManifest } from '@hasi/plugin-sdk';
+import {
+  PLUGIN_IMAGE_PROVENANCE_LABEL, pluginImageProvenanceLabel, pluginReleaseInventoryDigest,
+  type PluginReleaseProvenance,
+} from '@hasi/plugin-sdk/releases';
 import type { ManagedPluginView } from '@hasi/plugin-sdk/deployment-admin';
 import type { Persona } from '../apps/api/src/index.js';
 import { ProductionAuthorityDirectory } from '../apps/api/src/production-runtime.js';
@@ -23,6 +27,8 @@ import { DOCKER_PLUGIN_MANAGED_VALUE } from '../apps/api/src/docker-plugin-relay
 import type { ReferencePluginArtifactEvidence } from './package-reference-plugin.js';
 import { qualificationFixtures as f } from './healthy-plugin-qualification.js';
 import { assertNoPostgresEnvironment, qualificationDatabase } from './plugin-gateway-qualification-config.js';
+import { artifactPluginProvenance } from './plugin-release-provenance.js';
+import type { ExternalPluginSourceIdentity } from './plugin-gateway-qualification-artifacts.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const PLUGIN_ID = 'hasi.reference';
@@ -60,6 +66,7 @@ export const managedJourneyCredentialSlotContract = Object.freeze({
 export interface ManagedJourneyReleaseInput {
   readonly directory: string;
   readonly sourceSha: string;
+  readonly sourceIdentity: ExternalPluginSourceIdentity;
   readonly evidence: ReferencePluginArtifactEvidence;
 }
 
@@ -131,7 +138,9 @@ interface ArtifactRelease {
   readonly version: (typeof RELEASES)[number]['version'];
   readonly directory: string;
   readonly sourceSha: string;
+  readonly sourceIdentity: ExternalPluginSourceIdentity;
   readonly evidence: ReferencePluginArtifactEvidence;
+  readonly provenance: PluginReleaseProvenance;
   readonly artifact: Awaited<ReturnType<typeof f.readArtifactManifest>>;
   readonly manifest: PluginManifest;
   readonly imageTag: string;
@@ -206,10 +215,25 @@ export function validateManagedPluginJourneyBoundary(options: ManagedPluginJourn
   assert(options.releases.length === 2);
   const versions = new Set<string>();
   const sourceShas = new Set<string>();
+  const sourceRepositories = new Set<string>();
   const directories = new Set<string>();
   for (const release of options.releases) {
     assert(typeof release.directory === 'string' && isAbsolute(release.directory) && !release.directory.includes('\0'));
     assert(GIT_SHA.test(release.sourceSha));
+    const sourceIdentity: unknown = release.sourceIdentity;
+    if (typeof sourceIdentity !== 'object' || sourceIdentity === null || Array.isArray(sourceIdentity)) {
+      throw new ManagedPluginJourneyRuntimeError('Managed plugin journey runtime failed.');
+    }
+    const source = sourceIdentity as ExternalPluginSourceIdentity;
+    assert(typeof source.repository === 'string' && source.revision === release.sourceSha && typeof source.tag === 'string');
+    assert(source.tag.startsWith('v') ? source.tag.slice(1) === release.evidence.pluginVersion
+      : source.tag === release.evidence.pluginVersion);
+    try {
+      artifactPluginProvenance(release.evidence, {
+        repository: source.repository,
+        revision: source.revision,
+      });
+    } catch { throw new ManagedPluginJourneyRuntimeError('Managed plugin journey runtime failed.'); }
     assert(!sourceShas.has(release.sourceSha));
     assert(!directories.has(resolve(release.directory)));
     assert(release.evidence.pluginId === PLUGIN_ID);
@@ -224,9 +248,10 @@ export function validateManagedPluginJourneyBoundary(options: ManagedPluginJourn
     assert(release.evidence.licenseInventory.length <= 10_000);
     versions.add(release.evidence.pluginVersion);
     sourceShas.add(release.sourceSha);
+    sourceRepositories.add(source.repository);
     directories.add(resolve(release.directory));
   }
-  assert(versions.has('1.0.0') && versions.has('1.0.1'));
+  assert(versions.has('1.0.0') && versions.has('1.0.1') && sourceRepositories.size === 1);
 }
 
 /** Plans removals only for new containers carrying this runtime's owner label. */
@@ -381,7 +406,7 @@ function startWorkerProcess(environment: Readonly<Record<string, string | undefi
 
 function assignReleaseIdentity(release: ArtifactRelease, publisher: PublisherApproval, publisherKey: KeyObject): void {
   const unsigned: UnsignedPluginRelease = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     pluginId: PLUGIN_ID,
     version: release.version,
     manifestDigest: digest(release.manifest),
@@ -389,6 +414,7 @@ function assignReleaseIdentity(release: ArtifactRelease, publisher: PublisherApp
     publisherId: publisher.publisherId,
     configSchemaVersion: 1,
     stateMigration: 'none',
+    provenance: release.provenance,
   };
   const envelope: PluginReleaseEnvelope = {
     ...unsigned,
@@ -727,7 +753,12 @@ export async function startManagedJourneyRuntime(options: ManagedPluginJourneyRu
         version: spec.version,
         directory: source.directory,
         sourceSha: source.sourceSha,
+        sourceIdentity: source.sourceIdentity,
         evidence: source.evidence,
+        provenance: artifactPluginProvenance(source.evidence, {
+          repository: source.sourceIdentity.repository,
+          revision: source.sourceIdentity.revision,
+        }),
         artifact,
         manifest,
         imageTag: image.tag,
@@ -744,12 +775,19 @@ export async function startManagedJourneyRuntime(options: ManagedPluginJourneyRu
       };
       const dockerfile = join(helperDirectory, `Dockerfile-${spec.suffix}`);
       await writeFile(dockerfile, f.pluginLauncherDockerfile(), { mode: 0o600, flag: 'wx' });
+      const provenanceLabel = pluginImageProvenanceLabel({
+        pluginId: PLUGIN_ID,
+        version: release.version,
+        manifestDigest: digest(release.manifest),
+        provenance: release.provenance,
+      });
       image.attempted = true;
       f.runDocker([
         'build', '--network=none', '--pull=false', '--label', `${OWNER_LABEL}=${ownerId}`,
+        '--label', `${PLUGIN_IMAGE_PROVENANCE_LABEL}=${provenanceLabel}`,
         '--tag', image.tag, '--file', dockerfile, source.directory,
       ], 'managed_offline_image_build_failed', 180_000);
-      const built = f.dockerImageIdentity(image.tag, ownerId);
+      const built = f.dockerImageIdentity(image.tag, ownerId, provenanceLabel);
       assert(/^sha256:[a-f0-9]{64}$/u.test(built.id)
         && /^localhost\/hasi-reference-qualification@sha256:[a-f0-9]{64}$/u.test(built.repoDigest));
       release.imageId = built.id;
@@ -778,8 +816,6 @@ export async function startManagedJourneyRuntime(options: ManagedPluginJourneyRu
         { name: SERVICE_TOKEN_SLOT, secretRef: serviceTokenRef },
         { name: PUBLIC_KEY_SLOT, secretRef: publicKeyRef },
       ],
-      license: 'GPL-3.0-only',
-      inventoryDigest: release.artifact.artifactSha256,
     }));
     const [rpcPort, gatewayPort] = await Promise.all([port(), port()]);
     const relayNetwork = networkOwnership[2];
@@ -851,7 +887,7 @@ export async function startManagedJourneyRuntime(options: ManagedPluginJourneyRu
     for (const release of releases) {
       const installed = view.releases.find(item => item.id === release.id);
       assert(installed && installed.digest === release.releaseDigest && installed.version === release.version
-        && installed.inventoryDigest === release.evidence.artifactSha256);
+        && installed.inventoryDigest === pluginReleaseInventoryDigest(release.provenance));
     }
 
     const snapshot = async (): Promise<ManagedJourneySnapshot> => {
@@ -864,7 +900,7 @@ export async function startManagedJourneyRuntime(options: ManagedPluginJourneyRu
         for (const release of releases) {
           const installed = installation.releases.find(item => item.id === release.id);
           assert(installed && installed.digest === release.releaseDigest && installed.version === release.version
-            && installed.inventoryDigest === release.evidence.artifactSha256);
+            && installed.inventoryDigest === pluginReleaseInventoryDigest(release.provenance));
         }
         const result: ManagedJourneySnapshot = {
           workerPid: worker.pid,

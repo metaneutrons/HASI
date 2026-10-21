@@ -6,6 +6,7 @@ import {
   managedJourneyCredentialSlotContract,
   planManagedJourneyContainerRemoval,
   validateManagedPluginJourneyBoundary,
+  ManagedPluginJourneyRuntimeError,
   type ManagedPluginJourneyRuntimeOptions,
 } from '../scripts/managed-plugin-journey-runtime.js';
 
@@ -21,7 +22,10 @@ function evidence(version: '1.0.0' | '1.0.1'): ReferencePluginArtifactEvidence {
     artifactManifestSha256: version === '1.0.0' ? 'e'.repeat(64) : 'f'.repeat(64),
     payloadFileCount: 5,
     runtimePackageCount: 4,
-    licenseInventory: [{ name: '@hasi/plugin-sdk', version: '1.0.0', license: 'GPL-3.0-only' }],
+    licenseInventory: [
+      { name: '@hasi/plugin-sdk', version: '1.0.0', license: 'GPL-3.0-only' },
+      { name: 'hasi-reference-plugin', version, license: 'GPL-3.0-only' },
+    ],
   };
 }
 
@@ -43,8 +47,18 @@ function options(overrides: Partial<ManagedPluginJourneyRuntimeOptions> = {}): M
     authorities: authorities(),
     transportToken: 'T'.repeat(43),
     releases: [
-      { directory: '/tmp/hasi-reference-v1', sourceSha: '1'.repeat(40), evidence: evidence('1.0.0') },
-      { directory: '/tmp/hasi-reference-v2', sourceSha: '2'.repeat(40), evidence: evidence('1.0.1') },
+      {
+        directory: '/tmp/hasi-reference-v1',
+        sourceSha: '1'.repeat(40),
+        sourceIdentity: { repository: 'file:///tmp/hasi-reference-source', revision: '1'.repeat(40), tag: 'v1.0.0' },
+        evidence: evidence('1.0.0'),
+      },
+      {
+        directory: '/tmp/hasi-reference-v2',
+        sourceSha: '2'.repeat(40),
+        sourceIdentity: { repository: 'file:///tmp/hasi-reference-source', revision: '2'.repeat(40), tag: 'v1.0.1' },
+        evidence: evidence('1.0.1'),
+      },
     ],
     onUnexpectedExit: () => undefined,
     ...overrides,
@@ -59,15 +73,25 @@ describe('managed journey runtime admission boundary', () => {
     })); }).toThrow();
     expect(() => { validateManagedPluginJourneyBoundary(options({
       releases: [
-        { directory: '/tmp/a', sourceSha: '1'.repeat(40), evidence: evidence('1.0.0') },
-        { directory: '/tmp/b', sourceSha: '1'.repeat(40), evidence: evidence('1.0.1') },
+        { directory: '/tmp/a', sourceSha: '1'.repeat(40), sourceIdentity: { repository: 'file:///tmp/a-source', revision: '1'.repeat(40), tag: 'v1.0.0' }, evidence: evidence('1.0.0') },
+        { directory: '/tmp/b', sourceSha: '1'.repeat(40), sourceIdentity: { repository: 'file:///tmp/b-source', revision: '1'.repeat(40), tag: 'v1.0.1' }, evidence: evidence('1.0.1') },
       ],
     })); }).toThrow();
     expect(() => { validateManagedPluginJourneyBoundary(options({
       releases: [
-        { directory: '/tmp/a', sourceSha: '1'.repeat(40), evidence: evidence('1.0.0') },
-        { directory: '/tmp/b', sourceSha: '2'.repeat(40), evidence: evidence('1.0.0') },
+        { directory: '/tmp/a', sourceSha: '1'.repeat(40), sourceIdentity: { repository: 'file:///tmp/a-source', revision: '1'.repeat(40), tag: 'v1.0.0' }, evidence: evidence('1.0.0') },
+        { directory: '/tmp/b', sourceSha: '2'.repeat(40), sourceIdentity: { repository: 'file:///tmp/b-source', revision: '2'.repeat(40), tag: 'v1.0.1' }, evidence: evidence('1.0.0') },
       ],
+    })); }).toThrow();
+    const valid = options();
+    expect(() => { validateManagedPluginJourneyBoundary(options({
+      releases: [{ ...valid.releases[0]!, sourceIdentity: undefined as never }, valid.releases[1]!],
+    })); }).toThrow(ManagedPluginJourneyRuntimeError);
+    expect(() => { validateManagedPluginJourneyBoundary(options({
+      releases: [{ ...valid.releases[0]!, sourceIdentity: { ...valid.releases[0]!.sourceIdentity, tag: 'v9.9.9' } }, valid.releases[1]!],
+    })); }).toThrow();
+    expect(() => { validateManagedPluginJourneyBoundary(options({
+      releases: [{ ...valid.releases[0]!, sourceIdentity: { ...valid.releases[0]!.sourceIdentity, repository: 'file:///tmp/another-source' } }, valid.releases[1]!],
     })); }).toThrow();
   });
 

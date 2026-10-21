@@ -6,6 +6,7 @@ import { createServer } from 'node:net';
 import { describe, expect, it } from 'vitest';
 import { PostgresJsonStore } from '@hasi/state';
 import { digest, type PluginManifest } from '@hasi/plugin-sdk';
+import { TEST_PLUGIN_PROVENANCE } from './plugin-release-fixtures.js';
 import { startManagedPluginWorker } from '../apps/api/src/managed-plugin-worker.js';
 import { createManagedPluginContractClient, createManagedPluginRpcClient } from '../apps/api/src/managed-plugin-rpc.js';
 import { ProductionAuthorityDirectory } from '../apps/api/src/production-runtime.js';
@@ -41,10 +42,10 @@ describe('separate managed installer composition', () => {
     const rpcPort = await port(); let gatewayPort = await port();
     while (gatewayPort === rpcPort) gatewayPort = await port();
     const manifest: PluginManifest = { manifestVersion: 2, id: 'reference', version: '1.0.0', name: 'Synthetic', description: 'Setup only', apiVersion: '2.0.0', mcpVersion: '2026-07-28', tools: [] };
-    const unsigned: UnsignedPluginRelease = { schemaVersion: 1, pluginId: manifest.id, version: manifest.version, manifestDigest: digest(manifest), image: `registry.example.test/hasi/reference@sha256:${'a'.repeat(64)}`, publisherId: 'publisher', configSchemaVersion: 1, stateMigration: 'none' };
+    const unsigned: UnsignedPluginRelease = { schemaVersion: 2, pluginId: manifest.id, version: manifest.version, manifestDigest: digest(manifest), image: `registry.example.test/hasi/reference@sha256:${'a'.repeat(64)}`, publisherId: 'publisher', configSchemaVersion: 1, stateMigration: 'none', provenance: TEST_PLUGIN_PROVENANCE };
     const configuration = { version: 1, scope, ownerId: 'synthetic-owner', rpcPort, gatewayPort, socketPath: '/tmp/hasi-installer-not-a-real-docker.sock', internalNetworks: ['hasi-synthetic-internal'], relayNetwork: 'hasi-synthetic-relay',
       publishers: [{ publisherId: 'publisher', publicKey: publisherKeys.publicKey.export({ type: 'spki', format: 'pem' }).toString(), sourceRegistryPrefix: 'registry.example.test/hasi', allowedPluginIds: ['reference'] }],
-      installations: [{ id: 'installation', label: 'Synthetic setup', pluginId: manifest.id, configurationSchemaVersion: 1, restorePlans: [], releases: [{ id: 'release-a', envelope: { ...unsigned, signature: sign(null, pluginReleaseSigningBytes(unsigned), publisherKeys.privateKey).toString('base64url') }, manifest, launch: { network: { mode: 'none' } }, secretAssignments: [], license: 'GPL-3.0-only', inventoryDigest: 'b'.repeat(64) }] }],
+      installations: [{ id: 'installation', label: 'Synthetic setup', pluginId: manifest.id, configurationSchemaVersion: 1, restorePlans: [], releases: [{ id: 'release-a', envelope: { ...unsigned, signature: sign(null, pluginReleaseSigningBytes(unsigned), publisherKeys.privateKey).toString('base64url') }, manifest, launch: { network: { mode: 'none' } }, secretAssignments: [] }] }],
       credentials: { installation: { transport: { environmentName: 'HASI_PLUGIN_SECRET_TRANSPORT', revision: 'v1' }, slots: {} } } };
     const configPath = join(directory, 'operator.json');
     await writeFile(configPath, JSON.stringify(configuration), { mode: 0o600, flag: 'wx' });

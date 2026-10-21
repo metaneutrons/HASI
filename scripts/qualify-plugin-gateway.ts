@@ -1,11 +1,12 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { generateKeyPairSync, randomBytes, randomUUID, sign } from 'node:crypto';
 import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { PostgresJsonStore } from '@hasi/state';
 import { digest } from '@hasi/plugin-sdk';
+import { PLUGIN_IMAGE_PROVENANCE_LABEL, pluginImageProvenanceLabel } from '@hasi/plugin-sdk/releases';
 import {
   DeploymentDriverError, PluginDeploymentCoordinator, pluginReleaseSigningBytes, verifyPluginRelease,
   type DeploymentDriver, type PluginReleaseEnvelope, type PublisherApproval, type UnsignedPluginRelease,
@@ -17,8 +18,9 @@ import { qualificationFixtures as f, qualificationFailureCategory } from './heal
 import { assertNoPostgresEnvironment, qualificationDatabase } from './plugin-gateway-qualification-config.js';
 import {
   createVerifiedArtifactSnapshot, ExternalPluginArtifactInputError, loadExternalPluginArtifactPair,
-  type ExternalPluginArtifact, type ExternalPluginArtifactPair,
+  type ExternalPluginArtifact, type ExternalPluginArtifactPair, type ExternalPluginSourceIdentity,
 } from './plugin-gateway-qualification-artifacts.js';
+import { artifactPluginProvenance } from './plugin-release-provenance.js';
 
 const assert: (condition: unknown, category: string) => asserts condition = f.assert;
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -85,16 +87,37 @@ async function stopWorker(child: ChildProcess): Promise<void> {
   });
 }
 
-async function versionedSource(root: string): Promise<string> {
-  const source = join(root, 'source-b');
+interface LocalPluginSource {
+  readonly directory: string;
+  readonly identity: ExternalPluginSourceIdentity;
+}
+
+async function versionedSource(root: string, version: '1.0.0' | '1.1.0'): Promise<LocalPluginSource> {
+  const source = join(root, `source-${version}`);
   await mkdir(join(source, 'src'), { recursive: true });
   for (const name of ['package.json', 'src/manifest.json']) {
     const value = JSON.parse(await readFile(join(ROOT, 'examples/reference-plugin', name), 'utf8')) as Record<string, unknown>;
-    value.version = '1.1.0';
+    value.version = version;
     await writeFile(join(source, name), `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx' });
   }
   for (const name of ['README.md', 'src/server.js', 'src/state.js']) await copyFile(join(ROOT, 'examples/reference-plugin', name), join(source, name));
-  return source;
+  const gitEnvironment = {
+    PATH: process.env.PATH ?? '/usr/bin:/bin',
+    GIT_CONFIG_GLOBAL: '/dev/null',
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_TERMINAL_PROMPT: '0',
+  };
+  const git = (args: readonly string[]) => execFileSync('git', [...args], {
+    cwd: source, env: gitEnvironment, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
+  git(['init', '--quiet']);
+  git(['add', '--all']);
+  git(['-c', 'user.name=HASI local qualification', '-c', 'user.email=qualification@example.test',
+    'commit', '--quiet', '-m', `test: prepare independent reference ${version}`]);
+  const revision = git(['rev-parse', '--verify', 'HEAD']);
+  const tag = `v${version}`;
+  git(['tag', tag]);
+  return { directory: source, identity: { repository: pathToFileURL(source).href, revision, tag } };
 }
 
 async function main(): Promise<Record<string, unknown>> {
@@ -205,26 +228,37 @@ async function main(): Promise<Record<string, unknown>> {
       || (ref.name === 'PUBLIC_KEY' && [ `key-${nonce}`, `missing-${nonce}` ].includes(ref.secretRef))),
     authorizeReview: () => false, getConfigurationRevision: revision,
   });
-  const build = async (letter: string, external?: ExternalPluginArtifact<Artifact>, sourceDirectory?: string) => {
+  const build = async (letter: string, external?: ExternalPluginArtifact<Artifact>, localSource?: LocalPluginSource) => {
     const directory = join(root, `artifact-${letter}`);
     const evidence = external?.evidence
-      ?? f.packageReferencePluginWithAllowlistedEnvironment(directory, sourceDirectory);
+      ?? f.packageReferencePluginWithAllowlistedEnvironment(directory, localSource?.directory);
     const artifact = external
       ? (await createVerifiedArtifactSnapshot({ sourceDirectory: external.directory, destinationDirectory: directory,
         evidence, inventory: external.artifact.payloadFiles, readArtifactManifest: f.readArtifactManifest })).artifact
       : await f.readArtifactManifest(directory, evidence);
+    const sourceIdentity = external?.source ?? localSource?.identity;
+    assert(sourceIdentity, 'artifact_source_identity_missing');
+    const provenance = artifactPluginProvenance(evidence, {
+      repository: sourceIdentity.repository,
+      revision: sourceIdentity.revision,
+    });
+    const provenanceLabel = pluginImageProvenanceLabel({
+      pluginId: artifact.pluginId, version: artifact.pluginVersion, manifestDigest: artifact.manifestDigest, provenance,
+    });
     const dockerfile = join(root, `Dockerfile-${letter}`); await writeFile(dockerfile, f.pluginLauncherDockerfile(), { flag: 'wx' });
     const tag = `${REPOSITORY}:${nonce}-${letter}`;
     assert(f.runDocker(['image', 'ls', '--quiet', tag], 'image_collision_check_failed') === '', 'image_tag_collision');
     const image: { tag: string; id?: string } = { tag }; images.push(image);
-    f.runDocker(['build', '--network=none', '--pull=false', '--label', `${OWNER_LABEL}=${ownerId}`, '--tag', tag,
+    f.runDocker(['build', '--network=none', '--pull=false', '--label', `${OWNER_LABEL}=${ownerId}`,
+      '--label', `${PLUGIN_IMAGE_PROVENANCE_LABEL}=${provenanceLabel}`, '--tag', tag,
       '--file', dockerfile, directory], 'offline_image_build_failed', 180000);
-    const identity = f.dockerImageIdentity(tag, ownerId); image.id = identity.id;
-    const unsigned: UnsignedPluginRelease = { schemaVersion: 1, publisherId: publisher.publisherId, pluginId: artifact.pluginId,
-      version: artifact.pluginVersion, manifestDigest: artifact.manifestDigest, image: identity.repoDigest, configSchemaVersion: 1, stateMigration: 'none' };
+    const identity = f.dockerImageIdentity(tag, ownerId, provenanceLabel); image.id = identity.id;
+    const unsigned: UnsignedPluginRelease = { schemaVersion: 2, publisherId: publisher.publisherId, pluginId: artifact.pluginId,
+      version: artifact.pluginVersion, manifestDigest: artifact.manifestDigest, provenance,
+      image: identity.repoDigest, configSchemaVersion: 1, stateMigration: 'none' };
     const envelope: PluginReleaseEnvelope = { ...unsigned, signature: sign(null, pluginReleaseSigningBytes(unsigned), publisherKeys.privateKey).toString('base64url') };
     const verified = verifyPluginRelease(envelope, resolvePublisher); allowed.add(verified.releaseDigest);
-    return { envelope, verified, artifact, evidence, ...(external ? { source: external.source } : {}) };
+    return { envelope, verified, artifact, evidence, source: sourceIdentity };
   };
   const workerConfig = { databaseUrl, namespace, ownerId, installationId, socketPath, internalNetworks: networks, relayNetwork, serviceToken: token };
   const read = async (worker: GatewayWorker, artifact: Artifact, configurationRevision = 1) => {
@@ -249,10 +283,11 @@ async function main(): Promise<Record<string, unknown>> {
     routes = newRoutes(); await routes.initializeInstallation({ installationId, configurationRevision: '1' }); driver = newDriver(routes);
     for (const name of [...networks, relayNetwork]) { attemptedNetworks.push(name); f.createQualificationNetwork(name, ownerId, name !== relayNetwork); }
     phase = 'building-artifacts';
-    const a = await build('a', externalArtifacts?.a);
+    const localA = externalArtifacts ? undefined : await versionedSource(root, '1.0.0');
+    const a = await build('a', externalArtifacts?.a, localA);
     const b = externalArtifacts
       ? await build('b', externalArtifacts.b)
-      : await build('b', undefined, await versionedSource(root));
+      : await build('b', undefined, await versionedSource(root, '1.1.0'));
     assert(a.artifact.pluginId === 'hasi.reference' && b.artifact.pluginId === 'hasi.reference'
       && a.artifact.pluginVersion !== b.artifact.pluginVersion
       && a.verified.releaseDigest !== b.verified.releaseDigest, 'distinct_versions_not_built');
@@ -318,17 +353,18 @@ async function main(): Promise<Record<string, unknown>> {
     await inactive.body?.cancel(); assert(inactive.status === 503, 'withdrawn_route_still_serves'); checks.withdrawalStopsGatewayTraffic = true;
     report = { qualification: 'postgres-paired-plugin-gateway-lifecycle', qualified: true, fullP5P6Acceptance: false,
       independentDistributionAcceptance: false, artifactInputMode: externalArtifacts ? 'external-prebuilt-pair' : 'workspace-reference-fixture',
+      sourceIdentityAssurance: externalArtifacts
+        ? 'operator-declared-metadata-only-not-cryptographic-provenance'
+        : 'temporary-local-git-fixture-not-external-publisher-proof',
       ...(externalArtifacts ? {
         qualificationScope: 'local-independent-source-artifacts',
-        sourceIdentityAssurance: 'operator-declared-metadata-only-not-cryptographic-provenance',
         filesystemAssurance: 'preflight-plus-private-snapshot-inventory-not-general-hostile-filesystem-proof',
         publisherTrust: 'ephemeral-synthetic-qualification-key-only',
       } : {}),
       nativeReads, activationCommits, checks,
       artifacts: [a, b].map(value => ({ version: value.artifact.pluginVersion, artifactSha256: value.evidence.artifactSha256,
         artifactManifestSha256: value.evidence.artifactManifestSha256, manifestDigest: value.artifact.manifestDigest,
-        image: value.verified.image, releaseDigest: value.verified.releaseDigest,
-        ...(value.source ? { source: value.source } : {}) })),
+        image: value.verified.image, releaseDigest: value.verified.releaseDigest, source: value.source })),
       ownerId, installationId, namespace, cleanupVerified: true };
   } catch (error) {
     blocker = qualificationFailureCategory(error);

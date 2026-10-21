@@ -178,13 +178,16 @@ synthetic. The IdP rejects non-test mode.
 | Runtime | Supported boundary | Qualification limit |
 | --- | --- | --- |
 | Local reference stack | Separate web/API/MCP processes; test IdP | Memory state, synthetic identities |
-| Vercel demo | Reviewed bundled fixtures and fixed HTTP transports | Cannot install persistent executable plugins inside a function |
+| Coolify public demo | Reviewed composition, persistent PostgreSQL and fixed approved transports | Public administrators cannot install arbitrary executables or access Docker |
+| Vercel | Retired; not an execution or secret-storage target | No current deployment support |
 | Approved remote MCP | Pinned manifest/endpoint and per-instance authority | Operator-reviewed adapter required for plain MCP without HASI policy/effect contract |
 | Operator-local container driver | Verified signed digest image, nonroot/read-only/capability/resource/network policy, durable staged coordinator | Shared CAS route controller, configuration binding, verified endpoint gateway and operator secret custody implemented; actual runtime qualification pending; no arbitrary pulls/build scripts |
 
 The Docker controller is an operator-side component. Its Engine socket must never
 be mounted into plugins or exposed to the public demo administrator. Release
-envelopes use Ed25519 publisher approval and immutable image/manifest digests.
+envelopes use Ed25519 publisher approval and immutable image/manifest digests,
+with [authenticated source and license inventory](plugin-release-provenance.md)
+bound to the built image label before container creation or secret resolution.
 Independent external distribution, complete UI update review, production API/
 worker deployment and actual-device qualification are not accepted by this code
 alone. They remain tracked in M2/P5/P6.

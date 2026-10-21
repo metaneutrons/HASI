@@ -32,6 +32,13 @@ repository with distinct revisions/tags. Sidecars use `schemaVersion: 1`, a
 `artifactEvidence`. Those source fields are operator declarations, not verified
 publisher provenance. No source URL is fetched and no trust grant is inferred.
 
+The admitted source commit, payload and license inventory are propagated into
+the version-2 release envelope and the canonical image label. The qualifier's
+ephemeral synthetic signing key authenticates that local assertion; it does not
+turn an unsigned sidecar into an independently trusted publisher release. Local
+workspace mode records actual temporary Git commits with their file URL. See
+the [publisher contract and breaking transition](../architecture/plugin-release-provenance.md).
+
 Both manifests must already declare the expected reference managed-state
 profile. The qualifier will not patch a supplied artifact to make it pass.
 Only the held managed fixture uses this exact version/profile pair; production

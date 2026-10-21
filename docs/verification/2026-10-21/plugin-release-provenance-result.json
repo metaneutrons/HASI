@@ -1,0 +1,606 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "826531cf6d3677c24eea563abf2dd9797360df64",
+  "environment": {
+    "node": "24.21.0",
+    "host": "macOS/arm64",
+    "containers": "Linux/arm64",
+    "dockerClient": "29.9.0",
+    "dockerServer": "29.2.1"
+  },
+  "realProviderCalls": 0,
+  "firstAttempt": {
+    "result": {
+      "qualified": false,
+      "blocker": "cleanup_unconfirmed",
+      "primaryBlocker": "docker_driver_unknown",
+      "ownerId": "local-qualifier-615e1c3ed3f5",
+      "installationId": "healthy-plugin-615e1c3ed3f5",
+      "operationId": "stage-3ff059da-7994-4b23-9cd9-b6cf8faa9786",
+      "cleanupVerified": false
+    },
+    "rootCause": "inherited provenance JSON exceeded512-character container-label limit",
+    "provenanceLabelCharacters": 4890,
+    "manualExactCleanupVerified": true,
+    "unrelatedContainerCountRetained": 16
+  },
+  "healthyRun": {
+    "sourceFiles": {
+      "scripts/qualify-healthy-plugin-container.ts": "c29b59a2cf24d173111f23566d75b2eacc8b121a2f5a9e0b478ab0d46a91556c",
+      "scripts/healthy-plugin-qualification.ts": "39cf28c770853638613bf7680850a88e63e1fd83e02c863b8a8542285717de91",
+      "scripts/plugin-release-provenance.ts": "15dff3e877970ccd8a87e406f48fcbacf3babe04760587c82280271f6c151349",
+      "packages/plugin-sdk/src/releases.ts": "875b0d8ce40ad1ca298279d7102b35a413899e8122f33d52a3f2ed1d376084af",
+      "apps/api/src/plugin-artifacts.ts": "2d6d5388a8aa7025341e502112d4955037f4af1b651593db24f7e56e5ec43746",
+      "apps/api/src/docker-plugin-driver.ts": "2675e9658af27fe100828a067c933066978b3785ec94a097bdd3e7e234c19747"
+    },
+    "rawReportSha256": "2e40b698f949dd11d60cae7cecf08a836ad6795884481bf86bc3dc70f14ccd03",
+    "result": {
+      "qualification": "local-synthetic-reference-plugin-container-behavior",
+      "qualified": true,
+      "externalSourceIndependentlyReviewed": false,
+      "fullDistributionAcceptance": false,
+      "fullP5P6Acceptance": false,
+      "baseImage": "docker.io/library/node@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5",
+      "image": "localhost/hasi-reference-qualification@sha256:f854ed18fe5925471309612233a56ae73ad316f4f3112c6732e319b0868ff553",
+      "imageDigest": "f854ed18fe5925471309612233a56ae73ad316f4f3112c6732e319b0868ff553",
+      "manifestDigest": "01038ec93bce8c02af0b3918911735348839ffe5a72b01de317c27d388851611",
+      "artifactSha256": "a2e4cda86601c96de8b7b0de4787153a406eb76720597848f6c5c3fbc780bbb9",
+      "artifactManifestSha256": "6d513837a7011703578a644ab46953e06c0d5a8e46e937dfe4ea0e45adf3a9f5",
+      "pluginSourceSha256": "ae1714c28441e4fa939d5b819ed9e20b82a4c58c9118077f0eeff7d502dc1dc5",
+      "sourceIdentity": {
+        "repository": "https://github.com/metaneutrons/HASI.git",
+        "revision": "826531cf6d3677c24eea563abf2dd9797360df64"
+      },
+      "sourceIdentityAssurance": "workspace-commit-matched-to-source-files",
+      "dockerfileSha256": "2157b9f5ced16bcc95dca7682d1b87d2def2a127b94dadd78dd8532c3b887d92",
+      "configurationSha256": "2e4090c81af1f26e2d89ab7e98eebd205d69d2e8376804d289933bca05b3ca5b",
+      "payloadFileCount": 8314,
+      "runtimePackageCount": 72,
+      "qualificationCounts": {
+        "releaseCounterprobes": 5,
+        "imageProvenanceLabelCounterprobes": 1,
+        "preflightSecretResolutionCounterprobes": 1,
+        "staticPolicyDenials": 5,
+        "assignedSecretResolutions": 2,
+        "nativeReadStatusCalls": 1
+      },
+      "probes": {
+        "syntheticPublisherSignatureVerified": true,
+        "signedChangedSourceCommitRejectedBeforeContainerOrSecret": true,
+        "packagedManifestIdentityMatched": true,
+        "runningManifestDigestMatched": true,
+        "nativeMcpReadMatchedSyntheticContext": true,
+        "validSignedForeignInstallationDenied": true,
+        "driverHealthCheck": true,
+        "nonRootRuntime": true,
+        "readOnlyRootfs": true,
+        "rootfsWriteDenied": true,
+        "rootfsWriteFailureCode": "EROFS",
+        "assignedSecretSlotsPresent": true,
+        "foreignSecretSlotsAbsent": true,
+        "capabilitiesDropped": true,
+        "noNewPrivileges": true,
+        "builtinSeccompVerifiedByDriver": true,
+        "cpuLimit": "50000 100000",
+        "memoryLimitBytes": "268435456",
+        "pidsLimit": "64",
+        "pluginUnpublished": true,
+        "relayDeploymentId": "dc6cf2583fd7b3ed00c2956d04d73047aa054fbdeb49b552809c1e2e40d9f8ad",
+        "relayImage": "docker.io/library/node@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5",
+        "relayProgramSha256": "1ffeaa642833ada48edba7c581ed78e480db370cda216d3f7756cfbe99b3c5cc",
+        "relayLoopbackOnlyPublishedPort": true,
+        "relayAssignedEnvironmentOnly": true,
+        "externalControlStatus": 200,
+        "pluginPublicHealthStatus": null,
+        "targetEgressDeniedOnInternalNetwork": true
+      },
+      "cleanupVerified": true
+    },
+    "denialCause": "image_provenance_mismatch",
+    "sourceCommitComparison": "one pinned HEAD^{commit} SHA for every source file"
+  },
+  "limits": [
+    "Ephemeral local synthetic publisher, not independent external publisher approval.",
+    "Source commit assertion authentication is not reproducible-build or inventory-completeness proof.",
+    "No joined browser/native-device/assistive-technology acceptance.",
+    "M2/M6/M7 remain open."
+  ],
+  "managedAttempts": [
+    {
+      "sourceFiles": {
+        "scripts/qualify-managed-plugin-lifecycle.ts": "f2bb082e9624d90abceff37e3acaf596b70b9307ac8db5f36eff81ea477c8f54",
+        "scripts/healthy-plugin-qualification.ts": "cb3d111f9517d450b093e21235134ebb429c5a2d2e768a8242a5d7f55801697c",
+        "scripts/plugin-release-provenance.ts": "15dff3e877970ccd8a87e406f48fcbacf3babe04760587c82280271f6c151349",
+        "packages/plugin-sdk/src/releases.ts": "875b0d8ce40ad1ca298279d7102b35a413899e8122f33d52a3f2ed1d376084af",
+        "apps/api/src/plugin-artifacts.ts": "2d6d5388a8aa7025341e502112d4955037f4af1b651593db24f7e56e5ec43746",
+        "apps/api/src/docker-plugin-driver.ts": "202ad81a5a5e7faae35555f6d2fbd35d4b3c7d8890fca6cd4193cc140fa44458"
+      },
+      "rawReportSha256": "8b5fa9a433e70eff5a102876618d313920950f00ee4b2a995fe3ee3d68753606",
+      "result": {
+        "qualification": "managed-reference-plugin-lifecycle",
+        "qualifierSourceSha256": "f2bb082e9624d90abceff37e3acaf596b70b9307ac8db5f36eff81ea477c8f54",
+        "qualified": false,
+        "phase": "managed-v2-write-crash-restart-reconcile",
+        "blocker": "managed_plugin_lifecycle_qualification_failed",
+        "failureCategory": "managed_crash_reconciliation_invalid",
+        "ownerId": "managed-qualifier-2ba9315d604f",
+        "installationId": "reference-2ba9315d604f",
+        "scope": "managed-lifecycle-2ba9315d604f",
+        "gatewayMcpSuccessfulUpstreamRequests": 59,
+        "gatewayMcpStatusCounts": {
+          "200": 27,
+          "202": 32,
+          "503": 2
+        },
+        "toolApiStatusCounts": {
+          "200": 6,
+          "403": 1
+        },
+        "stageOutcomes": {
+          "v1": {
+            "afterStage": "review-required",
+            "afterApproval": "candidate-ready"
+          },
+          "v2": {
+            "afterStage": "review-required",
+            "afterApproval": "candidate-ready"
+          }
+        },
+        "crashObservation": {
+          "confirmationHttpStatus": 409,
+          "durableProposalStatus": "outcome_unknown"
+        },
+        "identities": {
+          "installerConfigurationSha256": "26e1f7ed6416e78f0b8ef0c416cb8ffa73f541af0f8eef15b41480581eee8fe5",
+          "artifacts": [
+            {
+              "id": "reference-v1",
+              "version": "1.0.0",
+              "sourceIdentity": {
+                "repository": "file:///tmp/hasi-managed-plugin-lifecycle-pzIk2m/source-1.0.0",
+                "revision": "61fd7d3ab9e337127660c194d29fd43ce2b96c90"
+              },
+              "artifactSha256": "6ca8a1eabf5c26acf414b253e78b20c6bf1a338d8255ba1e91c6ba91b6b389ee",
+              "manifestDigest": "9d5e5c904a1295ab08015e79c2d61ea8269e377ea8d6d1c8148aa295992ae66a",
+              "imageId": "sha256:de4b331a1dfa6b38490e2724fb8e803d3146236258958513c90279df9a2ca5c3",
+              "immutableImage": "localhost/hasi-reference-qualification@sha256:de4b331a1dfa6b38490e2724fb8e803d3146236258958513c90279df9a2ca5c3",
+              "releaseDigest": "2ae295a6585d470da79c61e21c031f9ad6eeeed1cd1c8ca3ef6713e1d44e79aa"
+            },
+            {
+              "id": "reference-v2",
+              "version": "1.1.0",
+              "sourceIdentity": {
+                "repository": "file:///tmp/hasi-managed-plugin-lifecycle-pzIk2m/source-1.1.0",
+                "revision": "6566c85786ccd68a355160fd9531bfe6a9f19031"
+              },
+              "artifactSha256": "70ff5d9b79e3126f7fdab05eb09382229e5daaaa32c0556471591bfdb5519199",
+              "manifestDigest": "4d78b65f247d1a94703583efbe8e148696a4329123430bb14ffe58ec1ec7db48",
+              "imageId": "sha256:0214a130e721400e84b5775ddcabeb46c802de8181fa32c974f6f34b0ac538f9",
+              "immutableImage": "localhost/hasi-reference-qualification@sha256:0214a130e721400e84b5775ddcabeb46c802de8181fa32c974f6f34b0ac538f9",
+              "releaseDigest": "b55ad471a68fd8127b51ab33422261c76e812fc0cb4261a41ceeb3c75904cbe9"
+            }
+          ]
+        },
+        "cleanup": {
+          "verified": true,
+          "containersRemoved": 4,
+          "networksRemoved": 3,
+          "imagesRemoved": 2,
+          "stateKeysRemoved": 36,
+          "expiredOidcKeysRemoved": 0,
+          "physicallyMissingOidcKeys": 0,
+          "discoveredOidcKeys": 0
+        }
+      }
+    },
+    {
+      "sourceFiles": {
+        "scripts/qualify-managed-plugin-lifecycle.ts": "aa5d21e35f23f82b2e301b58569cb1ee7834067589068498d156d866247db591",
+        "scripts/healthy-plugin-qualification.ts": "39cf28c770853638613bf7680850a88e63e1fd83e02c863b8a8542285717de91",
+        "scripts/plugin-release-provenance.ts": "15dff3e877970ccd8a87e406f48fcbacf3babe04760587c82280271f6c151349",
+        "packages/plugin-sdk/src/releases.ts": "875b0d8ce40ad1ca298279d7102b35a413899e8122f33d52a3f2ed1d376084af",
+        "apps/api/src/plugin-artifacts.ts": "2d6d5388a8aa7025341e502112d4955037f4af1b651593db24f7e56e5ec43746",
+        "apps/api/src/docker-plugin-driver.ts": "2675e9658af27fe100828a067c933066978b3785ec94a097bdd3e7e234c19747"
+      },
+      "rawReportSha256": "d8499e3e728e0acc124a0fa1cb1c50ecce8b6b0f5b556012fc3b11a4a9272868",
+      "result": {
+        "qualification": "managed-reference-plugin-lifecycle",
+        "qualifierSourceSha256": "aa5d21e35f23f82b2e301b58569cb1ee7834067589068498d156d866247db591",
+        "qualified": false,
+        "phase": "managed-v2-write-crash-restart-reconcile",
+        "blocker": "managed_plugin_lifecycle_qualification_failed",
+        "failureCategory": "managed_crash_reconciliation_invalid",
+        "ownerId": "managed-qualifier-7ba4cec3eaee",
+        "installationId": "reference-7ba4cec3eaee",
+        "scope": "managed-lifecycle-7ba4cec3eaee",
+        "gatewayMcpSuccessfulUpstreamRequests": 59,
+        "gatewayMcpStatusCounts": {
+          "200": 27,
+          "202": 32,
+          "503": 2
+        },
+        "toolApiStatusCounts": {
+          "200": 6,
+          "403": 1
+        },
+        "stageOutcomes": {
+          "v1": {
+            "afterStage": "review-required",
+            "afterApproval": "candidate-ready"
+          },
+          "v2": {
+            "afterStage": "review-required",
+            "afterApproval": "candidate-ready"
+          }
+        },
+        "crashObservation": {
+          "confirmationHttpStatus": 409,
+          "durableProposalStatus": "outcome_unknown",
+          "reconciliationEvidenceBefore": {
+            "marks": 2,
+            "sourceRows": 2,
+            "journalRows": 2,
+            "confirmedJournalRows": 1
+          },
+          "reconciliationHttpStatus": 200,
+          "reconciliationDurationMs": 11958,
+          "reconciliationEvidenceAfter": {
+            "marks": 2,
+            "sourceRows": 2,
+            "journalRows": 2,
+            "confirmedJournalRows": 2
+          },
+          "reconciliationProposalStatus": "outcome_unknown",
+          "durableReconciliationStatus": "outcome_unknown"
+        },
+        "identities": {
+          "installerConfigurationSha256": "fd58b0bd119c942a5e798320340559ebb4587e0ead3a1d7d7db7a01342e64173",
+          "artifacts": [
+            {
+              "id": "reference-v1",
+              "version": "1.0.0",
+              "sourceIdentity": {
+                "repository": "file:///tmp/hasi-managed-plugin-lifecycle-4A9Y9m/source-1.0.0",
+                "revision": "e7e0e4ece6dfd3daa2c3f93d43c0afcd091d12e5"
+              },
+              "artifactSha256": "6ca8a1eabf5c26acf414b253e78b20c6bf1a338d8255ba1e91c6ba91b6b389ee",
+              "manifestDigest": "9d5e5c904a1295ab08015e79c2d61ea8269e377ea8d6d1c8148aa295992ae66a",
+              "imageId": "sha256:eb204c40ee9c497c260b7ab85fd8418f0cfa591d642501f79520af8bfbc7d53e",
+              "immutableImage": "localhost/hasi-reference-qualification@sha256:eb204c40ee9c497c260b7ab85fd8418f0cfa591d642501f79520af8bfbc7d53e",
+              "releaseDigest": "27f37859d764fb079e24c049efd3a1ff2a2b9975d9f682a4c4e8377a00bb7143"
+            },
+            {
+              "id": "reference-v2",
+              "version": "1.1.0",
+              "sourceIdentity": {
+                "repository": "file:///tmp/hasi-managed-plugin-lifecycle-4A9Y9m/source-1.1.0",
+                "revision": "1b8467fc8d1f0839ceb71a1d49ecd71931a5e2d0"
+              },
+              "artifactSha256": "70ff5d9b79e3126f7fdab05eb09382229e5daaaa32c0556471591bfdb5519199",
+              "manifestDigest": "4d78b65f247d1a94703583efbe8e148696a4329123430bb14ffe58ec1ec7db48",
+              "imageId": "sha256:e88845cf26a3243155c82aab9523540d3f149dd91e8ebe68302e2d6cadcfb19c",
+              "immutableImage": "localhost/hasi-reference-qualification@sha256:e88845cf26a3243155c82aab9523540d3f149dd91e8ebe68302e2d6cadcfb19c",
+              "releaseDigest": "e6e0c11bb773f7588cd0e498c0924bfd5c631a339da29ed9140c8fc648384dff"
+            }
+          ]
+        },
+        "cleanup": {
+          "verified": true,
+          "containersRemoved": 4,
+          "networksRemoved": 3,
+          "imagesRemoved": 2,
+          "stateKeysRemoved": 36,
+          "expiredOidcKeysRemoved": 0,
+          "physicallyMissingOidcKeys": 0,
+          "discoveredOidcKeys": 0
+        }
+      }
+    }
+  ],
+  "operatorBundle": {
+    "result": {
+      "bundleDirectoryMode": "0700",
+      "bundleInventorySha256": "d710bbadd69e033ef51a64f54f146f90754c680984969b218fc3ce2a36772765",
+      "operatorDockerfileSha256": "4330a2228a713d101efb12be98a772a7fa9c12dc230be2896e091f0636b065cd",
+      "bundledScriptSha256": "18470de67795a0245f9b6092f4c4e1598023738e9249c2bf58441a1f54395c36",
+      "pluginSourceSha256": "ae1714c28441e4fa939d5b819ed9e20b82a4c58c9118077f0eeff7d502dc1dc5",
+      "artifactSha256": "faefcf807162ce1cd773dd6bf063f837a09e7fb2ea04fba19c9eee79c861817e",
+      "artifactManifestSha256": "1f93728244cc7725456a7f8c9c87dea5296ea69c616973b6ee4f764df509c30d",
+      "manifestDigest": "01038ec93bce8c02af0b3918911735348839ffe5a72b01de317c27d388851611",
+      "payloadFileCount": 8314,
+      "runtimePackageCount": 72,
+      "inventoryEntryCount": 10106,
+      "inventoryFileCount": 8163,
+      "inventoryTotalBytes": 88671382,
+      "inventorySymlinkCount": 161,
+      "inventorySha256": "ab7bb440bf0473aa9b67ba6691772c58e8b0c86a0bf610faeb3365525c3b9070",
+      "refreshInventoryUsage": "pnpm exec tsx scripts/package-healthy-container-qualifier.ts --refresh-inventory <absolute-bundle-directory> <initial-inventory-sha256> <initial-inventory-file-sha256>",
+      "optInGuard": "explicit_opt_in_required",
+      "counterchecks": {
+        "validPrebuilt": "accepted_before_missing_docker_executable",
+        "copiedPrebuilt": "accepted_before_missing_docker_executable",
+        "mismatchedContext": "rejected_before_docker_executable_lookup",
+        "corruptedSource": "rejected_before_docker_executable_lookup",
+        "corruptedPayload": "rejected_before_docker_executable_lookup"
+      },
+      "dockerCli": {
+        "status": "empty-placeholder",
+        "path": "docker.cli.placeholder"
+      }
+    },
+    "rawReportSha256": "83ef5fe906de32a5a74a22386fe00bc7bebbcd4d9ae21e0da14c21a0901f4eaa",
+    "sourceSha256": "fbac06351dca567b2f6603df0415d59dd3fd0a7a61047ca964b94f4f123eafeb",
+    "earlierAttempts": [
+      "Unprepared sanitized environment failed closed with ERR_PNPM_NO_OFFLINE_META.",
+      "After identical-environment preparation, old corruption oracle expected payload failure but the new earlier source-binding gate rejected it.",
+      "Separate exact source and non-source payload counterprobes now both pass."
+    ],
+    "dockerRuntimeExecuted": false,
+    "ownedBundleAndHomeRemoved": true
+  },
+  "implementationRevision": "9bd45f675aa948126d3fc9484386df3d126dcbf6",
+  "managedRun": {
+    "sourceFiles": {
+      "scripts/qualify-managed-plugin-lifecycle.ts": "02d5aff425b795eb5e72363096e420a7a923f9fb40edce44cb1d7fde682c9cb1",
+      "scripts/healthy-plugin-qualification.ts": "39cf28c770853638613bf7680850a88e63e1fd83e02c863b8a8542285717de91",
+      "scripts/plugin-release-provenance.ts": "15dff3e877970ccd8a87e406f48fcbacf3babe04760587c82280271f6c151349",
+      "packages/plugin-sdk/src/releases.ts": "875b0d8ce40ad1ca298279d7102b35a413899e8122f33d52a3f2ed1d376084af",
+      "apps/api/src/plugin-artifacts.ts": "2d6d5388a8aa7025341e502112d4955037f4af1b651593db24f7e56e5ec43746",
+      "apps/api/src/docker-plugin-driver.ts": "2675e9658af27fe100828a067c933066978b3785ec94a097bdd3e7e234c19747"
+    },
+    "rawReportSha256": "897a88e380d78045d62e9acb296eb7e1a9fd79c2e5213746d8ec859f43e55773",
+    "result": {
+      "qualification": "managed-reference-plugin-lifecycle",
+      "qualifierSourceSha256": "02d5aff425b795eb5e72363096e420a7a923f9fb40edce44cb1d7fde682c9cb1",
+      "qualified": true,
+      "scope": "isolated-local-managed-runtime; instrumented reference source derivative; synthetic-only OIDC and credentials",
+      "confirmationEvidence": "explicit-API-confirm-route-only; not browser-click evidence",
+      "realProviderCalls": 0,
+      "productionWrites": 0,
+      "syntheticSourceWrites": 3,
+      "crashObservation": {
+        "confirmationHttpStatus": 409,
+        "durableProposalStatus": "outcome_unknown",
+        "reconciliationEvidenceBefore": {
+          "marks": 2,
+          "sourceRows": 2,
+          "journalRows": 2,
+          "confirmedJournalRows": 1
+        },
+        "registryStatusObservations": [
+          {
+            "outcome": "other-error",
+            "durationMs": 9674
+          },
+          {
+            "outcome": "confirmed",
+            "durationMs": 8145
+          }
+        ],
+        "reconciliationHttpStatus": 200,
+        "reconciliationDurationMs": 11957,
+        "reconciliationEvidenceAfter": {
+          "marks": 2,
+          "sourceRows": 2,
+          "journalRows": 2,
+          "confirmedJournalRows": 2
+        },
+        "reconciliationProposalStatus": "outcome_unknown",
+        "durableReconciliationStatus": "outcome_unknown",
+        "followupStatusHttpStatus": 200,
+        "followupStatusDurationMs": 11338,
+        "followupProposalStatus": "confirmed"
+      },
+      "journey": {
+        "activatedV1": true,
+        "confirmedSourceBeforeUpdate": true,
+        "sourceAndConfigurationRetainedAcrossUpdateAndRollback": true,
+        "actualV2ContainerExitAfterSourceCommit": {
+          "containerId": "88b8aca5c390f849c2f662be7082f50d34024cc081e3e121ecc542c69ee9a7bc",
+          "exitCode": 73,
+          "confirmationHttpStatus": 409
+        },
+        "reauthenticatedReconciliationPreservesExecutionId": true,
+        "barePackageIdRejectedBeforeGateway": true,
+        "stagedPreflightApprovedAndActivatedV2": true,
+        "stageOutcomes": {
+          "v1": {
+            "afterStage": "review-required",
+            "afterApproval": "candidate-ready"
+          },
+          "v2": {
+            "afterStage": "review-required",
+            "afterApproval": "candidate-ready"
+          }
+        },
+        "v1ProposalRejectedAfterV2": true,
+        "adminDisableReenableKeepsV2ProposalInvalid": true,
+        "managedRollbackToV1": true,
+        "v2ProposalRejectedAfterRollback": true,
+        "postRollbackApiConfirmation": true
+      },
+      "effects": {
+        "marks": 3,
+        "sourceRows": 3,
+        "journalRows": 3,
+        "confirmedJournalRows": 3,
+        "invocationRows": 5,
+        "receipts": [
+          {
+            "identity": "2a3b9d9dfe15ab77c7c95f9d94b36e3ec302cfeaeb2d2d077246f21f53259690",
+            "binding": {
+              "subject": "oidc:ST8jgGyyAWCzEQG2j0AU97v1eZZeafyMTw3HiGd7mvM:d6MaPQ9eau6Ra8_RBf4dIdUdQ1DxB_zY9H1kdd4PgCk",
+              "installationId": "reference-a73ec5ea329b",
+              "executionId": "b19a44dd-a1f7-4d37-a226-393500c8e093",
+              "tool": "execute_mark",
+              "argsHash": "eebc585bf995892da7416b8460fa2521d17be19d9b332c5d538c7950469e2f73",
+              "configurationRevision": 1
+            },
+            "sourceResult": {
+              "confirmed": true,
+              "actionCount": 1,
+              "label": "Managed lifecycle 419bbdb5",
+              "account": "managed-lifecycle-account"
+            },
+            "journalStatus": "confirmed",
+            "journalResult": {
+              "label": "Managed lifecycle 419bbdb5",
+              "account": "managed-lifecycle-account",
+              "confirmed": true,
+              "actionCount": 1
+            }
+          },
+          {
+            "identity": "e6d68fc7b4665260e4ed6dded5923d568521255dc37b93559f698b2c9b8200e4",
+            "binding": {
+              "subject": "oidc:ST8jgGyyAWCzEQG2j0AU97v1eZZeafyMTw3HiGd7mvM:d6MaPQ9eau6Ra8_RBf4dIdUdQ1DxB_zY9H1kdd4PgCk",
+              "installationId": "reference-a73ec5ea329b",
+              "executionId": "2b13c516-2f89-4a0f-8201-bbf243a94940",
+              "tool": "execute_mark",
+              "argsHash": "eebc585bf995892da7416b8460fa2521d17be19d9b332c5d538c7950469e2f73",
+              "configurationRevision": 1
+            },
+            "sourceResult": {
+              "confirmed": true,
+              "actionCount": 2,
+              "label": "Managed lifecycle 419bbdb5",
+              "account": "managed-lifecycle-account"
+            },
+            "journalStatus": "confirmed",
+            "journalResult": {
+              "label": "Managed lifecycle 419bbdb5",
+              "account": "managed-lifecycle-account",
+              "confirmed": true,
+              "actionCount": 2
+            }
+          },
+          {
+            "identity": "f5bb81147b17d79812ff2fa348dbba79aca8f691b6adf4b4790234d9d0d472b8",
+            "binding": {
+              "subject": "oidc:ST8jgGyyAWCzEQG2j0AU97v1eZZeafyMTw3HiGd7mvM:d6MaPQ9eau6Ra8_RBf4dIdUdQ1DxB_zY9H1kdd4PgCk",
+              "installationId": "reference-a73ec5ea329b",
+              "executionId": "5dd13f1a-3fb5-4dd3-a19c-d0862f537bee",
+              "tool": "execute_mark",
+              "argsHash": "eebc585bf995892da7416b8460fa2521d17be19d9b332c5d538c7950469e2f73",
+              "configurationRevision": 1
+            },
+            "sourceResult": {
+              "confirmed": true,
+              "actionCount": 3,
+              "label": "Managed lifecycle 419bbdb5",
+              "account": "managed-lifecycle-account"
+            },
+            "journalStatus": "confirmed",
+            "journalResult": {
+              "label": "Managed lifecycle 419bbdb5",
+              "account": "managed-lifecycle-account",
+              "confirmed": true,
+              "actionCount": 3
+            }
+          }
+        ],
+        "actionCount": 3,
+        "gatewayMcpSuccessfulUpstreamRequests": 126,
+        "gatewayMcpStatusCounts": {
+          "200": 60,
+          "202": 66,
+          "503": 2
+        },
+        "toolApiStatusCounts": {
+          "200": 15,
+          "403": 1
+        },
+        "confirmationGatewayMcpDelta": 10,
+        "repeatedConfirmationAndStatusGatewayMcpDelta": 0,
+        "finalReadGatewayMcpDelta": 6
+      },
+      "identities": {
+        "ownerId": "managed-qualifier-a73ec5ea329b",
+        "installationId": "reference-a73ec5ea329b",
+        "scope": "managed-lifecycle-a73ec5ea329b",
+        "workerProcess": {
+          "pid": 28608,
+          "parentPid": 27943,
+          "separate": true
+        },
+        "approvedApiSource": {
+          "id": "reference-a73ec5ea329b",
+          "sourcePolicy": {
+            "sourceId": "managed-lifecycle-qualification",
+            "revision": "1",
+            "dataClasses": [
+              "synthetic_demo"
+            ]
+          }
+        },
+        "sourceFilesFromWorkspace": {
+          "examples/reference-plugin/package.json": "14003f73ed162a806af4e510d367d7fbe5e3dfb05c2ed6af0e15778bf76d6591",
+          "examples/reference-plugin/README.md": "9bb8cd1bfff144a7c6e1299bf61f47fc59899d94240c5024a768fca1d78d95e9",
+          "examples/reference-plugin/src/manifest.json": "9fbdd03fb66e2e5fbc32a97072a33e218a7e708b230ff5567ecf82a4eabb115e",
+          "examples/reference-plugin/src/server.js": "6c15efc729f0e9f960e2fc4647aee762be48e91dfc0da725aaa22991d3ea1f85",
+          "examples/reference-plugin/src/state.js": "0940467a804b6b4efbd8104f55dfe7dfcbde36b01d717ba305b287506380a9d6"
+        },
+        "installerConfigurationSha256": "4a53ea442c1710c317880e34ded2172bf643e2d701fd3e68ebb43c21c04d6465",
+        "artifacts": [
+          {
+            "id": "reference-v1",
+            "version": "1.0.0",
+            "instrumentedSourceTreeSha256": "23f111c43b3ba6c4442182f768396c47c13dc6c752555d5f7438cbff03f83f9d",
+            "instrumentedSourceFiles": {
+              "package.json": "14003f73ed162a806af4e510d367d7fbe5e3dfb05c2ed6af0e15778bf76d6591",
+              "README.md": "9bb8cd1bfff144a7c6e1299bf61f47fc59899d94240c5024a768fca1d78d95e9",
+              "src/manifest.json": "39e1a8df440022d677032735fb38ff6395ec1178072e2981d15cc66e698d0396",
+              "src/server.js": "6c15efc729f0e9f960e2fc4647aee762be48e91dfc0da725aaa22991d3ea1f85",
+              "src/state.js": "0940467a804b6b4efbd8104f55dfe7dfcbde36b01d717ba305b287506380a9d6"
+            },
+            "sourceIdentity": {
+              "repository": "file:///tmp/hasi-managed-plugin-lifecycle-yQwB50/source-1.0.0",
+              "revision": "e73e31e1c3adc39410a5ac3cd3e9259d38093ead"
+            },
+            "artifactSha256": "6ca8a1eabf5c26acf414b253e78b20c6bf1a338d8255ba1e91c6ba91b6b389ee",
+            "artifactManifestSha256": "c455c9f52c35f6e177caf598a9cb66e08192dc4716d77fd5e0412534e8a4311c",
+            "manifestDigest": "9d5e5c904a1295ab08015e79c2d61ea8269e377ea8d6d1c8148aa295992ae66a",
+            "imageId": "sha256:1c162adbf8c67536006e0617211381fcdf2cf72d433afb001522cafad2743b57",
+            "immutableImage": "localhost/hasi-reference-qualification@sha256:1c162adbf8c67536006e0617211381fcdf2cf72d433afb001522cafad2743b57",
+            "releaseDigest": "16973a35aed957551bef9240ddae45b9ef8931296136dd13551deb7d8ea30461"
+          },
+          {
+            "id": "reference-v2",
+            "version": "1.1.0",
+            "instrumentedSourceTreeSha256": "cf2778ae853c941909f1a65f06164fdc17e60f5885717557fd6a4db175436c0a",
+            "instrumentedSourceFiles": {
+              "package.json": "ab9bb7436cb768e57a7b5efe6299047f757e49b58249dd3175ffe4cedd8e0550",
+              "README.md": "9bb8cd1bfff144a7c6e1299bf61f47fc59899d94240c5024a768fca1d78d95e9",
+              "src/manifest.json": "4ab7e5db4a54ac27fdc1c96359ee627db78eaf5bc44e5829143636931e355732",
+              "src/server.js": "1dd951c18abffe79661b1aaf693f892c69f411d644bcb21bfe69e997c8dd3c7f",
+              "src/state.js": "0940467a804b6b4efbd8104f55dfe7dfcbde36b01d717ba305b287506380a9d6"
+            },
+            "sourceIdentity": {
+              "repository": "file:///tmp/hasi-managed-plugin-lifecycle-yQwB50/source-1.1.0",
+              "revision": "bafa0e00bd843bbab4980efaab3cb7a13dfc1166"
+            },
+            "artifactSha256": "70ff5d9b79e3126f7fdab05eb09382229e5daaaa32c0556471591bfdb5519199",
+            "artifactManifestSha256": "e294f017afff350e2e6a8decec21934ffe516f457969268934a4f56a15b6c6d2",
+            "manifestDigest": "4d78b65f247d1a94703583efbe8e148696a4329123430bb14ffe58ec1ec7db48",
+            "imageId": "sha256:77889f5b8e8f109a68ed87e6c4cdfcf1d74e91518371039df8f2fd49222275a2",
+            "immutableImage": "localhost/hasi-reference-qualification@sha256:77889f5b8e8f109a68ed87e6c4cdfcf1d74e91518371039df8f2fd49222275a2",
+            "releaseDigest": "d6e7d0c0ac67498397cd1f697dd7dcd39b9e874423a86acb452bc19cff11c604"
+          }
+        ]
+      },
+      "gatewayOrigin": "http://127.0.0.1:59981",
+      "cleanup": {
+        "verified": true,
+        "containersRemoved": 4,
+        "networksRemoved": 3,
+        "imagesRemoved": 2,
+        "stateKeysRemoved": 43,
+        "expiredOidcKeysRemoved": 0,
+        "physicallyMissingOidcKeys": 0,
+        "discoveredOidcKeys": 0
+      }
+    },
+    "sourceFilesMatchCommittedImplementation": true,
+    "publicProjection": "Redundant top-level execution ID omitted; the same synthetic IDs remain bound to individual receipts. Raw-report digest identifies the unmodified private report."
+  }
+}
