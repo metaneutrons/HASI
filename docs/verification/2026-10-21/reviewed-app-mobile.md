@@ -91,7 +91,9 @@ synthetic authorization and browser-local transcripts, not institutional identit
   and mouse-to-touch attempts did not establish a touch activation. Do not
   infer one from coarse-pointer layout or 44px controls. The attempted native
   iPhone Simulator could not open while the Mac was locked. That bounded
-  technical touch observation remains pending, separate from M8 hardware/AT.
+  technical observation was subsequently completed by the separate
+  [trusted Chromium/WebKit touch proof](reviewed-app-touch.md); that does not
+  extend these original observations or establish M8 hardware/AT acceptance.
 - A longer neutral office-preference reply exposed an independent fixed-dialog
   parser issue. Its narrow repair and 55 focused parser/dialogue/fast-path tests
   are separate from these frozen view observations; no joined parser browser

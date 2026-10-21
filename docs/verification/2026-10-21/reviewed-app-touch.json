@@ -1,0 +1,563 @@
+{
+  "record": "reviewed-app-touch",
+  "runDate": "2026-10-21",
+  "criterion": {
+    "id": "P2-A3 technical touch subset",
+    "normativeRequirement": "Feed HASI theme tokens, locale, time zone and dimensions into the view; test theme changes, keyboard/focus, touch, text enlargement and loss of the UI resource. A useful fallback remains available. State the protocol and library versions qualified; do not assume future native-app host support. Technical checks use automated browsers/simulators; native hardware and screen-reader acceptance transfers to M8-A7.",
+    "reference": "docs/plans/consolidated-delivery.md:351-356",
+    "scopeStatement": "This record supplies only actual browser-generated touch activation evidence. It does not independently accept all of P2-A3, M2, or M8."
+  },
+  "revision": "0d021e5540f869e34a79108a977b113e621b9c1e",
+  "runtime": {
+    "node": "v26.11.1",
+    "pnpm": "12.11.2",
+    "playwrightCore": "1.64.0",
+    "playwrightCorePackagePath": "/Volumes/Dev/Source/aidesk/node_modules/.pnpm/playwright-core@1.64.0/node_modules/playwright-core",
+    "appSdk": "@modelcontextprotocol/ext-apps 2.0.3",
+    "manifestMcpVersion": "2026-07-28",
+    "uiInitializeProtocolVersionObserved": "2026-01-26",
+    "launch": "TEST_DATABASE_URL='postgresql://postgres@127.0.0.1:32775/hasi_topology_test' HASI_WEB_PORT=3002 pnpm exec tsx scripts/dev.ts --test-idp --plugin-apps",
+    "modelProfile": "offline Dialog-Demo; deterministic synthetic TestIdP and Anny data; no real provider credentials or calls",
+    "sourceSha256": {
+      "scripts/dev.ts": "3f2d6a26533d9fec85d1b73ba67d0c057d6707f824170ea60114d9c090afed47",
+      "apps/anny-plugin/src/app-view-template.html": "f8aadc0c0ca1c4080678c1de2c05316fb48e1548d536fe9fe4a0723e862a91d9",
+      "apps/anny-plugin/src/app-view.generated.html": "0c4bd34f8c35d9d224e3d90ee8938f885cfb62efba2d45e6bd324f09d5b887be",
+      "apps/anny-plugin/src/app-view-metadata.generated.ts": "f10da752d660107c5b28564774ba3fe7dcb277cd9258ca281004ccaaf189cd2e",
+      "apps/anny-plugin/src/manifest.ts": "f11226727e1c6b8a0808f32f7facd3f868eefe5dbe3241dbb44531f4c8eee7fb",
+      "apps/anny-plugin/src/app-view.ts": "bc5b4e7183e2efc0a91dcde11c45a7e7ba5e3c1de83cdc506b97982c0a434e7e",
+      "apps/web/src/components/assistant-page.tsx": "6402903175b69b17bd2be4869f7223e171e7709982e9edc66d8150a68541110f",
+      "apps/web/src/components/plugin-result-app.tsx": "0f7f1e2c72064ae4f557e6fac4c451e5b554efc8b20a306703725f56f7acdc5d",
+      "apps/web/src/components/plugin-app-view.tsx": "8115e043b444d5a7783d6f53b0fade7a791fa03b03144cea4f4b32ae731f8b4f"
+    }
+  },
+  "results": [
+    {
+      "engine": "chromium",
+      "browserVersion": "156.0.8078.4",
+      "context": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "isMobile": true,
+        "hasTouch": true,
+        "deviceScaleFactor": 1,
+        "locale": "de-DE",
+        "timezoneId": "Europe/Berlin",
+        "colorScheme": "light"
+      },
+      "hostEnvironment": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "coarsePointer": true,
+        "maxTouchPoints": 1,
+        "colorScheme": "light",
+        "locale": "de-DE",
+        "timeZone": "Europe/Berlin"
+      },
+      "iframeEnvironment": {
+        "viewport": {
+          "width": 330,
+          "height": 606
+        },
+        "coarsePointer": true,
+        "maxTouchPoints": 1,
+        "locale": "de-DE",
+        "timeZone": "Europe/Berlin"
+      },
+      "mcpInitializeProtocolVersionsObserved": [
+        "2026-01-26"
+      ],
+      "resourceSha256": "0c4bd34f8c35d9d224e3d90ee8938f885cfb62efba2d45e6bd324f09d5b887be",
+      "initialRead": {
+        "method": "POST",
+        "path": "/api/tools/call",
+        "status": 200,
+        "request": {
+          "pluginId": "de.hsh.hasi.anny",
+          "name": "anny.view_resources",
+          "source": "app",
+          "argumentKeys": [
+            "page",
+            "pageSize"
+          ]
+        },
+        "response": {
+          "resourceSha256": null,
+          "resourceCount": 6,
+          "total": 43,
+          "page": 0
+        }
+      },
+      "noActionControl": {
+        "observationMs": 1200,
+        "before": 1,
+        "after": 1,
+        "unchanged": true
+      },
+      "activations": [
+        {
+          "activation": 1,
+          "beforeReads": 1,
+          "afterReads": 2,
+          "readDelta": 1,
+          "call": {
+            "method": "POST",
+            "path": "/api/tools/call",
+            "status": 200,
+            "request": {
+              "pluginId": "de.hsh.hasi.anny",
+              "name": "anny.view_resources",
+              "source": "app",
+              "argumentKeys": [
+                "page",
+                "pageSize"
+              ]
+            },
+            "response": {
+              "resourceSha256": null,
+              "resourceCount": 6,
+              "total": 43,
+              "page": 0
+            }
+          },
+          "events": [
+            {
+              "type": "pointerdown",
+              "trusted": true,
+              "pointerType": "touch",
+              "targetId": "reload"
+            },
+            {
+              "type": "touchstart",
+              "trusted": true,
+              "pointerType": null,
+              "targetId": "reload"
+            },
+            {
+              "type": "pointerup",
+              "trusted": true,
+              "pointerType": "touch",
+              "targetId": "reload"
+            },
+            {
+              "type": "touchend",
+              "trusted": true,
+              "pointerType": null,
+              "targetId": "reload"
+            }
+          ],
+          "allObservedTouchEventsTrustedForRefresh": true,
+          "successUi": true
+        },
+        {
+          "activation": 2,
+          "beforeReads": 2,
+          "afterReads": 3,
+          "readDelta": 1,
+          "call": {
+            "method": "POST",
+            "path": "/api/tools/call",
+            "status": 200,
+            "request": {
+              "pluginId": "de.hsh.hasi.anny",
+              "name": "anny.view_resources",
+              "source": "app",
+              "argumentKeys": [
+                "page",
+                "pageSize"
+              ]
+            },
+            "response": {
+              "resourceSha256": null,
+              "resourceCount": 6,
+              "total": 43,
+              "page": 0
+            }
+          },
+          "events": [
+            {
+              "type": "pointerdown",
+              "trusted": true,
+              "pointerType": "touch",
+              "targetId": "reload"
+            },
+            {
+              "type": "touchstart",
+              "trusted": true,
+              "pointerType": null,
+              "targetId": "reload"
+            },
+            {
+              "type": "pointerup",
+              "trusted": true,
+              "pointerType": "touch",
+              "targetId": "reload"
+            },
+            {
+              "type": "touchend",
+              "trusted": true,
+              "pointerType": null,
+              "targetId": "reload"
+            }
+          ],
+          "allObservedTouchEventsTrustedForRefresh": true,
+          "successUi": true
+        }
+      ],
+      "finalUi": {
+        "status": "43 Treffer · Seite 1 von 8",
+        "refreshLabel": "Aktualisieren",
+        "finalAuthorizedViewReads": 3,
+        "sourceDigest": "0c4bd34f8c35d9d224e3d90ee8938f885cfb62efba2d45e6bd324f09d5b887be"
+      },
+      "apiRequestCounts": {
+        "GET /api/session": 7,
+        "GET /api/auth/login": 1,
+        "GET /api/auth/callback": 1,
+        "GET /api/chat/workspace": 2,
+        "GET /api/chat": 2,
+        "GET /api/plugin-accounts": 2,
+        "POST /api/chat/timestamps": 2,
+        "POST /api/chat/dialogue": 1,
+        "GET /api/plugin-apps/de.hsh.hasi.anny/resources": 1,
+        "POST /api/tools/call": 3,
+        "PUT /api/chat/workspace": 1
+      },
+      "modelGenerationPosts": 0,
+      "bookingCancellationWrites": [],
+      "pageErrors": [],
+      "cspConsoleDiagnosticCount": 3,
+      "cspDiagnosticContentsRetained": false,
+      "cspAssessment": "Exact diagnostic strings were not retained in durable evidence; no CSP conclusion is made from the count."
+    },
+    {
+      "engine": "webkit",
+      "browserVersion": "27.2",
+      "context": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "isMobile": true,
+        "hasTouch": true,
+        "deviceScaleFactor": 1,
+        "locale": "de-DE",
+        "timezoneId": "Europe/Berlin",
+        "colorScheme": "light"
+      },
+      "hostEnvironment": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "coarsePointer": true,
+        "maxTouchPoints": 0,
+        "colorScheme": "light",
+        "locale": "de-DE",
+        "timeZone": "Europe/Berlin"
+      },
+      "iframeEnvironment": {
+        "viewport": {
+          "width": 330,
+          "height": 606
+        },
+        "coarsePointer": true,
+        "maxTouchPoints": 0,
+        "locale": "de-DE",
+        "timeZone": "Europe/Berlin"
+      },
+      "mcpInitializeProtocolVersionsObserved": [
+        "2026-01-26"
+      ],
+      "resourceSha256": "0c4bd34f8c35d9d224e3d90ee8938f885cfb62efba2d45e6bd324f09d5b887be",
+      "initialRead": {
+        "method": "POST",
+        "path": "/api/tools/call",
+        "status": 200,
+        "request": {
+          "pluginId": "de.hsh.hasi.anny",
+          "name": "anny.view_resources",
+          "source": "app",
+          "argumentKeys": [
+            "page",
+            "pageSize"
+          ]
+        },
+        "response": {
+          "resourceSha256": null,
+          "resourceCount": 6,
+          "total": 43,
+          "page": 0
+        }
+      },
+      "noActionControl": {
+        "observationMs": 1200,
+        "before": 1,
+        "after": 1,
+        "unchanged": true
+      },
+      "activations": [
+        {
+          "activation": 1,
+          "beforeReads": 1,
+          "afterReads": 2,
+          "readDelta": 1,
+          "call": {
+            "method": "POST",
+            "path": "/api/tools/call",
+            "status": 200,
+            "request": {
+              "pluginId": "de.hsh.hasi.anny",
+              "name": "anny.view_resources",
+              "source": "app",
+              "argumentKeys": [
+                "page",
+                "pageSize"
+              ]
+            },
+            "response": {
+              "resourceSha256": null,
+              "resourceCount": 6,
+              "total": 43,
+              "page": 0
+            }
+          },
+          "events": [
+            {
+              "type": "pointerdown",
+              "trusted": true,
+              "pointerType": "touch",
+              "targetId": "reload"
+            },
+            {
+              "type": "touchstart",
+              "trusted": true,
+              "pointerType": null,
+              "targetId": "reload"
+            },
+            {
+              "type": "pointerup",
+              "trusted": true,
+              "pointerType": "touch",
+              "targetId": "reload"
+            },
+            {
+              "type": "touchend",
+              "trusted": true,
+              "pointerType": null,
+              "targetId": "reload"
+            }
+          ],
+          "allObservedTouchEventsTrustedForRefresh": true,
+          "successUi": true
+        },
+        {
+          "activation": 2,
+          "beforeReads": 2,
+          "afterReads": 3,
+          "readDelta": 1,
+          "call": {
+            "method": "POST",
+            "path": "/api/tools/call",
+            "status": 200,
+            "request": {
+              "pluginId": "de.hsh.hasi.anny",
+              "name": "anny.view_resources",
+              "source": "app",
+              "argumentKeys": [
+                "page",
+                "pageSize"
+              ]
+            },
+            "response": {
+              "resourceSha256": null,
+              "resourceCount": 6,
+              "total": 43,
+              "page": 0
+            }
+          },
+          "events": [
+            {
+              "type": "pointerdown",
+              "trusted": true,
+              "pointerType": "touch",
+              "targetId": "reload"
+            },
+            {
+              "type": "touchstart",
+              "trusted": true,
+              "pointerType": null,
+              "targetId": "reload"
+            },
+            {
+              "type": "pointerup",
+              "trusted": true,
+              "pointerType": "touch",
+              "targetId": "reload"
+            },
+            {
+              "type": "touchend",
+              "trusted": true,
+              "pointerType": null,
+              "targetId": "reload"
+            }
+          ],
+          "allObservedTouchEventsTrustedForRefresh": true,
+          "successUi": true
+        }
+      ],
+      "finalUi": {
+        "status": "43 Treffer · Seite 1 von 8",
+        "refreshLabel": "Aktualisieren",
+        "finalAuthorizedViewReads": 3,
+        "sourceDigest": "0c4bd34f8c35d9d224e3d90ee8938f885cfb62efba2d45e6bd324f09d5b887be"
+      },
+      "apiRequestCounts": {
+        "GET /api/session": 7,
+        "GET /api/auth/login": 1,
+        "GET /api/auth/callback": 1,
+        "GET /api/chat/workspace": 2,
+        "GET /api/chat": 2,
+        "GET /api/plugin-accounts": 2,
+        "POST /api/chat/timestamps": 2,
+        "POST /api/chat/dialogue": 1,
+        "GET /api/plugin-apps/de.hsh.hasi.anny/resources": 1,
+        "POST /api/tools/call": 3,
+        "PUT /api/chat/workspace": 1
+      },
+      "modelGenerationPosts": 0,
+      "bookingCancellationWrites": [],
+      "pageErrors": [],
+      "cspConsoleDiagnosticCount": 3,
+      "cspDiagnosticContentsRetained": false,
+      "cspAssessment": "Exact diagnostic strings were not retained in durable evidence; no CSP conclusion is made from the count."
+    }
+  ],
+  "database": {
+    "database": "hasi_topology_test (isolated local PostgreSQL; no reset/delete)",
+    "fingerprintMethod": {
+      "before": "Grouped row count and MD5 over sorted namespace|key|revision|expires_at tuples; raw values were not selected.",
+      "after": "Same metadata fingerprint plus MD5 over sorted namespace|key|revision|expires_at|MD5(value::text) tuples; raw values were not selected.",
+      "normalization": "plugin-route-process-* grouped as plugin-route-process; otherwise first namespace segment before ':'",
+      "limitation": "No pre-run value fingerprint exists, so post-run value hashes cannot prove values unchanged. For every namespace group other than protected-chat-workspaces, pre/post row counts and metadata fingerprints matched exactly; no value-stability conclusion is made."
+    },
+    "before": [
+      {
+        "namespaceGroup": "anny-source-test",
+        "rows": 2888,
+        "metadataFingerprint": "36973c71d7a8c4af853574151426e103"
+      },
+      {
+        "namespaceGroup": "demo-test",
+        "rows": 26438,
+        "metadataFingerprint": "76ac5f4c9f82cbe245b2902c33811ca8"
+      },
+      {
+        "namespaceGroup": "journey",
+        "rows": 249,
+        "metadataFingerprint": "6d6c91c9ca036ed28fc9bbae0b2de2d9"
+      },
+      {
+        "namespaceGroup": "model-budgets",
+        "rows": 1,
+        "metadataFingerprint": "12f1c177654e8590e57c63ee113f8f1e"
+      },
+      {
+        "namespaceGroup": "plugin-route-process",
+        "rows": 140,
+        "metadataFingerprint": "ae029b50b44ccff86ebebb86c7d2f6d9"
+      },
+      {
+        "namespaceGroup": "production",
+        "rows": 157,
+        "metadataFingerprint": "98680478d20454c7942a9a7f741031ee"
+      },
+      {
+        "namespaceGroup": "protected-chat-workspaces",
+        "rows": 55,
+        "metadataFingerprint": "1c83424fa054849b65a0ac9bd52d6da8"
+      },
+      {
+        "namespaceGroup": "topology",
+        "rows": 14,
+        "metadataFingerprint": "43664bd58076f19ec1bf73bcdca2ff2f"
+      }
+    ],
+    "after": [
+      {
+        "namespaceGroup": "anny-source-test",
+        "rows": 2888,
+        "metadataFingerprint": "36973c71d7a8c4af853574151426e103",
+        "valueFingerprint": "257cc8b0c418a32c29edb8e0c1fb4ec9"
+      },
+      {
+        "namespaceGroup": "demo-test",
+        "rows": 26438,
+        "metadataFingerprint": "76ac5f4c9f82cbe245b2902c33811ca8",
+        "valueFingerprint": "f9f04115458053a0753deea4d45968d4"
+      },
+      {
+        "namespaceGroup": "journey",
+        "rows": 249,
+        "metadataFingerprint": "6d6c91c9ca036ed28fc9bbae0b2de2d9",
+        "valueFingerprint": "f0c610fd87f5f03fe884662855d8f142"
+      },
+      {
+        "namespaceGroup": "model-budgets",
+        "rows": 1,
+        "metadataFingerprint": "12f1c177654e8590e57c63ee113f8f1e",
+        "valueFingerprint": "d353843da853d4b3e1d22489a4476a33"
+      },
+      {
+        "namespaceGroup": "plugin-route-process",
+        "rows": 140,
+        "metadataFingerprint": "ae029b50b44ccff86ebebb86c7d2f6d9",
+        "valueFingerprint": "7db31f4f274d6fcf331aa36928228abd"
+      },
+      {
+        "namespaceGroup": "production",
+        "rows": 157,
+        "metadataFingerprint": "98680478d20454c7942a9a7f741031ee",
+        "valueFingerprint": "5d0a0676d1ac3654083d102f7d31f4aa"
+      },
+      {
+        "namespaceGroup": "protected-chat-workspaces",
+        "rows": 56,
+        "metadataFingerprint": "5f7e15d9103fb2b892fc6c742e675922",
+        "valueFingerprint": "ae08c502a8f400fe454a9f8b805b4b5d"
+      },
+      {
+        "namespaceGroup": "topology",
+        "rows": 14,
+        "metadataFingerprint": "43664bd58076f19ec1bf73bcdca2ff2f",
+        "valueFingerprint": "2ff25e3956771d86b1313c2c04b2b236"
+      }
+    ],
+    "observedDelta": "protected-chat-workspaces increased from 55 to 56, consistent with one synthetic local workspace created by the UI run. It was retained; no row was deleted. Other groups retained their exact baseline counts and metadata fingerprints."
+  },
+  "cleanup": {
+    "browserContexts": "Closed in finally block for both engines.",
+    "ownedLauncher": "Stopped by interrupting exec session 82955; process exited 0.",
+    "ports": "No listeners remained on TCP 3002 or 4100-4103; no touch harness/browser process remained.",
+    "database": "No reset or deletion. One additional synthetic protected-chat-workspaces row retained.",
+    "generatedFile": "The dev launcher temporarily changed apps/web/next-env.d.ts to use .next/dev/types imports. After launcher shutdown, it matched HEAD again; no generated diff remains.",
+    "temporaryHarness": {
+      "path": "/private/tmp/hasi-touch-syejp98_/touch-proof.mjs",
+      "sha256": "0d1b2975c1bc13ae1e70dfb3c71b9bc69964de3587648f5d8261fd96e0d2ad58",
+      "outputPath": "/private/tmp/hasi-touch-syejp98_/touch-proof-output.json",
+      "outputSha256": "9d0c5311b453e67681e4951d63ac43b466c2b20feca31027fea25ac31092a3f8",
+      "preserved": "Exact executed harness is embedded in reviewed-app-touch.md.",
+      "removedAfterEmbedding": true
+    }
+  },
+  "limitations": [
+    "The run uses headless browser mobile emulation, not an iPhone or Android device. Native Safari/Chrome, operating-system keyboard/safe-area behavior, VoiceOver/TalkBack, participants and real-device journeys remain M8-A7 per docs/plans/hasi-mvp.md:215-224.",
+    "WebKit 27.2 reported navigator.maxTouchPoints=0 despite isMobile=true, hasTouch=true and coarsePointer=true; the iframe nevertheless emitted trusted pointerdown/up with pointerType=touch and trusted touchstart/end for each Locator.tap.",
+    "Only the safe read-only Refresh control was activated. Booking, cancellation, model generation and real/institutional authorization are outside this touch proof.",
+    "The pre-run DB snapshot omitted value hashes; no value-stability claim is made.",
+    "This run does not retest theme changes, keyboard/focus, text enlargement, resource-loss fallback, P2-A4 go/no-go or M8 acceptance; see docs/verification/2026-10-21/reviewed-app-mobile.md for separate evidence."
+  ]
+}
