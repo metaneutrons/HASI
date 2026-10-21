@@ -20,7 +20,7 @@ welcome text targets passed in both candidate themes at 1280×900.
 The same measurement passed 56 actual mobile navigation text pairs: Chats,
 Bookings, Connections and Administration, at 320/375/390×844, light/dark, with
 the chat or administration route active; the administration route also has a
-390px/32px-root sample in each theme. Minimum observed ratios are 5.190:1 in
+390px/32px-root sample in each theme. Minimum observed ratios are 5.058:1 in
 light and 6.144:1 in dark. These readings qualify those specific navigation
 pairs; they do not silently accept all earlier incomplete admin/chat targets.
 
