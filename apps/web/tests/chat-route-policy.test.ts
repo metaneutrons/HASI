@@ -259,7 +259,7 @@ describe("chat route profile switching policy", () => {
       throw new Error("Unexpected test fetch");
     }) satisfies typeof fetch);
     const response = await postChat({ conversationId, profileId: "groq-oss-120b", proposalIds: [proposalId], messages: [{ role: "user", content: "Mein VPN funktioniert nicht" }] }, controller.signal);
-    expect(response.status).toBe(mode === "before" || mode === "after" || mode === "aborted" ? 409 : 200);
+    expect(response.status).toBe(mode === "aborted" ? 499 : mode === "before" || mode === "after" ? 409 : 200);
     const responseText = await response.text();
     if (mode === "before" || mode === "after") { expect(responseText).toContain("Aktionsstatus"); expect(responseText).not.toContain("Quellenrechte"); }
     expect(providerCalls).toBe(mode === "before" || mode === "aborted" ? 0 : 1);

@@ -1,0 +1,791 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-21",
+  "baseCommit": "9c757138844ff2015c2f4101c930345ab2e507c0",
+  "fixture": {
+    "api": "in-memory-only",
+    "builtAt": "2026-10-21T17:28:02.703Z",
+    "fixture": "synthetic-in-memory",
+    "output": {
+      "bundleSha256": "b2b5193405fcb072d78fd9e7c8d68ed7c82f757cce78cb9a1353e5e5f66dfecc",
+      "componentCssSha256": "2bbae669c52aca64b029609239f415cd0d943074ed13ec5cd64ed5093615ac23",
+      "globalCssSha256": "45eb87023a4334e17f96d27cde46863f9d7a40377609db00fb36b2ae0e858a11"
+    },
+    "render": "actual AssistantPage and actual Providers; app navigation/header omitted; one-column test wrapper",
+    "runtime": {
+      "esbuild": "0.28.2",
+      "minified": true,
+      "react": "19.3.1",
+      "reactDom": "19.3.1"
+    },
+    "source": {
+      "aggregateSha256": "18f1e9559312fd3f5db5bc3b938e96668f61231fe1dacb6ca4e9e0be6b972c7e",
+      "assistantPageSha256": "6402903175b69b17bd2be4869f7223e171e7709982e9edc66d8150a68541110f",
+      "files": {
+        "apps/web/src/app/globals.css": "c4b822edf2602132fa5e3fd4d11ed81c1f669079b80eb7daf9cc46ef21ccae17",
+        "apps/web/src/components/assistant-page.tsx": "6402903175b69b17bd2be4869f7223e171e7709982e9edc66d8150a68541110f",
+        "apps/web/src/components/chat-markdown.module.css": "ef5f7c5f04700819a6ca38905db561faf006fe32b952abc73cc2ac3faca65267",
+        "apps/web/src/components/chat-message-copy.module.css": "8e4ed7af10de509e6c68f489225d060ec281a164bb439a718ac65f3123d65df6",
+        "apps/web/src/components/chat-sidebar-context.tsx": "c119446c6afac33485a42838afce66fb63790b4f6ac5817b7b7cbbea1cf51cce",
+        "apps/web/src/components/providers.tsx": "3487808492857802a2e09f4f4e007c98cdbf370dda7ed0527fa1bee58fadad3d",
+        "apps/web/src/components/session-provider.tsx": "cf1e15b902a132f18be21a1614574c23243fe4ee124d2032a02a325a82538925"
+      },
+      "globalCssSourceSha256": "c4b822edf2602132fa5e3fd4d11ed81c1f669079b80eb7daf9cc46ef21ccae17"
+    }
+  },
+  "observations": [
+    {
+      "label": "fixed-held-with-draft-390",
+      "at": "2026-10-21T17:28:30.322Z",
+      "draft": "Mein ungesendeter Entwurf **bleibt**",
+      "focus": {
+        "tag": "BUTTON",
+        "label": "Antwort stoppen"
+      },
+      "stop": {
+        "x": 321,
+        "y": 679,
+        "width": 44,
+        "height": 44,
+        "hit": true
+      },
+      "statuses": [
+        "",
+        "",
+        "Custom endpoint antwortet …"
+      ],
+      "alerts": [],
+      "body": "ChatsSynthetic fixtureNeuer ChatUnterhaltungDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextHallo HASIMarkdown kopierenSchließenHallo HASICustom endpoint antwortet …Nachricht an HASIMarkdown ist möglich. Umschalt und Eingabetaste fügt eine neue Zeile ein. Eingabetaste sendet die Nachricht.Mein ungesendeter Entwurf **bleibt** Custom endpoint · anny-TestdatenNachrichten und ausgewählte Toolergebnisse gehen an Custom endpoint. Bitte nur Testdaten eingeben.",
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "fixed-abort-aware-stopped-390",
+      "at": "2026-10-21T17:28:30.595Z",
+      "draft": "Mein ungesendeter Entwurf **bleibt**",
+      "focus": {
+        "tag": "TEXTAREA",
+        "label": null
+      },
+      "stop": null,
+      "statuses": [
+        "",
+        "",
+        "Antwort gestoppt. Du kannst weiterschreiben."
+      ],
+      "alerts": [],
+      "body": "ChatsSynthetic fixtureNeuer ChatUnterhaltungDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextHallo HASIMarkdown kopierenSchließenHallo HASIAntwort gestoppt. Du kannst weiterschreiben.Nachricht an HASIMarkdown ist möglich. Umschalt und Eingabetaste fügt eine neue Zeile ein. Eingabetaste sendet die Nachricht.Mein ungesendeter Entwurf **bleibt** Custom endpoint · anny-TestdatenNachrichten und ausgewählte Toolergebnisse gehen an Custom endpoint. Bitte nur Testdaten eingeben.",
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "ignored-abort-stopping-with-draft",
+      "at": "2026-10-21T17:28:41.767Z",
+      "draft": "Dieser Entwurf bleibt auch bei später Antwort",
+      "focus": {
+        "tag": "BODY",
+        "label": null
+      },
+      "stop": null,
+      "statuses": [
+        "",
+        "",
+        "",
+        "",
+        "Antwort wird gestoppt …"
+      ],
+      "alerts": [],
+      "body": "ChatsSynthetic fixtureNeuer ChatUnterhaltungDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextHallo HASIMarkdown kopierenSchließenHallo HASIDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextWie funktioniert der Zugang?Markdown kopierenSchließenWie funktioniert der Zugang?Antwort wird gestoppt …Nachricht an HASIMarkdown ist möglich. Umschalt und Eingabetaste fügt eine neue Zeile ein. Eingabetaste sendet die Nachricht.Dieser Entwurf bleibt auch bei später Antwort Custom endpoint · anny-TestdatenNachrichten und ausgewählte Toolergebnisse gehen an Custom endpoint. Bitte nur Testdaten eingeben.",
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "late-tool-reply-discarded",
+      "at": "2026-10-21T17:28:41.952Z",
+      "draft": "Dieser Entwurf bleibt auch bei später Antwort",
+      "focus": {
+        "tag": "TEXTAREA",
+        "label": null
+      },
+      "stop": null,
+      "statuses": [
+        "",
+        "",
+        "",
+        "",
+        "Antwort gestoppt. Du kannst weiterschreiben."
+      ],
+      "alerts": [],
+      "body": "ChatsSynthetic fixtureNeuer ChatUnterhaltungDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextHallo HASIMarkdown kopierenSchließenHallo HASIDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextWie funktioniert der Zugang?Markdown kopierenSchließenWie funktioniert der Zugang?Antwort gestoppt. Du kannst weiterschreiben.Nachricht an HASIMarkdown ist möglich. Umschalt und Eingabetaste fügt eine neue Zeile ein. Eingabetaste sendet die Nachricht.Dieser Entwurf bleibt auch bei später Antwort Custom endpoint · anny-TestdatenNachrichten und ausgewählte Toolergebnisse gehen an Custom endpoint. Bitte nur Testdaten eingeben.",
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "next-message-success",
+      "at": "2026-10-21T17:28:53.600Z",
+      "draft": "",
+      "focus": {
+        "tag": "TEXTAREA",
+        "label": null
+      },
+      "stop": null,
+      "statuses": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "alerts": [],
+      "body": "ChatsSynthetic fixtureNeuer ChatUnterhaltungDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextHallo HASIMarkdown kopierenSchließenHallo HASIDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextWie funktioniert der Zugang?Markdown kopierenSchließenWie funktioniert der Zugang?Du21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextBitte antworte jetzt normal.Markdown kopierenSchließenBitte antworte jetzt normal. HASI Custom endpoint · Synthetic fixture21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextSynthetic fixture response.Markdown kopierenSchließenSynthetic fixture response.Nachricht an HASIMarkdown ist möglich. Umschalt und Eingabetaste fügt eine neue Zeile ein. Eingabetaste sendet die Nachricht. Custom endpoint · anny-TestdatenNachrichten und ausgewählte Toolergebnisse gehen an Custom endpoint. Bitte nur Testdaten eingeben.",
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "tool-read-pending-stop-absent",
+      "at": "2026-10-21T17:28:53.705Z",
+      "draft": "",
+      "focus": {
+        "tag": "TEXTAREA",
+        "label": null
+      },
+      "stop": null,
+      "statuses": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Wissensdienst · Quellen suchen"
+      ],
+      "alerts": [],
+      "body": "ChatsSynthetic fixtureNeuer ChatUnterhaltungDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextHallo HASIMarkdown kopierenSchließenHallo HASIDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextWie funktioniert der Zugang?Markdown kopierenSchließenWie funktioniert der Zugang?Du21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextBitte antworte jetzt normal.Markdown kopierenSchließenBitte antworte jetzt normal. HASI Custom endpoint · Synthetic fixture21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextSynthetic fixture response.Markdown kopierenSchließenSynthetic fixture response.Du21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextWie ist der nächste Prüfschritt?Markdown kopierenSchließenWie ist der nächste Prüfschritt?Wissensdienst · Quellen suchenNachricht an HASIMarkdown ist möglich. Umschalt und Eingabetaste fügt eine neue Zeile ein. Eingabetaste sendet die Nachricht. Custom endpoint · anny-TestdatenNachrichten und ausgewählte Toolergebnisse gehen an Custom endpoint. Bitte nur Testdaten eingeben.",
+      "overflow": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "small-viewport-200-percent-held",
+      "at": "2026-10-21T17:29:22.857Z",
+      "draft": "Entwurf bei großer Schrift",
+      "focus": {
+        "tag": "TEXTAREA",
+        "label": null
+      },
+      "stop": {
+        "x": 255,
+        "y": 313,
+        "width": 44,
+        "height": 44,
+        "hit": true
+      },
+      "statuses": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Custom endpoint antwortet …"
+      ],
+      "alerts": [],
+      "body": "ChatsSynthetic fixtureNeuer ChatUnterhaltungDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextHallo HASIMarkdown kopierenSchließenHallo HASIDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextWie funktioniert der Zugang?Markdown kopierenSchließenWie funktioniert der Zugang?Du21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextBitte antworte jetzt normal.Markdown kopierenSchließenBitte antworte jetzt normal. HASI Custom endpoint · Synthetic fixture21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextSynthetic fixture response.Markdown kopierenSchließenSynthetic fixture response.Du21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextWie ist der nächste Prüfschritt?Markdown kopierenSchließenWie ist der nächste Prüfschritt? HASI Custom endpoint · Synthetic fixture21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextKeine passenden, aktuell freigegebenen Quellen gefunden.Markdown kopierenSchließen Wissensdienst · MCPKeine passenden, aktuell freigegebenen Quellen gefunden. HASI Custom endpoint · Synthetic fixture21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextSynthetic fixture response.Markdown kopierenSchließenSynthetic fixture response.Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextBitte beginne eine weitere Antwort.Markdown kopierenSchließenBitte beginne eine weitere Antwort.Custom endpoint antwortet …Nachricht an HASIMarkdown ist möglich. Umschalt und Eingabetaste fügt eine neue Zeile ein. Eingabetaste sendet die Nachricht.Entwurf bei großer Schrift Custom endpoint · anny-TestdatenNachrichten und ausgewählte Toolergebnisse gehen an Custom endpoint. Bitte nur Testdaten eingeben.",
+      "overflow": false,
+      "viewport": {
+        "width": 320,
+        "height": 430
+      }
+    },
+    {
+      "label": "small-viewport-space-stop",
+      "at": "2026-10-21T17:29:23.462Z",
+      "draft": "Entwurf bei großer Schrift",
+      "focus": {
+        "tag": "TEXTAREA",
+        "label": null
+      },
+      "stop": null,
+      "statuses": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Antwort gestoppt. Du kannst weiterschreiben."
+      ],
+      "alerts": [],
+      "body": "ChatsSynthetic fixtureNeuer ChatUnterhaltungDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextHallo HASIMarkdown kopierenSchließenHallo HASIDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextWie funktioniert der Zugang?Markdown kopierenSchließenWie funktioniert der Zugang?Du21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextBitte antworte jetzt normal.Markdown kopierenSchließenBitte antworte jetzt normal. HASI Custom endpoint · Synthetic fixture21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextSynthetic fixture response.Markdown kopierenSchließenSynthetic fixture response.Du21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextWie ist der nächste Prüfschritt?Markdown kopierenSchließenWie ist der nächste Prüfschritt? HASI Custom endpoint · Synthetic fixture21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextKeine passenden, aktuell freigegebenen Quellen gefunden.Markdown kopierenSchließen Wissensdienst · MCPKeine passenden, aktuell freigegebenen Quellen gefunden. HASI Custom endpoint · Synthetic fixture21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextSynthetic fixture response.Markdown kopierenSchließenSynthetic fixture response.Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextBitte beginne eine weitere Antwort.Markdown kopierenSchließenBitte beginne eine weitere Antwort.Antwort gestoppt. Du kannst weiterschreiben.Nachricht an HASIMarkdown ist möglich. Umschalt und Eingabetaste fügt eine neue Zeile ein. Eingabetaste sendet die Nachricht.Entwurf bei großer Schrift Custom endpoint · anny-TestdatenNachrichten und ausgewählte Toolergebnisse gehen an Custom endpoint. Bitte nur Testdaten eingeben.",
+      "overflow": false,
+      "viewport": {
+        "width": 320,
+        "height": 430
+      }
+    },
+    {
+      "label": "final-stopped-large-text",
+      "at": "2026-10-21T17:31:08.014Z",
+      "draft": "Entwurf 20",
+      "focus": {
+        "tag": "BODY",
+        "label": null
+      },
+      "stop": null,
+      "statuses": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Antwort gestoppt. Du kannst weiterschreiben."
+      ],
+      "alerts": [],
+      "body": "ChatsSynthetic fixtureNeuer ChatUnterhaltungDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextHallo HASIMarkdown kopierenSchließenHallo HASIDu21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextWie funktioniert der Zugang?Markdown kopierenSchließenWie funktioniert der Zugang?Du21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextBitte antworte jetzt normal.Markdown kopierenSchließenBitte antworte jetzt normal. HASI Custom endpoint · Synthetic fixture21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextSynthetic fixture response.Markdown kopierenSchließenSynthetic fixture response.Du21.10.2026, 19:28Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextWie ist der nächste Prüfschritt?Markdown kopierenSchließenWie ist der nächste Prüfschritt? HASI Custom endpoint · Synthetic fixture21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextKeine passenden, aktuell freigegebenen Quellen gefunden.Markdown kopierenSchließen Wissensdienst · MCPKeine passenden, aktuell freigegebenen Quellen gefunden. HASI Custom endpoint · Synthetic fixture21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextSynthetic fixture response.Markdown kopierenSchließenSynthetic fixture response.Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextBitte beginne eine weitere Antwort.Markdown kopierenSchließenBitte beginne eine weitere Antwort.Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 1Markdown kopierenSchließenFeedbackprobe 1Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 2Markdown kopierenSchließenFeedbackprobe 2Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 3Markdown kopierenSchließenFeedbackprobe 3Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 4Markdown kopierenSchließenFeedbackprobe 4Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 5Markdown kopierenSchließenFeedbackprobe 5Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 6Markdown kopierenSchließenFeedbackprobe 6Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 7Markdown kopierenSchließenFeedbackprobe 7Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 8Markdown kopierenSchließenFeedbackprobe 8Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 9Markdown kopierenSchließenFeedbackprobe 9Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 10Markdown kopierenSchließenFeedbackprobe 10Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 11Markdown kopierenSchließenFeedbackprobe 11Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 12Markdown kopierenSchließenFeedbackprobe 12Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 13Markdown kopierenSchließenFeedbackprobe 13Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 14Markdown kopierenSchließenFeedbackprobe 14Du21.10.2026, 19:29Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 15Markdown kopierenSchließenFeedbackprobe 15Du21.10.2026, 19:30Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 16Markdown kopierenSchließenFeedbackprobe 16Du21.10.2026, 19:30Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 17Markdown kopierenSchließenFeedbackprobe 17Du21.10.2026, 19:30Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 18Markdown kopierenSchließenFeedbackprobe 18Du21.10.2026, 19:30Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 19Markdown kopierenSchließenFeedbackprobe 19Du21.10.2026, 19:30Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextFeedbackprobe 20Markdown kopierenSchließenFeedbackprobe 20Antwort gestoppt. Du kannst weiterschreiben.Nachricht an HASIMarkdown ist möglich. Umschalt und Eingabetaste fügt eine neue Zeile ein. Eingabetaste sendet die Nachricht.Entwurf 20 Custom endpoint · anny-TestdatenNachrichten und ausgewählte Toolergebnisse gehen an Custom endpoint. Bitte nur Testdaten eingeben.",
+      "overflow": false,
+      "viewport": {
+        "width": 320,
+        "height": 430
+      }
+    }
+  ],
+  "beforeFix": {
+    "meta": {
+      "fixture": "synthetic-in-memory",
+      "builtAt": "2026-10-21T17:26:43.963Z",
+      "source": {
+        "files": {
+          "apps/web/src/components/assistant-page.tsx": "b5efb542956ab1053136e62f0b90fb68298d5aabb9e8a19df011968afc7b1c4e",
+          "apps/web/src/components/providers.tsx": "3487808492857802a2e09f4f4e007c98cdbf370dda7ed0527fa1bee58fadad3d",
+          "apps/web/src/components/session-provider.tsx": "cf1e15b902a132f18be21a1614574c23243fe4ee124d2032a02a325a82538925",
+          "apps/web/src/components/chat-sidebar-context.tsx": "c119446c6afac33485a42838afce66fb63790b4f6ac5817b7b7cbbea1cf51cce",
+          "apps/web/src/app/globals.css": "c4b822edf2602132fa5e3fd4d11ed81c1f669079b80eb7daf9cc46ef21ccae17",
+          "apps/web/src/components/chat-markdown.module.css": "ef5f7c5f04700819a6ca38905db561faf006fe32b952abc73cc2ac3faca65267",
+          "apps/web/src/components/chat-message-copy.module.css": "8e4ed7af10de509e6c68f489225d060ec281a164bb439a718ac65f3123d65df6"
+        },
+        "aggregateSha256": "6870e88091d17e7bc9e2d67d27a133eb72dc41e877ef948be39956e3eb6ed536",
+        "assistantPageSha256": "b5efb542956ab1053136e62f0b90fb68298d5aabb9e8a19df011968afc7b1c4e",
+        "globalCssSourceSha256": "c4b822edf2602132fa5e3fd4d11ed81c1f669079b80eb7daf9cc46ef21ccae17"
+      },
+      "output": {
+        "bundleSha256": "ef9b55b029c6cf292c70673c3857a58caf0bfaca7a445716294e3f76e5c738d9",
+        "componentCssSha256": "2bbae669c52aca64b029609239f415cd0d943074ed13ec5cd64ed5093615ac23",
+        "globalCssSha256": "45eb87023a4334e17f96d27cde46863f9d7a40377609db00fb36b2ae0e858a11"
+      },
+      "runtime": {
+        "react": "19.3.1",
+        "reactDom": "19.3.1",
+        "esbuild": "0.28.2",
+        "minified": true
+      },
+      "render": "actual AssistantPage and actual Providers; app navigation/header omitted; one-column test wrapper",
+      "api": "in-memory-only"
+    },
+    "finding": {
+      "observations": [
+        {
+          "label": "held-inference-390",
+          "at": "2026-10-21T17:27:15.579Z",
+          "draft": "",
+          "focus": {
+            "tag": "TEXTAREA",
+            "label": null
+          },
+          "stop": {
+            "x": 321,
+            "y": 679,
+            "width": 44,
+            "height": 44,
+            "hit": true
+          },
+          "statuses": [
+            "",
+            "",
+            "Custom endpoint antwortet …"
+          ],
+          "alerts": [],
+          "body": "ChatsSynthetic fixtureNeuer ChatUnterhaltungDu21.10.2026, 19:26Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextHallo HASIMarkdown kopierenSchließenHallo HASICustom endpoint antwortet …Nachricht an HASIMarkdown ist möglich. Umschalt und Eingabetaste fügt eine neue Zeile ein. Eingabetaste sendet die Nachricht. Custom endpoint · anny-TestdatenNachrichten und ausgewählte Toolergebnisse gehen an Custom endpoint. Bitte nur Testdaten eingeben.",
+          "overflow": false,
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "fixture": null
+        },
+        {
+          "label": "abort-aware-stopped-390",
+          "at": "2026-10-21T17:27:16.035Z",
+          "draft": "",
+          "focus": {
+            "tag": "BODY",
+            "label": null
+          },
+          "stop": {
+            "x": 321,
+            "y": 679,
+            "width": 44,
+            "height": 44,
+            "hit": true
+          },
+          "statuses": [
+            "",
+            "",
+            "",
+            "",
+            "Custom endpoint antwortet …"
+          ],
+          "alerts": [],
+          "body": "ChatsSynthetic fixtureNeuer ChatUnterhaltungDu21.10.2026, 19:26Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextHallo HASIMarkdown kopierenSchließenHallo HASIDu21.10.2026, 19:27Nachricht und Ergebnisse kopierenMarkdown kopierenQuelltext anzeigenMarkdown-QuelltextDer unveränderte Markdown-Text dieser Nachricht.Markdown-QuelltextMein ungesendeter Entwurf **bleibt**Markdown kopierenSchließenMein ungesendeter Entwurf bleibtCustom endpoint antwortet …Nachricht an HASIMarkdown ist möglich. Umschalt und Eingabetaste fügt eine neue Zeile ein. Eingabetaste sendet die Nachricht. Custom endpoint · anny-TestdatenNachrichten und ausgewählte Toolergebnisse gehen an Custom endpoint. Bitte nur Testdaten eingeben.",
+          "overflow": false,
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "fixture": null
+        }
+      ],
+      "finding": "Keyboard activation of Stop aborted the first request but unintentionally submitted the unsent draft as a second model request.",
+      "expected": "Draft retained; no second request."
+    },
+    "statusAfterOwnedTabClose": {
+      "fixture": "synthetic-in-memory",
+      "identity": {
+        "id": "fixture-user",
+        "displayName": "Synthetic User",
+        "role": "student"
+      },
+      "control": {
+        "transport": "abort-aware",
+        "reply": "text",
+        "holdModelResponse": true,
+        "holdToolRead": false
+      },
+      "counters": {
+        "sessionReads": 5,
+        "modelProfileReads": 1,
+        "modelRequests": 2,
+        "modelResponsesDelivered": 0,
+        "abortedModelRequests": 1,
+        "lateResponsesSimulated": 0,
+        "timestamps": 2,
+        "pluginAccountReads": 1,
+        "toolListReads": 2,
+        "toolReads": 0,
+        "toolProposals": 0,
+        "proposalChecks": 0,
+        "toolExecutions": 0,
+        "unknownApiRequests": 0
+      },
+      "held": []
+    }
+  },
+  "afterLateReply": {
+    "control": {
+      "holdModelResponse": true,
+      "holdToolRead": false,
+      "reply": "knowledge-tool",
+      "transport": "ignore-abort"
+    },
+    "counters": {
+      "abortedModelRequests": 2,
+      "lateResponsesSimulated": 1,
+      "modelProfileReads": 1,
+      "modelRequests": 2,
+      "modelResponsesDelivered": 1,
+      "pluginAccountReads": 1,
+      "proposalChecks": 0,
+      "sessionReads": 5,
+      "timestamps": 2,
+      "toolExecutions": 0,
+      "toolListReads": 2,
+      "toolProposals": 0,
+      "toolReads": 0,
+      "unknownApiRequests": 0
+    },
+    "fixture": "synthetic-in-memory",
+    "held": [],
+    "identity": {
+      "displayName": "Synthetic User",
+      "id": "fixture-user",
+      "role": "student"
+    }
+  },
+  "toolPending": {
+    "control": {
+      "holdModelResponse": false,
+      "holdToolRead": true,
+      "reply": "knowledge-tool",
+      "transport": "abort-aware"
+    },
+    "counters": {
+      "abortedModelRequests": 2,
+      "lateResponsesSimulated": 1,
+      "modelProfileReads": 1,
+      "modelRequests": 4,
+      "modelResponsesDelivered": 3,
+      "pluginAccountReads": 1,
+      "proposalChecks": 0,
+      "sessionReads": 11,
+      "timestamps": 5,
+      "toolExecutions": 0,
+      "toolListReads": 4,
+      "toolProposals": 0,
+      "toolReads": 1,
+      "unknownApiRequests": 0
+    },
+    "fixture": "synthetic-in-memory",
+    "held": [
+      {
+        "id": "28f67b8c-2136-4f11-a3d7-83c3f4ab642d",
+        "kind": "tool-read",
+        "requestId": null
+      }
+    ],
+    "identity": {
+      "displayName": "Synthetic User",
+      "id": "fixture-user",
+      "role": "student"
+    }
+  },
+  "finalStatus": {
+    "control": {
+      "holdModelResponse": true,
+      "holdToolRead": false,
+      "reply": "text",
+      "transport": "abort-aware"
+    },
+    "counters": {
+      "abortedModelRequests": 23,
+      "lateResponsesSimulated": 1,
+      "modelProfileReads": 1,
+      "modelRequests": 26,
+      "modelResponsesDelivered": 4,
+      "pluginAccountReads": 1,
+      "proposalChecks": 0,
+      "sessionReads": 55,
+      "timestamps": 28,
+      "toolExecutions": 0,
+      "toolListReads": 25,
+      "toolProposals": 0,
+      "toolReads": 1,
+      "unknownApiRequests": 0
+    },
+    "fixture": "synthetic-in-memory",
+    "held": [],
+    "identity": {
+      "displayName": "Synthetic User",
+      "id": "fixture-user",
+      "role": "student"
+    }
+  },
+  "feedback": {
+    "method": "Trusted click capture timestamp to next animation frame after a visible app feedback mutation and Stop removal; DOM/render scheduling measurement, not photon or full application/API latency.",
+    "samples": [
+      {
+        "kind": "stop",
+        "elapsedMs": 5.700000047683716,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 6.599999904632568,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 6.299999952316284,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 5.900000095367432,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 6.799999952316284,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 6.599999904632568,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 6.300000190734863,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 6.799999952316284,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 7,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 8.200000047683716,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 7.200000047683716,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 7.5,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 8.200000047683716,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 8.399999856948853,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 8.799999952316284,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 9.099999904632568,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 9.399999856948853,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 9.900000095367432,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 9.900000095367432,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "stop",
+        "elapsedMs": 10.5,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "fast",
+        "elapsedMs": 1.8999998569488525,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      },
+      {
+        "kind": "slow",
+        "elapsedMs": 252.20000004768372,
+        "width": 320,
+        "height": 430,
+        "rootPx": "32px"
+      }
+    ],
+    "gates": [
+      {
+        "kind": "stop",
+        "samples": 20,
+        "maxMs": 10.5,
+        "exitCode": 0
+      },
+      {
+        "kind": "fast",
+        "samples": 1,
+        "maxMs": 1.8999998569488525,
+        "exitCode": 0
+      },
+      {
+        "kind": "slow",
+        "samples": 1,
+        "maxMs": 252.20000004768372,
+        "exitCode": 1
+      }
+    ],
+    "thresholdMs": 200
+  },
+  "accessibility": {
+    "axeVersion": "4.14.0",
+    "violations": [],
+    "incomplete": {
+      "id": "aria-valid-attr-value",
+      "nodes": 29,
+      "reason": "aria-controls references to conditionally mounted closed popup menus; not passed by this capture. Existing popup qualification remains separate."
+    }
+  },
+  "cleanup": {
+    "ownedTabsClosed": true,
+    "bothFixtureSessionsTerminal": true,
+    "ownedNodeProcessAbsenceVerified": true
+  },
+  "limits": [
+    "Actual AssistantPage and Providers in a one-column wrapper; application navigation/header and Next font setup are omitted.",
+    "Current global CSS compiled for this fixture; next/link is an anchor shim.",
+    "No provider, credentials, database, real MCP process or business action.",
+    "320x430 is a small-height emulated viewport, not native software keyboard/assistive technology. M8 remains open."
+  ],
+  "backendFocused": {
+    "files": 4,
+    "testsPassed": 174,
+    "sourceSha256": {
+      "apps/web/src/lib/server/model-router.ts": "2e3567c8f6c38d71b248893dd5b517beac0d6bb7542d98d1ac7027fee569a406",
+      "apps/web/src/lib/server/model-router-error.ts": "df0e09fc59807d000df875cd8ae857aa384c3ba376e2f417069badca090e8ce6",
+      "apps/web/src/lib/server/chat-http.ts": "40f537f91d2196c5b945b9120ae5212f33fd7c9c6b13790ca98b306929b5b199",
+      "apps/web/src/app/api/chat/route.ts": "60d4adf5d56275024676d472c8f971e4756c1b4d6d45686f1b2cd1fa88aecd6f",
+      "apps/web/tests/model-router.test.ts": "878990e895baef45abb4f88edfdae7ede5faee9282813ac278513094884a1492",
+      "apps/web/tests/chat-route-policy.test.ts": "391cfeece985f8c95feb3046fdb5efb51a35607ef96e87030f1b73401a56e4ef",
+      "apps/web/tests/chat-http.test.ts": "1477cb5c2a2bbc1e2b845cd52fdd69f0a7de087af20a0f2b6bf36fd77b1fcb2c",
+      "apps/web/tests/groq-cache-probe-transport.test.ts": "146fd1cfb5864e9ba2920cb3574189b53b5a17456d7f30b0ec7262aa17c2e0c2"
+    },
+    "initialFullGateFinding": "Unknown-usage settlement passed explicit undefined rather than omitting the argument; the existing probe expected no argument. The router now retains the no-argument unknown-usage call."
+  }
+}

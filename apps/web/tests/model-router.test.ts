@@ -1287,6 +1287,122 @@ describe("operator routing policy", () => {
     return { GROQ_API_KEY: FAKE_KEY, GWDG_API_KEY: GWDG_FAKE_KEY, HASI_LLM_CONFIG: JSON.stringify(config) };
   }
 
+  it("does not reserve budget or contact a provider for an already-cancelled request", async () => {
+    const controller = new AbortController();
+    controller.abort("private cancellation detail");
+    const provider = fakeProvider(completion({ content: "must not run" }));
+    const reserve = vi.fn(() => Promise.resolve({ settle: () => Promise.resolve() }));
+    const error = await expectRouterError(runModelStep(input(), {
+      env: environment(() => undefined),
+      fetch: provider.fetch,
+      now: NOW,
+      signal: controller.signal,
+      budgetAdmission: { reserve },
+    }), "request_cancelled");
+    expect(error.message).not.toContain("private cancellation detail");
+    expect(reserve).not.toHaveBeenCalled();
+    expect(provider.calls).toHaveLength(0);
+  });
+
+  it("settles zero usage when cancellation occurs after reservation but before provider dispatch", async () => {
+    const controller = new AbortController();
+    const provider = fakeProvider(completion({ content: "must not run" }));
+    const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+    await expectRouterError(runModelStep(input(), {
+      env: environment(() => undefined),
+      fetch: provider.fetch,
+      now: NOW,
+      signal: controller.signal,
+      budgetAdmission: { reserve: () => Promise.resolve({ settle: usage => { settlements.push(usage); return Promise.resolve(); } }) },
+      beforeProviderCall: () => { controller.abort("private cancellation detail"); return Promise.resolve(); },
+    }), "request_cancelled");
+    expect(provider.calls).toHaveLength(0);
+    expect(settlements).toEqual([{ inputTokens: 0, outputTokens: 0 }]);
+  });
+
+  it("passes cancellation to the SDK fetch and retains the unknown-usage hold without retry or fallback", async () => {
+    const controller = new AbortController();
+    const env = environment(() => undefined);
+    const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+    let calls = 0;
+    let providerSignal: AbortSignal | undefined;
+    let started!: () => void;
+    const fetchStarted = new Promise<void>(resolve => { started = resolve; });
+    const fetch: typeof globalThis.fetch = (_input, init) => {
+      calls += 1;
+      providerSignal = init?.signal ?? undefined;
+      started();
+      return new Promise<Response>((_resolve, reject) => {
+        const signal = init?.signal;
+        if (!signal) { reject(new Error("Expected SDK abort signal")); return; }
+        if (signal.aborted) { reject(new DOMException("provider request aborted", "AbortError")); return; }
+        signal.addEventListener("abort", () => { reject(new DOMException("private cancellation detail", "AbortError")); }, { once: true });
+      });
+    };
+    const pending = runModelStep(input(), {
+      env,
+      fetch,
+      now: NOW,
+      routingPins: pins(),
+      signal: controller.signal,
+      budgetAdmission: { reserve: () => Promise.resolve({ settle: usage => { settlements.push(usage); return Promise.resolve(); } }) },
+    });
+    await fetchStarted;
+    expect(providerSignal).toBeDefined();
+    controller.abort("private cancellation detail");
+    const error = await expectRouterError(pending, "request_cancelled");
+    expect(error.message).not.toContain("private cancellation detail");
+    expect(providerSignal?.aborted).toBe(true);
+    expect(calls).toBe(1);
+    expect(settlements).toEqual([undefined]);
+  });
+
+  it.each([
+    { status: 400, payload: { error: { message: "private provider detail", code: "tool_use_failed" } } },
+    { status: 500, payload: { error: { message: "private provider detail" } } },
+  ])("does not retry or fall back when request cancellation races with HTTP $status", async ({ status, payload }) => {
+    const controller = new AbortController();
+    const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+    let calls = 0;
+    const fetch: typeof globalThis.fetch = (_input, init) => {
+      calls += 1;
+      expect(init?.signal).toBeDefined();
+      controller.abort("private cancellation detail");
+      return Promise.resolve(new Response(JSON.stringify(payload), { status, headers: { "content-type": "application/json" } }));
+    };
+    const error = await expectRouterError(runModelStep(input(), {
+      env: environment(() => undefined),
+      fetch,
+      now: NOW,
+      routingPins: pins(),
+      signal: controller.signal,
+      budgetAdmission: { reserve: () => Promise.resolve({ settle: usage => { settlements.push(usage); return Promise.resolve(); } }) },
+    }), "request_cancelled");
+    expect(error.message).not.toContain("private cancellation detail");
+    expect(calls).toBe(1);
+    expect(settlements).toEqual([undefined]);
+  });
+
+  it("rejects a completed late payload while settling trustworthy provider usage", async () => {
+    const controller = new AbortController();
+    const provider = fakeProvider(completion({ content: "late private answer", usage: { prompt_tokens: 12, completion_tokens: 5 } }));
+    const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+    const telemetry = telemetrySpy();
+    const error = await expectRouterError(runModelStep(input(), {
+      env: environment(() => undefined),
+      fetch: provider.fetch,
+      now: NOW,
+      signal: controller.signal,
+      budgetAdmission: { reserve: () => Promise.resolve({ settle: usage => { settlements.push(usage); controller.abort("private cancellation detail"); return Promise.resolve(); } }) },
+      telemetry,
+    }), "request_cancelled");
+    expect(error.message).not.toContain("private cancellation detail");
+    expect(error.message).not.toContain("late private answer");
+    expect(provider.calls).toHaveLength(1);
+    expect(settlements).toEqual([{ inputTokens: 12, outputTokens: 5 }]);
+    expect(telemetry).not.toHaveBeenCalled();
+  });
+
   it("enforces disabled end-user choice even with a configured alternate key", async () => {
     const env = environment(config => { config.policy.userChoice.enabled = false; });
     const provider = fakeProvider(completion({ content: "unused" }));
