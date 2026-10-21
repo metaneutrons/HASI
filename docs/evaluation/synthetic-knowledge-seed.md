@@ -2,8 +2,10 @@
 
 This document describes a reviewed public demo corpus of 60 fictional knowledge
 documents. It is intended to exercise retrieval and response behavior, not to
-represent a university's actual services or rules. Every document begins with
-an explicit synthetic-data notice and has `publicationStatus: "demo"`.
+represent a university's actual services or rules. The corpus retains `synthetic: true` and `publicationStatus: "demo"` metadata.
+Following the 2026-10-21 operator decision, disclosure is centralized in the HASI
+website header; article titles and bodies use ordinary knowledge prose without
+repeated notices.
 
 ## Provenance and limits
 
@@ -20,10 +22,9 @@ dates, and named systems are invented; no text asserts a real institutional
 policy or workflow.
 
 The dataset is `fixtures/knowledge-demo-v1.json` (`schemaVersion: 1`,
-`datasetId: "hasi-knowledge-demo-v1"`, `createdAt: "2026-10-16"`). Each
-document has a stable synthetic citation ID, a visible `Demo:` title, revision
-1, a source category, a language, tags, and a per-document disclosure at the
-start of its text. It has no original-source URL. The corpus has been reviewed for publication as fictional demo content; the evaluation labels remain draft and require task-quality review before they become benchmark ground truth.
+`datasetId: "hasi-knowledge-demo-v1"`, `createdAt: "2026-10-21"`). Each
+document has a stable source identity, a revision-bound citation ID, an ordinary
+title, revision 2, a source category, a language, and tags. It has no original-source URL. The corpus has been reviewed for publication as fictional demo content; the evaluation labels remain draft and require task-quality review before they become benchmark ground truth.
 
 ## Demo audiences are fixtures, not access control
 
@@ -42,7 +43,7 @@ denial or an abstention respectively. Denied cases have empty
 documents' titles, text, tags, IDs, or citations. Four queries require multiple
 documents as evidence. Four explicit conflict groups pair incompatible
 fictional guidance; their queries expect abstention because the corpus provides
-no basis for choosing a winner. All documents use revision 1, so no implicit
+no basis for choosing a winner. All documents in this 60-document seed use revision 2, so no implicit
 recency rule can resolve those conflicts. English is represented by 12
 documents and at least 16 evaluation queries.
 

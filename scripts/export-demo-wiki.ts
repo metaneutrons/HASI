@@ -179,32 +179,13 @@ function timestampFromSeed(seed: DemoWikiSeed): string {
   return `${seed.createdAt}T00:00:00Z`;
 }
 
-function renderNotice(seed: DemoWikiSeed): string[] {
-  return [
-    "'''FICTIONAL DEMO CONTENT / FIKTIVE DEMO-INHALTE — SYNTHETIC ONLY. Every page is fabricated for evaluation; it does not describe an actual university service, procedure, source, person, or access right.'''",
-    `Seed date used for generated import timestamps: ${seed.createdAt}. This is not a source modification date.`,
-  ];
-}
-
-function renderDocumentPage(seed: DemoWikiSeed, document: DemoWikiDocument): ExportPage {
-  const inventoryTitle = document.sourceSystem === 'service_it'
-    ? 'Demo:Service-IT/Inventory'
-    : 'Demo:Intranet/Inventory';
+function renderDocumentPage(document: DemoWikiDocument): ExportPage {
   const audience = document.demoAudience.join(', ');
   const text = [
-    ...renderNotice(seed),
-    '',
-    '== Document information ==',
-    `* Title: ${nowiki(document.title)}`,
-    `* Document ID: ${nowiki(document.id)}`,
-    `* Source classification: ${nowiki(document.sourceSystem)} (synthetic fixture label)`,
-    `* Language: ${nowiki(document.language)}`,
-    `* Demo audience labels: ${nowiki(audience)} (evaluation labels only; they do not grant access rights)`,
-    '',
-    '== Synthetic example text ==',
+    `== ${nowiki(document.title)} ==`,
     `<nowiki>${safeNowikiText(document.text)}</nowiki>`,
     '',
-    `Navigation: [[${inventoryTitle}|source inventory]] · [[HASI Demo|HASI Demo]]`,
+    `Zielgruppe: ${nowiki(audience)}`,
   ].join('\n');
   return { title: createDemoWikiPageTitle(document), text };
 }
@@ -221,14 +202,12 @@ function renderInventoryPage(seed: DemoWikiSeed, sourceSystem: DemoWikiSourceSys
   return {
     title: inventoryTitle,
     text: [
-      ...renderNotice(seed),
-      '',
-      `== ${section} synthetic document inventory ==`,
-      `Fixture source classification: ${nowiki(sourceSystem)}. Inventory contains ${String(documents.length)} fictional documents.`,
+      `== ${section} ==`,
+      `${String(documents.length)} Dokumente.`,
       '',
       ...links,
       '',
-      'Navigation: [[HASI Demo|HASI Demo]]',
+      'Navigation: [[HASI Demo|HASI Wissen]]',
     ].join('\n'),
   };
 }
@@ -237,11 +216,9 @@ function renderMainPage(seed: DemoWikiSeed): ExportPage {
   return {
     title: 'HASI Demo',
     text: [
-      ...renderNotice(seed),
-      '',
-      '== Synthetic knowledge demo ==',
-      'This wiki is a disposable evaluation fixture built only from fictional demo documents. Its audience labels are not authorization rules.',
-      `Dataset: ${nowiki(seed.datasetId)} · document count: ${String(seed.documents.length)} · seed date: ${seed.createdAt}.`,
+      '== HASI Wissen ==',
+      'Wissensartikel zu Service IT und Intranet.',
+      `${String(seed.documents.length)} Dokumente · Stand: ${seed.createdAt}.`,
       '',
       '* [[Demo:Service-IT/Inventory|Service-IT inventory]]',
       '* [[Demo:Intranet/Inventory|Intranet inventory]]',
@@ -262,7 +239,7 @@ function createPages(seed: DemoWikiSeed): ExportPage[] {
     ...seed.documents
       .slice()
       .sort((first, second) => first.sourceSystem.localeCompare(second.sourceSystem, 'en') || first.id.localeCompare(second.id, 'en'))
-      .map(document => renderDocumentPage(seed, document)),
+      .map(document => renderDocumentPage(document)),
   ];
   const titles = new Set<string>();
   for (const page of pages) {

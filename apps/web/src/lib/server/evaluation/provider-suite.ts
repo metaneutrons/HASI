@@ -17,6 +17,8 @@ const fixedEvidence = [
   { id: "intra-03", sources: [["fixture:src:intranet:visiting-scholar-guidance", 3], ["fixture:src:intranet:visiting-scholar-guidance", 2]] },
   { id: "sit-vpn-grounding-01", sources: [["svc-catalog-6c79c1e68f04", 2], ["svc-catalog-9b30ce8b226d", 2], ["svc-catalog-94f501ccd7be", 2]] },
   { id: "sit-vpn-specificity-02", sources: [["fixture:src:serviceit:vpn-lab-north-cisco-anyconnect-410", 1]] },
+  { id: "sit-vpn-editorial-grounding-01", sources: [["svc-catalog-6c79c1e68f04", 4], ["svc-catalog-9b30ce8b226d", 4], ["svc-catalog-94f501ccd7be", 4]] },
+  { id: "sit-vpn-editorial-specificity-02", sources: [["fixture:src:serviceit:vpn-lab-north-cisco-anyconnect-410", 2]] },
 ] as const;
 
 export function createProviderEvaluationPlan(value: unknown, profileIds: readonly string[], env: Readonly<Record<string, string | undefined>>) {

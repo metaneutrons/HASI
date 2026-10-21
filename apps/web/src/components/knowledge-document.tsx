@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { knowledgeDocumentSchema, knowledgeSourceLabel, type KnowledgeDocument } from "@/lib/knowledge";
@@ -119,7 +119,6 @@ function DocumentReader({ documentId, revision, origin }: { documentId: string; 
 }
 
 function DocumentArticle({ document, detailsOpen, onDetailsChange }: { document: KnowledgeDocument; detailsOpen: boolean; onDetailsChange: (open: boolean) => void }) {
-  const synthetic = document.synthetic;
   const english = document.language === "en";
   const incident = document.incident;
   const originalHref = !document.synthetic
@@ -130,15 +129,13 @@ function DocumentArticle({ document, detailsOpen, onDetailsChange }: { document:
     : undefined;
 
   return <article className="knowledge-reader__article">
-    {synthetic && <div className="knowledge-demo-label"><BookOpen size={18} aria-hidden="true" /> Synthetisches Demo-Dokument</div>}
     <dl className="knowledge-reader__facts">
-      <div><dt>Quelle</dt><dd>{knowledgeSourceLabel(document.sourceSystem, synthetic)}</dd></div>
+      <div><dt>Quelle</dt><dd>{knowledgeSourceLabel(document.sourceSystem)}</dd></div>
       <div><dt>{english ? "Revision" : "Fassung"}</dt><dd>{document.revision}</dd></div>
       <div><dt>Sprache</dt><dd>{document.language.toUpperCase()}</dd></div>
     </dl>
     <h1>{document.title}</h1>
 
-    {synthetic && <p className="knowledge-disclaimer">Synthetisches Beispiel. Keine Anleitung für echte HsH-Dienste.</p>}
     {incident && <aside className={`knowledge-reader__incident knowledge-reader__incident--${incident.status}`}>
       <strong>{incident.status === "active"
         ? (english ? "Active incident" : "Aktuelle Störung")
@@ -163,7 +160,6 @@ function DocumentArticle({ document, detailsOpen, onDetailsChange }: { document:
     <footer>
       <details className="knowledge-source-details" open={detailsOpen} onToggle={event => { onDetailsChange(event.currentTarget.open); }}>
         <summary>Quellendetails</summary>
-        {synthetic && <p className="knowledge-disclaimer">Dieser Text ist vollständig synthetisch. Er beschreibt keine tatsächlichen HsH-Dienste, Fristen oder Verfahren.</p>}
         <dl className="knowledge-reader__facts knowledge-reader__facts--dates">
           <div>
             <dt>{document.acquisition ? (english ? "Indexed" : "Im Index aktualisiert") : (english ? "Updated" : "Aktualisiert")}</dt>
@@ -184,9 +180,9 @@ function DocumentArticle({ document, detailsOpen, onDetailsChange }: { document:
       </a>}
       {demoHref && <div className="knowledge-replica-link">
         <a className="knowledge-reader__original" href={demoHref} target="_blank" rel="noopener noreferrer">
-          <ExternalLink size={16} aria-hidden="true" /> Demo-Website öffnen
+          <ExternalLink size={16} aria-hidden="true" /> Quellwebsite öffnen
         </a>
-        <p>Die Demo-Website ist auf freigegebene Hochschuladressen beschränkt. Die freigegebene Dokumentfassung kannst du hier lesen.</p>
+        <p>Die Quellwebsite ist auf freigegebene Hochschuladressen beschränkt. Die freigegebene Dokumentfassung kannst du hier lesen.</p>
       </div>}
     </footer>
   </article>;

@@ -67,11 +67,11 @@ describe('synthetic ServiceIT HTML demo acquisition', () => {
       const session = login.cookies.find(cookie => cookie.name === 'hasi-session');
       expect(session).toBeDefined();
       const authenticated = { ...headers, cookie: `hasi-session=${session!.value}` };
-      const allowed = await api.inject({ url: `${sourcePath}?revision=1`, headers: authenticated });
+      const allowed = await api.inject({ url: `${sourcePath}?revision=2`, headers: authenticated });
       expect(allowed.statusCode, allowed.body).toBe(302);
       expect(allowed.headers.location).toBe(`${SERVICE_IT_DEMO_ORIGIN}/de/faqs/svc-001/`);
       expect(allowed.headers['cache-control']).toBe('private, no-store');
-      for (const path of [ `${sourcePath}?revision=2`, '/api/knowledge/documents/int-013/demo-source',
+      for (const path of [ `${sourcePath}?revision=1`, '/api/knowledge/documents/int-013/demo-source',
         '/api/knowledge/documents/svc-missing/demo-source' ]) {
         const denied = await api.inject({ url: path, headers: authenticated });
         expect(denied.statusCode, path).toBe(404);
@@ -98,8 +98,8 @@ describe('synthetic ServiceIT HTML demo acquisition', () => {
     const result = (search.structuredContent as { documents: Record<string, unknown>[] }).documents[0];
     expect(result).toMatchObject({
       id: 'svc-001',
-      title: 'Demo: WLAN-Verbindung prüfen',
-      revision: 1,
+      title: 'WLAN-Verbindung prüfen',
+      revision: 2,
       synthetic: true,
       text: fixtureById.get('svc-001')?.text,
       fetchedAt: timestamp,
@@ -113,7 +113,7 @@ describe('synthetic ServiceIT HTML demo acquisition', () => {
 
     const get = await callAs(plugin, student, 'knowledge.get_document', { documentId: 'svc-001' });
     expect((get.structuredContent as { document: Record<string, unknown> }).document).toMatchObject({
-      id: 'svc-001', text: fixtureById.get('svc-001')?.text, revision: 1, fetchedAt: timestamp,
+      id: 'svc-001', text: fixtureById.get('svc-001')?.text, revision: 2, fetchedAt: timestamp,
       acquisition: { adapter: 'web' },
     });
     expect(requests).toHaveLength(1);
@@ -174,7 +174,7 @@ describe('synthetic ServiceIT HTML demo acquisition', () => {
     const result = await callAs(plugin, admin, 'knowledge.get_document', { documentId: 'int-013' });
     expect(result.isError).not.toBe(true);
     expect((result.structuredContent as { document: Record<string, unknown> }).document).toMatchObject({
-      id: 'int-013', revision: 1, fetchedAt: `${knowledgeCreatedAt}T00:00:00Z`,
+      id: 'int-013', revision: 2, fetchedAt: `${knowledgeCreatedAt}T00:00:00Z`,
     });
     expect((result.structuredContent as { document: Record<string, unknown> }).document).not.toHaveProperty('acquisition');
     expect(get).not.toHaveBeenCalled();

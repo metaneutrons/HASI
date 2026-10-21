@@ -114,7 +114,7 @@ export const chatToolSchemas = {
 
 export const chatToolDescriptions: Readonly<Record<ChatToolName, string>> =
   Object.freeze({
-    knowledge_search: "Suche in aktuell freigegebenen Service-IT- und Intranet-Dokumenten. Verwende dieses Tool für Hochschul- und IT-Fragen. synthetic=true kennzeichnet erfundene Beispiele ohne Geltung als HsH-Anleitung. Quellenrevision, Aktualität und geprüfte Bildtranskripte beachten; fehlende oder widersprüchliche Belege ausdrücklich nennen.",
+    knowledge_search: "Suche in aktuell freigegebenen Service-IT- und Intranet-Dokumenten. Verwende dieses Tool für Hochschul- und IT-Fragen. Antworte aus belegten Inhalten; die Datenklassifizierung ist kein Ablehnungsgrund. Quellenrevision, Aktualität und geprüfte Bildtranskripte beachten; fehlende oder widersprüchliche Belege ausdrücklich nennen.",
     anny_search_resources:
       "Suche getrennt nach einzelnen Arbeitsplätzen (auch bei Büro-Anfragen), Besprechungsräumen oder Hörsälen. Nutze kind für die Buchungseinheit. Bei workplace bestimmt officeWorkplaceCount den Typ: 1 bedeutet Einzelbüro, mehr als 1 ein geteiltes Büro. Fehlt der Zähler, klassifiziere nur ausdrücklich als Einzelbüro/1er oder geteilt/2er-/3er bezeichnete Büros; sonst bleibt es unbekannt. any bedeutet keine Präferenz. Personenkapazität gehört zu ganzen Räumen. Arbeitsplätze liefern ihr übergeordnetes Büro, das nicht mitgebucht wird. Verfügbarkeit wird separat geprüft.",
     anny_get_availability:

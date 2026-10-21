@@ -27,7 +27,7 @@ describe("knowledge citation mappings", () => {
       citationId: "knowledge:service_it:svc-001:1",
       id: "svc-001",
       title: "Demo: WLAN",
-      sourceLabel: "Service IT · Demo",
+      sourceLabel: "Service IT",
       revision: 1,
       href: "/sources/svc-001?revision=1",
       number: 2,

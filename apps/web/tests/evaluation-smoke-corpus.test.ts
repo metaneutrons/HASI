@@ -21,9 +21,9 @@ function objectAt(value: unknown, path: string[]): unknown {
 }
 
 describe("development smoke corpus", () => {
-  it("parses twenty-two distinct draft cases without promoting their split or review status", () => {
-    expect(cases).toHaveLength(22);
-    expect(new Set(cases.map((evaluationCase) => evaluationCase.id)).size).toBe(22);
+  it("parses twenty-four distinct draft cases without promoting their split or review status", () => {
+    expect(cases).toHaveLength(24);
+    expect(new Set(cases.map((evaluationCase) => evaluationCase.id)).size).toBe(24);
     expect(cases.every((evaluationCase) => evaluationCase.reviewStatus === "draft")).toBe(true);
     expect(cases.every((evaluationCase) => evaluationCase.datasetSplit === "development")).toBe(true);
   });
