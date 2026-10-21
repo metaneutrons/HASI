@@ -1,0 +1,222 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  createEvaluationRoomPlanningFixture,
+  type EvaluationRoomPlanningFixture,
+} from "../scripts/evaluation/room-planning-fixture.js";
+
+const activeFixtures: EvaluationRoomPlanningFixture[] = [];
+
+async function createFixture(): Promise<EvaluationRoomPlanningFixture> {
+  const fixture = await createEvaluationRoomPlanningFixture();
+  activeFixtures.push(fixture);
+  return fixture;
+}
+
+function request(
+  fixture: EvaluationRoomPlanningFixture,
+  path: string,
+  method = "GET",
+  body?: unknown,
+): Request {
+  const headers = new Headers({ cookie: fixture.cookie });
+  if (method !== "GET") {
+    headers.set("origin", fixture.webOrigin);
+    headers.set("content-type", "application/json");
+  }
+  return new Request(`${fixture.apiOrigin}${path}`, {
+    method,
+    headers,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+}
+
+async function json<T>(response: Response): Promise<T> {
+  return await response.json() as T;
+}
+
+interface AnnyChatToolBridge {
+  run(name: string, args: unknown): Promise<{
+    rooms?: { resource: { id: string }; intervals: { available: boolean; startDate: string; endDate: string }[] }[];
+    proposal?: { status: string };
+  }>;
+}
+
+type CreateAnnyChatTools = (request: <T>(path: string, init?: RequestInit) => Promise<T>) => AnnyChatToolBridge;
+
+afterEach(async () => {
+  for (const fixture of activeFixtures.splice(0).reverse()) await fixture.close();
+});
+
+describe("authenticated Anny room-planning evaluation fixture", () => {
+  it("uses the code-owned 1J employee mapping through actual API, signed MCP and Anny contract routes", async () => {
+    const fixture = await createFixture();
+    expect(fixture.webOrigin).toBe("http://127.0.0.1:3001");
+    expect(fixture.apiOrigin).toBe("http://127.0.0.1:4100");
+    expect(fixture.resourceIds).toEqual(["180116", "180117"]);
+    expect(fixture.actor.resourceIds).toBeUndefined();
+    expect(fixture.actor.customerId).toBeUndefined();
+    expect(fixture.actor.permissions).toEqual(["rooms:read", "rooms:prepare", "rooms:execute"]);
+    expect(Object.keys(fixture)).not.toContain("serviceToken");
+    expect(Object.keys(fixture)).not.toContain("mockToken");
+
+    const session = await fixture.coreFetch(request(fixture, "/api/session"));
+    expect(session.status).toBe(200);
+    expect(await json(session)).toMatchObject({
+      mode: "oidc",
+      user: { id: fixture.actor.subject, role: "employee" },
+    });
+
+    const resourcesResponse = await fixture.coreFetch(request(fixture, "/api/resources"));
+    expect(resourcesResponse.status).toBe(200);
+    const resources = await json<{ resources: { id: string; location: string; kind: string; serviceId: string }[] }>(resourcesResponse);
+    expect(resources.resources.map(resource => resource.id)).toEqual(["180116", "180117"]);
+    expect(resources.resources.every(resource => resource.location === "1J" && resource.kind === "workplace")).toBe(true);
+
+    const start = new Date(Date.now() + 7 * 86_400_000);
+    start.setUTCHours(9, 0, 0, 0);
+    const startDate = start.toISOString();
+    const endDate = new Date(start.getTime() + 60 * 60_000).toISOString();
+    const availabilityResponse = await fixture.coreFetch(request(fixture, "/api/tools/call", "POST", {
+      pluginId: "de.hsh.hasi.anny",
+      name: "anny.get_availability",
+      arguments: { resourceId: "180116", serviceId: "76878", startDate, durationMinutes: 60 },
+    }));
+    expect(availabilityResponse.status).toBe(200);
+    const availability = await json<{ intervals: { startDate: string; endDate: string; available: boolean }[] }>(availabilityResponse);
+    expect(availability.intervals).toContainEqual({ startDate, endDate, available: true });
+
+    const proposalResponse = await fixture.coreFetch(request(fixture, "/api/tools/call", "POST", {
+      pluginId: "de.hsh.hasi.anny",
+      name: "anny.propose_booking",
+      arguments: { resourceId: "180116", serviceId: "76878", startDate, endDate },
+    }));
+    expect(proposalResponse.status).toBe(200);
+    const proposalBody = await json<{ proposal: { id: string; status: string; executionTool: string } }>(proposalResponse);
+    expect(proposalBody.proposal).toMatchObject({ status: "pending", executionTool: "anny.execute_booking" });
+
+    const readBack = await fixture.coreFetch(request(fixture, `/api/proposals/${proposalBody.proposal.id}`));
+    expect(readBack.status).toBe(200);
+    expect(await json<{ proposal: { id: string; status: string; arguments: Record<string, unknown> } }>(readBack)).toMatchObject({
+      proposal: {
+        id: proposalBody.proposal.id,
+        status: "pending",
+        arguments: { resourceId: "180116", serviceId: "76878", startDate, endDate },
+      },
+    });
+    expect(fixture.preparedProposals()).toEqual([{
+      id: proposalBody.proposal.id,
+      subject: fixture.actor.subject,
+      executionTool: "anny.execute_booking",
+      resourceId: "180116",
+      serviceId: "76878",
+      startDate,
+      endDate,
+      status: "pending",
+    }]);
+
+    const diagnostics = fixture.diagnostics();
+    expect(diagnostics.transport).toBe("fastify-inject-to-signed-mcp-and-anny-contract-mock");
+    expect(diagnostics.authorityScope).toBe("test-idp-and-process-local-memory");
+    expect(diagnostics.sourceWriteAttempts).toBe(0);
+    expect(diagnostics.sourceWriteEffects).toBe(0);
+    expect(diagnostics.accountInspections).toBeGreaterThan(0);
+    expect(diagnostics.sourceObservations.some(observation => observation.path === "/api/v1/availability/upcoming-intervals" && observation.method === "GET")).toBe(true);
+    expect(diagnostics.apiObservations.some(observation => observation.path === "/api/tools/call" && observation.status === 200)).toBe(true);
+  });
+
+  it("denies foreign and forged scope and keeps proposal confirmation outside the fixture transport", async () => {
+    const fixture = await createFixture();
+    const start = new Date(Date.now() + 7 * 86_400_000);
+    start.setUTCHours(13, 0, 0, 0);
+    const startDate = start.toISOString();
+
+    const { createAnnyChatTools } = await vi.importActual<{ createAnnyChatTools: CreateAnnyChatTools }>("../apps/web/src/lib/anny-chat-tools.js");
+    const currentChatBridge = createAnnyChatTools(async <T>(path: string, init?: RequestInit): Promise<T> => {
+      const headers = new Headers(init?.headers);
+      headers.set("cookie", fixture.cookie);
+      headers.set("accept", "application/json");
+      if (init?.body && !headers.has("content-type")) headers.set("content-type", "application/json");
+      if ((init?.method ?? "GET").toUpperCase() !== "GET") headers.set("origin", fixture.webOrigin);
+      const response = await fixture.coreFetch(new Request(`${fixture.apiOrigin}${path}`, { ...init, headers }));
+      if (!response.ok) throw new Error(`HASI core request failed at ${path} (${String(response.status)}): ${await response.text()}`);
+      return await json<T>(response);
+    });
+    const bridgeSearch = await currentChatBridge.run("anny_search_resources", { kind: "workplace", location: "1J" });
+    expect(bridgeSearch.rooms?.map(room => room.resource.id)).toEqual(["180116", "180117"]);
+    const bridgeAvailability = await currentChatBridge.run("anny_get_availability", {
+      resourceId: "180116",
+      date: "2099-03-10",
+      time: "09:00",
+      durationMinutes: 60,
+    });
+    const bridgeInterval = bridgeAvailability.rooms?.[0]?.intervals[0];
+    expect(bridgeInterval?.available).toBe(true);
+    if (!bridgeInterval) throw new Error("The authenticated Anny chat bridge returned no available interval.");
+    const bridgeProposal = await currentChatBridge.run("anny_propose_booking", {
+      resourceId: "180116",
+      startDate: bridgeInterval.startDate,
+      endDate: bridgeInterval.endDate,
+    });
+    expect(bridgeProposal.proposal?.status).toBe("pending");
+    expect(fixture.diagnostics().apiObservations.some(observation => observation.method === "POST" && observation.path === "/api/proposals" && observation.status === 200)).toBe(true);
+    expect(fixture.diagnostics().sourceWriteAttempts).toBe(0);
+    expect(fixture.diagnostics().sourceWriteEffects).toBe(0);
+    const availabilitySourceRequests = fixture.diagnostics().sourceObservations.filter(observation => observation.path?.includes("availability/upcoming-intervals")).length;
+
+    const foreignAvailability = await fixture.coreFetch(request(fixture, "/api/tools/call", "POST", {
+      pluginId: "de.hsh.hasi.anny",
+      name: "anny.get_availability",
+      arguments: {
+        resourceId: "00000000-0000-4000-8000-000000000101",
+        serviceId: "00000000-0000-4000-8000-000000000201",
+        startDate,
+        durationMinutes: 60,
+      },
+    }));
+    expect(foreignAvailability.status).toBe(502);
+
+    const forgedActor = await fixture.coreFetch(request(fixture, "/api/tools/call", "POST", {
+      pluginId: "de.hsh.hasi.anny",
+      name: "anny.search_resources",
+      arguments: {},
+      actor: { subject: "another-employee", resourceIds: ["00000000-0000-4000-8000-000000000101"] },
+    }));
+    expect(forgedActor.status).toBe(400);
+
+    const forgedArguments = await fixture.coreFetch(request(fixture, "/api/tools/call", "POST", {
+      pluginId: "de.hsh.hasi.anny",
+      name: "anny.get_availability",
+      arguments: {
+        resourceId: "00000000-0000-4000-8000-000000000101",
+        serviceId: "00000000-0000-4000-8000-000000000201",
+        startDate,
+        durationMinutes: 60,
+      },
+    }));
+    expect(forgedArguments.status).toBe(502);
+    expect(fixture.diagnostics().sourceObservations.filter(observation => observation.path?.includes("availability/upcoming-intervals"))).toHaveLength(availabilitySourceRequests);
+
+    await expect(fixture.coreFetch("https://example.invalid/api/session")).rejects.toThrow("unapproved API destination");
+    await expect(fixture.coreFetch(`${fixture.apiOrigin}/api/proposals/00000000-0000-4000-8000-000000000001/confirm`)).rejects.toThrow("unapproved API destination");
+    const executeAttempt = await fixture.coreFetch(request(fixture, "/api/tools/call", "POST", {
+      pluginId: "de.hsh.hasi.anny",
+      name: "anny.execute_booking",
+      arguments: {
+        resourceId: "180116",
+        serviceId: "76878",
+        startDate,
+        endDate: new Date(Date.parse(startDate) + 60 * 60_000).toISOString(),
+      },
+    }));
+    expect(executeAttempt.status).toBe(403);
+    expect(fixture.diagnostics().sourceWriteAttempts).toBe(0);
+    expect(fixture.diagnostics().sourceWriteEffects).toBe(0);
+  });
+
+  it("closes its owned TestIdP/API resources idempotently", async () => {
+    const fixture = await createFixture();
+    await fixture.close();
+    await fixture.close();
+    await expect(fixture.coreFetch(request(fixture, "/api/session"))).rejects.toThrow("fixture is closed");
+  });
+});

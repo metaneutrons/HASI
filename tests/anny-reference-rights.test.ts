@@ -118,7 +118,7 @@ class ReferenceAnnyAccountAdapter implements PluginAccountAdapter {
   readonly authorizationOrigins = ['https://reference.anny.invalid'] as const;
   private readonly grants = new Map<string, number>();
 
-  constructor(private readonly source: ReferenceMappingSource) {}
+  constructor(private readonly source: ReferenceMappingSource, private readonly permissions = ['rooms:read', 'rooms:prepare']) {}
 
   begin(input: { subject: string; installationId: string; operation: 'consent' | 'renewal'; state: string; signal: AbortSignal }) {
     if (input.installationId !== INSTALLATION_ID || input.signal.aborted) throw new Error('Invalid reference adapter context.');
@@ -162,7 +162,7 @@ class ReferenceAnnyAccountAdapter implements PluginAccountAdapter {
       authorityRevision: mapping.revision,
       expiresAt: null,
       projection: {
-        permissions: ['rooms:read', 'rooms:prepare'],
+        permissions: [...this.permissions],
         customerId: mapping.row.customerId,
         resourceIds: [...mapping.row.resourceIds],
       },
@@ -209,7 +209,8 @@ async function authenticateTestIdpSubject(provider: OidcIdentityProvider): Promi
   return provider.completeAuthorization({ transactionId: started.transactionId, code, state });
 }
 
-async function setup() {
+async function setup(options: { planning?: boolean } = {}) {
+  const permissions = options.planning ? ['rooms:read', 'rooms:prepare', 'rooms:execute'] : ['rooms:read', 'rooms:prepare'];
   const store = new MemoryJsonStore(`m4-reference-rights-${randomBytes(8).toString('hex')}`);
   const idps = await Promise.all([
     startTestIdp({ mode: 'test', clientId: OIDC_CLIENT_ID, redirectUri: IDP_REDIRECT_URI, subject: UPSTREAM_SUBJECT_ONE }),
@@ -226,7 +227,7 @@ async function setup() {
       id: 'synthetic-host-user-template',
       displayName: 'Synthetic host user',
       role: 'employee',
-      actor: { subject: 'mapper-input-is-not-authority', permissions: ['rooms:read', 'rooms:prepare'] },
+      actor: { subject: 'mapper-input-is-not-authority', permissions: [...permissions] },
     }),
   }));
   const sessions = await Promise.all(providers.map(provider => authenticateTestIdpSubject(provider)));
@@ -235,7 +236,7 @@ async function setup() {
   if (subjectOne === subjectTwo) throw new Error('TestIdP issuers did not produce distinct stable subjects.');
   const hostActors = new Map<string, ActorContext>(sessions.map(({ user }) => [user.actor.subject, {
     subject: user.actor.subject,
-    permissions: ['rooms:read', 'rooms:prepare'],
+    permissions: [...permissions],
   }]));
   const fixtures: HostSubjectFixture[] = [
     { subject: subjectOne, customerId: MOCK_IDS.customers.student, resourceIds: [MOCK_IDS.resources.seminarRoom] },
@@ -285,7 +286,7 @@ async function setup() {
     scope: 'm4-reference-contract',
     installationId: INSTALLATION_ID,
     mode: 'test',
-    adapter: new ReferenceAnnyAccountAdapter(source),
+    adapter: new ReferenceAnnyAccountAdapter(source, permissions),
   });
   const registry = new PluginRegistry(privateKey, {
     store,
@@ -330,6 +331,63 @@ async function linkAccount(api: Awaited<ReturnType<typeof createApi>>, headers: 
 }
 
 describe('Anny read rights through the host API, signed MCP and local contract mock', () => {
+  it('uses current installation account scope in the browser planning routes without global Anny claims', async () => {
+    const { api, source, annyRequests, headersFor, subjectOne, subjectTwo } = await setup({ planning: true });
+    const headers = headersFor(subjectOne);
+    await linkAccount(api, headers);
+    await linkAccount(api, headersFor(subjectTwo));
+    const args = { resourceId: MOCK_IDS.resources.seminarRoom, serviceId: MOCK_IDS.services.students2,
+      startDate, durationMinutes: 60 };
+    const direct = await api.inject({ method: 'POST', url: '/api/tools/call', headers,
+      payload: { pluginId: INSTALLATION_ID, name: 'anny.get_availability', arguments: args } });
+    expect(direct.statusCode, direct.body).toBe(200);
+
+    const proposalArgs = { resourceId: args.resourceId, serviceId: args.serviceId, startDate,
+      endDate: new Date(Date.parse(startDate) + 3_600_000).toISOString() };
+    const genericProposal = await api.inject({ method: 'POST', url: '/api/tools/call', headers,
+      payload: { pluginId: INSTALLATION_ID, name: 'anny.propose_booking', arguments: proposalArgs } });
+    expect(genericProposal.statusCode, genericProposal.body).toBe(200);
+    const available = await api.inject({ method: 'POST', url: '/api/availability', headers, payload: args });
+    const proposed = await api.inject({ method: 'POST', url: '/api/proposals', headers, payload: proposalArgs });
+    expect([available.statusCode, proposed.statusCode]).toEqual([200, 200]);
+    expect(available.json<{ intervals: unknown[] }>().intervals.length).toBeGreaterThan(0);
+    expect(proposed.json<{ proposal: { status: string } }>().proposal.status).toBe('pending');
+
+    const sourceReads = annyRequests.filter(request => request.path.includes('/availability/')).length;
+    const foreign = await api.inject({ method: 'POST', url: '/api/availability', headers,
+      payload: { ...args, resourceId: MOCK_IDS.resources.computerLab, serviceId: MOCK_IDS.services.hybridMeeting } });
+    expect(foreign.statusCode).toBe(502);
+    const foreignProposal = await api.inject({ method: 'POST', url: '/api/proposals', headers,
+      payload: { ...proposalArgs, resourceId: MOCK_IDS.resources.computerLab, serviceId: MOCK_IDS.services.hybridMeeting } });
+    expect(foreignProposal.statusCode).toBe(502);
+    expect(annyRequests.filter(request => request.path.includes('/availability/'))).toHaveLength(sourceReads);
+    const forged = await api.inject({ method: 'POST', url: '/api/availability', headers,
+      payload: { ...args, actor: { subject: subjectTwo, resourceIds: [MOCK_IDS.resources.computerLab] } } });
+    expect(forged.statusCode).toBe(400);
+    source.setResources(subjectOne, []);
+    const revoked = await api.inject({ method: 'POST', url: '/api/availability', headers, payload: args });
+    expect(revoked.statusCode).toBe(502);
+    const revokedProposal = await api.inject({ method: 'POST', url: '/api/proposals', headers, payload: proposalArgs });
+    expect(revokedProposal.statusCode).toBe(502);
+    expect(annyRequests.filter(request => request.path.includes('/availability/'))).toHaveLength(sourceReads);
+    expect(annyRequests.every(request => request.method === 'GET')).toBe(true);
+  });
+
+  it('keeps host execution permission required for a browser proposal after account projection', async () => {
+    const { api, annyRequests, headersFor, subjectOne } = await setup();
+    const headers = headersFor(subjectOne);
+    await linkAccount(api, headers);
+    const args = { resourceId: MOCK_IDS.resources.seminarRoom, serviceId: MOCK_IDS.services.students2,
+      startDate, durationMinutes: 60 };
+    const available = await api.inject({ method: 'POST', url: '/api/availability', headers, payload: args });
+    expect(available.statusCode, available.body).toBe(200);
+    const proposed = await api.inject({ method: 'POST', url: '/api/proposals', headers,
+      payload: { resourceId: args.resourceId, serviceId: args.serviceId, startDate,
+        endDate: new Date(Date.parse(startDate) + 3_600_000).toISOString() } });
+    expect(proposed.statusCode).toBe(403);
+    expect(annyRequests.every(request => request.method === 'GET')).toBe(true);
+  });
+
   it('uses stable-subject account authority, filters current resources and own bookings, and rejects forged or stale scope', async () => {
     const { api, source, annyRequests, headersFor, fixtures, subjectOne, subjectTwo } = await setup();
     const firstHeaders = headersFor(subjectOne);

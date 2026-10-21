@@ -323,16 +323,15 @@ export async function createApi(options: ApiOptions) {
     return { contexts };
   });
   app.get('/api/bookings', async request => { const user = await requireUser(request.cookies[cookieName]); return options.registry.invoke(ANNY, 'anny.list_my_bookings', {}, user.actor); });
+  // The registry projects current installation account authority before the plugin checks resource eligibility.
   app.post('/api/availability', async request => {
     const user = await requireUser(request.cookies[cookieName]);
     const args = z.strictObject({ resourceId: annyId, serviceId: annyId, startDate: time, durationMinutes: z.number().int().min(15).max(1440) }).parse(request.body);
-    if (!(user.actor.resourceIds ?? []).includes(args.resourceId)) throw new RequestError(403, 'Dieser Raum ist für das Testkonto nicht freigegeben.');
     return options.registry.invoke(ANNY, 'anny.get_availability', args, user.actor);
   });
   app.post('/api/proposals', async request => {
     const user = await requireUser(request.cookies[cookieName]);
     const args = roomRequest.parse(request.body);
-    if (!(user.actor.resourceIds ?? []).includes(args.resourceId)) throw new RequestError(403, 'Dieser Raum ist für das Testkonto nicht freigegeben.');
     return makeProposal(user, ANNY, 'anny.propose_booking', args);
   });
   app.post('/api/cancellations', async request => {

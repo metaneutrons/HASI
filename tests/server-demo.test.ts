@@ -132,8 +132,8 @@ for (const adapter of ['memory', 'snapshot', ...(url ? ['postgres', 'snapshot-po
       expect(sibling.parentId).toBe(first.parentId);
       const start = new Date(Date.now() + 8 * 86400000); start.setUTCHours(9, 0, 0, 0);
       const args = { resourceId: first.id, serviceId: first.serviceId, startDate: start.toISOString(), endDate: new Date(start.getTime() + 3600000).toISOString() };
-      expect((await request('desks', '/api/proposals', { ...args, resourceId: '179669' })).status).toBe(403);
-      expect((await request('desks', '/api/availability', { resourceId: '179669', serviceId: first.serviceId, startDate: args.startDate, durationMinutes: 60 })).status).toBe(403);
+      expect((await request('desks', '/api/proposals', { ...args, resourceId: '179669' })).status).toBe(502);
+      expect((await request('desks', '/api/availability', { resourceId: '179669', serviceId: first.serviceId, startDate: args.startDate, durationMinutes: 60 })).status).toBe(502);
       const prepared = await request('desks', '/api/proposals', args);
       expect(prepared.status).toBe(200);
       const { proposal } = await prepared.json() as { proposal: { id: string; resourceName: string } };
