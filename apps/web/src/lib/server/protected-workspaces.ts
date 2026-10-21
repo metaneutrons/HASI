@@ -12,7 +12,7 @@ import {
 } from "../chat-sessions";
 import type { NativeHistoryAccess, NativeHistoryResolver } from "./native-history";
 import { actionReferenceKey, actionReferencesSchema, retainedActionReferences, updatedActionReferences,
-  UNAVAILABLE_ANSWER, type ActionHistoryReference } from "./action-history-references";
+  UNAVAILABLE_ANSWER, UNAVAILABLE_ACTION_RECEIPT, type ActionHistoryReference } from "./action-history-references";
 import { createHostDialogueSigner } from "./host-dialogue";
 import { proposalPresentation } from "../proposal-presentation";
 import { compactPluginToolResult, MODEL_PLUGIN_TOOL_NAME } from "../plugin-tools";
@@ -213,7 +213,7 @@ function sanitizeDisplayMessages(
     const reference = actionReferences.get(actionReferenceKey(sessionId, message.id));
     if (reference) {
       const current = native.proposals.get(reference.proposalId);
-      if (!current) return unavailableMessage(message);
+      if (!current) return unavailableMessage(message, UNAVAILABLE_ACTION_RECEIPT);
       // Account renewal can restore a freshly authorized receipt, never its old consent.
       const proposal = reference.readOnly && current.status === "pending" ? { ...current, status: "invalidated" as const } : current;
       return { id: message.id, role: "assistant", proposal, tool: "Aktion · Aktueller Beleg",

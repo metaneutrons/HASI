@@ -57,6 +57,7 @@ No institutional credentials are needed.
 
 Terminal commands:
 
+- `model-unavailable-once`: fail exactly the next valid synthetic model completion with a fixed503; rejected requests do not consume it. The following explicit retry behaves normally. This is an operator terminal control, never an HTTP/MCP/model command.
 - `stats`: numeric model, source/journal and proxy observations only.
 - `expire-anny`, `expire-reference`: advance the matching synthetic account clock.
 - `reference-drop-reply`: discard the next successful `execute_mark` HTTP reply

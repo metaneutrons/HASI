@@ -1,0 +1,7 @@
+{
+  "label": "after-rollback",
+  "actionCount": 1,
+  "sourceReceipts": 1,
+  "confirmedJournalEntries": 1,
+  "scope": "f59fb6de-84ae-48fe-9e06-83136c955f4c"
+}
