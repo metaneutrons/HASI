@@ -1,7 +1,9 @@
 # Shared model-call budget
 
-Status: implementation in progress, 2026-10-18. Runtime admission is not yet
-deployment-qualified. This document does not establish provider billing limits.
+Status: implementation with bounded technical qualification, updated 2026-10-21.
+The [current M2 evidence and remaining gates](https://github.com/metaneutrons/HASI/issues/49)
+record shared-store/runtime qualification and delivery; they do not establish
+provider billing limits or completed M2/M6 acceptance.
 
 Fabian approved a total **USD 1 per UTC day** for the demo. One durable ledger
 is shared across users, workspaces, deployments using the same database,

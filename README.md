@@ -166,7 +166,7 @@ usage. The bounded citation checks do not establish semantic quality or M6
 acceptance. Add `--workflows` to plan the two explicitly registered, isolated
 booking/cancellation unknown-outcome variants. The model receives sanitized
 status as evidence and has no execute tools; independent fixture observations
-grade the trace. This is not a full planning workflow or live-provider result.
+grade the trace. The [first ten-call development run](docs/verification/2026-10-21/provider-unknown-outcome-run.md) records actual usage and semantic defects separately from passed structural controls; it does not establish full workflow or M6 acceptance.
 See [operator instructions and measurement limits](docs/evaluation/provider-observations.md).
 
 ### Local PostgreSQL server mode
@@ -321,14 +321,14 @@ Versioned GHCR images for `linux/amd64` and `linux/arm64` are built only through
 
 The roadmap additionally covers [public web search restricted to operator-approved URL scopes](docs/architecture/restricted-web-search.md), Moodle, Stud.IP, HISinOne (including exam registration and student records), SAP leave/time workflows, HsH library catalogue search, and a versioned knowledge base of examination regulations for every degree programme, including scanned PDFs, OCR and exact page citations. These integrations are planned, not implemented.
 
-The synthetic demo is disposable and has no backup acceptance requirement; production backup/restore and off-host replication remain final M8-A8 gates. API p95 ≤ 1 second with five concurrent users is deferred to M8-A9; local UI feedback ≤ 200 ms remains in M2/M7. Independent health monitoring and durable session/action/budget controls remain technical requirements.
+The synthetic demo is disposable and has no backup acceptance requirement; production backup/restore and off-host replication remain final M8-A8 gates. API p95 ≤ 1 second with five concurrent users is deferred to M8-A9; local UI feedback ≤ 200 ms remains in M2/M7. Groq prompt-cache proof (CACHE-A1) is deferred intact to M8-A10; absent counters remain unknown. Independent health monitoring and durable session/action/budget controls remain technical requirements.
 
 Technical milestones M1–M7 may qualify with Test-IdP, synthetic content, contract-based mocks and automated/browser/simulator tests. Real-device and participant acceptance is reserved for M8. Real HsH identity, effective source rights, actual Anny conformance and protected-data approvals belong to the final [institutional acceptance M8 #80](https://github.com/metaneutrons/HASI/issues/80). Mock qualification cannot authorize those live integrations. The requested DeepInfra addition is tracked in [#81](https://github.com/metaneutrons/HASI/issues/81); its synthetic-only profile passed bounded deployed chat and Anny-tool checks; formal model evaluation and real-user/data acceptance remain separate.
 
 Track delivery in the [unified index #47](https://github.com/metaneutrons/HASI/issues/47),
 later integrations in [roadmap #55](https://github.com/metaneutrons/HASI/issues/55),
 and the six plugin qualification groups P1–P6 in [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
-The approved [v8 plan](docs/plans/consolidated-delivery.md#v3-issue-graph)
+The approved [v9 plan](docs/plans/consolidated-delivery.md#groq-cache-sequencing-decision--2026-10-21)
 consolidates the initiative into 13 primary tracking records while preserving all acceptance criteria and evidence; completed records close with their evidence in the issue index.
 The MCP registry supports approved endpoints, compatible updates, schema-driven
 configuration and registry-driven chat tool discovery. Arbitrary plugin code

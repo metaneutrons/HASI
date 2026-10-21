@@ -153,7 +153,7 @@ its user turns, authorized evidence, approved tool definitions/results and any
 sanitized backend action status needed for the current task. Fixture approval
 events do not become model-controlled tool arguments.
 
-The [22 draft development smoke cases](example-cases.json) illustrate the format using
+The [24 draft development smoke cases](example-cases.json) illustrate the format using
 fictitious documents, roles and room data. They are not real HsH policy or a
 validated model benchmark. Their assertion strings are grading specifications,
 not executable quality judgments. The bounded TypeScript runner validates and
@@ -175,6 +175,13 @@ semantic scores, gold labels or completed provider comparison results. The
 [first bounded 35-answer development observations](../verification/2026-10-20/provider-development-run.md)
 record complete usage and concrete citation/grounding defects; formal workflow
 comparison and blinded human adjudication remain open.
+
+The [ten-answer observed unknown-outcome development run](../verification/2026-10-21/provider-unknown-outcome-run.md)
+adds actual per-profile responses to the two separately registered runtime variants.
+It preserves observed effects, input identities, usage and tariffs, but its passed
+structural oracle is not semantic acceptance: repeat-before-reconciliation and
+unsupported status claims remain human-review findings. The static corpus still
+contains 24 draft cases; runtime variants do not become additional reviewed cases.
 
 ## Three evaluation layers
 
