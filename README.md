@@ -193,6 +193,11 @@ an actual separate managed installer worker, signed private RPC, pinned Docker
 images and the deployment gateway. Install, approve, activate, update and roll
 back through the existing admin UI. This mode requires a local Unix Docker
 socket and the approved base image already present; it never pulls images.
+Add `--optimized` to either mode to build the frontend and run `next start`
+instead of the development server. The build receives no identity, database,
+Docker or model credentials. A separate operator step initializes the existing
+budget ledger in the admitted local test database, preserving prior usage.
+Run only one local Next build/server at a time because they share `.next`.
 Managed reference artifacts now declare the invocation-bound
 [managed-state SDK profile](docs/architecture/managed-plugin-state.md) before
 packaging and signing. Application state and execution receipts live in the

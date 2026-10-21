@@ -277,7 +277,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     element.scrollTo({ top: latestMessage || busy ? element.scrollHeight : 0, behavior: "instant" });
   }, [latestMessage, busy, active, sessionId]);
 
-  // Explicit action help takes scroll priority over following the newest message.
+  // Action feedback takes scroll priority when focus can safely return to its card.
   useEffect(() => {
     if (busy || !pendingProposalFocus.current) return;
     const requested = pendingProposalFocus.current;
@@ -290,7 +290,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     const confirmation = buttons.length === 1 ? buttons.item(0) : null;
     const target = requested.confirmation && confirmation && !confirmation.disabled ? confirmation : card;
     const container = scroller.current;
-    if (requested.requested && container) revealProposalCard(container, card);
+    if (container) revealProposalCard(container, card);
     target.focus({ preventScroll: true });
   }, [active, busy, messages]);
 
