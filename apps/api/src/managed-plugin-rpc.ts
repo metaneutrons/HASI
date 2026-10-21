@@ -3,7 +3,7 @@ import Fastify from 'fastify';
 import { SignJWT, jwtVerify } from 'jose';
 import { z } from 'zod';
 import { digest, configurationDefinitionSchema } from '@hasi/plugin-sdk';
-import { managedPluginCommandSchema, managedPluginCommandResultSchema, managedPluginCatalogSchema, type ManagedPluginCommand } from '@hasi/plugin-sdk/deployment-admin';
+import { managedPluginCommandSchema, managedPluginCommandResultSchema, managedPluginCatalogSchema, managedPluginReviewSchema, MAX_MANAGED_PLUGIN_REVIEW_BYTES, type ManagedPluginCommand, type ManagedPluginReview } from '@hasi/plugin-sdk/deployment-admin';
 import type { ManagedPluginAdmin } from './managed-plugin-admin.js';
 import { managedPluginRuntimeContractSchema, type ManagedPluginRuntimeContract } from './managed-plugin-contract.js';
 
@@ -20,6 +20,7 @@ const configurationSchema = z.strictObject({
 });
 const rpcSchema = z.discriminatedUnion('method', [
   z.strictObject({ method: z.literal('list'), subject }),
+  z.strictObject({ method: z.literal('review'), subject, installationId: id }),
   z.strictObject({ method: z.literal('command'), subject, installationId: id, command: managedPluginCommandSchema }),
   z.strictObject({ method: z.literal('commandStatus'), subject, installationId: id, commandId: z.uuid() }),
   z.strictObject({ method: z.literal('configuration'), subject, installationId: id }),
@@ -74,8 +75,14 @@ export async function createManagedPluginRpcServer(options: {
         const contract = managedPluginRuntimeContractSchema.nullable().parse(await options.runtimeContract(call.installationId));
         if (contract && contract.installationId !== call.installationId) throw new Error('Runtime contract binding invalid');
         result = contract;
-      } else if (call.method === 'list') result = managedPluginCatalogSchema.parse(await options.service.list(call.subject));
-      else if (call.method === 'configuration') result = configurationSchema.parse(await options.service.describeConfiguration?.(call.installationId, call.subject));
+      } else if (call.method === 'list') {
+        result = managedPluginCatalogSchema.parse(await options.service.list(call.subject));
+      } else if (call.method === 'review') {
+        if (!options.service.describeReview) throw new Error('Review reader unavailable');
+        const review = managedPluginReviewSchema.parse(await options.service.describeReview(call.installationId, call.subject));
+        if (review.installationId !== call.installationId) throw new Error('Review installation binding invalid');
+        result = review;
+      } else if (call.method === 'configuration') result = configurationSchema.parse(await options.service.describeConfiguration?.(call.installationId, call.subject));
       else if (call.method === 'draft') result = revisionSchema.parse(await options.service.saveConfigurationDraft?.(call.installationId, call.draft, call.subject));
       else if (call.method === 'activateConfiguration') result = revisionSchema.parse(await options.service.activateConfiguration?.(call.installationId, call.revision, call.subject));
       else result = managedPluginCommandResultSchema.parse(call.method === 'command'
@@ -83,6 +90,7 @@ export async function createManagedPluginRpcServer(options: {
         : await options.service.commandStatus(call.installationId, call.commandId, call.subject));
       const wire: unknown = JSON.parse(JSON.stringify(result));
       if (call.method === 'runtimeContract' && Buffer.byteLength(JSON.stringify(wire)) > MAX_RUNTIME_CONTRACT_RESPONSE) throw new Error('Runtime contract response too large');
+      if (call.method === 'review' && Buffer.byteLength(JSON.stringify(wire)) > MAX_MANAGED_PLUGIN_REVIEW_BYTES) throw new Error('Managed plugin review response too large');
       const proof = await new SignJWT({ scope: options.scope, requestId, requestDigest: digest(call), responseDigest: digest(wire) }).setProtectedHeader({ alg: 'EdDSA' })
         .setSubject(call.subject).setIssuer(audience).setAudience(issuer).setIssuedAt().setExpirationTime('60s').sign(options.privateKey);
       return await reply.header('cache-control', 'no-store').header('x-hasi-installer-proof', proof).send(wire);
@@ -106,6 +114,12 @@ export function createManagedPluginRpcClient(options: { origin: string; privateK
   };
   return {
     list: async subject => managedPluginCatalogSchema.parse(await call({ method: 'list', subject })),
+    describeReview: async (installationId: string, subject: string): Promise<ManagedPluginReview> => {
+      id.parse(installationId);
+      const review = managedPluginReviewSchema.parse(await call({ method: 'review', installationId, subject }, MAX_MANAGED_PLUGIN_REVIEW_BYTES));
+      if (review.installationId !== installationId) throw new Error('Installer response binding invalid');
+      return review;
+    },
     command: async (installationId: string, command: ManagedPluginCommand, subject: string) => commandResult(await call({ method: 'command', installationId, command, subject }), installationId, command.commandId),
     commandStatus: async (installationId, commandId, subject) => commandResult(await call({ method: 'commandStatus', installationId, commandId, subject }), installationId, commandId),
     describeConfiguration: async (installationId, subject) => {

@@ -79,3 +79,39 @@ cryptographic runtime attestation. These scripts are internal verification tools
 - Updated global CSS SHA-256: `5f70d95bf60a9d3927928e25de3ea463ba7f2077bf3ffea53e6b86a9abf227a9`.
 
 ![Local preview of mobile navigation, not a deployed-style claim](mobile-nav-contrast-preview.png)
+
+## Rebuilt application readback
+
+PR #189 is merged at `981519d9339f86b74a7041346e3be27541bfb5b6`.
+Exact-main CI39655662097 passed; the earlier run39655066077 was cancelled
+by GitHub's same-branch concurrency priority, not restarted as a qualification
+shortcut. The automatic controller completed at `2026-10-21T18:56:47.126Z`.
+Public readiness and the sole healthy application reported that exact merge.
+The552 active baseline records, database/volumes and budget fingerprint remained
+unchanged (zero missing, changed or expired baseline rows).
+
+A fresh owned tab28 then measured the **actual served styles without an overlay**.
+The [result](mobile-nav-contrast-actual.json) contains all48 valid groups,
+48 leaves and68 PNGs, zero contrast failures, minimum lower bound **5.827605**.
+Its independent13-patch/four-quadrant calibration at scroll0/200 and the black
+foreground, false-font-threshold and geometry counterprobes pass. Normal text
+uses4.5. This corroborates the preview on the rebuilt application; it remains
+bounded Chrome155/macOS emulation rather than native-device acceptance.
+The public admin page has no managed candidate, so this navigation observation
+does not establish the new release-review component's full-stack qualification.
+
+The [actual input packet](mobile-nav-contrast-actual-inputs.tar.gz) contains
+raw records/PNGs, served CSS identities, calibration, helpers and the verifier.
+Its only verifier identity adjustment from baseline is explicit tab28.
+SHA-256: `1b62b3d808c18ce17b66f23d58e87247d0fe20a76fbbc8177ad2c5e44626dc47`.
+After extraction, run from the extracted directory:
+
+```sh
+python3 actual/verify-mobile-nav.py
+```
+
+The original dark theme was restored, the synthetic administrator signed out,
+all recorder elements removed, viewport override reset and the owned tab closed.
+No chat message, booking, provider request or budget mutation was initiated.
+
+![Actual deployed mobile administration](mobile-nav-contrast-actual.png)

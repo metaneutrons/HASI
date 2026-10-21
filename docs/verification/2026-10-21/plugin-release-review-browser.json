@@ -1,0 +1,362 @@
+{
+  "scope": "Actual minified React component with synthetic in-memory HTTP; no installer, worker, database or provider. CDP font sizes are not native zoom or Dynamic Type.",
+  "layout": [
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "16px",
+      "minTarget": 44,
+      "scrollWidth": 320,
+      "theme": "light",
+      "unsafeResources": 0,
+      "width": 320
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "16px",
+      "minTarget": 44,
+      "scrollWidth": 320,
+      "theme": "dark",
+      "unsafeResources": 0,
+      "width": 320
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "32px",
+      "minTarget": 116,
+      "scrollWidth": 320,
+      "theme": "light",
+      "unsafeResources": 0,
+      "width": 320
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "32px",
+      "minTarget": 116,
+      "scrollWidth": 320,
+      "theme": "dark",
+      "unsafeResources": 0,
+      "width": 320
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "16px",
+      "minTarget": 44,
+      "scrollWidth": 375,
+      "theme": "light",
+      "unsafeResources": 0,
+      "width": 375
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "16px",
+      "minTarget": 44,
+      "scrollWidth": 375,
+      "theme": "dark",
+      "unsafeResources": 0,
+      "width": 375
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "32px",
+      "minTarget": 116,
+      "scrollWidth": 375,
+      "theme": "light",
+      "unsafeResources": 0,
+      "width": 375
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "32px",
+      "minTarget": 116,
+      "scrollWidth": 375,
+      "theme": "dark",
+      "unsafeResources": 0,
+      "width": 375
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "16px",
+      "minTarget": 44,
+      "scrollWidth": 390,
+      "theme": "light",
+      "unsafeResources": 0,
+      "width": 390
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "16px",
+      "minTarget": 44,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "unsafeResources": 0,
+      "width": 390
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "32px",
+      "minTarget": 116,
+      "scrollWidth": 390,
+      "theme": "light",
+      "unsafeResources": 0,
+      "width": 390
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "32px",
+      "minTarget": 116,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "unsafeResources": 0,
+      "width": 390
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "16px",
+      "minTarget": 44,
+      "scrollWidth": 768,
+      "theme": "light",
+      "unsafeResources": 0,
+      "width": 768
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "16px",
+      "minTarget": 44,
+      "scrollWidth": 768,
+      "theme": "dark",
+      "unsafeResources": 0,
+      "width": 768
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "32px",
+      "minTarget": 68,
+      "scrollWidth": 768,
+      "theme": "light",
+      "unsafeResources": 0,
+      "width": 768
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "32px",
+      "minTarget": 68,
+      "scrollWidth": 768,
+      "theme": "dark",
+      "unsafeResources": 0,
+      "width": 768
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "16px",
+      "minTarget": 44,
+      "scrollWidth": 1280,
+      "theme": "light",
+      "unsafeResources": 0,
+      "width": 1280
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "16px",
+      "minTarget": 44,
+      "scrollWidth": 1280,
+      "theme": "dark",
+      "unsafeResources": 0,
+      "width": 1280
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "32px",
+      "minTarget": 68,
+      "scrollWidth": 1280,
+      "theme": "light",
+      "unsafeResources": 0,
+      "width": 1280
+    },
+    {
+      "allChangesOpen": true,
+      "approveDisabled": false,
+      "font": "32px",
+      "minTarget": 68,
+      "scrollWidth": 1280,
+      "theme": "dark",
+      "unsafeResources": 0,
+      "width": 1280
+    }
+  ],
+  "axe": [
+    {
+      "incomplete": [],
+      "passes": 18,
+      "theme": "light",
+      "version": "4.14.0",
+      "violations": []
+    },
+    {
+      "incomplete": [],
+      "passes": 18,
+      "theme": "dark",
+      "version": "4.14.0",
+      "violations": []
+    }
+  ],
+  "cases": [
+    {
+      "label": "error",
+      "activeTag": "BUTTON",
+      "activeText": "\u00dcbersicht neu laden",
+      "approveDisabled": true,
+      "scrollWidth": 390,
+      "status": [
+        {
+          "role": "status",
+          "text": "Pr\u00fcfung erforderlich"
+        },
+        {
+          "role": "alert",
+          "text": "Die \u00c4nderungen konnten nicht aktuell gepr\u00fcft werden. Eine Freigabe ist noch nicht m\u00f6glich."
+        }
+      ],
+      "width": 390
+    },
+    {
+      "label": "stale-token",
+      "activeTag": "BUTTON",
+      "activeText": "\u00dcbersicht neu laden",
+      "approveDisabled": true,
+      "scrollWidth": 390,
+      "status": [
+        {
+          "role": "status",
+          "text": "Pr\u00fcfung erforderlich"
+        },
+        {
+          "role": "alert",
+          "text": "Die \u00c4nderungen konnten nicht aktuell gepr\u00fcft werden. Eine Freigabe ist noch nicht m\u00f6glich."
+        }
+      ],
+      "width": 390
+    },
+    {
+      "label": "pending",
+      "activeTag": "BODY",
+      "approveDisabled": true,
+      "scrollWidth": 390,
+      "status": [
+        {
+          "role": "status",
+          "text": "Pr\u00fcfung erforderlich"
+        },
+        {
+          "role": "status",
+          "text": "\u00c4nderungs\u00fcbersicht wird geladen \u2026"
+        }
+      ],
+      "width": 390
+    },
+    {
+      "label": "retry-ready",
+      "activeTag": "BUTTON",
+      "activeText": "\u00dcbersicht neu laden",
+      "approveDisabled": false,
+      "scrollWidth": 390,
+      "status": [
+        {
+          "role": "status",
+          "text": "Pr\u00fcfung erforderlich"
+        },
+        {
+          "role": "status",
+          "text": "\u00c4nderungen gegen\u00fcber der aktiven Version."
+        }
+      ],
+      "width": 390
+    },
+    {
+      "label": "newer-focus-during-load",
+      "activeTag": "BUTTON",
+      "activeText": " Kandidat verwerfen",
+      "approveDisabled": true,
+      "scrollWidth": 390,
+      "status": [
+        {
+          "role": "status",
+          "text": "Pr\u00fcfung erforderlich"
+        },
+        {
+          "role": "status",
+          "text": "\u00c4nderungs\u00fcbersicht wird geladen \u2026"
+        }
+      ],
+      "width": 390
+    },
+    {
+      "label": "newer-focus-after-load",
+      "activeTag": "BUTTON",
+      "activeText": " Kandidat verwerfen",
+      "approveDisabled": false,
+      "scrollWidth": 390,
+      "status": [
+        {
+          "role": "status",
+          "text": "Pr\u00fcfung erforderlich"
+        },
+        {
+          "role": "status",
+          "text": "\u00c4nderungen gegen\u00fcber der aktiven Version."
+        }
+      ],
+      "width": 390
+    }
+  ],
+  "state": {
+    "bundleHashes": {
+      "bundle.css": "f1f311bab7602ed7779c49536fa39ac0189e9f739761b24cfe48bb1b4c2a1dca",
+      "bundle.js": "4cecb82f67fd088aad2831ebd7779127bf99b46aa9c724aba2558e6fd7ffbd3e"
+    },
+    "commands": 0,
+    "delay": 300,
+    "globalCssHash": "4e24c25fda0af682c5e2d6077279d5625fa30e05521bed3136defd6867943e0e",
+    "globalCssSourceHash": "5f70d95bf60a9d3927928e25de3ea463ba7f2077bf3ffea53e6b86a9abf227a9",
+    "harnessSourceHashes": {
+      "entry": "499667f43f4dca131f9f51ef3e825b83498b3e31d1778ed912c4da0ccece3e82",
+      "server": "d63f48e7290d2d21f86b4bc404cb31b9f21357f26d3e714997de1919d8081cd8"
+    },
+    "mode": "ready",
+    "reviewReads": 5,
+    "sourceCommit": "5df9da5e5154b6e5ef66151777a734ae1a54cf85",
+    "sourceHashes": {
+      "managedPluginPanel": "8b8891a2a6421d3a93b77def077ef7b1327c783338341fd643e71c595d332419",
+      "managedPluginPanelCss": "3aef417d53bd8ce21ab643e6515700a67a2a2e47d4858738efca967d8e3c2553",
+      "pluginConfigFields": "93e01ae80c4fcffa271d4e6ac57791dd90d8251a4e20a6fbe2313587b117f4e9",
+      "pluginConfigPanel": "4a9a3f97125485fcc3f431467f2c066481373dbfca107042f1f4c34fca2d4d7f",
+      "pluginConfiguration": "59c34ebff7a3c4097585666c76dafeecc774801f64eeac88f467e1332549700b",
+      "pluginSdkConfiguration": "5a1bc8124d4f0930f614d84f8ceedc4528cb8abea237c72440a80c333580cf3c",
+      "pluginSdkDeploymentAdmin": "03c2cbc9dd77c196c006832de093a8942b49127940666feaebe83d6d148a496f",
+      "releaseReview": "7e5359668bafb6f8a98785ea97f54b34bca37cb4e2b7bf4554317c43a0576504",
+      "releaseReviewCss": "f98a1f7632ca9da910b5b745fa150654916d1d51da6ccf371e3e0e9f493afc3f",
+      "releaseReviewProjection": "df025f0e192a6e080de861418cc1cf3bfd5fa3492583070d181e1d6748789ef4"
+    },
+    "status": "review-required",
+    "unknownRoutes": 0
+  },
+  "axeSha256": "aae0b8b36278089962105b2351ea64f4da7d3d440b54e162e21616d597aa0d6f"
+}

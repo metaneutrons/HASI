@@ -266,7 +266,7 @@ The separate `pnpm knowledge:serve` composition accepts approved signed exports 
 A separate production API entrypoint and frontend-to-API transport are available; see [production composition](docs/architecture/production-runtime.md). They require real operator configuration and institutional authority provisioning. The public demo does not use this production identity path.
 
 The separate trusted managed-plugin installer now provides approved-release
-staging, manifest preflight, explicit review, activation, cancellation, rollback
+staging, manifest preflight, explicit before/after contract review, activation, cancellation, rollback
 and reconciliation through private signed RPC and the admin interface. Docker
 access belongs only to that worker. Configuration can be prepared before the
 first installation. Deployed lifecycle, independent artifact distribution and

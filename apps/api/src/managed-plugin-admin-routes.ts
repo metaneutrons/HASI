@@ -3,6 +3,7 @@ import {
   managedPluginCatalogSchema,
   managedPluginCommandResultSchema,
   managedPluginCommandSchema,
+  managedPluginReviewSchema,
 } from '@hasi/plugin-sdk/deployment-admin';
 import { z } from 'zod';
 import type { ManagedPluginAdmin } from './managed-plugin-admin.js';
@@ -35,6 +36,20 @@ export function registerManagedPluginAdminRoutes(
       return managedPluginCatalogSchema.parse(await input.service.list(admin.actor.subject));
     } catch {
       return reply.code(502).send({ error: 'Die verwalteten Plug-in-Installationen konnten nicht geladen werden.' });
+    }
+  });
+
+  app.get('/api/admin/managed-plugins/:id/review', async (request, reply) => {
+    reply.header('cache-control', 'no-store');
+    const admin = await input.requireAdmin(request.cookies[input.cookieName]);
+    const { id } = paramsSchema.parse(request.params);
+    if (!input.service?.describeReview) return unavailable(reply);
+    try {
+      const review = managedPluginReviewSchema.parse(await input.service.describeReview(id, admin.actor.subject));
+      if (review.installationId !== id) throw new Error('Review installation binding invalid.');
+      return await reply.header('cache-control', 'no-store').send(review);
+    } catch {
+      return reply.code(409).header('cache-control', 'no-store').send({ error: 'Die geprüfte Plug-in-Änderung ist nicht mehr aktuell. Bitte neu laden.' });
     }
   });
 
