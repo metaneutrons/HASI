@@ -1,0 +1,214 @@
+{
+  "qualification": "managed-reference-plugin-lifecycle",
+  "qualifierSourceSha256": "56dc8fa23bc93adba78be5f98631263aca3cc5d127573e0a800e8f8ead162284",
+  "qualified": true,
+  "scope": "isolated-local-managed-runtime; instrumented reference source derivative; synthetic-only OIDC and credentials",
+  "confirmationEvidence": "explicit-API-confirm-route-only; not browser-click evidence",
+  "realProviderCalls": 0,
+  "productionWrites": 0,
+  "syntheticSourceWrites": 3,
+  "crashObservation": {
+    "confirmationHttpStatus": 409,
+    "durableProposalStatus": "outcome_unknown"
+  },
+  "journey": {
+    "activatedV1": true,
+    "confirmedSourceBeforeUpdate": true,
+    "sourceAndConfigurationRetainedAcrossUpdateAndRollback": true,
+    "actualV2ContainerExitAfterSourceCommit": {
+      "containerId": "79d6ff2dbaca93194110ef46f15f2558a2e0baca52226f974ef04919bbb156ed",
+      "exitCode": 73,
+      "confirmationHttpStatus": 409
+    },
+    "reauthenticatedReconciliationPreservesExecutionId": true,
+    "barePackageIdRejectedBeforeGateway": true,
+    "stagedPreflightApprovedAndActivatedV2": true,
+    "stageOutcomes": {
+      "v1": {
+        "afterStage": "review-required",
+        "afterApproval": "candidate-ready"
+      },
+      "v2": {
+        "afterStage": "review-required",
+        "afterApproval": "candidate-ready"
+      }
+    },
+    "v1ProposalRejectedAfterV2": true,
+    "adminDisableReenableKeepsV2ProposalInvalid": true,
+    "managedRollbackToV1": true,
+    "v2ProposalRejectedAfterRollback": true,
+    "postRollbackApiConfirmation": true
+  },
+  "effects": {
+    "marks": 3,
+    "sourceRows": 3,
+    "journalRows": 3,
+    "confirmedJournalRows": 3,
+    "invocationRows": 5,
+    "receipts": [
+      {
+        "identity": "2319a4bd44e60315a567904001904ddd3ffbd930524ef6706ba39ff97bb18422",
+        "binding": {
+          "subject": "oidc:LWHLiNE4B9nSZ9pL9kXNor3b3jTCRyqajyEBls1F9dI:d6MaPQ9eau6Ra8_RBf4dIdUdQ1DxB_zY9H1kdd4PgCk",
+          "installationId": "reference-1761fc8e4ce4",
+          "executionId": "671a686e-54f1-494b-9b3b-d5be629f7f74",
+          "tool": "execute_mark",
+          "argsHash": "9353a7c4e6a85e044e7502679691179b38d93fd6f3da4750280300bacea3f9f3",
+          "configurationRevision": 1
+        },
+        "sourceResult": {
+          "confirmed": true,
+          "actionCount": 2,
+          "label": "Managed lifecycle 62b2eb07",
+          "account": "managed-lifecycle-account"
+        },
+        "journalStatus": "confirmed",
+        "journalResult": {
+          "label": "Managed lifecycle 62b2eb07",
+          "account": "managed-lifecycle-account",
+          "confirmed": true,
+          "actionCount": 2
+        }
+      },
+      {
+        "identity": "95d1b40a771d88ebc4d533d89ac697fedf615b709fa1f4b536bc4a3242fa1350",
+        "binding": {
+          "subject": "oidc:LWHLiNE4B9nSZ9pL9kXNor3b3jTCRyqajyEBls1F9dI:d6MaPQ9eau6Ra8_RBf4dIdUdQ1DxB_zY9H1kdd4PgCk",
+          "installationId": "reference-1761fc8e4ce4",
+          "executionId": "86e3c1b9-b454-4968-a56f-320edde213ab",
+          "tool": "execute_mark",
+          "argsHash": "9353a7c4e6a85e044e7502679691179b38d93fd6f3da4750280300bacea3f9f3",
+          "configurationRevision": 1
+        },
+        "sourceResult": {
+          "confirmed": true,
+          "actionCount": 1,
+          "label": "Managed lifecycle 62b2eb07",
+          "account": "managed-lifecycle-account"
+        },
+        "journalStatus": "confirmed",
+        "journalResult": {
+          "label": "Managed lifecycle 62b2eb07",
+          "account": "managed-lifecycle-account",
+          "confirmed": true,
+          "actionCount": 1
+        }
+      },
+      {
+        "identity": "f3b53372e4570c6c47ad50facb98385dfa4d68b1b12c587a68400dbe30df6f37",
+        "binding": {
+          "subject": "oidc:LWHLiNE4B9nSZ9pL9kXNor3b3jTCRyqajyEBls1F9dI:d6MaPQ9eau6Ra8_RBf4dIdUdQ1DxB_zY9H1kdd4PgCk",
+          "installationId": "reference-1761fc8e4ce4",
+          "executionId": "70ccbd8c-93bb-4fea-8645-5676d4638965",
+          "tool": "execute_mark",
+          "argsHash": "9353a7c4e6a85e044e7502679691179b38d93fd6f3da4750280300bacea3f9f3",
+          "configurationRevision": 1
+        },
+        "sourceResult": {
+          "confirmed": true,
+          "actionCount": 3,
+          "label": "Managed lifecycle 62b2eb07",
+          "account": "managed-lifecycle-account"
+        },
+        "journalStatus": "confirmed",
+        "journalResult": {
+          "label": "Managed lifecycle 62b2eb07",
+          "account": "managed-lifecycle-account",
+          "confirmed": true,
+          "actionCount": 3
+        }
+      }
+    ],
+    "actionCount": 3,
+    "gatewayMcpSuccessfulUpstreamRequests": 121,
+    "gatewayMcpStatusCounts": {
+      "200": 57,
+      "202": 64,
+      "503": 2
+    },
+    "toolApiStatusCounts": {
+      "200": 15,
+      "403": 1
+    },
+    "confirmationGatewayMcpDelta": 10,
+    "repeatedConfirmationAndStatusGatewayMcpDelta": 0,
+    "finalReadGatewayMcpDelta": 6
+  },
+  "identities": {
+    "ownerId": "managed-qualifier-1761fc8e4ce4",
+    "installationId": "reference-1761fc8e4ce4",
+    "scope": "managed-lifecycle-1761fc8e4ce4",
+    "workerProcess": {
+      "pid": 18683,
+      "parentPid": 18539,
+      "separate": true
+    },
+    "approvedApiSource": {
+      "id": "reference-1761fc8e4ce4",
+      "sourcePolicy": {
+        "sourceId": "managed-lifecycle-qualification",
+        "revision": "1",
+        "dataClasses": [
+          "synthetic_demo"
+        ]
+      }
+    },
+    "sourceFilesFromWorkspace": {
+      "examples/reference-plugin/package.json": "14003f73ed162a806af4e510d367d7fbe5e3dfb05c2ed6af0e15778bf76d6591",
+      "examples/reference-plugin/README.md": "9bb8cd1bfff144a7c6e1299bf61f47fc59899d94240c5024a768fca1d78d95e9",
+      "examples/reference-plugin/src/manifest.json": "9fbdd03fb66e2e5fbc32a97072a33e218a7e708b230ff5567ecf82a4eabb115e",
+      "examples/reference-plugin/src/server.js": "6c15efc729f0e9f960e2fc4647aee762be48e91dfc0da725aaa22991d3ea1f85",
+      "examples/reference-plugin/src/state.js": "0940467a804b6b4efbd8104f55dfe7dfcbde36b01d717ba305b287506380a9d6"
+    },
+    "installerConfigurationSha256": "817640943d66b48ccd5c5aae2e2ab035d53f61e94baddf137d813f29e7db1581",
+    "artifacts": [
+      {
+        "id": "reference-v1",
+        "version": "1.0.0",
+        "instrumentedSourceTreeSha256": "23f111c43b3ba6c4442182f768396c47c13dc6c752555d5f7438cbff03f83f9d",
+        "instrumentedSourceFiles": {
+          "package.json": "14003f73ed162a806af4e510d367d7fbe5e3dfb05c2ed6af0e15778bf76d6591",
+          "README.md": "9bb8cd1bfff144a7c6e1299bf61f47fc59899d94240c5024a768fca1d78d95e9",
+          "src/manifest.json": "39e1a8df440022d677032735fb38ff6395ec1178072e2981d15cc66e698d0396",
+          "src/server.js": "6c15efc729f0e9f960e2fc4647aee762be48e91dfc0da725aaa22991d3ea1f85",
+          "src/state.js": "0940467a804b6b4efbd8104f55dfe7dfcbde36b01d717ba305b287506380a9d6"
+        },
+        "artifactSha256": "b508468023c3defb763bcb42d53c68db6bb4576d17506ebd4477ef704c44e818",
+        "artifactManifestSha256": "3802e78a8cc24e99a13440d9d5594a6b8e749722479a03f5fbd0a7d3e0913677",
+        "manifestDigest": "9d5e5c904a1295ab08015e79c2d61ea8269e377ea8d6d1c8148aa295992ae66a",
+        "imageId": "sha256:7af148f0c5a738bf81c44549d2e9ce3433f29d450c5120f7d0362ddc0fe145e4",
+        "immutableImage": "localhost/hasi-reference-qualification@sha256:7af148f0c5a738bf81c44549d2e9ce3433f29d450c5120f7d0362ddc0fe145e4",
+        "releaseDigest": "a6d328efc5d2f74f6a6b76ed30319d480df2bbcaa9fd010bc451fb27fbc62332"
+      },
+      {
+        "id": "reference-v2",
+        "version": "1.1.0",
+        "instrumentedSourceTreeSha256": "cf2778ae853c941909f1a65f06164fdc17e60f5885717557fd6a4db175436c0a",
+        "instrumentedSourceFiles": {
+          "package.json": "ab9bb7436cb768e57a7b5efe6299047f757e49b58249dd3175ffe4cedd8e0550",
+          "README.md": "9bb8cd1bfff144a7c6e1299bf61f47fc59899d94240c5024a768fca1d78d95e9",
+          "src/manifest.json": "4ab7e5db4a54ac27fdc1c96359ee627db78eaf5bc44e5829143636931e355732",
+          "src/server.js": "1dd951c18abffe79661b1aaf693f892c69f411d644bcb21bfe69e997c8dd3c7f",
+          "src/state.js": "0940467a804b6b4efbd8104f55dfe7dfcbde36b01d717ba305b287506380a9d6"
+        },
+        "artifactSha256": "29e0756baf3c9d7cebb53d335fc26d2c2e03c3dd08531b9718dcb0ad780e20ee",
+        "artifactManifestSha256": "3aa15a9a0905f8007a21426ed6259f2bb875f2d6625bd610113b120ca8f95221",
+        "manifestDigest": "4d78b65f247d1a94703583efbe8e148696a4329123430bb14ffe58ec1ec7db48",
+        "imageId": "sha256:7b0664162c9f4b9c266051dc13efe91df9257963c7c32ec0484ce3a757d74731",
+        "immutableImage": "localhost/hasi-reference-qualification@sha256:7b0664162c9f4b9c266051dc13efe91df9257963c7c32ec0484ce3a757d74731",
+        "releaseDigest": "13388335055a946a68772739e06dfe65c80c25648cdec97c7d6bf29290e8da2d"
+      }
+    ]
+  },
+  "gatewayOrigin": "http://127.0.0.1:63720",
+  "cleanup": {
+    "verified": true,
+    "containersRemoved": 4,
+    "networksRemoved": 3,
+    "imagesRemoved": 2,
+    "stateKeysRemoved": 43,
+    "expiredOidcKeysRemoved": 0,
+    "physicallyMissingOidcKeys": 0,
+    "discoveredOidcKeys": 0
+  }
+}

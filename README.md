@@ -193,14 +193,17 @@ an actual separate managed installer worker, signed private RPC, pinned Docker
 images and the deployment gateway. Install, approve, activate, update and roll
 back through the existing admin UI. This mode requires a local Unix Docker
 socket and the approved base image already present; it never pulls images.
-Its reference containers use in-memory state, so this mode does not qualify
-state preservation across container replacement or external artifact publication.
-The optional [managed-state SDK profile](docs/architecture/managed-plugin-state.md)
-now connects invocation-bound application state and execution receipts over the
-existing MCP connection. Registry/gateway/SDK tests cover compatible version
-switches, rollback, account isolation and lost-acknowledgment recovery, including
-PostgreSQL. The current managed browser fixture has not yet enabled this profile;
-its container replacement and complete product journey still require qualification.
+Managed reference artifacts now declare the invocation-bound
+[managed-state SDK profile](docs/architecture/managed-plugin-state.md) before
+packaging and signing. Application state and execution receipts live in the
+host's fenced PostgreSQL store, partitioned by installation, subject and the
+personally linked synthetic account. Containers have no database credentials
+or persistent filesystem mount. The direct fixture keeps its private SQLite
+profile. Fixture metadata declares the configured mechanism; starting either
+fixture does not establish continuity or product acceptance. The
+[stateful lifecycle qualification](docs/verification/2026-10-21/managed-state-container-lifecycle.md)
+records actual API/container evidence and its limits. Full joined browser
+qualification and independent publication/distribution remain open.
 See the [managed browser runtime](docs/verification/2026-10-20/managed-browser-runtime.md)
 for isolation, commands, cleanup and the bounded browser observations.
 The report records current findings and incomplete journeys; starting the fixture

@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { PostgresJsonStore } from '@hasi/state';
 import { digest, manifestSchema, type PluginManifest } from '@hasi/plugin-sdk';
 import { managedPluginCommandSchema, managedPluginViewSchema, type ManagedPluginView } from '@hasi/plugin-sdk/deployment-admin';
-import { createApi, type Persona } from '../apps/api/src/index.js';
+import { createApi, PluginAccountService, type Persona } from '../apps/api/src/index.js';
 import { OidcIdentityProvider } from '../apps/api/src/oidc.js';
 import { startTestIdp } from '../apps/api/src/test-idp.js';
 import { ProductionAuthorityDirectory, stableOidcSubject } from '../apps/api/src/production-runtime.js';
@@ -27,6 +27,17 @@ import {
 import { DOCKER_PLUGIN_MANAGED_VALUE } from '../apps/api/src/docker-plugin-relay.js';
 import { qualificationFailureCategory, qualificationFixtures as f } from './healthy-plugin-qualification.js';
 import { assertNoPostgresEnvironment, qualificationDatabase } from './plugin-gateway-qualification-config.js';
+import { DemoPluginAccountAdapter } from '../packages/demo-runtime/src/plugin-account-adapter.js';
+import { validateObservedManagedContainer } from './managed-lifecycle-container-ownership.js';
+import { createManagedReferenceManifest } from './reference-managed-state-profile.js';
+import {
+  deriveManagedReferenceStateKey, deriveManagedStateLeaseKey, readManagedReferenceEvidence,
+  validateManagedReferenceStateValue, validateManagedStateLeaseValue,
+  deriveManagedPluginAccountKey, deriveDemoPluginGrantKey, derivePluginAccountChallengeKey,
+  validateOwnedPluginAccountValue, validateOwnedDemoGrantValue, validateOwnedPluginAccountChallengeValue,
+  type ManagedReferenceEvidenceContext, type ManagedReferenceAccountContext,
+  type ManagedReferenceChallengeContext, type ManagedReferenceLeaseContext,
+} from './managed-reference-state-evidence.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const OWNER_LABEL = 'com.hasi.qualification.owner';
@@ -34,6 +45,21 @@ const REPOSITORY = 'localhost/hasi-reference-qualification';
 const PLUGIN_ID = 'hasi.reference';
 const SOURCE_FILES = ['package.json', 'README.md', 'src/manifest.json', 'src/server.js', 'src/state.js'] as const;
 const SAFE_LIFECYCLE_FAILURE_CATEGORIES = [
+  'managed_crash_false_success', 'managed_crash_unexpected_conflict',
+  'reference_crash_instrumentation_anchor_missing', 'managed_lease_evidence_invalid',
+  'managed_account_authorization_failed', 'managed_account_authorization_invalid',
+  'managed_account_consent_failed', 'managed_before_update_confirmation_failed',
+  'managed_before_update_confirmation_invalid', 'managed_before_update_effect_invalid',
+  'managed_before_update_receipt_missing', 'managed_crash_confirmation_failed',
+  'managed_crash_confirmation_invalid', 'managed_crash_proposal_missing',
+  'managed_crash_outcome_not_unknown', 'managed_crash_source_not_durable',
+  'managed_crash_receipt_identity_invalid', 'managed_crash_container_inspection_failed',
+  'managed_crash_container_identity_invalid', 'managed_crash_exit_not_observed',
+  'managed_crash_container_restart_failed', 'managed_restart_read_invalid',
+  'managed_restart_did_not_recover_source', 'managed_crash_reconciliation_failed',
+  'managed_crash_reconciliation_invalid', 'managed_crash_reconciliation_identity_changed',
+  'managed_crash_reconciliation_replayed_effect', 'managed_crash_confirmation_replayed',
+  'managed_rollback_lost_confirmed_effects',
   'managed_state_cleanup_key_mismatch', 'managed_state_cleanup_delete_mismatch', 'managed_state_cleanup_key_unclassified',
   'package_id_counterprobe_not_rejected_before_gateway',
   'managed_worker_process_identity_invalid', 'managed_worker_process_not_ready', 'managed_worker_process_failed',
@@ -46,7 +72,7 @@ const SAFE_LIFECYCLE_FAILURE_CATEGORIES = [
   'counterprobe_partial_second_auth_not_reproduced', 'counterprobe_transaction_fixture_missing',
   'explicit_api_confirmation_effect_invalid', 'explicit_api_confirmation_failed',
   'explicit_api_confirmation_invalid', 'explicit_confirmation_did_not_reach_gateway',
-  'explicit_opt_in_required', 'final_action_count_not_exactly_one', 'final_v1_preconfirmation_read_mismatch',
+  'explicit_opt_in_required', 'final_action_count_not_exactly_three', 'final_v1_preconfirmation_read_mismatch',
   'guarded_fetch_not_started', 'inactive_managed_contract_was_adopted', 'local_operator_mode_required',
   'managed_admin_authority_seed_failed', 'managed_admin_disable_failed', 'managed_admin_list_failed',
   'managed_admin_list_invalid', 'managed_admin_reenable_failed', 'managed_api_catalog_connect_failed',
@@ -85,10 +111,10 @@ const SAFE_LIFECYCLE_FAILURE_CATEGORIES = [
   'managed_v1_contract_not_live', 'managed_v1_initial_effects_nonzero', 'managed_v1_not_activated',
   'managed_v1_proposal_not_pending', 'managed_v1_stage_review_required_missing', 'managed_v2_api_read_mismatch',
   'managed_v2_api_reads_did_not_reach_gateway', 'managed_v2_approval_missing',
-  'managed_v2_contract_not_live', 'managed_v2_initial_effects_nonzero', 'managed_v2_not_activated',
+  'managed_v2_contract_not_live', 'managed_v2_lost_prior_effect', 'managed_v2_not_activated',
   'managed_v2_pending_read_mismatch', 'managed_v2_rollback_pending_read_mismatch',
   'managed_v2_stage_review_required_missing', 'managed_worker_initial_state_invalid',
-  'mark_source_or_journal_count_not_exactly_one', 'oidc_artifact_identity_invalid',
+  'managed_source_or_journal_count_not_exactly_three', 'oidc_artifact_identity_invalid',
   'oidc_captured_key_outside_owned_issuer', 'oidc_expiry_missing_or_invalid',
   'oidc_physical_delete_count_mismatch', 'oidc_physical_row_outside_owned_issuer',
   'plugin_stats_invalid', 'plugin_stats_missing', 'proposal_id_invalid', 'proposal_missing',
@@ -138,7 +164,6 @@ const assert: (condition: unknown, category: string) => asserts condition = f.as
 type Artifact = Awaited<ReturnType<typeof f.readArtifactManifest>>;
 type Api = Awaited<ReturnType<typeof createApi>>;
 interface Worker { pid: number; ready(): Promise<void>; close(): Promise<void>; }
-interface Stats { marks: number; journalRows: number; sourceRows: number; invocationRows: number }
 interface ArtifactRelease {
   id: string;
   manifest: PluginManifest;
@@ -427,33 +452,19 @@ async function writeInstrumentedReferenceSource(root: string, version: '1.0.0' |
   packageMetadata.version = version;
   const manifest = asRecord(JSON.parse(await readFile(join(directory, 'src/manifest.json'), 'utf8')) as unknown, 'reference_manifest_invalid');
   manifest.version = version;
-  assert(Array.isArray(manifest.tools), 'reference_tools_missing');
-  const tools = manifest.tools as Record<string, unknown>[];
-  const readTool = tools.find(tool => tool.name === 'read_status');
-  assert(readTool, 'reference_read_status_missing');
-  const outputSchema = asRecord(readTool.outputSchema, 'reference_read_status_schema_invalid');
-  const properties = asRecord(outputSchema.properties, 'reference_read_status_schema_invalid');
-  properties.qualificationStats = {
-    type: 'object',
-    properties: {
-      marks: { type: 'integer', minimum: 0 },
-      journalRows: { type: 'integer', minimum: 0 },
-      sourceRows: { type: 'integer', minimum: 0 },
-      invocationRows: { type: 'integer', minimum: 0 },
-    },
-    required: ['marks', 'journalRows', 'sourceRows', 'invocationRows'],
-    additionalProperties: false,
-  };
-  assert(Array.isArray(outputSchema.required), 'reference_read_status_required_missing');
-  (outputSchema.required as string[]).push('qualificationStats');
-
-  const serverPath = join(directory, 'src/server.js');
-  const server = await readFile(serverPath, 'utf8');
-  const marker = '      actionCount: await state.count(context?.installationId ?? installationId, actor),';
-  assert(server.split(marker).length === 2, 'reference_stats_instrumentation_anchor_missing');
-  await writeFile(serverPath, server.replace(marker, `${marker}\n      qualificationStats: state.stats(),`), { flag: 'w' });
+  const managedManifest = createManagedReferenceManifest(manifest);
+  // This immutable v2 qualification derivative dies only after its durable
+  // source write, before the SDK can acknowledge/finalize the execution journal.
+  // There is no HTTP/model-accessible fault switch or host credential involved.
+  if (version === '1.1.0') {
+    const serverPath = join(directory, 'src/server.js');
+    const server = await readFile(serverPath, 'utf8');
+    const marker = '      const result = await referenceState.mark(binding, arguments_, actor);';
+    assert(server.split(marker).length === 2, 'reference_crash_instrumentation_anchor_missing');
+    await writeFile(serverPath, server.replace(marker, `${marker}\n      process.exit(73);`), { flag: 'w' });
+  }
   await writeFile(join(directory, 'package.json'), `${JSON.stringify(packageMetadata, null, 2)}\n`, { flag: 'w' });
-  await writeFile(join(directory, 'src/manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, { flag: 'w' });
+  await writeFile(join(directory, 'src/manifest.json'), `${JSON.stringify(managedManifest, null, 2)}\n`, { flag: 'w' });
 
   const fileHashes: Record<string, string> = {};
   for (const name of SOURCE_FILES) fileHashes[name] = sha256(await readFile(join(directory, name)));
@@ -580,18 +591,6 @@ async function authenticate(
   const check = await app.inject({ method: 'GET', url: '/api/session', headers: { host: API_ORIGIN_HOST, cookie: session } });
   assert(check.statusCode === 200, 'synthetic_oidc_session_failed');
   return { cookie: session };
-}
-
-function parseStats(value: unknown): Stats {
-  const stats = asRecord(value, 'plugin_stats_missing');
-  const parsed = {
-    marks: stats.marks,
-    journalRows: stats.journalRows,
-    sourceRows: stats.sourceRows,
-    invocationRows: stats.invocationRows,
-  };
-  assert(Object.values(parsed).every(item => typeof item === 'number' && Number.isSafeInteger(item) && item >= 0), 'plugin_stats_invalid');
-  return parsed as Stats;
 }
 
 async function runOidcCleanupCounterprobe(): Promise<Record<string, unknown>> {
@@ -723,6 +722,7 @@ function newPendingId(value: unknown): string {
 async function main(): Promise<Record<string, unknown>> {
   requireExplicitOptIn();
   assertNoPostgresEnvironment();
+  const qualifierSourceSha256 = sha256(await readFile(fileURLToPath(import.meta.url)));
   const databaseUrl = process.env.TEST_DATABASE_URL;
   const database = qualificationDatabase(databaseUrl);
   const dockerSocket = f.dockerSocketPath();
@@ -755,7 +755,22 @@ async function main(): Promise<Record<string, unknown>> {
   const apiPort = await f.ephemeralLoopbackPort();
   const apiOrigin = `http://127.0.0.1:${String(apiPort)}`;
   const databaseNamespace = `production:${scope}`;
-  const store = new PostgresJsonStore(databaseNamespace, { poolConfig: { ...database, max: 4 } });
+  const leases = new Map<string, ManagedReferenceLeaseContext>();
+  class ObservedStore extends PostgresJsonStore {
+    override async compareAndSet(key: string, revision: string | null, value: unknown, expiresAt?: number): Promise<boolean> {
+      const committed = await super.compareAndSet(key, revision, value, expiresAt);
+      if (committed && key.startsWith('managed-plugin-state-lease:v1:')) {
+        const lease = asRecord(value, 'managed_lease_evidence_invalid');
+        assert(typeof lease.invocation === 'string', 'managed_lease_evidence_invalid');
+        const context = { scope, installationId, jti: lease.invocation };
+        validateManagedStateLeaseValue(context, key, value);
+        assert(deriveManagedStateLeaseKey(context) === key, 'managed_lease_evidence_invalid');
+        leases.set(key, context);
+      }
+      return committed;
+    }
+  }
+  const store = new ObservedStore(databaseNamespace, { poolConfig: { ...database, max: 4 } });
   const baselineContainers = exactFullContainerList();
   const root = await mkdtemp(join(tmpdir(), 'hasi-managed-plugin-lifecycle-'));
   const images: ImageRecord[] = [];
@@ -764,6 +779,7 @@ async function main(): Promise<Record<string, unknown>> {
   const proposals: string[] = [];
   const oidcArtifacts: OidcArtifactTracker = { issuer: '', keys: new Set<string>() };
   const runtimeOperationIds = new Set<string>();
+  const observedContainers = new Map<string, { operationId: string; labelsDigest: string }>();
   let identityProvider: Awaited<ReturnType<typeof startTestIdp>> | undefined;
   let worker: Worker | undefined;
   let app: Api | undefined;
@@ -789,6 +805,10 @@ async function main(): Promise<Record<string, unknown>> {
   const releases: ArtifactRelease[] = [];
   let pluginSourceHashes: Record<string, string> = {};
   let authoritySubjects: string[] = [];
+  let stateContext: ManagedReferenceEvidenceContext | undefined;
+  let accountContext: ManagedReferenceAccountContext | undefined;
+  const accountChallenges = new Map<string, ManagedReferenceChallengeContext>();
+  const crashObservation: { confirmationHttpStatus?: number; durableProposalStatus?: string } = {};
   const managedStageOutcomes: Record<'v1' | 'v2', {
     afterStage?: ManagedPluginView['status'];
     afterApproval?: ManagedPluginView['status'];
@@ -812,13 +832,19 @@ async function main(): Promise<Record<string, unknown>> {
       const fields = f.runDocker(['container', 'inspect', '--format', '{{.Id}}|{{.Name}}|{{json .Config.Labels}}', id],
         'managed_container_identity_inspection_failed').split('|');
       const labels = asRecord(JSON.parse(fields[2] ?? '{}') as unknown, 'managed_container_labels_invalid');
+      if (labels['hasi.owner'] !== ownerId) continue;
       assert(fields[0] === id && typeof fields[1] === 'string' && fields[1].startsWith('/')
-        && labels['hasi.owner'] === ownerId && labels['hasi.managed-by'] === DOCKER_PLUGIN_MANAGED_VALUE
-        && labels['hasi.installation'] === installationId, 'managed_container_identity_mismatch');
+        && labels['hasi.managed-by'] === DOCKER_PLUGIN_MANAGED_VALUE
+        && labels['hasi.installation'] === installationId && labels['hasi.plugin'] === PLUGIN_ID
+        && ['candidate', 'relay'].includes(String(labels['hasi.role']))
+        && releases.some(release => release.releaseDigest === labels['hasi.release']), 'managed_container_identity_mismatch');
       const operationId = labels['hasi.operation'];
       assert(typeof operationId === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u.test(operationId),
         'managed_container_operation_identity_missing');
       runtimeOperationIds.add(operationId);
+      const observed = observedContainers.get(id);
+      assert(!observed || observed.labelsDigest === digest(labels), 'managed_container_identity_mismatch');
+      observedContainers.set(id, { operationId, labelsDigest: digest(labels) });
     }
   };
   const getView = async (adminCookie: string): Promise<ManagedPluginView> => {
@@ -892,7 +918,7 @@ async function main(): Promise<Record<string, unknown>> {
   };
 
   try {
-    phase = 'database-and-docker-preflight';
+    phase = 'database-and-docker-preflight'; process.stderr.write(`${JSON.stringify({ event: 'managed-lifecycle-phase', phase })}\n`);
     await store.initialize(); storeInitialized = true;
     await assertPhysicalNamespaceEmpty(database, databaseNamespace);
     assert(await store.compareAndSet(OWNER_MARKER_KEY, null, {
@@ -908,7 +934,7 @@ async function main(): Promise<Record<string, unknown>> {
     ];
     for (const key of keyCheck) assert(await store.read(key) === undefined, 'managed_qualification_state_collision');
 
-    phase = 'offline-artifacts';
+    phase = 'offline-artifacts'; process.stderr.write(`${JSON.stringify({ event: 'managed-lifecycle-phase', phase })}\n`);
     for (const name of networks) { attemptedNetworks.push(name); f.createQualificationNetwork(name, ownerId, true); }
     attemptedNetworks.push(relayNetwork); f.createQualificationNetwork(relayNetwork, ownerId, false);
     const labelsA = portA;
@@ -949,7 +975,7 @@ async function main(): Promise<Record<string, unknown>> {
     await writeFile(configPath, configBytes, { mode: 0o600, flag: 'wx' });
     configSha256 = sha256(configBytes);
 
-    phase = 'synthetic-authority-and-managed-worker';
+    phase = 'synthetic-authority-and-managed-worker'; process.stderr.write(`${JSON.stringify({ event: 'managed-lifecycle-phase', phase })}\n`);
     identityProvider = await startTestIdp({ mode: 'test', clientId: API_CLIENT_ID,
       redirectUri: `${apiOrigin}/api/auth/callback`, subjects: [
         { subject: 'managed-journey-admin', label: 'Synthetic administrator' },
@@ -963,7 +989,7 @@ async function main(): Promise<Record<string, unknown>> {
     const admin: Persona = { id: adminSubject, displayName: 'Synthetic lifecycle administrator', role: 'admin',
       actor: { subject: adminSubject, permissions: ['plugins:manage'] } };
     const student: Persona = { id: studentSubject, displayName: 'Synthetic lifecycle student', role: 'student',
-      actor: { subject: studentSubject, permissions: ['reference:read', 'reference:prepare', 'reference:execute'], claims: { 'reference.account': ACCOUNT } } };
+      actor: { subject: studentSubject, permissions: ['reference:read', 'reference:prepare', 'reference:execute'] } };
     assert(await authority.replace(adminSubject, null, admin), 'managed_admin_authority_seed_failed');
     assert(await authority.replace(studentSubject, null, student), 'managed_student_authority_seed_failed');
     const workerEnvironment = {
@@ -984,7 +1010,7 @@ async function main(): Promise<Record<string, unknown>> {
     const initialCatalog = await managedAdmin.list(adminSubject);
     assert(initialCatalog.installations[0]?.status === 'empty', 'managed_worker_initial_state_invalid');
 
-    phase = 'api-registry-private-rpc-composition';
+    phase = 'api-registry-private-rpc-composition'; process.stderr.write(`${JSON.stringify({ event: 'managed-lifecycle-phase', phase })}\n`);
     const sourcePolicy: NonNullable<ApprovedPluginSource['registration']['sourcePolicy']> = {
       sourceId: 'managed-lifecycle-qualification', revision: '1', dataClasses: ['synthetic_demo'],
     };
@@ -1020,8 +1046,19 @@ async function main(): Promise<Record<string, unknown>> {
       }
       return response;
     };
+    assert(v1.manifest.manifestVersion === 2, 'reference_manifest_invalid');
+    stateContext = { scope, installationId, subject: studentSubject, account: ACCOUNT, manifest: v1.manifest };
+    accountContext = { scope, installationId, subject: studentSubject, publicKey: authorityKeys.publicKey };
+    const evidenceContext = stateContext;
+    const evidence = () => readManagedReferenceEvidence(store, evidenceContext);
+    const adapter = new DemoPluginAccountAdapter({ mode: 'test', privateKey: authorityKeys.privateKey,
+      store, scope, installationId, resolveProjection: ({ subject }) => subject === studentSubject
+        ? { permissions: ['reference:read', 'reference:prepare', 'reference:execute'], claims: { 'reference.account': ACCOUNT } }
+        : undefined });
+    const accounts = new Map([[installationId, new PluginAccountService({ mode: 'test',
+      privateKey: authorityKeys.privateKey, store, scope, installationId, adapter })]]);
     const registry = new PluginRegistry(authorityKeys.privateKey, {
-      store, scope, envelopeResults: true,
+      store, scope, envelopeResults: true, accounts,
       operatorManagedLoopbackOrigin: gatewayOrigin,
       resolveActor: async subject => (await authority.resolve(subject))?.actor,
       resolveActorSnapshot: async subject => { const snapshot = await authority.resolveSnapshot(subject); return snapshot ? { actor: snapshot.persona.actor, fence: snapshot.fence } : undefined; },
@@ -1045,9 +1082,9 @@ async function main(): Promise<Record<string, unknown>> {
     const adminSession = await authenticate(app, identityProvider.issuer, 'managed-journey-admin', apiOrigin, recordOidcArtifact);
     const studentSession = await authenticate(app, identityProvider.issuer, 'managed-journey-student', apiOrigin, recordOidcArtifact);
     const adminCookie = adminSession.cookie;
-    const studentCookie = studentSession.cookie;
+    let studentCookie = studentSession.cookie;
 
-    phase = 'v1-configuration-and-activation';
+    phase = 'v1-configuration-and-activation'; process.stderr.write(`${JSON.stringify({ event: 'managed-lifecycle-phase', phase })}\n`);
     const draft = await apiCall('POST', `/api/admin/managed-plugins/${installationId}/configuration/draft`, adminCookie,
       { revision: 0, values: { label: LABEL }, disabledTools: [] });
     assert(draft.statusCode === 200, 'managed_configuration_draft_failed');
@@ -1066,9 +1103,21 @@ async function main(): Promise<Record<string, unknown>> {
     assert(view.status === 'active' && view.current?.id === 'reference-v1', 'managed_v1_not_activated');
     assert((await contractClient.read(installationId))?.manifest.version === '1.0.0', 'managed_v1_contract_not_live');
 
-    phase = 'v1-api-connection-and-pending-proposal';
+    phase = 'v1-api-connection-and-pending-proposal'; process.stderr.write(`${JSON.stringify({ event: 'managed-lifecycle-phase', phase })}\n`);
     const connect = await apiCall('POST', '/api/admin/plugin-catalog/connect', adminCookie, { sourceId: installationId });
     assert(connect.statusCode === 200, 'managed_api_catalog_connect_failed');
+    const authorization = await apiCall('POST', `/api/plugin-accounts/${installationId}/authorization`, studentCookie,
+      { operation: 'consent', returnTo: '/' });
+    assert(authorization.statusCode === 200, 'managed_account_authorization_failed');
+    const authorizationUrl = parseJsonBody(authorization, 'managed_account_authorization_invalid').authorizationUrl;
+    assert(typeof authorizationUrl === 'string', 'managed_account_authorization_invalid');
+    const accountState = new URL(authorizationUrl, apiOrigin).searchParams.get('state');
+    assert(typeof accountState === 'string' && /^[A-Za-z0-9_-]{43}$/u.test(accountState), 'managed_account_authorization_invalid');
+    const challengeContext = { ...accountContext, state: accountState };
+    accountChallenges.set(derivePluginAccountChallengeKey(challengeContext), challengeContext);
+    const consent = await apiCall('POST', `/api/plugin-accounts/${installationId}/consent`, studentCookie,
+      { state: accountState, approved: true });
+    assert(consent.statusCode === 200, 'managed_account_consent_failed');
     const beforePackageIdCounterprobe = gatewayMcpSuccesses;
     const packageIdCounterprobe = await apiCall('POST', '/api/tools/call', studentCookie, {
       pluginId: PLUGIN_ID, name: 'read_status', arguments: {}, source: 'model', requiredEffect: 'read',
@@ -1078,15 +1127,22 @@ async function main(): Promise<Record<string, unknown>> {
     const v1Read = await readStatus(studentCookie);
     assert(v1Read.label === LABEL && v1Read.version === '1.0.0' && v1Read.account === ACCOUNT && v1Read.actionCount === 0,
       'managed_v1_api_read_mismatch');
-    const v1Stats = parseStats(v1Read.qualificationStats);
+    const v1Stats = await evidence();
     assert(v1Stats.marks === 0 && v1Stats.journalRows === 0 && v1Stats.sourceRows === 0, 'managed_v1_initial_effects_nonzero');
+    const beforeUpdatePending = await prepare(studentCookie);
+    const beforeUpdateConfirm = await apiCall('POST', `/api/proposals/${beforeUpdatePending}/confirm`, studentCookie, {});
+    assert(beforeUpdateConfirm.statusCode === 200, 'managed_before_update_confirmation_failed');
+    const beforeUpdateResult = parseJsonBody(beforeUpdateConfirm, 'managed_before_update_confirmation_invalid');
+    assert(beforeUpdateResult.confirmed === true && beforeUpdateResult.actionCount === 1, 'managed_before_update_effect_invalid');
+    const beforeUpdateEvidence = await evidence();
+    assert(beforeUpdateEvidence.marks === 1 && beforeUpdateEvidence.confirmedJournalRows === 1, 'managed_before_update_receipt_missing');
     const pendingV1 = await prepare(studentCookie);
     await observeReadOnly(studentCookie, pendingV1, 200);
     const v1PendingRecord = await store.read(`proposal:${pendingV1}`);
     assert(v1PendingRecord !== undefined && asRecord(v1PendingRecord.value, 'v1_pending_invalid').status === 'pending', 'managed_v1_proposal_not_pending');
     const mcpBeforeV2 = gatewayMcpSuccesses;
 
-    phase = 'managed-v2-stage-preflight-approve-activate';
+    phase = 'managed-v2-stage-preflight-approve-activate'; process.stderr.write(`${JSON.stringify({ event: 'managed-lifecycle-phase', phase })}\n`);
     view = await command(adminCookie, 'stage', 'reference-v2');
     managedStageOutcomes.v2.afterStage = view.status;
     assert(view.status === 'review-required' && view.candidate?.id === 'reference-v2', 'managed_v2_stage_review_required_missing');
@@ -1099,16 +1155,88 @@ async function main(): Promise<Record<string, unknown>> {
     await rejectOldProposal(studentCookie, pendingV1);
     await observeReadOnly(studentCookie, pendingV1, 409);
     const v2Read = await readStatus(studentCookie);
-    assert(v2Read.version === '1.1.0' && v2Read.label === LABEL && v2Read.actionCount === 0, 'managed_v2_api_read_mismatch');
-    const v2InitialStats = parseStats(v2Read.qualificationStats);
-    assert(v2InitialStats.marks === 0 && v2InitialStats.journalRows === 0 && v2InitialStats.sourceRows === 0, 'managed_v2_initial_effects_nonzero');
+    assert(v2Read.version === '1.1.0' && v2Read.label === LABEL && v2Read.actionCount === 1, 'managed_v2_api_read_mismatch');
+    const v2InitialStats = await evidence();
+    assert(v2InitialStats.marks === 1 && v2InitialStats.journalRows === 1 && v2InitialStats.sourceRows === 1, 'managed_v2_lost_prior_effect');
     assert(gatewayMcpSuccesses > mcpBeforeV2, 'managed_v2_api_reads_did_not_reach_gateway');
 
-    phase = 'managed-disable-reenable';
+    phase = 'managed-v2-write-crash-restart-reconcile'; process.stderr.write(`${JSON.stringify({ event: 'managed-lifecycle-phase', phase })}\n`);
+    const crashingPending = await prepare(studentCookie);
+    const crashingResponse = await apiCall('POST', `/api/proposals/${crashingPending}/confirm`, studentCookie, {});
+    // The final access projection can return unavailable while the owned
+    // runtime is down. It must still durably retain an unknown execution.
+    crashObservation.confirmationHttpStatus = crashingResponse.statusCode;
+    assert(crashingResponse.statusCode === 200 || crashingResponse.statusCode === 409, 'managed_crash_confirmation_failed');
+    const crashResponseBody = parseJsonBody(crashingResponse, 'managed_crash_confirmation_invalid');
+    assert(crashResponseBody.confirmed !== true, 'managed_crash_false_success');
+    if (crashingResponse.statusCode === 409) {
+      assert(crashResponseBody.error === 'Die aktuelle verwaltete Plugin-Freigabe ist nicht verfügbar.',
+        'managed_crash_unexpected_conflict');
+    }
+    const crashRecord = await store.read(`proposal:${crashingPending}`);
+    assert(crashRecord, 'managed_crash_proposal_missing');
+    const crashedProposal = asRecord(crashRecord.value, 'managed_crash_proposal_missing');
+    if (typeof crashedProposal.status === 'string') crashObservation.durableProposalStatus = crashedProposal.status;
+    assert(crashedProposal.id === crashingPending && crashedProposal.subject === studentSubject,
+      'managed_crash_receipt_identity_invalid');
+    if (crashingResponse.statusCode === 200) {
+      const publicUnknown = asRecord(crashResponseBody.proposal, 'managed_crash_confirmation_invalid');
+      assert(publicUnknown.status === 'outcome_unknown' && publicUnknown.id === crashingPending,
+        'managed_crash_confirmation_invalid');
+    }
+    assert(crashedProposal.status === 'outcome_unknown' && typeof crashedProposal.executionId === 'string', 'managed_crash_outcome_not_unknown');
+    const afterCrash = await evidence();
+    assert(afterCrash.marks === 2 && afterCrash.sourceRows === 2 && afterCrash.confirmedJournalRows === 1,
+      'managed_crash_source_not_durable');
+    const crashedReceipt = afterCrash.receipts.find(receipt => receipt.binding.executionId === crashedProposal.executionId);
+    assert(crashedReceipt && crashedReceipt.journalStatus !== 'confirmed', 'managed_crash_receipt_identity_invalid');
+    const ownedV2 = [...exactFullContainerList()].filter(id => {
+      if (baselineContainers.has(id)) return false;
+      const raw = f.runDocker(['container', 'inspect', '--format', '{{json .Config.Labels}}', id], 'managed_crash_container_inspection_failed');
+      const labels = asRecord(JSON.parse(raw) as unknown, 'managed_container_labels_invalid');
+      return labels['hasi.owner'] === ownerId && labels['hasi.installation'] === installationId
+        && labels['hasi.managed-by'] === DOCKER_PLUGIN_MANAGED_VALUE && labels['hasi.role'] === 'candidate'
+        && labels['hasi.release'] === releaseV2.releaseDigest;
+    });
+    assert(ownedV2.length === 1 && ownedV2[0], 'managed_crash_container_identity_invalid');
+    const crashedContainer = ownedV2[0];
+    const containerState = f.runDocker(['container', 'inspect', '--format', '{{.State.Running}}|{{.State.ExitCode}}', crashedContainer], 'managed_crash_container_inspection_failed');
+    assert(containerState === 'false|73', 'managed_crash_exit_not_observed');
+    f.runDocker(['container', 'start', crashedContainer], 'managed_crash_container_restart_failed');
+    // Fresh OIDC authentication, same durable account and execution identity.
+    studentCookie = (await authenticate(app, identityProvider.issuer, 'managed-journey-student', apiOrigin, recordOidcArtifact)).cookie;
+    let restartedRead: Record<string, unknown> | undefined;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const response = await apiCall('POST', '/api/tools/call', studentCookie,
+        { pluginId: installationId, name: 'read_status', arguments: {}, source: 'model', requiredEffect: 'read' });
+      if (response.statusCode === 200) { restartedRead = parseJsonBody(response, 'managed_restart_read_invalid'); break; }
+      await delay(250);
+    }
+    assert(restartedRead?.version === '1.1.0' && restartedRead.actionCount === 2, 'managed_restart_did_not_recover_source');
+    const reconciled = await apiCall('POST', `/api/proposals/${crashingPending}/reconcile`, studentCookie, {});
+    assert(reconciled.statusCode === 200, 'managed_crash_reconciliation_failed');
+    const reconciliation = asRecord(parseJsonBody(reconciled, 'managed_crash_reconciliation_invalid').proposal, 'managed_crash_reconciliation_invalid');
+    assert(reconciliation.status === 'confirmed' && reconciliation.id === crashingPending,
+      'managed_crash_reconciliation_invalid');
+    // Execution IDs are intentionally absent from the public proposal shape.
+    const reconciledRecord = await store.read(`proposal:${crashingPending}`);
+    assert(reconciledRecord, 'managed_crash_proposal_missing');
+    const durableReconciliation = asRecord(reconciledRecord.value, 'managed_crash_reconciliation_invalid');
+    assert(durableReconciliation.status === 'confirmed' && durableReconciliation.subject === studentSubject
+      && durableReconciliation.id === crashingPending && durableReconciliation.executionId === crashedProposal.executionId,
+      'managed_crash_reconciliation_identity_changed');
+    const afterReconcile = await evidence();
+    assert(afterReconcile.marks === 2 && afterReconcile.confirmedJournalRows === 2, 'managed_crash_reconciliation_replayed_effect');
+    const beforeCrashReplay = gatewayMcpSuccesses;
+    const replayCrashed = await apiCall('POST', `/api/proposals/${crashingPending}/confirm`, studentCookie, {});
+    assert(replayCrashed.statusCode === 200 && gatewayMcpSuccesses === beforeCrashReplay, 'managed_crash_confirmation_replayed');
+    await observeReadOnly(studentCookie, crashingPending, 200);
+
+    phase = 'managed-disable-reenable'; process.stderr.write(`${JSON.stringify({ event: 'managed-lifecycle-phase', phase })}\n`);
     const pendingV2Toggle = await prepare(studentCookie);
     await observeReadOnly(studentCookie, pendingV2Toggle, 200);
     const v2PendingRead = await readStatus(studentCookie);
-    assert(v2PendingRead.version === '1.1.0' && v2PendingRead.actionCount === 0, 'managed_v2_pending_read_mismatch');
+    assert(v2PendingRead.version === '1.1.0' && v2PendingRead.actionCount === 2, 'managed_v2_pending_read_mismatch');
     const beforeToggle = gatewayMcpSuccesses;
     const disable = await apiCall('POST', `/api/admin/plugins/${installationId}/enabled`, adminCookie, { enabled: false });
     assert(disable.statusCode === 200, 'managed_admin_disable_failed');
@@ -1121,33 +1249,33 @@ async function main(): Promise<Record<string, unknown>> {
     await observeReadOnly(studentCookie, pendingV2Toggle, 409);
     assert(gatewayMcpSuccesses === beforeToggle, 'managed_disable_reenable_or_stale_status_invoked_gateway_mcp');
     const afterReenable = await readStatus(studentCookie);
-    assert(afterReenable.version === '1.1.0' && afterReenable.actionCount === 0, 'managed_reenable_did_not_restore_v2_read');
+    assert(afterReenable.version === '1.1.0' && afterReenable.actionCount === 2, 'managed_reenable_did_not_restore_v2_read');
 
-    phase = 'managed-v2-pending-and-rollback-v1';
+    phase = 'managed-v2-pending-and-rollback-v1'; process.stderr.write(`${JSON.stringify({ event: 'managed-lifecycle-phase', phase })}\n`);
     const pendingV2Rollback = await prepare(studentCookie);
     await observeReadOnly(studentCookie, pendingV2Rollback, 200);
     const rollbackRead = await readStatus(studentCookie);
-    assert(rollbackRead.version === '1.1.0' && rollbackRead.actionCount === 0, 'managed_v2_rollback_pending_read_mismatch');
+    assert(rollbackRead.version === '1.1.0' && rollbackRead.actionCount === 2, 'managed_v2_rollback_pending_read_mismatch');
     view = await command(adminCookie, 'rollback');
     assert(view.status === 'active' && view.current?.id === 'reference-v1' && view.previous?.id === 'reference-v2', 'managed_rollback_to_v1_failed');
     assert((await contractClient.read(installationId))?.manifest.version === '1.0.0', 'managed_rollback_v1_contract_not_live');
     await rejectOldProposal(studentCookie, pendingV2Rollback);
     await observeReadOnly(studentCookie, pendingV2Rollback, 409);
     const afterRollback = await readStatus(studentCookie);
-    assert(afterRollback.version === '1.0.0' && afterRollback.label === LABEL && afterRollback.actionCount === 0, 'managed_rollback_v1_api_read_mismatch');
-    const rollbackStats = parseStats(afterRollback.qualificationStats);
-    assert(rollbackStats.marks === 0 && rollbackStats.journalRows === 0 && rollbackStats.sourceRows === 0, 'rollback_container_inherited_old_effects');
+    assert(afterRollback.version === '1.0.0' && afterRollback.label === LABEL && afterRollback.actionCount === 2, 'managed_rollback_v1_api_read_mismatch');
+    const rollbackStats = await evidence();
+    assert(rollbackStats.marks === 2 && rollbackStats.journalRows === 2 && rollbackStats.confirmedJournalRows === 2, 'managed_rollback_lost_confirmed_effects');
 
-    phase = 'post-rollback-explicit-api-confirmation';
+    phase = 'post-rollback-explicit-api-confirmation'; process.stderr.write(`${JSON.stringify({ event: 'managed-lifecycle-phase', phase })}\n`);
     const finalPending = await prepare(studentCookie);
     await observeReadOnly(studentCookie, finalPending, 200);
     const finalBefore = await readStatus(studentCookie);
-    assert(finalBefore.version === '1.0.0' && finalBefore.actionCount === 0, 'final_v1_preconfirmation_read_mismatch');
+    assert(finalBefore.version === '1.0.0' && finalBefore.actionCount === 2, 'final_v1_preconfirmation_read_mismatch');
     const beforeConfirm = gatewayMcpSuccesses;
     const confirmed = await apiCall('POST', `/api/proposals/${finalPending}/confirm`, studentCookie, {});
     assert(confirmed.statusCode === 200, 'explicit_api_confirmation_failed');
     const confirmBody = parseJsonBody(confirmed, 'explicit_api_confirmation_invalid');
-    assert(confirmBody.confirmed === true && confirmBody.actionCount === 1 && confirmBody.label === LABEL && confirmBody.account === ACCOUNT,
+    assert(confirmBody.confirmed === true && confirmBody.actionCount === 3 && confirmBody.label === LABEL && confirmBody.account === ACCOUNT,
       'explicit_api_confirmation_effect_invalid');
     const afterConfirm = gatewayMcpSuccesses;
     assert(afterConfirm > beforeConfirm, 'explicit_confirmation_did_not_reach_gateway');
@@ -1158,7 +1286,7 @@ async function main(): Promise<Record<string, unknown>> {
     const repeated = await apiCall('POST', `/api/proposals/${finalPending}/confirm`, studentCookie, {});
     assert(repeated.statusCode === 200, 'repeated_confirmation_failed');
     const repeatedBody = parseJsonBody(repeated, 'repeated_confirmation_invalid');
-    assert(repeatedBody.confirmed === true && repeatedBody.actionCount === 1, 'repeated_confirmation_replayed_effect');
+    assert(repeatedBody.confirmed === true && repeatedBody.actionCount === 3, 'repeated_confirmation_replayed_effect');
     assert(gatewayMcpSuccesses === afterConfirm, 'repeated_confirmation_invoked_gateway_mcp');
     const statusAfterConfirm = await apiCall('GET', `/api/proposals/${finalPending}`, studentCookie);
     assert(statusAfterConfirm.statusCode === 200, 'confirmed_proposal_status_failed');
@@ -1169,17 +1297,22 @@ async function main(): Promise<Record<string, unknown>> {
     const finalProposal = asRecord(proposalAfterReplay.value, 'confirmed_proposal_record_invalid_after_replay');
     assert(finalProposal.status === 'confirmed' && finalProposal.executionId === proposalStateBeforeReplay.executionId, 'repeated_confirmation_changed_execution_identity');
     const finalRead = await readStatus(studentCookie);
-    assert(finalRead.version === '1.0.0' && finalRead.actionCount === 1, 'final_action_count_not_exactly_one');
-    const finalStats = parseStats(finalRead.qualificationStats);
-    assert(finalStats.marks === 1 && finalStats.journalRows === 1 && finalStats.sourceRows === 1, 'mark_source_or_journal_count_not_exactly_one');
+    assert(finalRead.version === '1.0.0' && finalRead.actionCount === 3, 'final_action_count_not_exactly_three');
+    const finalStats = await evidence();
+    assert(finalStats.marks === 3 && finalStats.journalRows === 3 && finalStats.sourceRows === 3 && finalStats.confirmedJournalRows === 3, 'managed_source_or_journal_count_not_exactly_three');
 
     report = {
-      qualification: 'managed-reference-plugin-lifecycle',
+      qualification: 'managed-reference-plugin-lifecycle', qualifierSourceSha256,
       qualified: true,
       scope: 'isolated-local-managed-runtime; instrumented reference source derivative; synthetic-only OIDC and credentials',
       confirmationEvidence: 'explicit-API-confirm-route-only; not browser-click evidence',
+      realProviderCalls: 0, productionWrites: 0, syntheticSourceWrites: 3, crashObservation,
       journey: {
         activatedV1: true,
+        confirmedSourceBeforeUpdate: true,
+        sourceAndConfigurationRetainedAcrossUpdateAndRollback: true,
+        actualV2ContainerExitAfterSourceCommit: { containerId: crashedContainer, exitCode: 73, confirmationHttpStatus: crashingResponse.statusCode },
+        reauthenticatedReconciliationPreservesExecutionId: true,
         barePackageIdRejectedBeforeGateway: true,
         stagedPreflightApprovedAndActivatedV2: true,
         stageOutcomes: managedStageOutcomes,
@@ -1213,9 +1346,9 @@ async function main(): Promise<Record<string, unknown>> {
   } catch (error) {
     const failureCategory = safeFailureCategory(error);
     blocker = 'managed_plugin_lifecycle_qualification_failed';
-    report = { qualification: 'managed-reference-plugin-lifecycle', qualified: false, phase, blocker, failureCategory,
+    report = { qualification: 'managed-reference-plugin-lifecycle', qualifierSourceSha256, qualified: false, phase, blocker, failureCategory,
       ownerId, installationId, scope, gatewayMcpSuccessfulUpstreamRequests: gatewayMcpSuccesses, gatewayMcpStatusCounts, toolApiStatusCounts,
-      stageOutcomes: managedStageOutcomes,
+      stageOutcomes: managedStageOutcomes, crashObservation,
       identities: { installerConfigurationSha256: configSha256,
         artifacts: releases.map(release => ({ id: release.id, version: release.manifest.version,
           artifactSha256: release.evidence.artifactSha256, manifestDigest: release.evidence.manifestDigest,
@@ -1245,19 +1378,21 @@ async function main(): Promise<Record<string, unknown>> {
         for (const id of added) {
           const fields = f.runDocker(['container', 'inspect', '--format', '{{.Id}}|{{.Name}}|{{json .Config.Labels}}', id], 'managed_container_cleanup_inspection_failed').split('|');
           const labels = asRecord(JSON.parse(fields[2] ?? '{}') as unknown, 'managed_container_labels_invalid');
-          assert(fields[0] === id && typeof fields[1] === 'string' && fields[1].startsWith('/')
-            && labels['hasi.owner'] === ownerId && labels['hasi.managed-by'] === DOCKER_PLUGIN_MANAGED_VALUE,
-          'managed_container_cleanup_owner_mismatch');
-          const operationId = labels['hasi.operation'];
-          if (typeof operationId === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u.test(operationId)) runtimeOperationIds.add(operationId);
-          ownedContainers.push({ id, ...(typeof operationId === 'string' ? { operationId } : {}) });
+          if (labels['hasi.owner'] !== ownerId) continue;
+          const observed = observedContainers.get(id);
+          assert(fields[0] === id && observed, 'managed_container_cleanup_owner_mismatch');
+          validateObservedManagedContainer({ id, name: fields[1] ?? '', labels, ownerId, installationId,
+            pluginId: PLUGIN_ID, allowedReleaseDigests: releases.map(release => release.releaseDigest),
+            observed, knownOperationIds: runtimeOperationIds });
+          ownedContainers.push({ id, operationId: observed.operationId });
         }
         for (const container of ownedContainers) {
           f.runDocker(['container', 'rm', '--force', container.id], 'managed_owned_container_cleanup_failed');
           containersRemoved += 1;
         }
         const restored = exactFullContainerList();
-        if (restored.size !== baselineContainers.size || [...restored].some(id => !baselineContainers.has(id))) cleanupVerified = false;
+        if ([...baselineContainers].some(id => !restored.has(id))
+          || ownedContainers.some(container => restored.has(container.id))) cleanupVerified = false;
       } catch { cleanupVerified = false; }
       if (cleanupVerified) {
         for (const name of [...attemptedNetworks].reverse()) {
@@ -1293,10 +1428,31 @@ async function main(): Promise<Record<string, unknown>> {
           return [`proposal:${proposalId}`, `proposal-invalidation-audit:v1:${scopeDigest}:${eventId}`];
         }),
       ]);
+      if (stateContext) cleanupKeys.add(deriveManagedReferenceStateKey(stateContext));
+      if (accountContext) {
+        cleanupKeys.add(deriveManagedPluginAccountKey(accountContext));
+        cleanupKeys.add(deriveDemoPluginGrantKey(accountContext));
+      }
+      for (const key of leases.keys()) cleanupKeys.add(key);
+      for (const key of accountChallenges.keys()) cleanupKeys.add(key);
       try {
         stateKeysRemoved += await removePhysicalStateArtifacts({ database, namespace: databaseNamespace, ownerId, nonce,
           keys: cleanupKeys, validate: (key, value) => {
-            if (key.includes('plugin-route')) {
+            if (stateContext && key === deriveManagedReferenceStateKey(stateContext)) {
+              validateManagedReferenceStateValue(stateContext, value);
+            } else if (leases.has(key)) {
+              const lease = leases.get(key);
+              assert(lease, 'managed_lease_evidence_invalid');
+              validateManagedStateLeaseValue(lease, key, value);
+            } else if (accountContext && key === deriveManagedPluginAccountKey(accountContext)) {
+              validateOwnedPluginAccountValue(accountContext, value);
+            } else if (accountContext && key === deriveDemoPluginGrantKey(accountContext)) {
+              validateOwnedDemoGrantValue(accountContext, value);
+            } else if (accountChallenges.has(key)) {
+              const challenge = accountChallenges.get(key);
+              assert(challenge, 'managed_account_authorization_invalid');
+              validateOwnedPluginAccountChallengeValue(challenge, key, value);
+            } else if (key.includes('plugin-route')) {
               const state = asRecord(value, 'managed_route_cleanup_state_invalid');
               assert(state.ownerId === ownerId && state.installationId === installationId, 'managed_route_cleanup_owner_mismatch');
             } else if (key.includes('plugin-deployment')) {
