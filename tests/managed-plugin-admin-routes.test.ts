@@ -2,6 +2,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type {
   ManagedPluginCommand,
+  ManagedPluginReview,
   ManagedPluginView,
 } from '@hasi/plugin-sdk/deployment-admin';
 import { createApi, PluginRegistry } from '../apps/api/src/index.js';
@@ -30,6 +31,18 @@ const installation: ManagedPluginView = {
     inventoryDigest: digest,
     approved: true,
   }],
+};
+const reviewContract = {
+  tools: [], configurationSchema: null, identityClaims: [], secretRequirements: [], presentations: [],
+  network: { mode: 'none' as const }, ingress: null, managedState: null,
+};
+const installationReview: ManagedPluginReview = {
+  installationId: installation.id,
+  stateToken,
+  currentDigest: null,
+  candidateDigest: digest,
+  current: null,
+  candidate: reviewContract,
 };
 
 const openApis: Awaited<ReturnType<typeof createApi>>[] = [];
@@ -78,6 +91,12 @@ describe('managed plugin admin HTTP bridge', () => {
     });
     expect(absentCommand.statusCode).toBe(503);
     expect(absentCommand.json()).toEqual({ error: 'Die verwaltete Plug-in-Verwaltung ist derzeit nicht verfügbar.' });
+    const absentReview = await api.inject({
+      url: '/api/admin/managed-plugins/de.example.calendar/review',
+      headers: { ...headers, cookie: adminCookie },
+    });
+    expect(absentReview.statusCode).toBe(503);
+    expect(absentReview.headers['cache-control']).toBe('no-store');
 
     const badOrigin = await api.inject({
       method: 'POST',
@@ -103,10 +122,16 @@ describe('managed plugin admin HTTP bridge', () => {
       statusCalls.push({ commandId: requestedCommandId, subject, installationId });
       return Promise.resolve({ commandId: requestedCommandId, status: 'uncertain' as const, view: installation });
     });
+    const reviewMock = vi.fn((installationId: string, caller: string) => {
+      expect(installationId).toBe(installation.id);
+      expect(caller).toBe('fixture-admin');
+      return Promise.resolve(installationReview);
+    });
     const service: ManagedPluginAdmin = {
       list: listMock,
       command: commandMock,
       commandStatus: commandStatusMock,
+      describeReview: reviewMock,
     };
     const { api, login } = await setup(service);
     const adminCookie = await login('admin');
@@ -115,6 +140,14 @@ describe('managed plugin admin HTTP bridge', () => {
     const list = await api.inject({ url: '/api/admin/managed-plugins', headers: { ...headers, cookie: adminCookie } });
     expect(list.statusCode).toBe(200);
     expect(list.json()).toEqual({ installations: [installation] });
+    const review = await api.inject({
+      url: '/api/admin/managed-plugins/de.example.calendar/review',
+      headers: { ...headers, cookie: adminCookie },
+    });
+    expect(review.statusCode).toBe(200);
+    expect(review.headers['cache-control']).toBe('no-store');
+    expect(review.json()).toEqual(installationReview);
+    expect(reviewMock).toHaveBeenCalledTimes(1);
 
     const baseCommand = { commandId, expectedState: stateToken, operation: 'stage', releaseId: 'calendar-1.0.0' };
     const extraField = await api.inject({
@@ -134,6 +167,12 @@ describe('managed plugin admin HTTP bridge', () => {
     });
     expect(unauthorized.statusCode).toBe(403);
     expect(commandMock).not.toHaveBeenCalled();
+    const deniedReview = await api.inject({
+      url: '/api/admin/managed-plugins/de.example.calendar/review',
+      headers: { ...headers, cookie: studentCookie },
+    });
+    expect(deniedReview.statusCode).toBe(403);
+    expect(reviewMock).toHaveBeenCalledTimes(1);
 
     const command = await api.inject({
       method: 'POST',
@@ -179,5 +218,24 @@ describe('managed plugin admin HTTP bridge', () => {
     expect(status.statusCode).toBe(502);
     expect(status.body).not.toContain('internal job');
     expect(status.json()).toEqual({ error: 'Der Befehlsstatus konnte nicht geprüft werden.' });
+  });
+
+  it('rejects a review result bound to another installation and returns a fixed no-store error', async () => {
+    const service: ManagedPluginAdmin = {
+      list: () => Promise.resolve({ installations: [installation] }),
+      command: (_installationId: string, command: ManagedPluginCommand) => Promise.resolve({ commandId: command.commandId, status: 'completed', view: installation }),
+      commandStatus: (_installationId: string, commandId: string) => Promise.resolve({ commandId, status: 'uncertain', view: installation }),
+      describeReview: () => Promise.resolve({ ...installationReview, installationId: 'other-installation' }),
+    };
+    const { api, login } = await setup(service);
+    const adminCookie = await login('admin');
+
+    const response = await api.inject({
+      url: '/api/admin/managed-plugins/de.example.calendar/review',
+      headers: { ...headers, cookie: adminCookie },
+    });
+    expect(response.statusCode).toBe(409);
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.json()).toEqual({ error: 'Die geprüfte Plug-in-Änderung ist nicht mehr aktuell. Bitte neu laden.' });
   });
 });

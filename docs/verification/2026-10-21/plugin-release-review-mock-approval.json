@@ -1,0 +1,51 @@
+{
+  "state": {
+    "bundleHashes": {
+      "bundle.css": "f1f311bab7602ed7779c49536fa39ac0189e9f739761b24cfe48bb1b4c2a1dca",
+      "bundle.js": "4cecb82f67fd088aad2831ebd7779127bf99b46aa9c724aba2558e6fd7ffbd3e"
+    },
+    "commands": 1,
+    "delay": 300,
+    "globalCssHash": "4e24c25fda0af682c5e2d6077279d5625fa30e05521bed3136defd6867943e0e",
+    "globalCssSourceHash": "5f70d95bf60a9d3927928e25de3ea463ba7f2077bf3ffea53e6b86a9abf227a9",
+    "harnessSourceHashes": {
+      "entry": "499667f43f4dca131f9f51ef3e825b83498b3e31d1778ed912c4da0ccece3e82",
+      "server": "d63f48e7290d2d21f86b4bc404cb31b9f21357f26d3e714997de1919d8081cd8"
+    },
+    "mode": "ready",
+    "reviewReads": 5,
+    "sourceCommit": "5df9da5e5154b6e5ef66151777a734ae1a54cf85",
+    "sourceHashes": {
+      "managedPluginPanel": "8b8891a2a6421d3a93b77def077ef7b1327c783338341fd643e71c595d332419",
+      "managedPluginPanelCss": "3aef417d53bd8ce21ab643e6515700a67a2a2e47d4858738efca967d8e3c2553",
+      "pluginConfigFields": "93e01ae80c4fcffa271d4e6ac57791dd90d8251a4e20a6fbe2313587b117f4e9",
+      "pluginConfigPanel": "4a9a3f97125485fcc3f431467f2c066481373dbfca107042f1f4c34fca2d4d7f",
+      "pluginConfiguration": "59c34ebff7a3c4097585666c76dafeecc774801f64eeac88f467e1332549700b",
+      "pluginSdkConfiguration": "5a1bc8124d4f0930f614d84f8ceedc4528cb8abea237c72440a80c333580cf3c",
+      "pluginSdkDeploymentAdmin": "03c2cbc9dd77c196c006832de093a8942b49127940666feaebe83d6d148a496f",
+      "releaseReview": "7e5359668bafb6f8a98785ea97f54b34bca37cb4e2b7bf4554317c43a0576504",
+      "releaseReviewCss": "f98a1f7632ca9da910b5b745fa150654916d1d51da6ccf371e3e0e9f493afc3f",
+      "releaseReviewProjection": "df025f0e192a6e080de861418cc1cf3bfd5fa3492583070d181e1d6748789ef4"
+    },
+    "status": "candidate-ready",
+    "unknownRoutes": 0
+  },
+  "ui": {
+    "buttons": [
+      {
+        "disabled": false,
+        "text": ""
+      },
+      {
+        "disabled": false,
+        "text": "Version aktivieren"
+      },
+      {
+        "disabled": false,
+        "text": " Kandidat verwerfen"
+      }
+    ],
+    "text": "Plugin-Update prüfenCONTAINER-BETRIEBVerwaltete Plugin-InstallationenRelease, Prüfung und Aktivierung für verwaltete Installationen. Diese Ansicht ist vom Plugin-Katalog getrennt.Separates Test-Pluginreview.fixtureZur Aktivierung freigegebenKonfigurationEinsatzbereitRevision1Separates Test-Plugin: Einstellungen und FunktionsfreigabenKonfiguration, Zugangsdatenstatus und deaktivierte FunktionenAktuellSignatur geprüftVersion1.0.0PublisherfixtureLizenzGPL-3.0-onlyInventar-DigestddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddMigrationKeineKandidatSignatur geprüftVersion2.0.0PublisherfixtureLizenzGPL-3.0-onlyInventar-DigestddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddMigrationKeinePrüfung abgeschlossenDer Kandidat ist freigegeben und kann aktiviert oder verworfen werden.Version aktivieren Kandidat verwerfenPrüfung: Abgeschlossen. Die aktuelle Ansicht wurde neu geladen."
+  },
+  "scope": "One synthetic approve command only; no activation or actual installer"
+}

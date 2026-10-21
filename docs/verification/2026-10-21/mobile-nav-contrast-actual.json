@@ -1,0 +1,5751 @@
+{
+  "calibration": {
+    "errors": [],
+    "captures": [
+      {
+        "file": "cal-0.png",
+        "sha256": "f7df2cf2f314b8d3c81523fc64028177b0d68ddae76b811ec2313c82ef9f171d",
+        "scroll": {
+          "x": 0,
+          "y": 0
+        },
+        "clip": {
+          "x": 40,
+          "y": 300,
+          "width": 260,
+          "height": 100,
+          "scale": 1
+        },
+        "pixels_checked": 26000,
+        "top_patches": [
+          {
+            "css_srgb": "#ff0000",
+            "observed_p3": [
+              234,
+              51,
+              35
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#00ff00",
+            "observed_p3": [
+              117,
+              251,
+              76
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#0000ff",
+            "observed_p3": [
+              0,
+              0,
+              245
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#ffffff",
+            "observed_p3": [
+              255,
+              255,
+              255
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#000000",
+            "observed_p3": [
+              0,
+              0,
+              0
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#808080",
+            "observed_p3": [
+              128,
+              128,
+              128
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#111311",
+            "observed_p3": [
+              17,
+              19,
+              17
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#686d66",
+            "observed_p3": [
+              105,
+              109,
+              103
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#494e48",
+            "observed_p3": [
+              74,
+              78,
+              72
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#b9c0b3",
+            "observed_p3": [
+              186,
+              192,
+              180
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#ecdcd4",
+            "observed_p3": [
+              233,
+              221,
+              213
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#f8f6f0",
+            "observed_p3": [
+              248,
+              246,
+              241
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#abc398",
+            "observed_p3": [
+              176,
+              194,
+              156
+            ],
+            "pixels": 400
+          }
+        ],
+        "bottom_quadrants": [
+          {
+            "css_srgb": "#ff0000",
+            "observed_p3": [
+              234,
+              51,
+              35
+            ],
+            "pixels": 5200
+          },
+          {
+            "css_srgb": "#00ff00",
+            "observed_p3": [
+              117,
+              251,
+              76
+            ],
+            "pixels": 5200
+          },
+          {
+            "css_srgb": "#0000ff",
+            "observed_p3": [
+              0,
+              0,
+              245
+            ],
+            "pixels": 5200
+          },
+          {
+            "css_srgb": "#ffffff",
+            "observed_p3": [
+              255,
+              255,
+              255
+            ],
+            "pixels": 5200
+          }
+        ]
+      },
+      {
+        "file": "cal-200.png",
+        "sha256": "f7df2cf2f314b8d3c81523fc64028177b0d68ddae76b811ec2313c82ef9f171d",
+        "scroll": {
+          "x": 0,
+          "y": 200
+        },
+        "clip": {
+          "x": 40,
+          "y": 500,
+          "width": 260,
+          "height": 100,
+          "scale": 1
+        },
+        "pixels_checked": 26000,
+        "top_patches": [
+          {
+            "css_srgb": "#ff0000",
+            "observed_p3": [
+              234,
+              51,
+              35
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#00ff00",
+            "observed_p3": [
+              117,
+              251,
+              76
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#0000ff",
+            "observed_p3": [
+              0,
+              0,
+              245
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#ffffff",
+            "observed_p3": [
+              255,
+              255,
+              255
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#000000",
+            "observed_p3": [
+              0,
+              0,
+              0
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#808080",
+            "observed_p3": [
+              128,
+              128,
+              128
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#111311",
+            "observed_p3": [
+              17,
+              19,
+              17
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#686d66",
+            "observed_p3": [
+              105,
+              109,
+              103
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#494e48",
+            "observed_p3": [
+              74,
+              78,
+              72
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#b9c0b3",
+            "observed_p3": [
+              186,
+              192,
+              180
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#ecdcd4",
+            "observed_p3": [
+              233,
+              221,
+              213
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#f8f6f0",
+            "observed_p3": [
+              248,
+              246,
+              241
+            ],
+            "pixels": 400
+          },
+          {
+            "css_srgb": "#abc398",
+            "observed_p3": [
+              176,
+              194,
+              156
+            ],
+            "pixels": 400
+          }
+        ],
+        "bottom_quadrants": [
+          {
+            "css_srgb": "#ff0000",
+            "observed_p3": [
+              234,
+              51,
+              35
+            ],
+            "pixels": 5200
+          },
+          {
+            "css_srgb": "#00ff00",
+            "observed_p3": [
+              117,
+              251,
+              76
+            ],
+            "pixels": 5200
+          },
+          {
+            "css_srgb": "#0000ff",
+            "observed_p3": [
+              0,
+              0,
+              245
+            ],
+            "pixels": 5200
+          },
+          {
+            "css_srgb": "#ffffff",
+            "observed_p3": [
+              255,
+              255,
+              255
+            ],
+            "pixels": 5200
+          }
+        ]
+      }
+    ],
+    "same_digest": true
+  },
+  "errors": [],
+  "groups": [
+    {
+      "file": "app-mobile-320-admin-dark-1.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Chats",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.19467444630663,
+            "minimum_quantization_lower_bound": 8.134269358717525,
+            "pixel_count": 490
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.18351488740636,
+            "minimum_quantization_lower_bound": 8.12315522795051,
+            "pixel_count": 490
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                47,
+                50,
+                46
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                47,
+                51,
+                46
+              ],
+              "count": 31
+            },
+            {
+              "rgb": [
+                47,
+                52,
+                46
+              ],
+              "count": 3
+            },
+            {
+              "rgb": [
+                48,
+                51,
+                46
+              ],
+              "count": 7
+            },
+            {
+              "rgb": [
+                48,
+                51,
+                47
+              ],
+              "count": 16
+            },
+            {
+              "rgb": [
+                48,
+                52,
+                46
+              ],
+              "count": 27
+            },
+            {
+              "rgb": [
+                48,
+                52,
+                47
+              ],
+              "count": 131
+            },
+            {
+              "rgb": [
+                48,
+                52,
+                48
+              ],
+              "count": 8
+            },
+            {
+              "rgb": [
+                48,
+                53,
+                48
+              ],
+              "count": 6
+            },
+            {
+              "rgb": [
+                49,
+                52,
+                47
+              ],
+              "count": 49
+            },
+            {
+              "rgb": [
+                49,
+                52,
+                48
+              ],
+              "count": 40
+            },
+            {
+              "rgb": [
+                49,
+                53,
+                48
+              ],
+              "count": 133
+            },
+            {
+              "rgb": [
+                49,
+                53,
+                49
+              ],
+              "count": 38
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-admin-dark-2.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Buchungen",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.68631903679931,
+            "minimum_quantization_lower_bound": 8.624117898988695,
+            "pixel_count": 1020
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.674846047477516,
+            "minimum_quantization_lower_bound": 8.612678778482977,
+            "pixel_count": 1020
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                31,
+                33,
+                30
+              ],
+              "count": 120
+            },
+            {
+              "rgb": [
+                44,
+                47,
+                43
+              ],
+              "count": 13
+            },
+            {
+              "rgb": [
+                44,
+                48,
+                43
+              ],
+              "count": 434
+            },
+            {
+              "rgb": [
+                44,
+                48,
+                44
+              ],
+              "count": 115
+            },
+            {
+              "rgb": [
+                44,
+                49,
+                43
+              ],
+              "count": 12
+            },
+            {
+              "rgb": [
+                44,
+                49,
+                44
+              ],
+              "count": 18
+            },
+            {
+              "rgb": [
+                45,
+                48,
+                44
+              ],
+              "count": 55
+            },
+            {
+              "rgb": [
+                45,
+                49,
+                43
+              ],
+              "count": 34
+            },
+            {
+              "rgb": [
+                45,
+                49,
+                44
+              ],
+              "count": 203
+            },
+            {
+              "rgb": [
+                45,
+                49,
+                45
+              ],
+              "count": 16
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-admin-dark-3.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verbundene Dienste",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.936913162670825,
+            "minimum_quantization_lower_bound": 8.874014698769209,
+            "pixel_count": 1800
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.925321841174647,
+            "minimum_quantization_lower_bound": 8.862450288862004,
+            "pixel_count": 1800
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                29,
+                32,
+                28
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                30,
+                32,
+                28
+              ],
+              "count": 6
+            },
+            {
+              "rgb": [
+                30,
+                32,
+                29
+              ],
+              "count": 264
+            },
+            {
+              "rgb": [
+                30,
+                33,
+                29
+              ],
+              "count": 555
+            },
+            {
+              "rgb": [
+                33,
+                37,
+                33
+              ],
+              "count": 41
+            },
+            {
+              "rgb": [
+                33,
+                38,
+                33
+              ],
+              "count": 12
+            },
+            {
+              "rgb": [
+                34,
+                37,
+                33
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                34,
+                38,
+                33
+              ],
+              "count": 6
+            },
+            {
+              "rgb": [
+                34,
+                38,
+                34
+              ],
+              "count": 39
+            },
+            {
+              "rgb": [
+                34,
+                39,
+                34
+              ],
+              "count": 6
+            },
+            {
+              "rgb": [
+                35,
+                39,
+                34
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                35,
+                39,
+                35
+              ],
+              "count": 26
+            },
+            {
+              "rgb": [
+                35,
+                40,
+                35
+              ],
+              "count": 7
+            },
+            {
+              "rgb": [
+                36,
+                40,
+                35
+              ],
+              "count": 21
+            },
+            {
+              "rgb": [
+                36,
+                40,
+                36
+              ],
+              "count": 22
+            },
+            {
+              "rgb": [
+                36,
+                41,
+                36
+              ],
+              "count": 6
+            },
+            {
+              "rgb": [
+                37,
+                41,
+                35
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                37,
+                41,
+                36
+              ],
+              "count": 25
+            },
+            {
+              "rgb": [
+                37,
+                41,
+                37
+              ],
+              "count": 21
+            },
+            {
+              "rgb": [
+                37,
+                42,
+                37
+              ],
+              "count": 5
+            },
+            {
+              "rgb": [
+                38,
+                41,
+                37
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                38,
+                42,
+                36
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                38,
+                42,
+                37
+              ],
+              "count": 24
+            },
+            {
+              "rgb": [
+                38,
+                42,
+                38
+              ],
+              "count": 23
+            },
+            {
+              "rgb": [
+                38,
+                43,
+                38
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                39,
+                42,
+                37
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                39,
+                42,
+                38
+              ],
+              "count": 17
+            },
+            {
+              "rgb": [
+                39,
+                43,
+                38
+              ],
+              "count": 36
+            },
+            {
+              "rgb": [
+                39,
+                43,
+                39
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                39,
+                44,
+                39
+              ],
+              "count": 5
+            },
+            {
+              "rgb": [
+                40,
+                43,
+                38
+              ],
+              "count": 11
+            },
+            {
+              "rgb": [
+                40,
+                43,
+                39
+              ],
+              "count": 10
+            },
+            {
+              "rgb": [
+                40,
+                44,
+                39
+              ],
+              "count": 61
+            },
+            {
+              "rgb": [
+                40,
+                45,
+                39
+              ],
+              "count": 11
+            },
+            {
+              "rgb": [
+                41,
+                44,
+                39
+              ],
+              "count": 5
+            },
+            {
+              "rgb": [
+                41,
+                44,
+                40
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                41,
+                45,
+                39
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                41,
+                45,
+                40
+              ],
+              "count": 51
+            },
+            {
+              "rgb": [
+                41,
+                45,
+                41
+              ],
+              "count": 37
+            },
+            {
+              "rgb": [
+                41,
+                46,
+                41
+              ],
+              "count": 25
+            },
+            {
+              "rgb": [
+                42,
+                46,
+                41
+              ],
+              "count": 79
+            },
+            {
+              "rgb": [
+                42,
+                46,
+                42
+              ],
+              "count": 122
+            },
+            {
+              "rgb": [
+                42,
+                47,
+                42
+              ],
+              "count": 10
+            },
+            {
+              "rgb": [
+                43,
+                46,
+                42
+              ],
+              "count": 44
+            },
+            {
+              "rgb": [
+                43,
+                47,
+                42
+              ],
+              "count": 102
+            },
+            {
+              "rgb": [
+                43,
+                47,
+                43
+              ],
+              "count": 16
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-admin-dark-4.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verwaltung",
+          "font_size": "12px",
+          "font_weight": "650",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            227,
+            146,
+            112
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 6.133838975854614,
+            "minimum_quantization_lower_bound": 6.094000205119686,
+            "pixel_count": 1050
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 6.143964285068524,
+            "minimum_quantization_lower_bound": 6.104116072740779,
+            "pixel_count": 1050
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                22,
+                25,
+                22
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                22,
+                26,
+                22
+              ],
+              "count": 60
+            },
+            {
+              "rgb": [
+                22,
+                27,
+                22
+              ],
+              "count": 30
+            },
+            {
+              "rgb": [
+                23,
+                27,
+                23
+              ],
+              "count": 90
+            },
+            {
+              "rgb": [
+                23,
+                28,
+                23
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                24,
+                28,
+                24
+              ],
+              "count": 90
+            },
+            {
+              "rgb": [
+                24,
+                29,
+                24
+              ],
+              "count": 30
+            },
+            {
+              "rgb": [
+                25,
+                29,
+                25
+              ],
+              "count": 210
+            },
+            {
+              "rgb": [
+                25,
+                30,
+                25
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                26,
+                30,
+                26
+              ],
+              "count": 360
+            },
+            {
+              "rgb": [
+                46,
+                37,
+                32
+              ],
+              "count": 135
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-admin-light-1.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Chats",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 9.028505050159525,
+            "minimum_quantization_lower_bound": 8.98977954856017,
+            "pixel_count": 490
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 9.030684032653436,
+            "minimum_quantization_lower_bound": 8.991952756229162,
+            "pixel_count": 490
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                252,
+                252,
+                248
+              ],
+              "count": 32
+            },
+            {
+              "rgb": [
+                252,
+                253,
+                248
+              ],
+              "count": 214
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                248
+              ],
+              "count": 244
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-admin-light-2.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Buchungen",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 7.709119917301275,
+            "minimum_quantization_lower_bound": 7.673988712740525,
+            "pixel_count": 1020
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 7.7101124761903845,
+            "minimum_quantization_lower_bound": 7.674978460139596,
+            "pixel_count": 1020
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                234,
+                234,
+                232
+              ],
+              "count": 35
+            },
+            {
+              "rgb": [
+                234,
+                234,
+                233
+              ],
+              "count": 24
+            },
+            {
+              "rgb": [
+                234,
+                235,
+                232
+              ],
+              "count": 47
+            },
+            {
+              "rgb": [
+                234,
+                235,
+                233
+              ],
+              "count": 163
+            },
+            {
+              "rgb": [
+                235,
+                235,
+                233
+              ],
+              "count": 131
+            },
+            {
+              "rgb": [
+                235,
+                235,
+                234
+              ],
+              "count": 323
+            },
+            {
+              "rgb": [
+                235,
+                236,
+                233
+              ],
+              "count": 152
+            },
+            {
+              "rgb": [
+                235,
+                236,
+                234
+              ],
+              "count": 25
+            },
+            {
+              "rgb": [
+                252,
+                253,
+                248
+              ],
+              "count": 108
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                248
+              ],
+              "count": 12
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-admin-light-3.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verbundene Dienste",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 9.106262595530781,
+            "minimum_quantization_lower_bound": 9.067332706866319,
+            "pixel_count": 1800
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 9.108453140798051,
+            "minimum_quantization_lower_bound": 9.069517468561308,
+            "pixel_count": 1800
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                253,
+                253,
+                249
+              ],
+              "count": 1219
+            },
+            {
+              "rgb": [
+                253,
+                254,
+                249
+              ],
+              "count": 74
+            },
+            {
+              "rgb": [
+                254,
+                254,
+                249
+              ],
+              "count": 165
+            },
+            {
+              "rgb": [
+                254,
+                254,
+                250
+              ],
+              "count": 342
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-admin-light-4.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verwaltung",
+          "font_size": "12px",
+          "font_weight": "650",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            152,
+            66,
+            38
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 5.853731723496642,
+            "minimum_quantization_lower_bound": 5.827604623196645,
+            "pixel_count": 1050
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 5.84753031112251,
+            "minimum_quantization_lower_bound": 5.821419857966434,
+            "pixel_count": 1050
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                247,
+                247,
+                244
+              ],
+              "count": 75
+            },
+            {
+              "rgb": [
+                247,
+                247,
+                245
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                248,
+                238,
+                231
+              ],
+              "count": 135
+            },
+            {
+              "rgb": [
+                248,
+                248,
+                245
+              ],
+              "count": 45
+            },
+            {
+              "rgb": [
+                248,
+                248,
+                246
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                249,
+                249,
+                246
+              ],
+              "count": 30
+            },
+            {
+              "rgb": [
+                249,
+                249,
+                247
+              ],
+              "count": 45
+            },
+            {
+              "rgb": [
+                250,
+                250,
+                247
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                250,
+                250,
+                248
+              ],
+              "count": 45
+            },
+            {
+              "rgb": [
+                250,
+                250,
+                249
+              ],
+              "count": 60
+            },
+            {
+              "rgb": [
+                251,
+                251,
+                249
+              ],
+              "count": 45
+            },
+            {
+              "rgb": [
+                251,
+                251,
+                250
+              ],
+              "count": 60
+            },
+            {
+              "rgb": [
+                252,
+                252,
+                250
+              ],
+              "count": 60
+            },
+            {
+              "rgb": [
+                252,
+                252,
+                251
+              ],
+              "count": 60
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                250
+              ],
+              "count": 75
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                251
+              ],
+              "count": 90
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                252
+              ],
+              "count": 180
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-chat-dark-1.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Chats",
+          "font_size": "12px",
+          "font_weight": "650",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            227,
+            146,
+            112
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 7.675050969424463,
+            "minimum_quantization_lower_bound": 7.64371373958122,
+            "pixel_count": 504
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 7.670782655636582,
+            "minimum_quantization_lower_bound": 7.639385980480916,
+            "pixel_count": 504
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                16,
+                19,
+                16
+              ],
+              "count": 504
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-chat-dark-2.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Buchungen",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 11.024496336829827,
+            "minimum_quantization_lower_bound": 10.963297236313222,
+            "pixel_count": 1020
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 11.01801293694081,
+            "minimum_quantization_lower_bound": 10.956780633683104,
+            "pixel_count": 1020
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                16,
+                19,
+                16
+              ],
+              "count": 900
+            },
+            {
+              "rgb": [
+                28,
+                30,
+                27
+              ],
+              "count": 120
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-chat-dark-3.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verbundene Dienste",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 11.024496336829827,
+            "minimum_quantization_lower_bound": 10.963297236313222,
+            "pixel_count": 1800
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 11.01801293694081,
+            "minimum_quantization_lower_bound": 10.956780633683104,
+            "pixel_count": 1800
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                16,
+                19,
+                16
+              ],
+              "count": 960
+            },
+            {
+              "rgb": [
+                28,
+                30,
+                27
+              ],
+              "count": 840
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-chat-dark-4.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verwaltung",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 11.024496336829827,
+            "minimum_quantization_lower_bound": 10.963297236313222,
+            "pixel_count": 1020
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 11.01801293694081,
+            "minimum_quantization_lower_bound": 10.956780633683104,
+            "pixel_count": 1020
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                16,
+                19,
+                16
+              ],
+              "count": 885
+            },
+            {
+              "rgb": [
+                28,
+                30,
+                27
+              ],
+              "count": 135
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-chat-light-1.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Chats",
+          "font_size": "12px",
+          "font_weight": "650",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            152,
+            66,
+            38
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 5.853731723496642,
+            "minimum_quantization_lower_bound": 5.827604623196645,
+            "pixel_count": 504
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 5.84753031112251,
+            "minimum_quantization_lower_bound": 5.821419857966434,
+            "pixel_count": 504
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                248,
+                238,
+                231
+              ],
+              "count": 504
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-chat-light-2.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Buchungen",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.438192327467084,
+            "minimum_quantization_lower_bound": 8.401044530292856,
+            "pixel_count": 1020
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.439057347224042,
+            "minimum_quantization_lower_bound": 8.401907153674873,
+            "pixel_count": 1020
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                245,
+                244,
+                240
+              ],
+              "count": 900
+            },
+            {
+              "rgb": [
+                254,
+                254,
+                249
+              ],
+              "count": 120
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-chat-light-3.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verbundene Dienste",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.438192327467084,
+            "minimum_quantization_lower_bound": 8.401044530292856,
+            "pixel_count": 1800
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.439057347224042,
+            "minimum_quantization_lower_bound": 8.401907153674873,
+            "pixel_count": 1800
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                245,
+                244,
+                240
+              ],
+              "count": 960
+            },
+            {
+              "rgb": [
+                254,
+                254,
+                249
+              ],
+              "count": 840
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-320-chat-light-4.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verwaltung",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.438192327467084,
+            "minimum_quantization_lower_bound": 8.401044530292856,
+            "pixel_count": 1020
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.439057347224042,
+            "minimum_quantization_lower_bound": 8.401907153674873,
+            "pixel_count": 1020
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                245,
+                244,
+                240
+              ],
+              "count": 885
+            },
+            {
+              "rgb": [
+                254,
+                254,
+                249
+              ],
+              "count": 135
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-admin-dark-1.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Chats",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.412057025709023,
+            "minimum_quantization_lower_bound": 8.350779935442368,
+            "pixel_count": 490
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.402697126938525,
+            "minimum_quantization_lower_bound": 8.341453855488727,
+            "pixel_count": 490
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                46,
+                50,
+                46
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                46,
+                51,
+                46
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                47,
+                51,
+                46
+              ],
+              "count": 182
+            },
+            {
+              "rgb": [
+                47,
+                51,
+                47
+              ],
+              "count": 145
+            },
+            {
+              "rgb": [
+                48,
+                51,
+                46
+              ],
+              "count": 11
+            },
+            {
+              "rgb": [
+                48,
+                51,
+                47
+              ],
+              "count": 149
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-admin-dark-2.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Buchungen",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.438728723213755,
+            "minimum_quantization_lower_bound": 8.377364345903533,
+            "pixel_count": 938
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.427400701304684,
+            "minimum_quantization_lower_bound": 8.36607635773477,
+            "pixel_count": 938
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                44,
+                48,
+                44
+              ],
+              "count": 9
+            },
+            {
+              "rgb": [
+                44,
+                49,
+                44
+              ],
+              "count": 11
+            },
+            {
+              "rgb": [
+                45,
+                48,
+                44
+              ],
+              "count": 8
+            },
+            {
+              "rgb": [
+                45,
+                49,
+                44
+              ],
+              "count": 448
+            },
+            {
+              "rgb": [
+                46,
+                49,
+                44
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                46,
+                49,
+                45
+              ],
+              "count": 70
+            },
+            {
+              "rgb": [
+                46,
+                50,
+                45
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                46,
+                50,
+                46
+              ],
+              "count": 98
+            },
+            {
+              "rgb": [
+                47,
+                50,
+                46
+              ],
+              "count": 98
+            },
+            {
+              "rgb": [
+                47,
+                51,
+                46
+              ],
+              "count": 46
+            },
+            {
+              "rgb": [
+                47,
+                51,
+                47
+              ],
+              "count": 94
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-admin-dark-3.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verbundene Dienste",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 9.072417765867945,
+            "minimum_quantization_lower_bound": 9.009215015298418,
+            "pixel_count": 1740
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 9.05992758757322,
+            "minimum_quantization_lower_bound": 8.996749077690252,
+            "pixel_count": 1740
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                30,
+                32,
+                29
+              ],
+              "count": 115
+            },
+            {
+              "rgb": [
+                30,
+                33,
+                29
+              ],
+              "count": 185
+            },
+            {
+              "rgb": [
+                30,
+                34,
+                30
+              ],
+              "count": 12
+            },
+            {
+              "rgb": [
+                30,
+                35,
+                30
+              ],
+              "count": 12
+            },
+            {
+              "rgb": [
+                31,
+                33,
+                29
+              ],
+              "count": 75
+            },
+            {
+              "rgb": [
+                31,
+                33,
+                30
+              ],
+              "count": 300
+            },
+            {
+              "rgb": [
+                31,
+                35,
+                30
+              ],
+              "count": 12
+            },
+            {
+              "rgb": [
+                31,
+                35,
+                31
+              ],
+              "count": 33
+            },
+            {
+              "rgb": [
+                31,
+                36,
+                31
+              ],
+              "count": 13
+            },
+            {
+              "rgb": [
+                32,
+                36,
+                31
+              ],
+              "count": 23
+            },
+            {
+              "rgb": [
+                32,
+                36,
+                32
+              ],
+              "count": 22
+            },
+            {
+              "rgb": [
+                32,
+                37,
+                31
+              ],
+              "count": 5
+            },
+            {
+              "rgb": [
+                32,
+                37,
+                32
+              ],
+              "count": 7
+            },
+            {
+              "rgb": [
+                33,
+                37,
+                32
+              ],
+              "count": 37
+            },
+            {
+              "rgb": [
+                33,
+                37,
+                33
+              ],
+              "count": 27
+            },
+            {
+              "rgb": [
+                33,
+                38,
+                33
+              ],
+              "count": 12
+            },
+            {
+              "rgb": [
+                34,
+                38,
+                33
+              ],
+              "count": 29
+            },
+            {
+              "rgb": [
+                34,
+                38,
+                34
+              ],
+              "count": 17
+            },
+            {
+              "rgb": [
+                34,
+                39,
+                33
+              ],
+              "count": 7
+            },
+            {
+              "rgb": [
+                34,
+                39,
+                34
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                35,
+                39,
+                33
+              ],
+              "count": 7
+            },
+            {
+              "rgb": [
+                35,
+                39,
+                34
+              ],
+              "count": 23
+            },
+            {
+              "rgb": [
+                35,
+                39,
+                35
+              ],
+              "count": 16
+            },
+            {
+              "rgb": [
+                35,
+                40,
+                34
+              ],
+              "count": 5
+            },
+            {
+              "rgb": [
+                35,
+                40,
+                35
+              ],
+              "count": 7
+            },
+            {
+              "rgb": [
+                36,
+                40,
+                34
+              ],
+              "count": 5
+            },
+            {
+              "rgb": [
+                36,
+                40,
+                35
+              ],
+              "count": 29
+            },
+            {
+              "rgb": [
+                36,
+                40,
+                36
+              ],
+              "count": 19
+            },
+            {
+              "rgb": [
+                36,
+                41,
+                36
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                37,
+                40,
+                35
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                37,
+                40,
+                36
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                37,
+                41,
+                35
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                37,
+                41,
+                36
+              ],
+              "count": 25
+            },
+            {
+              "rgb": [
+                37,
+                41,
+                37
+              ],
+              "count": 22
+            },
+            {
+              "rgb": [
+                38,
+                41,
+                36
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                38,
+                41,
+                37
+              ],
+              "count": 20
+            },
+            {
+              "rgb": [
+                38,
+                42,
+                37
+              ],
+              "count": 26
+            },
+            {
+              "rgb": [
+                38,
+                42,
+                38
+              ],
+              "count": 8
+            },
+            {
+              "rgb": [
+                38,
+                43,
+                37
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                38,
+                43,
+                38
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                39,
+                41,
+                37
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                39,
+                42,
+                37
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                39,
+                42,
+                38
+              ],
+              "count": 13
+            },
+            {
+              "rgb": [
+                39,
+                43,
+                38
+              ],
+              "count": 45
+            },
+            {
+              "rgb": [
+                39,
+                43,
+                39
+              ],
+              "count": 19
+            },
+            {
+              "rgb": [
+                39,
+                44,
+                38
+              ],
+              "count": 6
+            },
+            {
+              "rgb": [
+                39,
+                44,
+                39
+              ],
+              "count": 8
+            },
+            {
+              "rgb": [
+                40,
+                44,
+                38
+              ],
+              "count": 13
+            },
+            {
+              "rgb": [
+                40,
+                44,
+                39
+              ],
+              "count": 54
+            },
+            {
+              "rgb": [
+                40,
+                44,
+                40
+              ],
+              "count": 22
+            },
+            {
+              "rgb": [
+                40,
+                45,
+                39
+              ],
+              "count": 13
+            },
+            {
+              "rgb": [
+                40,
+                45,
+                40
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                41,
+                45,
+                39
+              ],
+              "count": 12
+            },
+            {
+              "rgb": [
+                41,
+                45,
+                40
+              ],
+              "count": 110
+            },
+            {
+              "rgb": [
+                41,
+                45,
+                41
+              ],
+              "count": 33
+            },
+            {
+              "rgb": [
+                41,
+                46,
+                41
+              ],
+              "count": 5
+            },
+            {
+              "rgb": [
+                42,
+                45,
+                40
+              ],
+              "count": 6
+            },
+            {
+              "rgb": [
+                42,
+                45,
+                41
+              ],
+              "count": 31
+            },
+            {
+              "rgb": [
+                42,
+                46,
+                41
+              ],
+              "count": 160
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-admin-dark-4.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verwaltung",
+          "font_size": "12px",
+          "font_weight": "650",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            227,
+            146,
+            112
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 6.926471522285878,
+            "minimum_quantization_lower_bound": 6.888458739536351,
+            "pixel_count": 966
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 6.919542733975211,
+            "minimum_quantization_lower_bound": 6.881491486611827,
+            "pixel_count": 966
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                23,
+                27,
+                23
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                24,
+                27,
+                24
+              ],
+              "count": 84
+            },
+            {
+              "rgb": [
+                25,
+                27,
+                24
+              ],
+              "count": 14
+            },
+            {
+              "rgb": [
+                25,
+                28,
+                24
+              ],
+              "count": 98
+            },
+            {
+              "rgb": [
+                25,
+                29,
+                24
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                25,
+                29,
+                25
+              ],
+              "count": 84
+            },
+            {
+              "rgb": [
+                26,
+                29,
+                25
+              ],
+              "count": 98
+            },
+            {
+              "rgb": [
+                26,
+                30,
+                25
+              ],
+              "count": 14
+            },
+            {
+              "rgb": [
+                26,
+                30,
+                26
+              ],
+              "count": 518
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-admin-light-1.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Chats",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 9.100216544897886,
+            "minimum_quantization_lower_bound": 9.061302771348762,
+            "pixel_count": 490
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 9.102947505212603,
+            "minimum_quantization_lower_bound": 9.064026507671434,
+            "pixel_count": 490
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                253,
+                253,
+                248
+              ],
+              "count": 469
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                249
+              ],
+              "count": 21
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-admin-light-2.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Buchungen",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 7.574664177436314,
+            "minimum_quantization_lower_bound": 7.539913923086426,
+            "pixel_count": 938
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 7.575156242495786,
+            "minimum_quantization_lower_bound": 7.540404585824325,
+            "pixel_count": 938
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                232,
+                232,
+                231
+              ],
+              "count": 98
+            },
+            {
+              "rgb": [
+                232,
+                233,
+                230
+              ],
+              "count": 103
+            },
+            {
+              "rgb": [
+                232,
+                233,
+                231
+              ],
+              "count": 23
+            },
+            {
+              "rgb": [
+                233,
+                233,
+                230
+              ],
+              "count": 48
+            },
+            {
+              "rgb": [
+                233,
+                233,
+                231
+              ],
+              "count": 50
+            },
+            {
+              "rgb": [
+                233,
+                234,
+                231
+              ],
+              "count": 84
+            },
+            {
+              "rgb": [
+                233,
+                234,
+                232
+              ],
+              "count": 14
+            },
+            {
+              "rgb": [
+                233,
+                235,
+                232
+              ],
+              "count": 42
+            },
+            {
+              "rgb": [
+                234,
+                234,
+                233
+              ],
+              "count": 40
+            },
+            {
+              "rgb": [
+                234,
+                235,
+                232
+              ],
+              "count": 373
+            },
+            {
+              "rgb": [
+                234,
+                235,
+                233
+              ],
+              "count": 40
+            },
+            {
+              "rgb": [
+                235,
+                235,
+                232
+              ],
+              "count": 7
+            },
+            {
+              "rgb": [
+                235,
+                235,
+                233
+              ],
+              "count": 16
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-admin-light-3.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verbundene Dienste",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 7.971676993423754,
+            "minimum_quantization_lower_bound": 7.93581025683853,
+            "pixel_count": 1740
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 7.974371470647639,
+            "minimum_quantization_lower_bound": 7.938497221418616,
+            "pixel_count": 1740
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                237,
+                238,
+                235
+              ],
+              "count": 163
+            },
+            {
+              "rgb": [
+                237,
+                238,
+                236
+              ],
+              "count": 22
+            },
+            {
+              "rgb": [
+                238,
+                238,
+                235
+              ],
+              "count": 26
+            },
+            {
+              "rgb": [
+                238,
+                238,
+                236
+              ],
+              "count": 45
+            },
+            {
+              "rgb": [
+                238,
+                238,
+                237
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                238,
+                239,
+                236
+              ],
+              "count": 32
+            },
+            {
+              "rgb": [
+                238,
+                239,
+                237
+              ],
+              "count": 45
+            },
+            {
+              "rgb": [
+                239,
+                239,
+                237
+              ],
+              "count": 39
+            },
+            {
+              "rgb": [
+                239,
+                239,
+                238
+              ],
+              "count": 40
+            },
+            {
+              "rgb": [
+                239,
+                240,
+                237
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                239,
+                240,
+                238
+              ],
+              "count": 35
+            },
+            {
+              "rgb": [
+                240,
+                240,
+                238
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                240,
+                240,
+                239
+              ],
+              "count": 7
+            },
+            {
+              "rgb": [
+                240,
+                241,
+                238
+              ],
+              "count": 18
+            },
+            {
+              "rgb": [
+                240,
+                241,
+                239
+              ],
+              "count": 41
+            },
+            {
+              "rgb": [
+                241,
+                241,
+                239
+              ],
+              "count": 11
+            },
+            {
+              "rgb": [
+                241,
+                242,
+                239
+              ],
+              "count": 17
+            },
+            {
+              "rgb": [
+                241,
+                242,
+                240
+              ],
+              "count": 32
+            },
+            {
+              "rgb": [
+                241,
+                243,
+                240
+              ],
+              "count": 3
+            },
+            {
+              "rgb": [
+                242,
+                242,
+                240
+              ],
+              "count": 10
+            },
+            {
+              "rgb": [
+                242,
+                242,
+                241
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                242,
+                243,
+                240
+              ],
+              "count": 10
+            },
+            {
+              "rgb": [
+                242,
+                243,
+                241
+              ],
+              "count": 20
+            },
+            {
+              "rgb": [
+                242,
+                244,
+                241
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                243,
+                243,
+                241
+              ],
+              "count": 11
+            },
+            {
+              "rgb": [
+                243,
+                243,
+                242
+              ],
+              "count": 10
+            },
+            {
+              "rgb": [
+                243,
+                244,
+                241
+              ],
+              "count": 9
+            },
+            {
+              "rgb": [
+                243,
+                244,
+                242
+              ],
+              "count": 24
+            },
+            {
+              "rgb": [
+                244,
+                244,
+                242
+              ],
+              "count": 21
+            },
+            {
+              "rgb": [
+                244,
+                244,
+                243
+              ],
+              "count": 11
+            },
+            {
+              "rgb": [
+                244,
+                245,
+                242
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                244,
+                245,
+                243
+              ],
+              "count": 21
+            },
+            {
+              "rgb": [
+                245,
+                245,
+                243
+              ],
+              "count": 22
+            },
+            {
+              "rgb": [
+                245,
+                245,
+                244
+              ],
+              "count": 29
+            },
+            {
+              "rgb": [
+                245,
+                246,
+                244
+              ],
+              "count": 5
+            },
+            {
+              "rgb": [
+                246,
+                246,
+                244
+              ],
+              "count": 24
+            },
+            {
+              "rgb": [
+                246,
+                246,
+                245
+              ],
+              "count": 27
+            },
+            {
+              "rgb": [
+                246,
+                247,
+                245
+              ],
+              "count": 24
+            },
+            {
+              "rgb": [
+                247,
+                247,
+                245
+              ],
+              "count": 19
+            },
+            {
+              "rgb": [
+                247,
+                247,
+                246
+              ],
+              "count": 13
+            },
+            {
+              "rgb": [
+                247,
+                248,
+                245
+              ],
+              "count": 16
+            },
+            {
+              "rgb": [
+                247,
+                248,
+                246
+              ],
+              "count": 14
+            },
+            {
+              "rgb": [
+                248,
+                248,
+                246
+              ],
+              "count": 21
+            },
+            {
+              "rgb": [
+                248,
+                248,
+                247
+              ],
+              "count": 18
+            },
+            {
+              "rgb": [
+                248,
+                249,
+                246
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                248,
+                249,
+                247
+              ],
+              "count": 13
+            },
+            {
+              "rgb": [
+                249,
+                249,
+                247
+              ],
+              "count": 18
+            },
+            {
+              "rgb": [
+                249,
+                249,
+                248
+              ],
+              "count": 12
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                248
+              ],
+              "count": 200
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                249
+              ],
+              "count": 445
+            },
+            {
+              "rgb": [
+                253,
+                254,
+                249
+              ],
+              "count": 5
+            },
+            {
+              "rgb": [
+                254,
+                254,
+                249
+              ],
+              "count": 25
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-admin-light-4.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verwaltung",
+          "font_size": "12px",
+          "font_weight": "650",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            152,
+            66,
+            38
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 6.279731717763446,
+            "minimum_quantization_lower_bound": 6.252441831912316,
+            "pixel_count": 966
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 6.280885842432382,
+            "minimum_quantization_lower_bound": 6.253592856788611,
+            "pixel_count": 966
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                248,
+                248,
+                245
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                248,
+                248,
+                246
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                249,
+                249,
+                246
+              ],
+              "count": 56
+            },
+            {
+              "rgb": [
+                249,
+                249,
+                247
+              ],
+              "count": 42
+            },
+            {
+              "rgb": [
+                250,
+                250,
+                248
+              ],
+              "count": 42
+            },
+            {
+              "rgb": [
+                250,
+                250,
+                249
+              ],
+              "count": 56
+            },
+            {
+              "rgb": [
+                251,
+                251,
+                249
+              ],
+              "count": 42
+            },
+            {
+              "rgb": [
+                251,
+                251,
+                250
+              ],
+              "count": 56
+            },
+            {
+              "rgb": [
+                252,
+                252,
+                250
+              ],
+              "count": 42
+            },
+            {
+              "rgb": [
+                252,
+                252,
+                251
+              ],
+              "count": 56
+            },
+            {
+              "rgb": [
+                253,
+                252,
+                251
+              ],
+              "count": 112
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                251
+              ],
+              "count": 42
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                252
+              ],
+              "count": 364
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-chat-dark-1.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Chats",
+          "font_size": "12px",
+          "font_weight": "650",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            227,
+            146,
+            112
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 7.675050969424463,
+            "minimum_quantization_lower_bound": 7.64371373958122,
+            "pixel_count": 490
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 7.670782655636582,
+            "minimum_quantization_lower_bound": 7.639385980480916,
+            "pixel_count": 490
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                16,
+                19,
+                16
+              ],
+              "count": 490
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-chat-dark-2.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Buchungen",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 12.283493503842866,
+            "minimum_quantization_lower_bound": 12.233340005091996,
+            "pixel_count": 938
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 12.276662304298439,
+            "minimum_quantization_lower_bound": 12.226413666621207,
+            "pixel_count": 938
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                16,
+                19,
+                16
+              ],
+              "count": 938
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-chat-dark-3.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verbundene Dienste",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 11.024496336829827,
+            "minimum_quantization_lower_bound": 10.963297236313222,
+            "pixel_count": 1740
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 11.01801293694081,
+            "minimum_quantization_lower_bound": 10.956780633683104,
+            "pixel_count": 1740
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                16,
+                19,
+                16
+              ],
+              "count": 1065
+            },
+            {
+              "rgb": [
+                28,
+                30,
+                27
+              ],
+              "count": 675
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-chat-dark-4.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verwaltung",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 12.283493503842866,
+            "minimum_quantization_lower_bound": 12.233340005091996,
+            "pixel_count": 938
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 12.276662304298439,
+            "minimum_quantization_lower_bound": 12.226413666621207,
+            "pixel_count": 938
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                16,
+                19,
+                16
+              ],
+              "count": 938
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-chat-light-1.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Chats",
+          "font_size": "12px",
+          "font_weight": "650",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            152,
+            66,
+            38
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 5.853731723496642,
+            "minimum_quantization_lower_bound": 5.827604623196645,
+            "pixel_count": 490
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 5.84753031112251,
+            "minimum_quantization_lower_bound": 5.821419857966434,
+            "pixel_count": 490
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                248,
+                238,
+                231
+              ],
+              "count": 490
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-chat-light-2.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Buchungen",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.438192327467084,
+            "minimum_quantization_lower_bound": 8.401044530292856,
+            "pixel_count": 938
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.439057347224042,
+            "minimum_quantization_lower_bound": 8.401907153674873,
+            "pixel_count": 938
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                245,
+                244,
+                240
+              ],
+              "count": 938
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-chat-light-3.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verbundene Dienste",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.438192327467084,
+            "minimum_quantization_lower_bound": 8.401044530292856,
+            "pixel_count": 1740
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.439057347224042,
+            "minimum_quantization_lower_bound": 8.401907153674873,
+            "pixel_count": 1740
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                245,
+                244,
+                240
+              ],
+              "count": 1065
+            },
+            {
+              "rgb": [
+                254,
+                254,
+                249
+              ],
+              "count": 675
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-375-chat-light-4.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verwaltung",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.438192327467084,
+            "minimum_quantization_lower_bound": 8.401044530292856,
+            "pixel_count": 938
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.439057347224042,
+            "minimum_quantization_lower_bound": 8.401907153674873,
+            "pixel_count": 938
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                245,
+                244,
+                240
+              ],
+              "count": 938
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-admin-dark-1.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Chats",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 7.96343116033914,
+            "minimum_quantization_lower_bound": 7.904054963618459,
+            "pixel_count": 490
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 7.951650183813807,
+            "minimum_quantization_lower_bound": 7.8923273710028745,
+            "pixel_count": 490
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                48,
+                52,
+                48
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                48,
+                53,
+                48
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                49,
+                53,
+                48
+              ],
+              "count": 44
+            },
+            {
+              "rgb": [
+                49,
+                53,
+                49
+              ],
+              "count": 13
+            },
+            {
+              "rgb": [
+                49,
+                54,
+                48
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                49,
+                54,
+                49
+              ],
+              "count": 5
+            },
+            {
+              "rgb": [
+                50,
+                53,
+                48
+              ],
+              "count": 16
+            },
+            {
+              "rgb": [
+                50,
+                53,
+                49
+              ],
+              "count": 19
+            },
+            {
+              "rgb": [
+                50,
+                54,
+                48
+              ],
+              "count": 26
+            },
+            {
+              "rgb": [
+                50,
+                54,
+                49
+              ],
+              "count": 125
+            },
+            {
+              "rgb": [
+                50,
+                54,
+                50
+              ],
+              "count": 24
+            },
+            {
+              "rgb": [
+                50,
+                55,
+                50
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                51,
+                54,
+                49
+              ],
+              "count": 67
+            },
+            {
+              "rgb": [
+                51,
+                54,
+                50
+              ],
+              "count": 24
+            },
+            {
+              "rgb": [
+                51,
+                55,
+                49
+              ],
+              "count": 19
+            },
+            {
+              "rgb": [
+                51,
+                55,
+                50
+              ],
+              "count": 99
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-admin-dark-2.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Buchungen",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 9.199197947201233,
+            "minimum_quantization_lower_bound": 9.135748960636937,
+            "pixel_count": 938
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 9.18666570638812,
+            "minimum_quantization_lower_bound": 9.123236663314653,
+            "pixel_count": 938
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                33,
+                37,
+                33
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                33,
+                38,
+                33
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                34,
+                38,
+                33
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                34,
+                38,
+                34
+              ],
+              "count": 34
+            },
+            {
+              "rgb": [
+                34,
+                39,
+                34
+              ],
+              "count": 14
+            },
+            {
+              "rgb": [
+                35,
+                39,
+                34
+              ],
+              "count": 59
+            },
+            {
+              "rgb": [
+                35,
+                39,
+                35
+              ],
+              "count": 105
+            },
+            {
+              "rgb": [
+                35,
+                40,
+                35
+              ],
+              "count": 31
+            },
+            {
+              "rgb": [
+                36,
+                40,
+                35
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                36,
+                40,
+                36
+              ],
+              "count": 91
+            },
+            {
+              "rgb": [
+                36,
+                41,
+                36
+              ],
+              "count": 19
+            },
+            {
+              "rgb": [
+                37,
+                41,
+                37
+              ],
+              "count": 85
+            },
+            {
+              "rgb": [
+                37,
+                42,
+                37
+              ],
+              "count": 23
+            },
+            {
+              "rgb": [
+                38,
+                42,
+                37
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                38,
+                42,
+                38
+              ],
+              "count": 71
+            },
+            {
+              "rgb": [
+                38,
+                43,
+                37
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                38,
+                43,
+                38
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                39,
+                43,
+                37
+              ],
+              "count": 10
+            },
+            {
+              "rgb": [
+                39,
+                43,
+                38
+              ],
+              "count": 99
+            },
+            {
+              "rgb": [
+                39,
+                43,
+                39
+              ],
+              "count": 31
+            },
+            {
+              "rgb": [
+                39,
+                44,
+                38
+              ],
+              "count": 14
+            },
+            {
+              "rgb": [
+                39,
+                44,
+                39
+              ],
+              "count": 22
+            },
+            {
+              "rgb": [
+                40,
+                44,
+                38
+              ],
+              "count": 11
+            },
+            {
+              "rgb": [
+                40,
+                44,
+                39
+              ],
+              "count": 46
+            },
+            {
+              "rgb": [
+                40,
+                44,
+                40
+              ],
+              "count": 56
+            },
+            {
+              "rgb": [
+                40,
+                45,
+                40
+              ],
+              "count": 18
+            },
+            {
+              "rgb": [
+                41,
+                45,
+                40
+              ],
+              "count": 54
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-admin-dark-3.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verbundene Dienste",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 9.572425729230321,
+            "minimum_quantization_lower_bound": 9.508507677776656,
+            "pixel_count": 1770
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 9.560676119427374,
+            "minimum_quantization_lower_bound": 9.496764082175323,
+            "pixel_count": 1770
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                29,
+                31,
+                28
+              ],
+              "count": 690
+            },
+            {
+              "rgb": [
+                31,
+                36,
+                31
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                32,
+                36,
+                31
+              ],
+              "count": 10
+            },
+            {
+              "rgb": [
+                32,
+                36,
+                32
+              ],
+              "count": 18
+            },
+            {
+              "rgb": [
+                32,
+                37,
+                31
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                32,
+                37,
+                32
+              ],
+              "count": 8
+            },
+            {
+              "rgb": [
+                33,
+                37,
+                31
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                33,
+                37,
+                32
+              ],
+              "count": 16
+            },
+            {
+              "rgb": [
+                33,
+                37,
+                33
+              ],
+              "count": 31
+            },
+            {
+              "rgb": [
+                33,
+                38,
+                33
+              ],
+              "count": 7
+            },
+            {
+              "rgb": [
+                34,
+                38,
+                33
+              ],
+              "count": 24
+            },
+            {
+              "rgb": [
+                34,
+                38,
+                34
+              ],
+              "count": 30
+            },
+            {
+              "rgb": [
+                34,
+                39,
+                33
+              ],
+              "count": 3
+            },
+            {
+              "rgb": [
+                34,
+                39,
+                34
+              ],
+              "count": 13
+            },
+            {
+              "rgb": [
+                35,
+                39,
+                33
+              ],
+              "count": 5
+            },
+            {
+              "rgb": [
+                35,
+                39,
+                34
+              ],
+              "count": 46
+            },
+            {
+              "rgb": [
+                35,
+                39,
+                35
+              ],
+              "count": 33
+            },
+            {
+              "rgb": [
+                35,
+                40,
+                34
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                35,
+                40,
+                35
+              ],
+              "count": 17
+            },
+            {
+              "rgb": [
+                36,
+                40,
+                35
+              ],
+              "count": 86
+            },
+            {
+              "rgb": [
+                36,
+                40,
+                36
+              ],
+              "count": 73
+            },
+            {
+              "rgb": [
+                36,
+                41,
+                36
+              ],
+              "count": 19
+            },
+            {
+              "rgb": [
+                37,
+                40,
+                35
+              ],
+              "count": 15
+            },
+            {
+              "rgb": [
+                37,
+                40,
+                36
+              ],
+              "count": 79
+            },
+            {
+              "rgb": [
+                37,
+                41,
+                36
+              ],
+              "count": 65
+            },
+            {
+              "rgb": [
+                37,
+                41,
+                37
+              ],
+              "count": 243
+            },
+            {
+              "rgb": [
+                37,
+                42,
+                37
+              ],
+              "count": 39
+            },
+            {
+              "rgb": [
+                38,
+                41,
+                37
+              ],
+              "count": 3
+            },
+            {
+              "rgb": [
+                38,
+                42,
+                37
+              ],
+              "count": 71
+            },
+            {
+              "rgb": [
+                38,
+                42,
+                38
+              ],
+              "count": 113
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-admin-dark-4.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verwaltung",
+          "font_size": "12px",
+          "font_weight": "650",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            227,
+            146,
+            112
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 6.926471522285878,
+            "minimum_quantization_lower_bound": 6.888458739536351,
+            "pixel_count": 966
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 6.919542733975211,
+            "minimum_quantization_lower_bound": 6.881491486611827,
+            "pixel_count": 966
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                22,
+                27,
+                22
+              ],
+              "count": 14
+            },
+            {
+              "rgb": [
+                23,
+                27,
+                23
+              ],
+              "count": 84
+            },
+            {
+              "rgb": [
+                23,
+                28,
+                23
+              ],
+              "count": 14
+            },
+            {
+              "rgb": [
+                24,
+                28,
+                24
+              ],
+              "count": 98
+            },
+            {
+              "rgb": [
+                24,
+                29,
+                24
+              ],
+              "count": 14
+            },
+            {
+              "rgb": [
+                25,
+                29,
+                25
+              ],
+              "count": 182
+            },
+            {
+              "rgb": [
+                25,
+                30,
+                25
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                26,
+                30,
+                26
+              ],
+              "count": 532
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-admin-light-1.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Chats",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 9.028505050159525,
+            "minimum_quantization_lower_bound": 8.98977954856017,
+            "pixel_count": 490
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 9.030684032653436,
+            "minimum_quantization_lower_bound": 8.991952756229162,
+            "pixel_count": 490
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                252,
+                252,
+                248
+              ],
+              "count": 427
+            },
+            {
+              "rgb": [
+                252,
+                253,
+                248
+              ],
+              "count": 58
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                248
+              ],
+              "count": 5
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-admin-light-2.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Buchungen",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 7.9937530211752685,
+            "minimum_quantization_lower_bound": 7.957824745443327,
+            "pixel_count": 938
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 7.994768153733425,
+            "minimum_quantization_lower_bound": 7.9588370483705795,
+            "pixel_count": 938
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                238,
+                238,
+                236
+              ],
+              "count": 3
+            },
+            {
+              "rgb": [
+                238,
+                238,
+                237
+              ],
+              "count": 31
+            },
+            {
+              "rgb": [
+                239,
+                239,
+                236
+              ],
+              "count": 20
+            },
+            {
+              "rgb": [
+                239,
+                239,
+                237
+              ],
+              "count": 61
+            },
+            {
+              "rgb": [
+                239,
+                239,
+                238
+              ],
+              "count": 31
+            },
+            {
+              "rgb": [
+                239,
+                240,
+                237
+              ],
+              "count": 5
+            },
+            {
+              "rgb": [
+                239,
+                240,
+                238
+              ],
+              "count": 20
+            },
+            {
+              "rgb": [
+                240,
+                240,
+                237
+              ],
+              "count": 27
+            },
+            {
+              "rgb": [
+                240,
+                240,
+                238
+              ],
+              "count": 40
+            },
+            {
+              "rgb": [
+                240,
+                240,
+                239
+              ],
+              "count": 4
+            },
+            {
+              "rgb": [
+                240,
+                241,
+                238
+              ],
+              "count": 58
+            },
+            {
+              "rgb": [
+                240,
+                241,
+                239
+              ],
+              "count": 48
+            },
+            {
+              "rgb": [
+                240,
+                242,
+                239
+              ],
+              "count": 9
+            },
+            {
+              "rgb": [
+                241,
+                241,
+                239
+              ],
+              "count": 30
+            },
+            {
+              "rgb": [
+                241,
+                241,
+                240
+              ],
+              "count": 42
+            },
+            {
+              "rgb": [
+                241,
+                242,
+                239
+              ],
+              "count": 8
+            },
+            {
+              "rgb": [
+                241,
+                242,
+                240
+              ],
+              "count": 11
+            },
+            {
+              "rgb": [
+                242,
+                242,
+                240
+              ],
+              "count": 40
+            },
+            {
+              "rgb": [
+                242,
+                242,
+                241
+              ],
+              "count": 68
+            },
+            {
+              "rgb": [
+                242,
+                243,
+                241
+              ],
+              "count": 3
+            },
+            {
+              "rgb": [
+                243,
+                243,
+                241
+              ],
+              "count": 68
+            },
+            {
+              "rgb": [
+                243,
+                243,
+                242
+              ],
+              "count": 30
+            },
+            {
+              "rgb": [
+                243,
+                244,
+                241
+              ],
+              "count": 18
+            },
+            {
+              "rgb": [
+                243,
+                244,
+                242
+              ],
+              "count": 52
+            },
+            {
+              "rgb": [
+                243,
+                245,
+                242
+              ],
+              "count": 10
+            },
+            {
+              "rgb": [
+                244,
+                244,
+                242
+              ],
+              "count": 33
+            },
+            {
+              "rgb": [
+                244,
+                244,
+                243
+              ],
+              "count": 42
+            },
+            {
+              "rgb": [
+                244,
+                245,
+                242
+              ],
+              "count": 21
+            },
+            {
+              "rgb": [
+                244,
+                245,
+                243
+              ],
+              "count": 44
+            },
+            {
+              "rgb": [
+                245,
+                245,
+                243
+              ],
+              "count": 40
+            },
+            {
+              "rgb": [
+                245,
+                245,
+                244
+              ],
+              "count": 8
+            },
+            {
+              "rgb": [
+                245,
+                246,
+                243
+              ],
+              "count": 8
+            },
+            {
+              "rgb": [
+                245,
+                246,
+                244
+              ],
+              "count": 5
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-admin-light-3.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verbundene Dienste",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.205699189613458,
+            "minimum_quantization_lower_bound": 8.169185637420698,
+            "pixel_count": 1770
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.207243164150205,
+            "minimum_quantization_lower_bound": 8.170725350639387,
+            "pixel_count": 1770
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                241,
+                241,
+                238
+              ],
+              "count": 13
+            },
+            {
+              "rgb": [
+                241,
+                241,
+                239
+              ],
+              "count": 72
+            },
+            {
+              "rgb": [
+                241,
+                241,
+                240
+              ],
+              "count": 62
+            },
+            {
+              "rgb": [
+                241,
+                242,
+                240
+              ],
+              "count": 2
+            },
+            {
+              "rgb": [
+                242,
+                242,
+                239
+              ],
+              "count": 20
+            },
+            {
+              "rgb": [
+                242,
+                242,
+                240
+              ],
+              "count": 127
+            },
+            {
+              "rgb": [
+                242,
+                242,
+                241
+              ],
+              "count": 142
+            },
+            {
+              "rgb": [
+                242,
+                243,
+                240
+              ],
+              "count": 49
+            },
+            {
+              "rgb": [
+                242,
+                243,
+                241
+              ],
+              "count": 105
+            },
+            {
+              "rgb": [
+                243,
+                243,
+                241
+              ],
+              "count": 96
+            },
+            {
+              "rgb": [
+                243,
+                243,
+                242
+              ],
+              "count": 59
+            },
+            {
+              "rgb": [
+                243,
+                244,
+                241
+              ],
+              "count": 18
+            },
+            {
+              "rgb": [
+                243,
+                244,
+                242
+              ],
+              "count": 47
+            },
+            {
+              "rgb": [
+                244,
+                244,
+                242
+              ],
+              "count": 46
+            },
+            {
+              "rgb": [
+                244,
+                244,
+                243
+              ],
+              "count": 35
+            },
+            {
+              "rgb": [
+                244,
+                245,
+                242
+              ],
+              "count": 1
+            },
+            {
+              "rgb": [
+                244,
+                245,
+                243
+              ],
+              "count": 18
+            },
+            {
+              "rgb": [
+                245,
+                245,
+                243
+              ],
+              "count": 25
+            },
+            {
+              "rgb": [
+                245,
+                245,
+                244
+              ],
+              "count": 31
+            },
+            {
+              "rgb": [
+                246,
+                246,
+                244
+              ],
+              "count": 20
+            },
+            {
+              "rgb": [
+                246,
+                246,
+                245
+              ],
+              "count": 39
+            },
+            {
+              "rgb": [
+                247,
+                247,
+                245
+              ],
+              "count": 21
+            },
+            {
+              "rgb": [
+                247,
+                247,
+                246
+              ],
+              "count": 23
+            },
+            {
+              "rgb": [
+                248,
+                248,
+                246
+              ],
+              "count": 9
+            },
+            {
+              "rgb": [
+                255,
+                255,
+                251
+              ],
+              "count": 690
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-admin-light-4.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verwaltung",
+          "font_size": "12px",
+          "font_weight": "650",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            152,
+            66,
+            38
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 6.284012630114049,
+            "minimum_quantization_lower_bound": 6.256711202091436,
+            "pixel_count": 966
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 6.284784113354468,
+            "minimum_quantization_lower_bound": 6.257480617214853,
+            "pixel_count": 966
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                248,
+                248,
+                246
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                249,
+                249,
+                247
+              ],
+              "count": 56
+            },
+            {
+              "rgb": [
+                249,
+                249,
+                248
+              ],
+              "count": 14
+            },
+            {
+              "rgb": [
+                250,
+                249,
+                248
+              ],
+              "count": 42
+            },
+            {
+              "rgb": [
+                250,
+                250,
+                248
+              ],
+              "count": 14
+            },
+            {
+              "rgb": [
+                251,
+                250,
+                248
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                251,
+                250,
+                249
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                252,
+                250,
+                249
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                252,
+                251,
+                249
+              ],
+              "count": 56
+            },
+            {
+              "rgb": [
+                252,
+                251,
+                250
+              ],
+              "count": 56
+            },
+            {
+              "rgb": [
+                252,
+                252,
+                250
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                252,
+                252,
+                251
+              ],
+              "count": 70
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                251
+              ],
+              "count": 28
+            },
+            {
+              "rgb": [
+                253,
+                253,
+                252
+              ],
+              "count": 490
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-chat-dark-1.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Chats",
+          "font_size": "12px",
+          "font_weight": "650",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            227,
+            146,
+            112
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 7.675050969424463,
+            "minimum_quantization_lower_bound": 7.64371373958122,
+            "pixel_count": 504
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 7.670782655636582,
+            "minimum_quantization_lower_bound": 7.639385980480916,
+            "pixel_count": 504
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                16,
+                19,
+                16
+              ],
+              "count": 504
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-chat-dark-2.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Buchungen",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 12.283493503842866,
+            "minimum_quantization_lower_bound": 12.233340005091996,
+            "pixel_count": 938
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 12.276662304298439,
+            "minimum_quantization_lower_bound": 12.226413666621207,
+            "pixel_count": 938
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                16,
+                19,
+                16
+              ],
+              "count": 938
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-chat-dark-3.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verbundene Dienste",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 11.024496336829827,
+            "minimum_quantization_lower_bound": 10.963297236313222,
+            "pixel_count": 1770
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 11.01801293694081,
+            "minimum_quantization_lower_bound": 10.956780633683104,
+            "pixel_count": 1770
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                16,
+                19,
+                16
+              ],
+              "count": 1080
+            },
+            {
+              "rgb": [
+                28,
+                30,
+                27
+              ],
+              "count": 690
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-chat-dark-4.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verwaltung",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            209,
+            210,
+            202
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 12.283493503842866,
+            "minimum_quantization_lower_bound": 12.233340005091996,
+            "pixel_count": 938
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 12.276662304298439,
+            "minimum_quantization_lower_bound": 12.226413666621207,
+            "pixel_count": 938
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                16,
+                19,
+                16
+              ],
+              "count": 938
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-chat-light-1.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Chats",
+          "font_size": "12px",
+          "font_weight": "650",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            152,
+            66,
+            38
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 5.853731723496642,
+            "minimum_quantization_lower_bound": 5.827604623196645,
+            "pixel_count": 504
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 5.84753031112251,
+            "minimum_quantization_lower_bound": 5.821419857966434,
+            "pixel_count": 504
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                248,
+                238,
+                231
+              ],
+              "count": 504
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-chat-light-2.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Buchungen",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.438192327467084,
+            "minimum_quantization_lower_bound": 8.401044530292856,
+            "pixel_count": 938
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.439057347224042,
+            "minimum_quantization_lower_bound": 8.401907153674873,
+            "pixel_count": 938
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                245,
+                244,
+                240
+              ],
+              "count": 938
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-chat-light-3.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verbundene Dienste",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.438192327467084,
+            "minimum_quantization_lower_bound": 8.401044530292856,
+            "pixel_count": 1770
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.439057347224042,
+            "minimum_quantization_lower_bound": 8.401907153674873,
+            "pixel_count": 1770
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                245,
+                244,
+                240
+              ],
+              "count": 1080
+            },
+            {
+              "rgb": [
+                254,
+                254,
+                249
+              ],
+              "count": 690
+            }
+          ]
+        }
+      ],
+      "images": 2,
+      "contrast_pass": true
+    },
+    {
+      "file": "app-mobile-390-chat-light-4.json",
+      "capture_errors": [],
+      "capture_valid": true,
+      "leaves": [
+        {
+          "leaf_index": 0,
+          "text": "Verwaltung",
+          "font_size": "12px",
+          "font_weight": "550",
+          "threshold": 4.5,
+          "foreground_css_srgb": [
+            69,
+            72,
+            67
+          ],
+          "profile_p3": {
+            "minimum_point_ratio": 8.438192327467084,
+            "minimum_quantization_lower_bound": 8.401044530292856,
+            "pixel_count": 938
+          },
+          "profile_srgb": {
+            "minimum_point_ratio": 8.439057347224042,
+            "minimum_quantization_lower_bound": 8.401907153674873,
+            "pixel_count": 938
+          },
+          "pass": true,
+          "background_palette": [
+            {
+              "rgb": [
+                245,
+                244,
+                240
+              ],
+              "count": 938
+            }
+          ]
+        }
+      ],
+      "images": 1,
+      "contrast_pass": true
+    }
+  ],
+  "group_count": 48,
+  "image_count": 68,
+  "leaf_count": 48,
+  "lowest_ratio": 5.827604623196645,
+  "counterprobes": {
+    "coherent_black_foreground_rejected": true,
+    "font_threshold_rejected": true,
+    "per_image_geometry_rejected": true
+  },
+  "pass": true
+}

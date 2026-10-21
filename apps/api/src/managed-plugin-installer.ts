@@ -2,7 +2,7 @@ import { createPublicKey, sign, verify, type KeyObject } from 'node:crypto';
 import { z } from 'zod';
 import { pluginReleaseInventoryDigest } from '@hasi/plugin-sdk/releases';
 import { digest, manifestSchema, managedStateValidator, type PluginManifest } from '@hasi/plugin-sdk';
-import { managedPluginCommandSchema, type ManagedPluginCommand, type ManagedPluginCommandResult, type ManagedPluginView } from '@hasi/plugin-sdk/deployment-admin';
+import { managedPluginCommandSchema, managedPluginReviewSchema, type ManagedPluginCommand, type ManagedPluginCommandResult, type ManagedPluginReview, type ManagedPluginView } from '@hasi/plugin-sdk/deployment-admin';
 import type { JsonStore } from '@hasi/state';
 import { buildPluginContainerLaunchPolicy, PluginDeploymentCoordinator, verifyPluginRelease, type DeploymentDriver, type PluginContainerLaunchOptions, type PluginDeploymentSnapshot, type PluginReleaseIdentity, type PublisherApprovalResolver, type VerifiedPluginRelease, type LogicalSecretAssignment } from './plugin-artifacts.js';
 import { PluginSettingsStore } from './plugin-settings.js';
@@ -210,6 +210,67 @@ export class ManagedPluginInstaller implements ManagedPluginAdmin {
       releases: entry.releases.flatMap(item => { const view = this.releaseView(item.verified, entry); return view?.approved ? [view] : []; }),
       tools: selected?.manifest.tools.map(tool => ({ name: tool.name, title: tool.title, effect: tool.effect })) ?? [] };
     return { view, state, entry };
+  }
+  private reviewContract(release: ApprovedRelease): ManagedPluginReview['candidate'] {
+    const manifest = release.manifest;
+    const policy = buildPluginContainerLaunchPolicy(release.verified, release.launch);
+    return {
+      tools: manifest.tools.map(tool => ({
+        name: tool.name,
+        title: tool.title,
+        description: tool.description,
+        resultSemantics: 'resultSemantics' in tool
+          ? { kind: tool.resultSemantics.kind }
+          : null,
+        inputSchema: tool.inputSchema,
+        outputSchema: tool.outputSchema,
+        effect: tool.effect,
+        requiredPermissions: tool.requiredPermissions,
+        visibility: 'visibility' in tool ? [...(tool.visibility ?? ['model'])] : ['model'],
+        presentationId: 'presentationId' in tool ? tool.presentationId ?? null : null,
+      })),
+      configurationSchema: manifest.manifestVersion === 2 ? manifest.configuration ?? null : null,
+      identityClaims: manifest.manifestVersion === 2 ? [...(manifest.identity?.claims ?? [])] : [],
+      secretRequirements: manifest.manifestVersion === 2 ? (manifest.secrets ?? []).map(secret => ({ name: secret.name, required: secret.required })) : [],
+      presentations: manifest.manifestVersion === 2 ? manifest.presentations ?? [] : [],
+      network: policy.network.mode === 'none' ? { mode: 'none' } : { mode: 'internal', name: policy.network.name },
+      ingress: policy.ingress,
+      managedState: manifest.manifestVersion === 2 ? manifest.managedState ?? null : null,
+    };
+  }
+  async describeReview(id: string, subject: string): Promise<ManagedPluginReview> {
+    await this.authorize(subject);
+    const described = await this.describe(id);
+    const candidateDigest = described.state.candidate?.releaseDigest;
+    // coordinator.get validates the persisted candidate base against the exact
+    // current digest before exposing this snapshot.
+    if (described.state.status !== 'review-required' || !described.state.candidate || !candidateDigest) throw new ManagedPluginInstallerError();
+    const candidate = described.entry.releases.find(item => item.verified.releaseDigest === candidateDigest);
+    if (!candidate) throw new ManagedPluginInstallerError();
+    const currentDigest = described.state.current?.releaseDigest ?? null;
+    const current = currentDigest === null
+      ? null
+      : described.entry.releases.find(item => item.verified.releaseDigest === currentDigest);
+    if (currentDigest !== null && !current) throw new ManagedPluginInstallerError();
+    if (!await this.options.secretsAuthorized(id, candidate.secretAssignments)
+      || !await this.trusted(candidate.verified, candidate.secretAssignments)) throw new ManagedPluginInstallerError();
+
+    const review = managedPluginReviewSchema.parse({
+      installationId: id,
+      stateToken: described.view.stateToken,
+      currentDigest,
+      candidateDigest,
+      current: current ? this.reviewContract(current) : null,
+      candidate: this.reviewContract(candidate),
+    });
+    const latest = await this.describe(id);
+    if (latest.view.stateToken !== described.view.stateToken
+      || !latest.entry.releases.some(item => item.verified.releaseDigest === candidateDigest)
+      || (currentDigest !== null && !latest.entry.releases.some(item => item.verified.releaseDigest === currentDigest))
+      || latest.state.candidate?.releaseDigest !== candidateDigest
+      || (latest.state.current?.releaseDigest ?? null) !== currentDigest) throw new ManagedPluginInstallerError();
+    await this.authorize(subject);
+    return review;
   }
   async list(subject: string) {
     await this.authorize(subject);

@@ -294,3 +294,14 @@ verifies the current README and hosting correction with retained state/budgets.
 This mapping and runbook follow-up remains a separate candidate until qualified
 and delivered. No criterion is waived or milestone accepted by this document;
 the final requirement-by-requirement decision belongs in #49.
+
+## Release comparison and rebuilt mobile navigation follow-up
+
+The [release-review slice](../2026-10-21/plugin-release-review.md) supplies the
+previously missing concrete before/after operator comparison for P5-A3. Its
+installer/RPC/route tests and actual-component synthetic HTTP observations are
+bounded evidence, not complete admin/chat/update/rollback acceptance. The
+[mobile navigation readback](../2026-10-21/mobile-nav-contrast.md#rebuilt-application-readback)
+adds actual rebuilt-style48-group evidence to P6-A3 after PR #189 delivery.
+It supersedes the preview-only limitation for those named navigation groups,
+without extending desktop/mobile coverage to every product state or M8 devices.

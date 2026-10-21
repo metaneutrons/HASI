@@ -23,6 +23,8 @@ import { managedPluginCatalogSchema, managedPluginCommandResultSchema } from '@h
 import { apiRequest, postJson } from '@/lib/api';
 import { useActionFocusRecovery } from '@/lib/use-action-focus-recovery';
 import { PluginConfigPanel } from '@/components/plugin-config-panel';
+import { PluginReleaseReview } from '@/components/plugin-release-review';
+import { releaseReviewKey } from '@/lib/plugin-release-review';
 import styles from './managed-plugin-panel.module.css';
 
 type Operation = ManagedPluginCommand['operation'];
@@ -121,6 +123,10 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
   const [attempts, setAttempts] = useState<Record<string, CommandAttempt | undefined>>({});
   const [feedback, setFeedback] = useState<Record<string, Feedback | undefined>>({});
   const [selectedRelease, setSelectedRelease] = useState<Record<string, string | undefined>>({});
+  const [verifiedReviews, setVerifiedReviews] = useState<Record<string, string | null | undefined>>({});
+  const rememberReview = useCallback((id: string, key: string | null) => {
+    setVerifiedReviews(current => current[id] === key ? current : { ...current, [id]: key });
+  }, []);
   const [restorePlanId, setRestorePlanId] = useState<Record<string, string | undefined>>({});
   const busyIds = useRef(new Set<string>());
   const refreshButtonRef = useRef<HTMLButtonElement>(null);
@@ -240,6 +246,10 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
   ) {
     const id = view.id;
     if (busyIds.current.has(id) || attempts[id]) return;
+    if (operation === 'approve' && verifiedReviews[id] !== releaseReviewKey(view)) {
+      setFeedback(current => ({ ...current, [id]: { kind: 'error', message: 'Bitte zuerst die aktuelle Änderungsübersicht laden und prüfen.' } }));
+      return;
+    }
     let command: ManagedPluginCommand;
     try {
       command = makeCommand(view, operation, details);
@@ -367,7 +377,8 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
               && view.candidate === null
               && view.configurationReady
               && release !== undefined;
-            const canReview = view.status === 'review-required' && view.candidate !== null;
+            const canReview = view.status === 'review-required' && view.candidate !== null
+              && verifiedReviews[view.id] === releaseReviewKey(view);
             const canActivate = view.status === 'candidate-ready' && view.candidate !== null && view.configurationReady;
             const canCancel = (view.status === 'review-required' || view.status === 'candidate-ready') && view.candidate !== null;
             const canRollback = view.status === 'active' && view.previous !== null;
@@ -430,9 +441,9 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
                       <section className={styles.releaseState} key={key}>
                         <div className={styles.releaseStateHeading}>
                           <strong>{title}</strong>
-                          <span className={isApprovedRelease(item) ? styles.approvedTag : styles.revokedTag}>
-                            {isApprovedRelease(item) ? <Check size={12} aria-hidden="true" /> : <CircleAlert size={12} aria-hidden="true" />}
-                            {isApprovedRelease(item) ? 'Freigegeben' : 'Nicht freigegeben'}
+                          <span className={item.approved ? styles.approvedTag : styles.revokedTag}>
+                            {item.approved ? <Check size={12} aria-hidden="true" /> : <CircleAlert size={12} aria-hidden="true" />}
+                            {item.approved ? 'Signatur geprüft' : 'Herkunft nicht freigegeben'}
                           </span>
                         </div>
                         <ReleaseDetails release={item} />
@@ -473,6 +484,7 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
                   <div className={styles.reviewBox}>
                     <div className={styles.reviewHeading}><ShieldCheck size={17} aria-hidden="true" /><strong>Explizite Prüfung erforderlich</strong></div>
                     <p>Die Kandidatenversion wird erst nach deiner Prüfung für die Aktivierung freigegeben.</p>
+                    <PluginReleaseReview key={releaseReviewKey(view)} view={view} onVerified={rememberReview} />
                     {candidateIsIrreversible && (
                       <>
                         <label htmlFor={`restore-${view.id}`} className={styles.fieldLabel}>ID des genehmigten Wiederherstellungsplans</label>
@@ -596,8 +608,8 @@ function ReleaseDetails({ release, expanded = false }: { release: ManagedPluginV
     <dl className={joinClasses(styles.releaseDetails, expanded ? styles.releaseDetailsExpanded : undefined)}>
       <div><dt>Version</dt><dd>{release.version}</dd></div>
       <div><dt>Publisher</dt><dd>{release.publisher}</dd></div>
-      <div><dt>Lizenz</dt><dd>{release.license ?? 'Nicht freigegeben'}</dd></div>
-      <div><dt>Inventar-Digest</dt><dd>{release.inventoryDigest ? <code>{release.inventoryDigest}</code> : 'Nicht freigegeben'}</dd></div>
+      <div><dt>Lizenz</dt><dd>{release.license ?? 'Lizenzangabe fehlt'}</dd></div>
+      <div><dt>Inventar-Digest</dt><dd>{release.inventoryDigest ? <code>{release.inventoryDigest}</code> : 'Inventar fehlt'}</dd></div>
       {expanded && <div><dt>Release-Digest</dt><dd><code>{release.digest}</code></dd></div>}
       <div><dt>Migration</dt><dd>{release.migration === 'none' ? 'Keine' : release.migration === 'reversible' ? 'Umkehrbar' : 'Irreversibel'}</dd></div>
     </dl>

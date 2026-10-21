@@ -101,6 +101,16 @@ schemas, effects, permissions, UI or identity contract require renewed operator
 approval. This operation changes a contract pin; it does not install an image
 or make an arbitrary repository trustworthy.
 
+For a staged candidate requiring review, the managed-installations panel loads
+an administrator-only, no-store comparison from the installer. Review the open
+changed sections: model-facing descriptions, schemas, effects, permissions,
+identity/credential requirements, validated networking, UI resources/CSP and
+configuration/state declarations. Secret values and saved configuration values
+are excluded. A failed or stale comparison blocks the UI approval; reload and
+review the current candidate. The existing expected-state check remains the
+server authority, and activation is a separate explicit step. Signature approval
+is not the operator's activation approval. See the [bounded review evidence](../verification/2026-10-21/plugin-release-review.md).
+
 The separate operator-local artifact coordinator verifies signed publisher and
 immutable image identities, stages an isolated candidate, checks health and
 configuration, and retains a previous artifact. `PluginRouteController` in

@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { SignJWT } from 'jose';
 import { MemoryJsonStore } from '@hasi/state';
 import { digest } from '@hasi/plugin-sdk';
-import type { ManagedPluginCommand, ManagedPluginView } from '@hasi/plugin-sdk/deployment-admin';
+import { MAX_MANAGED_PLUGIN_REVIEW_BYTES, type ManagedPluginCommand, type ManagedPluginReview, type ManagedPluginView } from '@hasi/plugin-sdk/deployment-admin';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ManagedPluginInstaller } from '../apps/api/src/managed-plugin-installer.js';
 import { createManagedPluginContractClient, createManagedPluginRpcClient, createManagedPluginRpcServer } from '../apps/api/src/managed-plugin-rpc.js';
@@ -24,6 +24,18 @@ const view: ManagedPluginView = {
   id: 'de.example.calendar', label: 'Synthetic calendar', stateToken, status: 'active',
   configurationRevision: 'configuration-1', configurationReady: true,
   current: null, previous: null, candidate: null, releases: [],
+};
+const reviewContract = {
+  tools: [], configurationSchema: null, identityClaims: [], secretRequirements: [], presentations: [],
+  network: { mode: 'none' as const }, ingress: null, managedState: null,
+};
+const managedPluginReview: ManagedPluginReview = {
+  installationId: view.id,
+  stateToken,
+  currentDigest: null,
+  candidateDigest: 'b'.repeat(64),
+  current: null,
+  candidate: reviewContract,
 };
 
 const command: ManagedPluginCommand = {
@@ -55,8 +67,9 @@ async function startRpc(service: ManagedPluginAdmin = {
   list: () => Promise.resolve({ installations: [view] }),
   command: (_id, requested, _subject) => Promise.resolve({ commandId: requested.commandId, status: 'completed', view }),
   commandStatus: (_id, requestedId) => Promise.resolve({ commandId: requestedId, status: 'uncertain', view }),
-}, readRuntimeContract?: (installationId: string) => Promise<ManagedPluginRuntimeContract | null>) {
-  const server = await createManagedPluginRpcServer({ service, ...(readRuntimeContract ? { runtimeContract: readRuntimeContract } : {}), publicKey: keys.publicKey, privateKey: keys.privateKey, scope: 'synthetic-scope', port: 0 });
+}, readRuntimeContract?: (installationId: string) => Promise<ManagedPluginRuntimeContract | null>, readReview?: (installationId: string, caller: string) => Promise<ManagedPluginReview>) {
+  const adminService = readReview ? { ...service, describeReview: readReview } : service;
+  const server = await createManagedPluginRpcServer({ service: adminService, ...(readRuntimeContract ? { runtimeContract: readRuntimeContract } : {}), publicKey: keys.publicKey, privateKey: keys.privateKey, scope: 'synthetic-scope', port: 0 });
   servers.push(server);
   return server;
 }
@@ -165,6 +178,66 @@ it('roundtrips a permitted multi-installation catalogue larger than the former r
   const server = await startRpc({ list: () => Promise.resolve({ installations }), command: () => Promise.reject(new Error('unused')), commandStatus: () => Promise.reject(new Error('unused')) });
   const client = createManagedPluginRpcClient({ origin: server.origin, privateKey: keys.privateKey, scope: 'synthetic-scope' });
   expect((await client.list(subject)).installations).toHaveLength(32);
+});
+
+it('reads the on-demand review through signed RPC and binds it to the signed administrator and installation', async () => {
+  const read = vi.fn((installationId: string, _caller: string) => Promise.resolve({ ...managedPluginReview, installationId }));
+  const list = vi.fn(() => Promise.reject(new Error('list must not run')));
+  const command = vi.fn(() => Promise.reject(new Error('command must not run')));
+  const commandStatus = vi.fn(() => Promise.reject(new Error('commandStatus must not run')));
+  const service: ManagedPluginAdmin = {
+    list,
+    command,
+    commandStatus,
+  };
+  const server = await startRpc(service, undefined, read);
+  const client = createManagedPluginRpcClient({ origin: server.origin, privateKey: keys.privateKey, scope: 'synthetic-scope' });
+
+  await expect(client.describeReview!(view.id, subject)).resolves.toEqual(managedPluginReview);
+  expect(read).toHaveBeenCalledWith(view.id, subject);
+  expect(list).not.toHaveBeenCalled();
+  expect(command).not.toHaveBeenCalled();
+  expect(commandStatus).not.toHaveBeenCalled();
+
+  const input = { method: 'review', subject, installationId: view.id };
+  const changedInstallation = { ...input, installationId: 'other-installation' };
+  const changed = await postRaw(server.origin, changedInstallation, await signedToken(input));
+  expect(changed.status).toBe(401);
+  await changed.body?.cancel();
+});
+
+it('rejects mismatched and oversized review responses and replays authenticated review bytes only for their original request', async () => {
+  const mismatched = await startRpc(undefined, undefined, () => Promise.resolve({ ...managedPluginReview, installationId: 'other-installation' }));
+  const mismatchedClient = createManagedPluginRpcClient({ origin: mismatched.origin, privateKey: keys.privateKey, scope: 'synthetic-scope' });
+  await expect(mismatchedClient.describeReview!(view.id, subject)).rejects.toThrow('Installer request unavailable');
+
+  const oversizedReview = { ...managedPluginReview, unexpected: 'x'.repeat(MAX_MANAGED_PLUGIN_REVIEW_BYTES + 1) } as unknown as ManagedPluginReview;
+  const oversizedServer = await startRpc(undefined, undefined, () => Promise.resolve(oversizedReview));
+  const oversizedClient = createManagedPluginRpcClient({ origin: oversizedServer.origin, privateKey: keys.privateKey, scope: 'synthetic-scope' });
+  await expect(oversizedClient.describeReview!(view.id, subject)).rejects.toThrow('Installer request unavailable');
+
+  const server = await startRpc(undefined, undefined, () => Promise.resolve(managedPluginReview));
+  const input = { method: 'review', subject, installationId: view.id };
+  const original = await postRaw(server.origin, input, await signedToken(input));
+  expect(original.status).toBe(200);
+  const body = await original.text();
+  const proof = original.headers.get('x-hasi-installer-proof');
+  expect(proof).toBeTruthy();
+  if (!proof) throw new Error('Expected signed review proof');
+  const replayOrigin = await startHttp((_request, response) => {
+    response.writeHead(200, { 'content-type': 'application/json', 'x-hasi-installer-proof': proof });
+    response.end(body);
+  });
+  const replayClient = createManagedPluginRpcClient({ origin: replayOrigin, privateKey: keys.privateKey, scope: 'synthetic-scope' });
+  await expect(replayClient.describeReview!(view.id, subject)).rejects.toThrow('Installer response authentication failed');
+
+  const clientOversizeOrigin = await startHttp((_request, response) => {
+    const payload = JSON.stringify({ filler: 'x'.repeat(MAX_MANAGED_PLUGIN_REVIEW_BYTES) });
+    response.writeHead(200, { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(payload)) });
+    response.end(payload);
+  });
+  const clientOversize = createManagedPluginRpcClient({ origin: clientOversizeOrigin, privateKey: keys.privateKey, scope: 'synthetic-scope' });
+  await expect(clientOversize.describeReview!(view.id, subject)).rejects.toThrow('Installer response too large');
 });
 
 describe('managed plugin private RPC', () => {
