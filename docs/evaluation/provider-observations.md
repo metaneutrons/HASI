@@ -1,4 +1,4 @@
-# Fixed-evidence provider observations
+# Fixed-evidence and observed-workflow provider observations
 
 The operator command `pnpm evaluate:models` runs the existing HASI model router
 on the bundled synthetic development corpus. It is separate from the offline
@@ -78,6 +78,12 @@ not calendar interpretation, initial search/planning, the original static cases,
 all workflow families or semantic correctness. Blinded human scoring, access and
 injection fixtures, approved thresholds and measured live per-profile results
 remain separate M6 work. Local fake-provider tests are not live-provider evidence.
+
+The [first ten-call unknown-outcome development run](../verification/2026-10-21/provider-unknown-outcome-run.md)
+now records actual observations across five approved synthetic profiles. Its
+trace/no-proposal checks pass, while developer inspection finds semantic defects.
+Usage, conservative ledger charges, exact inputs and unreviewed human material
+remain separate; this does not close M6 or establish a model ranking.
 
 ## Explicit live execution
 

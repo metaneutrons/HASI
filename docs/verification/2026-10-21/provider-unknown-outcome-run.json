@@ -1,0 +1,1019 @@
+{
+  "runId": "936b5b8e-b8a6-4afa-91d1-41d982f24e6a",
+  "operatorRevision": "621fd6c2d76a383feab8b30db9546df368ba6b66",
+  "servingRevision": "13fe0d0e58c26787ad39cf5f3de50b5970339a92",
+  "operatorImageId": "sha256:3d4525b54cc7eb91810ac7e2491c9a7b7173113b1ad93152974a8d38f9cf545e",
+  "sourceReportSha256": "fbbeb7f82e43c3873b049e895c3f9c72a30ae873d63af705874f1d29491e78d7",
+  "startedAt": "2026-10-21T21:04:42.412Z",
+  "finishedAt": "2026-10-21T21:07:20.863Z",
+  "actualHttpRequests": 10,
+  "attemptCap": 10,
+  "providerErrors": 0,
+  "fallbackOrRepairAttempts": 0,
+  "fixtureCleanupCompleted": 10,
+  "perCaseInputDigests": {
+    "anny-03-runtime": [
+      "ba33a46c6623229d0a3327c0091c91d0f3d4fca08457057d5107b32dbcb459eb"
+    ],
+    "anny-06-runtime": [
+      "5de42f5b0e16e40e9b055944a280bb5b55bfa6958506bf645b1e8dfb6436bfbe"
+    ]
+  },
+  "configurationDigestSha256": "70627c5be0361af8f4b3a625ae30e3010ad2c8b31506a27e58556102831d22ce",
+  "profiles": [
+    {
+      "profile": "groq-oss-120b",
+      "answers": 2,
+      "inputTokens": 2853,
+      "outputTokens": 230,
+      "estimatedCostUsd": "0.00056595",
+      "latencyMs": [
+        718.942,
+        752.738
+      ]
+    },
+    {
+      "profile": "groq-oss-20b",
+      "answers": 2,
+      "inputTokens": 2853,
+      "outputTokens": 173,
+      "estimatedCostUsd": "0.000265875",
+      "latencyMs": [
+        582.414,
+        940.342
+      ]
+    },
+    {
+      "profile": "groq-qwen-3.8-27b",
+      "answers": 2,
+      "inputTokens": 2807,
+      "outputTokens": 391,
+      "estimatedCostUsd": "0.0038096",
+      "latencyMs": [
+        669.451,
+        750.522
+      ]
+    },
+    {
+      "profile": "gwdg-qwen3-30b",
+      "answers": 2,
+      "inputTokens": 3349,
+      "outputTokens": 178,
+      "estimatedCostUsd": "0.0033912",
+      "latencyMs": [
+        3295.743,
+        2235.451
+      ]
+    },
+    {
+      "profile": "deepinfra-deepseek-v4.1-flash",
+      "answers": 2,
+      "inputTokens": 3356,
+      "outputTokens": 341,
+      "estimatedCostUsd": "0.0008758",
+      "latencyMs": [
+        2630.202,
+        2244.872
+      ]
+    }
+  ],
+  "totalInputTokens": 15218,
+  "totalOutputTokens": 1313,
+  "configuredTariffEstimateUsd": "0.008908425",
+  "sharedBudget": {
+    "samePhysicalLedgerVerified": true,
+    "before": {
+      "initialized": true,
+      "windowStart": 1792540800000,
+      "windowEnd": 1792627200000,
+      "inputTokensUsed": 128830,
+      "outputTokensUsed": 10695,
+      "microUsdUsed": 145858,
+      "inputTokenLimit": 1250000,
+      "outputTokenLimit": 250000,
+      "microUsdLimit": 1000000,
+      "reservationsInWindow": 38,
+      "unresolvedReservations": 4,
+      "unknownUsageReservations": 4,
+      "archivedUnknown": {
+        "microUsd": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "reservations": 0
+      }
+    },
+    "after": {
+      "initialized": true,
+      "windowStart": 1792540800000,
+      "windowEnd": 1792627200000,
+      "inputTokensUsed": 144048,
+      "outputTokensUsed": 12008,
+      "microUsdUsed": 163289,
+      "inputTokenLimit": 1250000,
+      "outputTokenLimit": 250000,
+      "microUsdLimit": 1000000,
+      "reservationsInWindow": 48,
+      "unresolvedReservations": 4,
+      "unknownUsageReservations": 4,
+      "archivedUnknown": {
+        "microUsd": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "reservations": 0
+      }
+    },
+    "conservativeMicroUsdDelta": 17431,
+    "beforeFingerprint": "81a1420dffc83f4b9accb096d92b667344f1f5bb0f92a4a7042aa9c0409c0a4b",
+    "afterFingerprint": "99f76bcc0013148e3ebf67f4f4edcca633a9bfde9daa90033afde33c6c04da63"
+  },
+  "retention": {
+    "mode": "verify",
+    "at": 1792616866130,
+    "baseline_nonbudget_rows_still_active": 553,
+    "missing_rows": 0,
+    "changed_rows": 0,
+    "budget_rows": 1,
+    "budget_fingerprint": "99f76bcc0013148e3ebf67f4f4edcca633a9bfde9daa90033afde33c6c04da63",
+    "same_database_and_volumes": true,
+    "baseline_expired_rows": 0,
+    "budget_changed": true,
+    "before_budget_fingerprint": "81a1420dffc83f4b9accb096d92b667344f1f5bb0f92a4a7042aa9c0409c0a4b"
+  },
+  "reviewPacket": {
+    "sha256": "dc503c8efa31bf351329c18dd36e914a341130573d3fceeebc48962c42223d9a",
+    "answers": 10,
+    "status": "unreviewed",
+    "exactInputMatches": 10,
+    "exactAnswerRoundTrips": 10,
+    "alteredAnswerCounterprobesRejected": 10,
+    "earlierEightAnswerPacketUnchanged": true
+  },
+  "cases": [
+    {
+      "caseId": "anny-03-runtime",
+      "workflowRunId": "2a485c96-ba45-47cf-a7a2-5cb6307b1989",
+      "profile": {
+        "id": "groq-oss-120b",
+        "provider": "groq",
+        "modelId": "openai/gpt-oss-120b",
+        "resolvedProviderVersion": null
+      },
+      "inputDigestSha256": "ba33a46c6623229d0a3327c0091c91d0f3d4fca08457057d5107b32dbcb459eb",
+      "requestDigestsSha256": [
+        "d01cef0819751572e09594215ffa7ee45afd2c6fae4edf242ee747403f04c2cd"
+      ],
+      "pricing": {
+        "provider": "groq",
+        "baseURL": "https://api.groq.com/openai/v1",
+        "modelId": "openai/gpt-oss-120b",
+        "inputMicroUsdPerMillion": 150000,
+        "outputMicroUsdPerMillion": 600000,
+        "basis": "published"
+      },
+      "pricingDigestSha256": "4ffc97259e06966c5326d46e6ab03603ba8d8324f746a6b4003625e58b3054b8",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 718.9419310000003,
+        "providerRequestCount": 1,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 1426,
+        "outputTokens": 100,
+        "estimatedCostUsd": 0.0002739,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "groq-oss-120b",
+            "inputBound": 10469,
+            "outputBound": 1536,
+            "inputTokens": 1426,
+            "outputTokens": 100,
+            "estimatedCostUsd": 0.0002739,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "assessment": {
+        "kind": "deterministic_fixture_oracle",
+        "scope": "synthetic_observed_workflow_only",
+        "oracleDigestSha256": "0c2e536f815d1ea61eece9f1e0abc75a81907f125314e3a69cbf7c078aca9d70",
+        "workflowObservationDigestSha256": "2a7cbd17b5ade6724eb1fc3c63eebade5ccde88420c43fe6c4a7f4351462d8ce",
+        "status": "passed",
+        "assertions": [
+          {
+            "id": "$projection.authorized-citations",
+            "kind": "projection_citations_authorized",
+            "status": "passed"
+          },
+          {
+            "id": "observed-workflow-trace",
+            "kind": "workflow_trace_exact",
+            "status": "passed"
+          },
+          {
+            "id": "no-model-tool-proposals",
+            "kind": "tool_proposals_allowed",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "anny-03-runtime",
+      "workflowRunId": "497507ab-eea5-42e0-8988-568cb91f2366",
+      "profile": {
+        "id": "groq-oss-20b",
+        "provider": "groq",
+        "modelId": "openai/gpt-oss-20b",
+        "resolvedProviderVersion": null
+      },
+      "inputDigestSha256": "ba33a46c6623229d0a3327c0091c91d0f3d4fca08457057d5107b32dbcb459eb",
+      "requestDigestsSha256": [
+        "22c8539122d019523dc10e61d3bf7553ddc4912b0a7086204942c36109a9d8e2"
+      ],
+      "pricing": {
+        "provider": "groq",
+        "baseURL": "https://api.groq.com/openai/v1",
+        "modelId": "openai/gpt-oss-20b",
+        "inputMicroUsdPerMillion": 75000,
+        "outputMicroUsdPerMillion": 300000,
+        "basis": "published"
+      },
+      "pricingDigestSha256": "2ed56f11cf35248c07a253790d2bb368367400b4a0c8be6a97f833cdf09c8907",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 582.4136309999958,
+        "providerRequestCount": 1,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 1426,
+        "outputTokens": 115,
+        "estimatedCostUsd": 0.00014145,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "groq-oss-20b",
+            "inputBound": 10469,
+            "outputBound": 1536,
+            "inputTokens": 1426,
+            "outputTokens": 115,
+            "estimatedCostUsd": 0.00014145,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "assessment": {
+        "kind": "deterministic_fixture_oracle",
+        "scope": "synthetic_observed_workflow_only",
+        "oracleDigestSha256": "a6028864dd6312ea8b9705dadd01d75e94afa5aa9e1b66b16445051e13f7a669",
+        "workflowObservationDigestSha256": "b6ff503ec6c7752c6bfce75944ad48b6f31d1d72be037c2dff2ce52e6faa49b8",
+        "status": "passed",
+        "assertions": [
+          {
+            "id": "$projection.authorized-citations",
+            "kind": "projection_citations_authorized",
+            "status": "passed"
+          },
+          {
+            "id": "observed-workflow-trace",
+            "kind": "workflow_trace_exact",
+            "status": "passed"
+          },
+          {
+            "id": "no-model-tool-proposals",
+            "kind": "tool_proposals_allowed",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "anny-03-runtime",
+      "workflowRunId": "736887d8-658f-417d-a826-f186db75d487",
+      "profile": {
+        "id": "groq-qwen-3.8-27b",
+        "provider": "groq",
+        "modelId": "qwen/qwen3.8-27b",
+        "resolvedProviderVersion": null
+      },
+      "inputDigestSha256": "ba33a46c6623229d0a3327c0091c91d0f3d4fca08457057d5107b32dbcb459eb",
+      "requestDigestsSha256": [
+        "cfbbc011a9216788cd0d4949574029ea93fd74ad803bb8022e0fccd78acb1c13"
+      ],
+      "pricing": {
+        "provider": "groq",
+        "baseURL": "https://api.groq.com/openai/v1",
+        "modelId": "qwen/qwen3.8-27b",
+        "inputMicroUsdPerMillion": 800000,
+        "outputMicroUsdPerMillion": 4000000,
+        "basis": "published"
+      },
+      "pricingDigestSha256": "29a3749440a589ed1a054ac3b92efc0239c9ddd34f5a509750c8a6cedea4b2e1",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 669.4508679999999,
+        "providerRequestCount": 1,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 1403,
+        "outputTokens": 141,
+        "estimatedCostUsd": 0.0016864,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "groq-qwen-3.8-27b",
+            "inputBound": 10469,
+            "outputBound": 1536,
+            "inputTokens": 1403,
+            "outputTokens": 141,
+            "estimatedCostUsd": 0.0016864,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "assessment": {
+        "kind": "deterministic_fixture_oracle",
+        "scope": "synthetic_observed_workflow_only",
+        "oracleDigestSha256": "c61dc666d4f975050452637909efbb88a0d43011685265ca68025a8e409462a5",
+        "workflowObservationDigestSha256": "9aa3d82ab5e78338b34f7d7f04bbc6270c3e732743ea7200e62156be779d7cff",
+        "status": "passed",
+        "assertions": [
+          {
+            "id": "$projection.authorized-citations",
+            "kind": "projection_citations_authorized",
+            "status": "passed"
+          },
+          {
+            "id": "observed-workflow-trace",
+            "kind": "workflow_trace_exact",
+            "status": "passed"
+          },
+          {
+            "id": "no-model-tool-proposals",
+            "kind": "tool_proposals_allowed",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "anny-03-runtime",
+      "workflowRunId": "a1d9dae4-17fd-4887-9c66-7d0ed1237db2",
+      "profile": {
+        "id": "gwdg-qwen3-30b",
+        "provider": "gwdg",
+        "modelId": "qwen3-30b-a3b-instruct-2507",
+        "resolvedProviderVersion": null
+      },
+      "inputDigestSha256": "ba33a46c6623229d0a3327c0091c91d0f3d4fca08457057d5107b32dbcb459eb",
+      "requestDigestsSha256": [
+        "bc61b7fff4a8a318e122b0c87656ecf602197682bfddd8fdc2669b58c6064050"
+      ],
+      "pricing": {
+        "provider": "gwdg",
+        "baseURL": "https://chat-ai.academiccloud.de/v1",
+        "modelId": "qwen3-30b-a3b-instruct-2507",
+        "inputMicroUsdPerMillion": 800000,
+        "outputMicroUsdPerMillion": 4000000,
+        "basis": "operator_estimate"
+      },
+      "pricingDigestSha256": "0c49a0b1e3662be73fe035748c01cb7f0f7774f968565207c92ffa56f424b33d",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 3295.742978999988,
+        "providerRequestCount": 1,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 1674,
+        "outputTokens": 80,
+        "estimatedCostUsd": 0.0016592,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "gwdg-qwen3-30b",
+            "inputBound": 10469,
+            "outputBound": 1536,
+            "inputTokens": 1674,
+            "outputTokens": 80,
+            "estimatedCostUsd": 0.0016592,
+            "pricingBasis": "operator_estimate",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "assessment": {
+        "kind": "deterministic_fixture_oracle",
+        "scope": "synthetic_observed_workflow_only",
+        "oracleDigestSha256": "3735fa165c51f38b8fee91af1dc66ae957d46d92b50055e19ca87a23323ed645",
+        "workflowObservationDigestSha256": "92e78126d9bd87f0d9cc85ad8e10f9362dc8e77e1ae350cb9ff6415622c08b99",
+        "status": "passed",
+        "assertions": [
+          {
+            "id": "$projection.authorized-citations",
+            "kind": "projection_citations_authorized",
+            "status": "passed"
+          },
+          {
+            "id": "observed-workflow-trace",
+            "kind": "workflow_trace_exact",
+            "status": "passed"
+          },
+          {
+            "id": "no-model-tool-proposals",
+            "kind": "tool_proposals_allowed",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "anny-03-runtime",
+      "workflowRunId": "9d5835ae-b431-46b4-a27a-438014c67abf",
+      "profile": {
+        "id": "deepinfra-deepseek-v4.1-flash",
+        "provider": "deepinfra",
+        "modelId": "deepseek-ai/DeepSeek-V4.1-Flash",
+        "resolvedProviderVersion": null
+      },
+      "inputDigestSha256": "ba33a46c6623229d0a3327c0091c91d0f3d4fca08457057d5107b32dbcb459eb",
+      "requestDigestsSha256": [
+        "d04dc9ef99ff7a423d5da6006851f95900333b30b6a51c37798628f571c073a4"
+      ],
+      "pricing": {
+        "provider": "deepinfra",
+        "baseURL": "https://api.deepinfra.com/v1/openai",
+        "modelId": "deepseek-ai/DeepSeek-V4.1-Flash",
+        "inputMicroUsdPerMillion": 200000,
+        "outputMicroUsdPerMillion": 600000,
+        "basis": "published"
+      },
+      "pricingDigestSha256": "4743c2bd9e791543074a3d962b3511ec5db6fdc835f2b60d3d4329e48924c323",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 2630.202249000009,
+        "providerRequestCount": 1,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 1677,
+        "outputTokens": 168,
+        "estimatedCostUsd": 0.0004362,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "deepinfra-deepseek-v4.1-flash",
+            "inputBound": 10469,
+            "outputBound": 1536,
+            "inputTokens": 1677,
+            "outputTokens": 168,
+            "estimatedCostUsd": 0.0004362,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "assessment": {
+        "kind": "deterministic_fixture_oracle",
+        "scope": "synthetic_observed_workflow_only",
+        "oracleDigestSha256": "2a12530623e4a3eb2c059e62f502ec895e16aa4baca21ff39db21ecf4b827c4c",
+        "workflowObservationDigestSha256": "e4c6bc39b186421105bccedc4df0489fb97ade6d1df5e302b817000fb5b4fb46",
+        "status": "passed",
+        "assertions": [
+          {
+            "id": "$projection.authorized-citations",
+            "kind": "projection_citations_authorized",
+            "status": "passed"
+          },
+          {
+            "id": "observed-workflow-trace",
+            "kind": "workflow_trace_exact",
+            "status": "passed"
+          },
+          {
+            "id": "no-model-tool-proposals",
+            "kind": "tool_proposals_allowed",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "anny-06-runtime",
+      "workflowRunId": "d8c4bfe2-2e20-4426-aec1-795ac3f4c52f",
+      "profile": {
+        "id": "groq-oss-20b",
+        "provider": "groq",
+        "modelId": "openai/gpt-oss-20b",
+        "resolvedProviderVersion": null
+      },
+      "inputDigestSha256": "5de42f5b0e16e40e9b055944a280bb5b55bfa6958506bf645b1e8dfb6436bfbe",
+      "requestDigestsSha256": [
+        "81d3d3538140b5e83ba9a91554e6722a70dd72e534cebb7219d6a96107c436be"
+      ],
+      "pricing": {
+        "provider": "groq",
+        "baseURL": "https://api.groq.com/openai/v1",
+        "modelId": "openai/gpt-oss-20b",
+        "inputMicroUsdPerMillion": 75000,
+        "outputMicroUsdPerMillion": 300000,
+        "basis": "published"
+      },
+      "pricingDigestSha256": "2ed56f11cf35248c07a253790d2bb368367400b4a0c8be6a97f833cdf09c8907",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 940.3418609999935,
+        "providerRequestCount": 1,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 1427,
+        "outputTokens": 58,
+        "estimatedCostUsd": 0.000124425,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "groq-oss-20b",
+            "inputBound": 10479,
+            "outputBound": 1536,
+            "inputTokens": 1427,
+            "outputTokens": 58,
+            "estimatedCostUsd": 0.000124425,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "assessment": {
+        "kind": "deterministic_fixture_oracle",
+        "scope": "synthetic_observed_workflow_only",
+        "oracleDigestSha256": "76edc606bac237297786dce55aedf8ceb95ef26f7d02d09b5085e0a867a45c2a",
+        "workflowObservationDigestSha256": "581d27924c944993817e7537cc2cff92aa8f614c2bb1ab7e6bee474e626f5af3",
+        "status": "passed",
+        "assertions": [
+          {
+            "id": "$projection.authorized-citations",
+            "kind": "projection_citations_authorized",
+            "status": "passed"
+          },
+          {
+            "id": "observed-workflow-trace",
+            "kind": "workflow_trace_exact",
+            "status": "passed"
+          },
+          {
+            "id": "no-model-tool-proposals",
+            "kind": "tool_proposals_allowed",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "anny-06-runtime",
+      "workflowRunId": "8170d5ea-5047-4234-99df-a5a1c182113e",
+      "profile": {
+        "id": "groq-qwen-3.8-27b",
+        "provider": "groq",
+        "modelId": "qwen/qwen3.8-27b",
+        "resolvedProviderVersion": null
+      },
+      "inputDigestSha256": "5de42f5b0e16e40e9b055944a280bb5b55bfa6958506bf645b1e8dfb6436bfbe",
+      "requestDigestsSha256": [
+        "8767098f899c90ba68af5ffd1d2fdeb736d6428766e2bf3c8c3dcb17e6198941"
+      ],
+      "pricing": {
+        "provider": "groq",
+        "baseURL": "https://api.groq.com/openai/v1",
+        "modelId": "qwen/qwen3.8-27b",
+        "inputMicroUsdPerMillion": 800000,
+        "outputMicroUsdPerMillion": 4000000,
+        "basis": "published"
+      },
+      "pricingDigestSha256": "29a3749440a589ed1a054ac3b92efc0239c9ddd34f5a509750c8a6cedea4b2e1",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 750.5222150000045,
+        "providerRequestCount": 1,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 1404,
+        "outputTokens": 250,
+        "estimatedCostUsd": 0.0021232,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "groq-qwen-3.8-27b",
+            "inputBound": 10479,
+            "outputBound": 1536,
+            "inputTokens": 1404,
+            "outputTokens": 250,
+            "estimatedCostUsd": 0.0021232,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "assessment": {
+        "kind": "deterministic_fixture_oracle",
+        "scope": "synthetic_observed_workflow_only",
+        "oracleDigestSha256": "2de06e99da3051539fc7d8d90d649e8465aafd3600b984464c36767f17d429fe",
+        "workflowObservationDigestSha256": "7b802eb66065c1bec5aceeebb52c5d40970389fc8557c52d6ab610432c89d247",
+        "status": "passed",
+        "assertions": [
+          {
+            "id": "$projection.authorized-citations",
+            "kind": "projection_citations_authorized",
+            "status": "passed"
+          },
+          {
+            "id": "observed-workflow-trace",
+            "kind": "workflow_trace_exact",
+            "status": "passed"
+          },
+          {
+            "id": "no-model-tool-proposals",
+            "kind": "tool_proposals_allowed",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "anny-06-runtime",
+      "workflowRunId": "ef77eb6b-e6e5-4c51-94a5-9948424b7aed",
+      "profile": {
+        "id": "gwdg-qwen3-30b",
+        "provider": "gwdg",
+        "modelId": "qwen3-30b-a3b-instruct-2507",
+        "resolvedProviderVersion": null
+      },
+      "inputDigestSha256": "5de42f5b0e16e40e9b055944a280bb5b55bfa6958506bf645b1e8dfb6436bfbe",
+      "requestDigestsSha256": [
+        "9ad56db0e1918602725c11c188b19a9d4b5856bfe2358af5a38081f3414947cb"
+      ],
+      "pricing": {
+        "provider": "gwdg",
+        "baseURL": "https://chat-ai.academiccloud.de/v1",
+        "modelId": "qwen3-30b-a3b-instruct-2507",
+        "inputMicroUsdPerMillion": 800000,
+        "outputMicroUsdPerMillion": 4000000,
+        "basis": "operator_estimate"
+      },
+      "pricingDigestSha256": "0c49a0b1e3662be73fe035748c01cb7f0f7774f968565207c92ffa56f424b33d",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 2235.4506300000066,
+        "providerRequestCount": 1,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 1675,
+        "outputTokens": 98,
+        "estimatedCostUsd": 0.001732,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "gwdg-qwen3-30b",
+            "inputBound": 10479,
+            "outputBound": 1536,
+            "inputTokens": 1675,
+            "outputTokens": 98,
+            "estimatedCostUsd": 0.001732,
+            "pricingBasis": "operator_estimate",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "assessment": {
+        "kind": "deterministic_fixture_oracle",
+        "scope": "synthetic_observed_workflow_only",
+        "oracleDigestSha256": "8ce27ecf257b2546016d0860b75d142c7788755dc98326c4403aca96958a495c",
+        "workflowObservationDigestSha256": "837da797a6ad356c195df4138296de2215c0bcd2d7e6776f37ce019d43e39673",
+        "status": "passed",
+        "assertions": [
+          {
+            "id": "$projection.authorized-citations",
+            "kind": "projection_citations_authorized",
+            "status": "passed"
+          },
+          {
+            "id": "observed-workflow-trace",
+            "kind": "workflow_trace_exact",
+            "status": "passed"
+          },
+          {
+            "id": "no-model-tool-proposals",
+            "kind": "tool_proposals_allowed",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "anny-06-runtime",
+      "workflowRunId": "0190e803-d2a6-4ba0-bf68-f25d62281ac0",
+      "profile": {
+        "id": "deepinfra-deepseek-v4.1-flash",
+        "provider": "deepinfra",
+        "modelId": "deepseek-ai/DeepSeek-V4.1-Flash",
+        "resolvedProviderVersion": null
+      },
+      "inputDigestSha256": "5de42f5b0e16e40e9b055944a280bb5b55bfa6958506bf645b1e8dfb6436bfbe",
+      "requestDigestsSha256": [
+        "47c36707da35f17eca9651bf584b1aa08b27896f3488b22c74cbc88b7b067dae"
+      ],
+      "pricing": {
+        "provider": "deepinfra",
+        "baseURL": "https://api.deepinfra.com/v1/openai",
+        "modelId": "deepseek-ai/DeepSeek-V4.1-Flash",
+        "inputMicroUsdPerMillion": 200000,
+        "outputMicroUsdPerMillion": 600000,
+        "basis": "published"
+      },
+      "pricingDigestSha256": "4743c2bd9e791543074a3d962b3511ec5db6fdc835f2b60d3d4329e48924c323",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 2244.8724179999845,
+        "providerRequestCount": 1,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 1679,
+        "outputTokens": 173,
+        "estimatedCostUsd": 0.0004396,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "deepinfra-deepseek-v4.1-flash",
+            "inputBound": 10479,
+            "outputBound": 1536,
+            "inputTokens": 1679,
+            "outputTokens": 173,
+            "estimatedCostUsd": 0.0004396,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "assessment": {
+        "kind": "deterministic_fixture_oracle",
+        "scope": "synthetic_observed_workflow_only",
+        "oracleDigestSha256": "1a8e7502ea60779fdffd1ebc63866a6953d5a95f7eee552d0f382fd28ce544fc",
+        "workflowObservationDigestSha256": "a8b1511be622fa11cb47afe309c2c39643180d70876e85321999604a5b85f595",
+        "status": "passed",
+        "assertions": [
+          {
+            "id": "$projection.authorized-citations",
+            "kind": "projection_citations_authorized",
+            "status": "passed"
+          },
+          {
+            "id": "observed-workflow-trace",
+            "kind": "workflow_trace_exact",
+            "status": "passed"
+          },
+          {
+            "id": "no-model-tool-proposals",
+            "kind": "tool_proposals_allowed",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "anny-06-runtime",
+      "workflowRunId": "8c815788-dd4d-4a36-9ebd-a0f585d0e801",
+      "profile": {
+        "id": "groq-oss-120b",
+        "provider": "groq",
+        "modelId": "openai/gpt-oss-120b",
+        "resolvedProviderVersion": null
+      },
+      "inputDigestSha256": "5de42f5b0e16e40e9b055944a280bb5b55bfa6958506bf645b1e8dfb6436bfbe",
+      "requestDigestsSha256": [
+        "26d41ab5221a71d1cdfccc361e07747e08d21e17850366b95852e88aa585dc11"
+      ],
+      "pricing": {
+        "provider": "groq",
+        "baseURL": "https://api.groq.com/openai/v1",
+        "modelId": "openai/gpt-oss-120b",
+        "inputMicroUsdPerMillion": 150000,
+        "outputMicroUsdPerMillion": 600000,
+        "basis": "published"
+      },
+      "pricingDigestSha256": "4ffc97259e06966c5326d46e6ab03603ba8d8324f746a6b4003625e58b3054b8",
+      "measurements": {
+        "kind": "provider_reported",
+        "latencyMs": 752.7376859999786,
+        "providerRequestCount": 1,
+        "currency": "USD",
+        "costKind": "token_usage_at_configured_rates",
+        "usageStatus": "complete",
+        "inputTokens": 1427,
+        "outputTokens": 130,
+        "estimatedCostUsd": 0.00029205,
+        "cacheStatus": "unknown",
+        "reservations": [
+          {
+            "profileId": "groq-oss-120b",
+            "inputBound": 10479,
+            "outputBound": 1536,
+            "inputTokens": 1427,
+            "outputTokens": 130,
+            "estimatedCostUsd": 0.00029205,
+            "pricingBasis": "published",
+            "settlement": "reported"
+          }
+        ]
+      },
+      "assessment": {
+        "kind": "deterministic_fixture_oracle",
+        "scope": "synthetic_observed_workflow_only",
+        "oracleDigestSha256": "e037c1a553449ad590ca5e0bcfaa7cdce1bea8fcf113b9e810dbae7eb77f645a",
+        "workflowObservationDigestSha256": "658ade8727df002a4aee6cfc44a41524398acdb58495c9fa7383dced06c11b1e",
+        "status": "passed",
+        "assertions": [
+          {
+            "id": "$projection.authorized-citations",
+            "kind": "projection_citations_authorized",
+            "status": "passed"
+          },
+          {
+            "id": "observed-workflow-trace",
+            "kind": "workflow_trace_exact",
+            "status": "passed"
+          },
+          {
+            "id": "no-model-tool-proposals",
+            "kind": "tool_proposals_allowed",
+            "status": "passed"
+          }
+        ]
+      }
+    }
+  ],
+  "operatorSourceVerification": {
+    "id": "sha256:3d4525b54cc7eb91810ac7e2491c9a7b7173113b1ad93152974a8d38f9cf545e",
+    "revision": "621fd6c2d76a383feab8b30db9546df368ba6b66",
+    "user": "node:node",
+    "node": "v24.22.0",
+    "platform": "linux",
+    "arch": "x64",
+    "sourceSha256": {
+      "apps/web/scripts/evaluate-models.ts": "5d52b206fa64367b2d109d8c4f761b7fb1a7bb6accc9aa08a96c5fa2f44c27c8",
+      "apps/web/src/lib/server/evaluation/provider-runner.ts": "3d5eb7dbdf922713ae1f8b56221d320e09dc4c2b2291406cb958104447959ad4",
+      "scripts/evaluation/anny-fixture.ts": "04921e5344b10f3c343ecef6ac9cba2d14539ac8ddc2002ee4384c6e0f9a6d3a",
+      "scripts/evaluation/provider-workflow-fixture.ts": "3fb1d02940a7ff4dcb9c4e4df1a35c2e6bb307963f86586c86d539bcb8c2613b",
+      "apps/web/src/lib/server/model-router.ts": "2e3567c8f6c38d71b248893dd5b517beac0d6bb7542d98d1ac7027fee569a406",
+      "apps/web/src/lib/server/model-budgets.ts": "990b9ba1a3d3c43786c7aaf7375fb2576ef0000a87093e5ba5e65e4153043c35",
+      "docs/evaluation/example-cases.json": "82ff06922cccad9a2a741ce0894cdb548ab40a540e485c689308933488b59ef0",
+      "pnpm-lock.yaml": "d17165ca9989d72401f3eaa9718d1ffa43bc1adb486113602760f30db13317ba"
+    },
+    "providerCalls": 0,
+    "budgetAccess": false
+  },
+  "durableObservationUrl": "https://github.com/metaneutrons/HASI/pull/194#issuecomment-6326650438",
+  "configurationSnapshot": {
+    "configurationDigestSha256": "70627c5be0361af8f4b3a625ae30e3010ad2c8b31506a27e58556102831d22ce",
+    "profiles": [
+      {
+        "id": "groq-oss-120b",
+        "label": "Groq GPT-OSS 120B",
+        "connectionId": "groq-demo",
+        "modelId": "openai/gpt-oss-120b",
+        "capabilities": {
+          "tools": true
+        },
+        "allowedDataClasses": [
+          "synthetic_demo"
+        ],
+        "parameters": {
+          "temperature": 0.2,
+          "maxOutputTokens": 1536,
+          "timeoutMs": 20000,
+          "reasoningEffort": "low"
+        }
+      },
+      {
+        "id": "groq-oss-20b",
+        "label": "Groq GPT-OSS 20B",
+        "connectionId": "groq-demo",
+        "modelId": "openai/gpt-oss-20b",
+        "capabilities": {
+          "tools": true
+        },
+        "allowedDataClasses": [
+          "synthetic_demo"
+        ],
+        "parameters": {
+          "temperature": 0.2,
+          "maxOutputTokens": 1536,
+          "timeoutMs": 20000,
+          "reasoningEffort": "low"
+        }
+      },
+      {
+        "id": "groq-qwen-3.8-27b",
+        "label": "Groq Qwen3.8 27B \u00b7 Preview",
+        "connectionId": "groq-demo",
+        "modelId": "qwen/qwen3.8-27b",
+        "capabilities": {
+          "tools": true
+        },
+        "allowedDataClasses": [
+          "synthetic_demo"
+        ],
+        "parameters": {
+          "temperature": 0.2,
+          "maxOutputTokens": 1536,
+          "timeoutMs": 20000,
+          "reasoningEffort": "none"
+        }
+      },
+      {
+        "id": "gwdg-qwen3-30b",
+        "label": "GWDG SAIA \u00b7 Qwen3 30B A3B Instruct 2507 \u00b7 Experimental",
+        "connectionId": "gwdg-demo",
+        "modelId": "qwen3-30b-a3b-instruct-2507",
+        "capabilities": {
+          "tools": true
+        },
+        "allowedDataClasses": [
+          "synthetic_demo"
+        ],
+        "parameters": {
+          "temperature": 0.2,
+          "maxOutputTokens": 1536,
+          "timeoutMs": 45000
+        }
+      },
+      {
+        "id": "deepinfra-deepseek-v4.1-flash",
+        "label": "DeepInfra \u00b7 DeepSeek V4.1 Flash \u00b7 Experimental",
+        "connectionId": "deepinfra-demo",
+        "modelId": "deepseek-ai/DeepSeek-V4.1-Flash",
+        "capabilities": {
+          "tools": true
+        },
+        "allowedDataClasses": [
+          "synthetic_demo"
+        ],
+        "parameters": {
+          "temperature": 1,
+          "maxOutputTokens": 1536,
+          "timeoutMs": 45000
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "groq-demo",
+        "provider": "groq",
+        "adapter": "groq",
+        "baseURL": "https://api.groq.com/openai/v1",
+        "api": "chat-completions"
+      },
+      {
+        "id": "gwdg-demo",
+        "provider": "gwdg",
+        "adapter": "openai-compatible",
+        "baseURL": "https://chat-ai.academiccloud.de/v1",
+        "api": "chat-completions"
+      },
+      {
+        "id": "deepinfra-demo",
+        "provider": "deepinfra",
+        "adapter": "openai-compatible",
+        "baseURL": "https://api.deepinfra.com/v1/openai",
+        "api": "chat-completions"
+      }
+    ],
+    "policy": {
+      "defaultProfileId": "groq-oss-120b",
+      "userChoice": {
+        "enabled": true,
+        "profileIds": [
+          "groq-oss-120b",
+          "groq-oss-20b",
+          "groq-qwen-3.8-27b",
+          "gwdg-qwen3-30b",
+          "deepinfra-deepseek-v4.1-flash"
+        ]
+      },
+      "fallbacks": [],
+      "maxAttempts": 2,
+      "totalTimeoutMs": 45000
+    },
+    "credentialReferencesIncluded": false,
+    "providerCalls": 0,
+    "budgetAccess": false
+  }
+}
