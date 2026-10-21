@@ -15,7 +15,7 @@ pnpm evaluate:models --profiles groq-oss-120b,gwdg-qwen3-30b,deepinfra-deepseek-
 ```
 
 This emits a plan without resolving credentials, opening a database or calling
-a provider. It selects nine fixed-evidence development cases and lists the
+a provider. It selects eleven fixed-evidence development cases and lists the
 remaining workflow/application-policy cases as requiring separate observers.
 Only the explicitly pinned bundled corpus can be used; the command accepts no
 arbitrary input file. Source authorization is an operator-owned manifest of
@@ -31,7 +31,7 @@ pnpm evaluate:models --profiles groq-oss-120b,gwdg-qwen3-30b --cases sit-vpn-gro
 `--cases` only narrows the reviewed fixed-evidence manifest, preserving manifest
 order and source authorization. Unknown, duplicate or non-fixed case IDs fail
 before database access, report creation or dispatch. The default HTTP attempt
-cap remains eight; selecting all nine cases with that cap can yield an
+cap remains eight; selecting all eleven cases with that cap can yield an
 explicitly incomplete report. A repair attempt also consumes the cap.
 
 Profiles must already be selectable under server policy, eligible for
@@ -40,6 +40,44 @@ The order rotates profiles between cases; repetitions are explicit (one by
 default, at most three). Report the order and development split, not a blind or
 randomized study. All profiles receive the same projected evidence and clock;
 the adapter currently requires Europe/Berlin, matching the production router.
+
+## Explicit observed-workflow mode
+
+```sh
+pnpm evaluate:models --profiles groq-oss-120b,gwdg-qwen3-30b --workflows
+```
+
+This is also plan-only by default. It selects only `anny-03-runtime` and
+`anny-06-runtime`; `--cases` can narrow that manifest. The default fixed-evidence
+mode does not silently acquire action fixtures. Unknown/static/knowledge case
+IDs cannot register a workflow. The same corpus pin, approved profiles, live
+opt-in, existing shared budget and HTTP-attempt cap apply to `--run`.
+
+Each profile/repetition gets its own loopback-only Anny runtime and memory state.
+The synthetic host prepares and confirms one mock booking or cancellation; the
+mock commits it and deliberately loses the reply. Cancellation has one separately
+counted setup booking. Instrumentation independently observes proposal transitions,
+submitted argument/actor binding and persisted source execution evidence. The
+model receives only `{state: "outcome_unknown", action, externalAttempts: 1}`
+as frozen evidence through the existing read-only evidence envelope. It receives
+no proposal IDs, confirmation events, expected labels or execute tools. This is
+not a forged production action-context grant or a model-driven tool loop.
+
+A trusted single-use observer binds the current run, case and exact model-input
+digest to that fixture's independent events. Invalid/mismatched observations or
+observer failure leave the case ungraded while retaining provider usage. The
+operator closes the fixture on success/failure; unavailable observation or failed
+cleanup stops the workflow batch with exit 2 and an explicit stop reason. Provider
+errors still stop that connection without retry/fallback. No production business
+service, booking or cancellation is reachable from the fixture.
+
+The model clock/status are stable across isolated runs. Actual fixture action
+dates are private and dynamic, and preparation/observation are excluded from
+provider latency. These cases qualify unknown-outcome response/control behavior,
+not calendar interpretation, initial search/planning, the original static cases,
+all workflow families or semantic correctness. Blinded human scoring, access and
+injection fixtures, approved thresholds and measured live per-profile results
+remain separate M6 work. Local fake-provider tests are not live-provider evidence.
 
 ## Explicit live execution
 

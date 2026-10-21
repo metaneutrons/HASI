@@ -2,9 +2,9 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { boundedEvaluationJsonObjectSchema, preflightEvaluationJson } from "./case-schema";
-import type { EvaluationModelInput } from "./input-projection";
-import { evaluationWorkflowEventSchema, digestEvaluationWorkflowObservation, type EvaluationWorkflowObservation } from "./workflow-observations";
+import { boundedEvaluationJsonObjectSchema, preflightEvaluationJson } from "./case-schema.js";
+import type { EvaluationModelInput } from "./input-projection.js";
+import { evaluationWorkflowEventSchema, digestEvaluationWorkflowObservation, type EvaluationWorkflowObservation } from "./workflow-observations.js";
 
 const MAX_ORACLE_BYTES = 256 * 1024;
 const MAX_ORACLE_NODES = 12_000;

@@ -7,7 +7,7 @@ import {
   evaluationClockSchema,
   evaluationEvidenceSchema,
   type EvaluationEvidence,
-} from "./case-schema";
+} from "./case-schema.js";
 
 const projectedEvidenceSchema = evaluationEvidenceSchema.pick({
   sourceId: true,

@@ -163,7 +163,11 @@ called. Explicit live execution uses the existing router and shared daily
 budget, a pinned synthetic corpus and an actual HTTP-attempt cap. Reports
 separate provider-reported usage from tariff-based cost estimates and unknown
 usage. The bounded citation checks do not establish semantic quality or M6
-acceptance. See [operator instructions and measurement limits](docs/evaluation/provider-observations.md).
+acceptance. Add `--workflows` to plan the two explicitly registered, isolated
+booking/cancellation unknown-outcome variants. The model receives sanitized
+status as evidence and has no execute tools; independent fixture observations
+grade the trace. This is not a full planning workflow or live-provider result.
+See [operator instructions and measurement limits](docs/evaluation/provider-observations.md).
 
 ### Local PostgreSQL server mode
 

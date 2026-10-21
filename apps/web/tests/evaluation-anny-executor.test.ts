@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import exampleCases from "../../../docs/evaluation/example-cases.json";
-import { createEvaluationAnnyFixture } from "../../../tests/support/evaluation-anny-fixture";
+import { createEvaluationAnnyFixture } from "../../../scripts/evaluation/anny-fixture.js";
 import { evaluationEvidenceKey } from "../src/lib/server/evaluation/input-projection";
 import { parseEvaluationDataset } from "../src/lib/server/evaluation/case-schema";
 import { runEvaluationCase, type EvaluationTransportResponse } from "../src/lib/server/evaluation/runner";

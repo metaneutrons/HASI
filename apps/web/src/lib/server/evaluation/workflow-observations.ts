@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { preflightEvaluationJson } from "./case-schema";
+import { preflightEvaluationJson } from "./case-schema.js";
 
 const MAX_OBSERVATION_BYTES = 256 * 1024;
 const MAX_OBSERVATION_NODES = 12_000;
