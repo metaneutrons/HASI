@@ -1291,15 +1291,15 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .app-frame--chat[data-chat-cramped] .chat-history-dialog-body { padding: 12px; }
 .app-frame--chat[data-chat-cramped] .chat-session-items { flex: none; overflow: visible; }
 
-/* Landscape phones need space for the transcript as well as touch controls. */
-@media (max-height: 500px) {
+/* Relative height also preserves transcript space with a larger default font. */
+@media (max-height: 32em) {
   .app-frame--chat .public-demo-notice, .app-frame--chat .chat-footnote { display: none; }
   .app-frame--chat .app-topbar { min-height: 48px; height: auto; }
   .app-frame--chat .side-nav { overflow-y: auto; }
   .chat-toolbar { min-height: 44px; }
   .chat-composer-dock { padding-top: 4px; padding-bottom: 6px; }
   .chat-composer { display: flex; align-items: flex-end; gap: 8px; padding: 8px; }
-  .chat-composer textarea, .app-frame--chat[data-keyboard-open] .chat-composer textarea { min-height: 44px; height: 44px; max-height: 80px; }
+  .chat-composer textarea, .app-frame--chat[data-keyboard-open] .chat-composer textarea { min-height: max(44px, 1.5em); height: 1.5em; max-height: max(80px, 3em); }
   .chat-composer-bottom { flex: 0 0 44px; margin: 0; }
   .chat-composer-bottom > span { display: none; }
 }
