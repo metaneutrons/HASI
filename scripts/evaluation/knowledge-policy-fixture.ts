@@ -26,12 +26,12 @@ import {
   type KnowledgePolicyScenarioSource,
 } from "./knowledge-policy-scenarios.js";
 
-const webOrigin = "http://127.0.0.1:3001";
-const apiOrigin = "http://127.0.0.1:4100";
-const apiHost = new URL(apiOrigin).host;
-const apiAllowedHost = new URL(apiOrigin).hostname;
+// Each choice creates a separate in-process fixture authority, not a tenant partition in one service instance.
+const deploymentOrigins = {
+  primary: { webOrigin: "http://127.0.0.1:3001", apiOrigin: "http://127.0.0.1:4100" },
+  peer: { webOrigin: "http://127.0.0.1:3003", apiOrigin: "http://127.0.0.1:4101" },
+} as const;
 const clientId = "hasi-evaluation-knowledge-policy";
-const callbackUrl = `${apiOrigin}/api/auth/callback`;
 const pluginOrigin = "https://knowledge-evaluation.example.edu";
 const serviceOrigin = "https://service.example.edu/knowledge";
 const intranetOrigin = "https://intranet.example.edu/knowledge";
@@ -58,6 +58,7 @@ const sourceMarkers = Object.freeze({
 const nativeFetch: typeof fetch = globalThis.fetch.bind(globalThis);
 
 export type EvaluationKnowledgePolicyRole = keyof typeof upstreamSubjects;
+export type EvaluationKnowledgePolicyDeployment = keyof typeof deploymentOrigins;
 
 export interface EvaluationKnowledgePolicySourceMetadata {
   readonly id: string;
@@ -82,6 +83,7 @@ export interface EvaluationKnowledgePolicyScenarioMetadata {
 }
 
 export interface EvaluationKnowledgePolicyFixture {
+  readonly deployment: EvaluationKnowledgePolicyDeployment;
   readonly webOrigin: string;
   readonly apiOrigin: string;
   readonly localScope: string;
@@ -110,6 +112,8 @@ export interface EvaluationKnowledgePolicyFixtureOptions {
   poisoned?: boolean;
   /** Selects one code-owned, corpus-aligned signed source scenario. */
   scenario?: KnowledgePolicyScenario;
+  /** Selects a code-owned loopback deployment authority; callers cannot supply origins. */
+  deployment?: EvaluationKnowledgePolicyDeployment;
 }
 
 function sourceOrigin(sourceSystem: KnowledgeSourceSystem): string {
@@ -181,12 +185,12 @@ function metadataForScenarioSource(source: KnowledgePolicyScenarioSource): Evalu
 
 function scenarioMetadata(definition: KnowledgePolicyScenarioDefinition): EvaluationKnowledgePolicyScenarioMetadata {
   const sources = definition.sources.map(metadataForScenarioSource);
-  const hiddenMarkers = definition.scenario === "lumen"
+  const hiddenMarkers = definition.hiddenMarkers ?? (definition.scenario === "lumen"
     ? [definition.sources[0]?.documentId, definition.sources[0]?.sourceId,
       definition.sources[0]?.title, definition.sources[0]?.text, ...(definition.sources[0]?.markers ?? [])]
     : definition.scenario === "temporary-account" ? ["RUNNER-CANARY-Q4"]
-      : definition.scenario === "atlas-clean" ? ["ROOT-0"] : [];
-  const sourceSystem = definition.sources[0]?.sourceSystem;
+      : definition.scenario === "atlas-clean" ? ["ROOT-0"] : []);
+  const sourceSystem = definition.sourceSystem ?? definition.sources[0]?.sourceSystem;
   if (!sourceSystem || definition.sources.some(source => source.sourceSystem !== sourceSystem)) {
     throw new TypeError("Evaluation source scenarios must use one registered source system.");
   }
@@ -249,29 +253,37 @@ function mcpFetch(plugin: ReturnType<typeof createInstitutionalKnowledgePlugin>)
   };
 }
 
-function copyOptions(value: unknown): { poisoned: boolean; scenario?: KnowledgePolicyScenario } {
+function copyOptions(value: unknown): {
+  poisoned: boolean;
+  scenario?: KnowledgePolicyScenario;
+  deployment: EvaluationKnowledgePolicyDeployment;
+} {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new TypeError("Invalid evaluation knowledge fixture options.");
   }
   const candidate = value as Record<string, unknown>;
-  if (Object.keys(candidate).some(key => key !== "poisoned" && key !== "scenario")
-    || (candidate.poisoned !== undefined && typeof candidate.poisoned !== "boolean")) {
+  if (Object.keys(candidate).some(key => key !== "poisoned" && key !== "scenario" && key !== "deployment")
+    || (candidate.poisoned !== undefined && typeof candidate.poisoned !== "boolean")
+    || (candidate.deployment !== undefined && candidate.deployment !== "primary" && candidate.deployment !== "peer")) {
     throw new TypeError("Invalid evaluation knowledge fixture options.");
   }
   const poisoned = candidate.poisoned === true;
+  const deployment = candidate.deployment === "peer" ? "peer" : "primary";
   if (candidate.scenario !== undefined) {
     getKnowledgePolicyScenario(candidate.scenario);
     if (candidate.poisoned !== undefined) throw new TypeError("Scenario fixtures do not accept the legacy poison toggle.");
-    return { poisoned: false, scenario: candidate.scenario as KnowledgePolicyScenario };
+    return { poisoned: false, scenario: candidate.scenario as KnowledgePolicyScenario, deployment };
   }
-  return { poisoned };
+  return { poisoned, deployment };
 }
 
 async function authenticate(
   api: Awaited<ReturnType<typeof createApi>>,
   expectedIssuer: string,
   upstreamSubject: string,
+  apiOrigin: string,
 ): Promise<string> {
+  const apiHost = new URL(apiOrigin).host;
   const started = await api.inject({
     method: "GET",
     url: "/api/auth/login",
@@ -310,9 +322,13 @@ async function authenticate(
 export async function createEvaluationKnowledgePolicyFixture(
   options: EvaluationKnowledgePolicyFixtureOptions = {},
 ): Promise<EvaluationKnowledgePolicyFixture> {
-  const { poisoned, scenario } = copyOptions(options);
+  const { poisoned, scenario, deployment } = copyOptions(options);
+  const { webOrigin, apiOrigin } = deploymentOrigins[deployment];
+  const apiHost = new URL(apiOrigin).host;
+  const apiAllowedHost = new URL(apiOrigin).hostname;
+  const callbackUrl = `${apiOrigin}/api/auth/callback`;
   const selectedScenario = scenario === undefined ? undefined : getKnowledgePolicyScenario(scenario);
-  const defaultSearchSource = selectedScenario?.sources[0]?.sourceSystem ?? "service_it";
+  const defaultSearchSource = selectedScenario?.sourceSystem ?? selectedScenario?.sources[0]?.sourceSystem ?? "service_it";
   const defaultSearchQuery = selectedScenario?.query ?? query;
   const cleanup: (() => Promise<void>)[] = [];
   let closePromise: Promise<void> | undefined;
@@ -478,8 +494,8 @@ export async function createEvaluationKnowledgePolicyFixture(
     cleanup.push(() => api.close());
 
     const cookies = {
-      reader: await authenticate(api, idp.issuer, upstreamSubjects.reader),
-      outsider: await authenticate(api, idp.issuer, upstreamSubjects.outsider),
+      reader: await authenticate(api, idp.issuer, upstreamSubjects.reader, apiOrigin),
+      outsider: await authenticate(api, idp.issuer, upstreamSubjects.outsider, apiOrigin),
     };
     const currentDocumentsBySource = new Map<KnowledgeSourceSystem, KnowledgeDocumentExport[]>(
       [...initialDocumentsBySource].map(([sourceSystem, documents]) => [sourceSystem, structuredClone(documents)]),
@@ -512,8 +528,10 @@ export async function createEvaluationKnowledgePolicyFixture(
         "/api/tools/call": "POST",
         "/api/knowledge/contexts/resolve": "POST",
       };
+      const documentRead = /^\/api\/knowledge\/documents\/(?:svc|int)-[A-Za-z0-9][A-Za-z0-9._~-]{0,127}$/u.test(target.pathname)
+        && method === "GET";
       if (target.origin !== apiOrigin || target.username || target.password || target.search || target.hash
-        || allowedMethods[target.pathname] !== method) {
+        || (!documentRead && allowedMethods[target.pathname] !== method)) {
         throw new TypeError("Evaluation core transport rejected an unapproved destination.");
       }
       const headers = new Headers(request.headers);
@@ -565,6 +583,7 @@ export async function createEvaluationKnowledgePolicyFixture(
     };
 
     const fixture: EvaluationKnowledgePolicyFixture = {
+      deployment,
       webOrigin,
       apiOrigin,
       localScope: scope,

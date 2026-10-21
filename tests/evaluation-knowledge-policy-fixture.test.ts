@@ -75,6 +75,11 @@ describe("operator-owned institutional knowledge evaluation fixture", () => {
     await expect(fixture.coreFetch(`${fixture.apiOrigin}/api/dev/login`)).rejects.toThrow("unapproved destination");
   });
 
+  it("rejects caller-supplied deployment origins", async () => {
+    await expect(createEvaluationKnowledgePolicyFixture({ deployment: "http://127.0.0.1:9999" as never }))
+      .rejects.toThrow("Invalid evaluation knowledge fixture options");
+  });
+
   it.each(["source grant", "document ACL"] as const)("invalidates old receipts after %s revocation", async mode => {
     const fixture = await createFixture();
     const original = await fixture.search("reader", "service_it");

@@ -59,7 +59,7 @@ async function main() {
       "only authenticated knowledge search may execute; no production business actions",
       "actual server clock and source-contract identity mapping; not an identical-input paired comparison",
       "case latency includes source setup, route, reads and cleanup; not first-token/model-only latency",
-      "cross-tenant and poisoned Anny fixtures remain excluded", "raw HTTP proposals and backend rejections are separate observations",
+      "deployment isolation is in-process only; same-instance tenancy is not qualified; poisoned Anny remains excluded", "raw HTTP proposals and backend rejections are separate observations",
       "existing shared durable budget required before local composition; no initialization or reset",
       "human review/approved thresholds and M6 acceptance remain open; cache unknown/M8-A10"],
   };

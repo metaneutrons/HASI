@@ -16,9 +16,14 @@ pnpm evaluate:application-policy --profiles groq-oss-120b --cases access-01,acce
 
 The default is plan-only: no fixture session, provider call, credential readiness
 check or budget-store access. The command accepts only the reviewed bundled
-corpus and explicitly registered server-owned manifest. Cases `inject-02`
-(poisoned Anny resource) and `access-03` (a different tenant) are excluded until
-their additional trusted fixtures exist. An unknown case cannot register a tool,
+corpus and explicitly registered server-owned manifest. Case `inject-02`
+(poisoned Anny resource) remains excluded. The original
+`access-03` is not directly executable; the explicitly named deployment-scoped
+runtime variant below uses its frozen question and a separately code-owned
+fixture source matching the note. It does not claim same-instance tenant
+partitioning. Plan validation checks candidate source ID, revision, title and
+text against that code-owned catalog before fixture execution; those corpus
+fields still grant no authority. An unknown case cannot register a tool,
 source, role, permission or destination.
 
 | Runtime case | Actual fixture behavior |
@@ -30,8 +35,9 @@ source, role, permission or destination.
 | `inject-04` | Authorized OCR-text card containing an outbound-disclosure instruction |
 | `inject-01-clean-runtime` | Separate clean Atlas control derived from `intra-01` |
 | `access-01-revoked-runtime` | Actual retrieval/answer, signed source-grant revocation, then current-history reconstruction |
+| `access-03-deployment-scoped-runtime` | Isolated Alpha/Beta fixture authorities; Beta positive read, Alpha empty search and denied session/document/context replay |
 
-The last two are registered runtime variants, not additional reviewed corpus
+The named runtime variants are not additional reviewed corpus
 cases or acceptance of the original static cases. Corpus entitlements, candidate
 documents, expected labels and tool fixtures never establish source authority.
 The code-owned scenario catalog supplies signed source snapshots and grants.
@@ -115,6 +121,19 @@ justify an HTTP request count. Unknown or unconfirmed settlements remain unknown
 Tariffs are estimates, including the expressly provisional GWDG rates, not invoices.
 No old unknown hold or budget window is reset or refunded.
 
+The deployment-scoped variant creates two separate in-process API/repository
+compositions with independent scopes, TestIdPs, sessions, source-signing and
+context-signing keys. Beta has the frozen private note; Alpha has signed empty
+snapshots. Beta's authenticated positive retrieval prevents an empty-everywhere
+false pass. Alpha must reject the peer cookie, return a generic404 for the known
+Beta document ID and resolve the Beta context as unavailable. Only Alpha's
+operator-selected API transport may reach the model route; peer source markers
+are forbidden at the outgoing model boundary. The result explicitly records
+`tenancyScope: isolated_in_process_deployments` and the individual probes. This
+does not qualify physical network/container separation, correct operator source
+wiring or tenant partitions inside a shared service instance. No tenant claim or
+new product authorization mechanism is introduced.
+
 The actual route uses its server clock; the static case clock is recorded but is
 not silently injected as production time. Effective inputs may differ across runs
 because of clocks, protocol identifiers or model choices. Exact input digests and
@@ -126,6 +145,7 @@ The source probe may pass while a model omits retrieval or gives a false answer.
 If the model never retrieves before the revocation variant, that scenario is
 explicitly `scenario_not_exercised`. No semantic score, human/gold label, model
 ranking, cache hit or M6 acceptance follows from technical success. Remaining
-cross-tenant, Anny/tool-output, full planning/calendar/dialogue, model-switch,
-rendering/network and human-adjudication requirements remain in M6; Groq cache
+Source/tenant scenarios beyond this bounded deployment variant, Anny/tool-output,
+full planning/calendar/dialogue, model-switch, rendering/network and
+human-adjudication requirements remain in M6; Groq cache
 proof remains M8-A10.
