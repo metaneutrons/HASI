@@ -240,18 +240,14 @@ function renderDocument(options: {
     <div class="header-inner">
       <a class="brand" href="/de/services/" aria-label="HASI Service IT Startseite">
         <span class="brand-mark" aria-hidden="true">H</span>
-        <span class="brand-copy">HASI<small>Service IT · Demo</small></span>
+        <span class="brand-copy">HASI<small>Service IT</small></span>
       </a>
       ${renderNav(options.active)}
     </div>
   </header>
-  <aside class="demo-banner" role="note" aria-label="Synthetische Demo">
-    <span class="demo-symbol" aria-hidden="true">!</span>
-    <div><strong>Synthetische Demo</strong><p>Sämtliche Inhalte sind erfunden. Auch Mitarbeitenden- und Admin-Beispiele sowie Rollenangaben sind reine Testdaten und begründen keine Berechtigungen oder realen Zugänge.</p></div>
-  </aside>
   ${options.main}
   <footer class="site-footer">
-    <div class="site-footer-inner"><p><span class="footer-brand">HASI Service IT</span> · Ausschließlich synthetische Inhalte</p><p>Diese Demo ersetzt keine reale Service- oder Zugriffsregelung.</p></div>
+    <div class="site-footer-inner"><p><span class="footer-brand">HASI Service IT</span></p><p>Serviceinformationen und Anleitungen.</p></div>
   </footer>
 </body>
 </html>`;
@@ -259,7 +255,7 @@ function renderDocument(options: {
 
 function renderArticleList(documents: readonly ServiceItDocument[]): string {
   if (documents.length === 0) {
-    return '<p class="empty-state">Zu dieser Suche wurden keine synthetischen Service-IT-Beiträge gefunden.</p>';
+    return '<p class="empty-state">Zu dieser Suche wurden keine Service-IT-Beiträge gefunden.</p>';
   }
   return `<ul class="article-list">${documents.map((document) => {
     const title = escapeHtml(document.title);
@@ -284,23 +280,23 @@ function renderServicePage(documents: readonly ServiceItDocument[]): string {
   const topicCards = topics.map((topic) => `<a class="topic-card" href="/de/faqs/?thema=${encodeURIComponent(topic)}"><h2>${escapeHtml(labelForTag(topic))}</h2><span class="topic-count">${String(topicCounts.get(topic) ?? 0)} Beiträge ansehen <span aria-hidden="true">→</span></span></a>`).join('');
   const serviceDocuments = documents.filter((document) => hasKind(document, 'service'));
   const serviceSection = serviceDocuments.length
-    ? `<div class="section-heading"><div><p class="eyebrow">Service-Übersicht</p><h2>Services im Demo-Katalog</h2></div></div>${renderArticleList(serviceDocuments)}`
+    ? `<div class="section-heading"><div><p class="eyebrow">Service-Übersicht</p><h2>Services im Katalog</h2></div></div>${renderArticleList(serviceDocuments)}`
     : '';
   const main = `<main id="main-content" class="page-shell">
     <section class="hero" aria-labelledby="home-title">
-      <div class="hero-copy"><p class="eyebrow">HASI · Service IT</p><h1 id="home-title">Digitale Hilfe, klar und nah.</h1><p class="lede">Finde Antworten zu typischen IT-Fragen und orientiere dich in den Themen der synthetischen Service-IT-Demo.</p></div>
-      <aside class="hero-aside"><strong>Ein ruhiger Startpunkt</strong><p>Suche nach einem Stichwort oder öffne ein Thema. Jeder Beitrag ist ausdrücklich ein fiktives Beispiel.</p></aside>
+      <div class="hero-copy"><p class="eyebrow">HASI · Service IT</p><h1 id="home-title">Digitale Hilfe, klar und nah.</h1><p class="lede">Finde Antworten zu typischen IT-Fragen und orientiere dich in den Themen der Service IT.</p></div>
+      <aside class="hero-aside"><strong>Ein ruhiger Startpunkt</strong><p>Suche nach einem Stichwort oder öffne ein Thema. Die Beiträge erklären Voraussetzungen und nächste Schritte.</p></aside>
     </section>
-    <div class="section-heading"><div><p class="eyebrow">Themen entdecken</p><h2>Wobei brauchst du Hilfe?</h2></div><p>Alle Themen führen zu den passenden Demo-Beiträgen.</p></div>
+    <div class="section-heading"><div><p class="eyebrow">Themen entdecken</p><h2>Wobei brauchst du Hilfe?</h2></div><p>Alle Themen führen zu den passenden Beiträgen.</p></div>
     <div class="topic-grid">${topicCards.length > 0 ? topicCards : '<p class="empty-state">Noch keine Themen verfügbar.</p>'}</div>
     <div class="section-heading"><div><p class="eyebrow">Schnellsuche</p><h2>Direkt zum passenden Beitrag</h2></div></div>
     ${renderSearchForm('/de/faqs/', '')}
     ${serviceSection}
-    <p class="result-note">Die angezeigten Inhalte und Rollenhinweise sind synthetische Testdaten.</p>
+    <p class="result-note">Die Zielgruppe ist beim jeweiligen Beitrag angegeben.</p>
   </main>`;
   return renderDocument({
     title: 'Service IT',
-    description: 'Themen und synthetische Service-IT-Beiträge in der HASI Demo.',
+    description: 'Themen und Service-IT-Beiträge.',
     path: '/de/services/',
     active: 'services',
     main,
@@ -316,15 +312,15 @@ function renderFaqPage(documents: readonly ServiceItDocument[], query: string, s
   ].join('');
   const heading = selectedTopic ? `Beiträge: ${labelForTag(selectedTopic)}` : 'Häufige Fragen';
   const main = `<main id="main-content" class="page-shell">
-    <p class="eyebrow">Antworten finden</p><h1>${escapeHtml(heading)}</h1><p class="lede">Durchsuche die fiktiven Service-IT-Informationen. Rollen- und Zielgruppenangaben sind Testmetadaten ohne Berechtigungswirkung.</p>
+    <p class="eyebrow">Antworten finden</p><h1>${escapeHtml(heading)}</h1><p class="lede">Durchsuche die Service-IT-Informationen nach Thema oder Stichwort. Die Zielgruppe ist beim jeweiligen Beitrag angegeben.</p>
     <div style="height:1.4rem"></div>${renderSearchForm('/de/faqs/', query)}
     <div class="filter-row" aria-label="Themenfilter">${topicLinks}</div>
-    <p class="result-note">${filtered.length === 1 ? 'Ein synthetischer Beitrag gefunden.' : `${String(filtered.length)} synthetische Beiträge gefunden.`}</p>
+    <p class="result-note">${filtered.length === 1 ? 'Ein Beitrag gefunden.' : `${String(filtered.length)} Beiträge gefunden.`}</p>
     ${renderArticleList(filtered)}
   </main>`;
   return renderDocument({
     title: heading,
-    description: 'Suche in synthetischen Service-IT-FAQs der HASI Demo.',
+    description: 'Suche in Service-IT-FAQs.',
     path: '/de/faqs/',
     active: 'faqs',
     main,
@@ -335,15 +331,15 @@ function renderNewsPage(documents: readonly ServiceItDocument[], query: string):
   const newsDocuments = documents.filter((document) => hasKind(document, 'news'));
   const filtered = matchingDocuments(newsDocuments, query);
   const main = `<main id="main-content" class="page-shell">
-    <p class="eyebrow">Service IT · Demo-Stand</p><h1>Meldungen</h1><p class="lede">Alle Meldungen aus dem synthetischen Service-IT-Bestand.</p>
-    <div class="notice-grid"><article class="notice-card"><h2>Fiktiver Beispielbestand</h2><p>Die Einträge zeigen erfundene Situationen. Namen, Zeiten, Portale und Abläufe sind keine realen Serviceinformationen.</p></article><article class="notice-card"><h2>Rollenangaben sind Testdaten</h2><p>Beispiele für Mitarbeitende oder Administration steuern keine Zugriffsrechte und erlauben keine realen Handlungen.</p></article></div>
+    <p class="eyebrow">Service IT-Stand</p><h1>Meldungen</h1><p class="lede">Alle Meldungen aus dem Service-IT-Bestand.</p>
+
     ${renderSearchForm('/de/meldungen/', query, 'Meldungen und Beiträge durchsuchen')}
-    <div class="section-heading"><div><p class="eyebrow">Aus dem Demo-Katalog</p><h2>Alle Demo-Meldungen</h2></div></div>
+    <div class="section-heading"><div><p class="eyebrow">Aus dem Katalog</p><h2>Alle Meldungen</h2></div></div>
     ${renderArticleList(filtered)}
   </main>`;
   return renderDocument({
     title: 'Meldungen',
-    description: 'Synthetische Hinweise und Beiträge aus dem HASI Service-IT-Demo-Katalog.',
+    description: 'Hinweise und Beiträge aus dem Service-IT-Katalog.',
     path: '/de/meldungen/',
     active: 'meldungen',
     main,
@@ -362,14 +358,14 @@ function renderArticle(document: ServiceItDocument): string {
   const articleMain = `<main id='service-it-document'><h1>${escapeHtml(document.title)}</h1>\n${contentParagraphs}</main>`;
   const main = `<div class="page-shell">
     <nav class="breadcrumbs" aria-label="Brotkrumennavigation"><a href="/de/services/">Services</a> / <a href="/de/faqs/">FAQs</a> / ${escapeHtml(document.id)}</nav>
-    <header class="article-heading"><p class="eyebrow">Synthetischer Service-IT-Beitrag</p></header>
-    <aside class="article-audience"><strong>Demo-Zielgruppe</strong><p>${escapeHtml(audienceText(document))}. Diese Rollenmetadaten sind fiktiv und geben keine reale Berechtigung an.</p></aside>
+    <header class="article-heading"><p class="eyebrow">Service IT</p></header>
+    <aside class="article-audience"><strong>Zielgruppe</strong><p>${escapeHtml(audienceText(document))}</p></aside>
     ${articleMain}
-    <p class="article-source">Stabile Demo-Quelle: <a href="${escapeHtml(canonical(path))}">${escapeHtml(canonical(path))}</a></p>
+    <p class="article-source">Quelle: <a href="${escapeHtml(canonical(path))}">${escapeHtml(canonical(path))}</a></p>
   </div>`;
   return renderDocument({
     title: document.title,
-    description: `Synthetischer Service-IT-Demo-Beitrag: ${document.title}`,
+    description: document.title,
     path,
     active: 'faqs',
     main,
@@ -423,10 +419,10 @@ export function createServiceItDemo(options: CreateServiceItDemoOptions = {}): F
 }
 
 function renderNotFound(): string {
-  const main = `<main id="main-content" class="page-shell"><p class="eyebrow">Service IT · Demo</p><h1>Diese Seite wurde nicht gefunden.</h1><p class="lede">Der gewünschte synthetische Beitrag ist nicht verfügbar.</p><p style="margin-top:1.4rem"><a class="button" href="/de/services/">Zur Übersicht</a></p></main>`;
+  const main = `<main id="main-content" class="page-shell"><p class="eyebrow">Service IT</p><h1>Diese Seite wurde nicht gefunden.</h1><p class="lede">Der gewünschte Beitrag ist nicht verfügbar.</p><p style="margin-top:1.4rem"><a class="button" href="/de/services/">Zur Übersicht</a></p></main>`;
   return renderDocument({
     title: 'Seite nicht gefunden',
-    description: 'Die gesuchte Seite ist in dieser synthetischen Demo nicht verfügbar.',
+    description: 'Die gesuchte Seite ist im Service-IT-Portal nicht verfügbar.',
     path: '/de/services/',
     active: 'services',
     main,

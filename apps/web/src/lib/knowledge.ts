@@ -21,13 +21,11 @@ export function knowledgeSourceMessage(result: KnowledgeSearchResult): Knowledge
 
 export function knowledgeSourceSummary(documents: readonly Pick<KnowledgeDocument, "synthetic">[]): string {
   if (documents.length === 0) return "Keine passenden, aktuell freigegebenen Quellen gefunden.";
-  return documents.every(document => document.synthetic)
-    ? "Gefundene Demoquellen."
-    : "Gefundene freigegebene Quellen.";
+  return "Gefundene freigegebene Quellen.";
 }
 
 export function knowledgeDocumentHref(id: string, revision?: number) { return `/sources/${knowledgeDocumentId.parse(id)}${revision === undefined ? "" : `?revision=${String(z.number().int().positive().parse(revision))}`}`; }
-export function knowledgeSourceLabel(source: KnowledgeDocument["sourceSystem"], synthetic = true) { return `${source === "service_it" ? "Service IT" : "Intranet"}${synthetic ? " · Demo" : ""}`; }
+export function knowledgeSourceLabel(source: KnowledgeDocument["sourceSystem"]) { return source === "service_it" ? "Service IT" : "Intranet"; }
 
 /** Compact evidence for the model; full authorized text stays in the source reader. */
 export function knowledgeModelDocuments(documents: readonly Record<string, unknown>[]) {

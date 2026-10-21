@@ -63,7 +63,7 @@ describe('synthetic Service IT portal', () => {
     expect(services.statusCode).toBe(200);
     expect(services.body).toContain('Wobei brauchst du Hilfe?');
     expect(services.body).toContain('/de/faqs/?thema=wlan');
-    expect(services.body).toContain('Sämtliche Inhalte sind erfunden.');
+    expect(services.body).not.toContain('Sämtliche Inhalte sind erfunden.');
     expect(services.body).toContain('@media(max-width:560px)');
     expect(services.body).toContain('@media(prefers-color-scheme:dark)');
     expect(services.body).not.toMatch(/<script|<img|fonts\.googleapis\.com/i);
@@ -76,7 +76,7 @@ describe('synthetic Service IT portal', () => {
     expect(faqs.body).toContain('/de/faqs/svc-001/');
     for (const document of serviceItDocuments) expect(faqs.body).toContain(`href="/de/faqs/${document.id}/"`);
     expect(news.statusCode).toBe(200);
-    expect(news.body).toContain('Rollenangaben sind Testdaten');
+    expect(news.body).not.toContain('Rollenangaben sind Testdaten');
     const newsDocuments = serviceItDocuments.filter((document) => document.tags.includes('kind:news'));
     for (const document of newsDocuments) expect(news.body).toContain(`href="/de/faqs/${document.id}/"`);
     expect(news.body).not.toContain('href="/de/faqs/svc-001/"');
@@ -88,7 +88,7 @@ describe('synthetic Service IT portal', () => {
       expect(specialSearch.body).toContain(`href="/de/faqs/${specialDocument.id}/"`);
     }
     expect(filtered.body).toContain('name="q" type="search" value="VPN"');
-    expect(filtered.body).toContain('VPN-Verbindung vorbereiten');
+    expect(filtered.body).toContain(fixtureDocument('svc-006').title);
     expect(services.headers['cache-control']).toContain('private, no-store');
     expect(services.headers['x-robots-tag']).toContain('noindex');
     expect(services.headers['content-security-policy']).toContain("default-src 'none'");
@@ -118,10 +118,10 @@ describe('synthetic Service IT portal', () => {
     expect(normalizedArticleText).toBe(`${document.title} ${document.text}`.replace(/\s+/g, ' ').trim());
     expect(main).not.toContain('Demo-Zielgruppe');
     expect(main).not.toContain('synthetisch');
-    expect(reply.body).toContain('Demo-Zielgruppe');
-    expect(reply.body).toContain('keine reale Berechtigung');
-    expect(reply.body).toContain('Synthetische Demo');
-    expect(reply.body).toContain('Stabile Demo-Quelle:');
+    expect(reply.body).toContain('<strong>Zielgruppe</strong>');
+    expect(reply.body).not.toContain('keine reale Berechtigung');
+    expect(reply.body).not.toContain('Synthetische Demo');
+    expect(reply.body).toContain('Quelle:');
   });
 
   it('escapes fixture content and search input before placing them in HTML', async () => {

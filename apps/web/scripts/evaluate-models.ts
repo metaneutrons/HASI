@@ -7,7 +7,7 @@ import { runProviderEvaluationCase } from "../src/lib/server/evaluation/provider
 
 // Only this code-reviewed bundled synthetic development corpus may be sent.
 // Updating the corpus requires updating this explicit pin in the same review.
-const CORPUS_SHA256 = "f4c543a711875b6e93cea32f26aaeffeec2cb90ea24207da161c590d6eaca8ef";
+const CORPUS_SHA256 = "82ff06922cccad9a2a741ce0894cdb548ab40a540e485c689308933488b59ef0";
 const USAGE = "Usage: pnpm evaluate:models --profiles <id,id> [--cases id,id] [--max-calls 1..64] [--repetitions 1..3] [--run --output <new.ndjson>]";
 
 function options(argv: readonly string[]) {

@@ -249,3 +249,19 @@ Choose among profiles that pass the gates by task quality, p95 end-to-end
 latency and cost per successful task. Any later routing between a cheap and a
 strong model requires its own evaluation, including routing mistakes; the
 first comparison does not establish that an automatic router is safe.
+
+## Editorial corpus revision — 2026-10-21
+
+The operator requested centralized disclosure in the HASI website header and
+ordinary source prose without repeated synthetic-content notices. This changes
+article wording and its cited revisions, not source classification, access,
+permitted provider processing, confirmation requirements or the factual-support
+rubric. A correct answer need not repeat the interface disclosure. It must still
+stay within the supplied evidence, identify missing or conflicting evidence,
+and avoid unsupported live-status or institutional-policy claims.
+
+The [editorial VPN development pair](editorial-vpn-review.md) uses new case IDs.
+Earlier cases, runs and the first local human-review packet remain historical;
+they cannot serve as review of the new inputs. Fabian will review newly generated
+answers. Critical findings still need an independent second review and
+adjudication; this editorial decision does not accept M6 or lower those gates.

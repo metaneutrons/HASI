@@ -45,7 +45,7 @@ interface ComposerSelection { start: number; end: number; direction: HTMLTextAre
 
 const suggestions = [
   { icon: Search, title: "Einen Raum finden", text: "Ich brauche morgen um 14 Uhr einen Raum für vier Personen für eine Stunde.", caption: "Gemeinsam planen und buchen" },
-  { icon: BookOpen, title: "Eine IT-Frage stellen", text: "Wie prüfe ich in der Service-IT-Demo den WLAN-Zugang Morgenstern-Lab?", caption: "Service IT und Intranet mit Quellen" },
+  { icon: BookOpen, title: "Eine IT-Frage stellen", text: "Wie prüfe ich den WLAN-Zugang Morgenstern-Lab?", caption: "Service IT und Intranet mit Quellen" },
   { icon: CalendarDays, title: "Meine Buchungen", text: "Zeige mir meine Buchungen.", caption: "Deine Reservierungen im Überblick" },
 ];
 

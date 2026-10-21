@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { syntheticFaqTitleCorrections } from '../scripts/synthetic-faq-titles.js';
+import { serviceItArticleTitle } from '../scripts/service-it-article-text.js';
 import { syntheticVpnGuidance } from '../scripts/synthetic-vpn-guidance.js';
 
 interface FixtureDocument {
@@ -34,13 +35,12 @@ describe('synthetic ServiceIT VPN guidance', () => {
   it('generates generic diagnostics only for FAQ and service VPN scenarios that reach this branch', () => {
     const guidance = syntheticVpnGuidance('VPN', 'VPN-Verbindung funktioniert nicht', 'faq');
     expect(guidance?.revision).toBe(2);
-    expect(guidance?.text).toContain('SYNTHETISCHES DEMO-BEISPIEL');
+    expect(guidance?.text).not.toMatch(/demo|synthetisch|fiktiv/iu);
     expect(guidance?.text).toContain('gewöhnliche Internetseiten');
     expect(guidance?.text).toContain('genauen Wortlaut der Fehlermeldung samt Fehlercode');
     expect(guidance?.text).toContain('Betriebssystem sowie Name und Version des VPN-Clients');
     expect(guidance?.text).toContain('VPN-Verbindungsaufbau selbst fehlschlägt');
     expect(guidance?.text).toContain('Anmeldung beziehungsweise Verbindung gelingt');
-    expect(guidance?.text).toContain('keine institutionelle Anleitung');
     expect(guidance?.text).toContain('keine Passwörter oder MFA-Codes');
     expect(syntheticVpnGuidance('WLAN', 'WLAN-Verbindung funktioniert nicht', 'faq')).toBeUndefined();
     expect(syntheticVpnGuidance('VPN', 'VPN-Störungshinweis', 'news')).toBeUndefined();
@@ -51,9 +51,9 @@ describe('synthetic ServiceIT VPN guidance', () => {
   });
 
   it('distinguishes troubleshooting, setup, second factor, coverage and service information', () => {
-    expect(syntheticVpnGuidance('VPN', 'Einrichtung: einen VPN Client unter Android ein', 'faq')?.text).toContain('keinen verifizierten Download');
+    expect(syntheticVpnGuidance('VPN', 'Einrichtung: einen VPN Client unter Android ein', 'faq')?.text).toContain('Download, Serveradresse und Geräteprofil');
     expect(syntheticVpnGuidance('VPN', 'Einrichtung: einen zweiten Faktor für VPN ein', 'faq')?.text).toContain('zugelassene Methode');
-    expect(syntheticVpnGuidance('Microsoft', 'In welchen Gebieten benötige ich keine aktive VPN Verbindung', 'faq')?.text).toContain('keine freigegebenen Netze oder Ausnahmen');
+    expect(syntheticVpnGuidance('Microsoft', 'In welchen Gebieten benötige ich keine aktive VPN Verbindung', 'faq')?.text).toContain('Freigegebene Netze und Ausnahmen');
     expect(syntheticVpnGuidance('Netzwerk', 'VPN (Virtual Private Network)', 'service')?.text).toContain('erfolgreiche Anmeldung beweist noch nicht');
   });
 
@@ -67,9 +67,9 @@ describe('synthetic ServiceIT VPN guidance', () => {
     for (const expected of expectedDocuments) {
       const document = fixture.documents.find((candidate) => candidate.id === expected.id);
       expect(document).toBeDefined();
-      const revision = expected.id === 'svc-catalog-9e71428c190f' || expected.id === 'svc-catalog-1b51d9da7793' ? 2 : 3;
+      const revision = expected.id === 'svc-catalog-9e71428c190f' || expected.id === 'svc-catalog-1b51d9da7793' ? 3 : 4;
       expect(document).toMatchObject({
-        title: expected.title,
+        title: serviceItArticleTitle(expected.title),
         revision,
         demoAudience: expected.audience,
         tags: expected.tags,

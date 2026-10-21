@@ -51,11 +51,11 @@ describe('knowledge plugin', () => {
     expect(content.documents).toHaveLength(1);
     expect(content.documents[0]).toMatchObject({
       id: 'svc-001',
-      citationId: 'knowledge:service_it:svc-001:1',
-      title: 'Demo: WLAN-Verbindung prüfen',
+      citationId: 'knowledge:service_it:svc-001:2',
+      title: 'WLAN-Verbindung prüfen',
       sourceSystem: 'service_it',
       language: 'de',
-      revision: 1,
+      revision: 2,
       synthetic: true,
     });
     expect(content.documents[0]?.text).toContain('Morgenstern-Lab');

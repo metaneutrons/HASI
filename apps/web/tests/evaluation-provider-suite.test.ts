@@ -15,7 +15,7 @@ import { loadModelConfiguration } from "../src/lib/server/model-config";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const selectedProfileId = "groq-oss-120b";
-const fixedCaseIds = ["sit-01", "sit-02", "intra-01", "intra-02", "sit-03", "sit-04", "intra-03", "sit-vpn-grounding-01", "sit-vpn-specificity-02"];
+const fixedCaseIds = ["sit-01", "sit-02", "intra-01", "intra-02", "sit-03", "sit-04", "intra-03", "sit-vpn-grounding-01", "sit-vpn-specificity-02", "sit-vpn-editorial-grounding-01", "sit-vpn-editorial-specificity-02"];
 
 function runEvaluationCli(args: readonly string[], environmentOverrides: Partial<NodeJS.ProcessEnv> = {}) {
   const controlledPath = [dirname(process.execPath), process.env.PATH].filter(Boolean).join(delimiter);
@@ -85,7 +85,7 @@ describe("operator-owned provider evaluation plan", () => {
     })).toThrow(/no approved price/u);
   });
 
-  it("grades only the nine fixed-evidence cases and explicitly excludes other layers", () => {
+  it("grades only the eleven fixed-evidence cases and explicitly excludes other layers", () => {
     const corpus = parseEvaluationDataset(exampleCases);
     const plan = createProviderEvaluationPlan(exampleCases, [selectedProfileId], {});
     const selectedIds = plan.cases.map((item) => item.evaluationCase.id);

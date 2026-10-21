@@ -73,7 +73,7 @@ describe("chat Markdown renderer", () => {
     }));
     expect(html).toMatch(/<a\b[^>]*class="[^"]+"[^>]*>/u);
     expect(html).toContain(`href=\"/sources/svc-001?revision=1\"`);
-    expect(html).toContain("aria-label=\"Quelle 1: Demo: WLAN; Service IT · Demo; Fassung 1\"");
+    expect(html).toContain("aria-label=\"Quelle 1: Demo: WLAN; Service IT; Fassung 1\"");
     expect(html).toContain(">[1]</a>");
     expect(html).not.toContain("target=\"_blank\"");
     expect(html).not.toContain("[knowledge:service_it:svc-001:2]");
@@ -198,7 +198,7 @@ describe("chat Markdown renderer", () => {
     expect(html.indexOf("Quellen dieser Antwort")).toBeGreaterThan(html.indexOf("again"));
     expect(html).toContain('<ul class="');
     expect(html).toContain('aria-label="Quellen dieser Antwort"');
-    expect(html).toContain('>[1] Demo: WLAN<br/>\n<small>Service IT · Demo · Fassung 1</small></a>');
+    expect(html).toContain('>[1] Demo: WLAN<br/>\n<small>Service IT · Fassung 1</small></a>');
     expect(html).not.toContain("Unused result");
     expect(html).not.toContain("svc-002");
     expect((html.match(/href="\/sources\/svc-001\?revision=1&amp;chat=/gu) ?? []).length).toBe(3);

@@ -1,4 +1,8 @@
-# VPN grounding development pair
+# Historical VPN grounding development pair
+
+The 2026-10-21 editorial decision supersedes this pair for the next manual
+review; see [the new pair](editorial-vpn-review.md). Inputs and results below
+remain frozen historical development evidence.
 
 Status: draft development cases; no provider result, human review or M6
 acceptance is established by adding these cases. Both belong to the same

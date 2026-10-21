@@ -3,7 +3,8 @@ import { readFile, realpath, writeFile } from 'node:fs/promises';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { formatSyntheticFaqTitle } from './synthetic-faq-titles.js';
-import { SYNTHETIC_DEMO_NOTICE as NOTICE, syntheticVpnGuidance } from './synthetic-vpn-guidance.js';
+import { syntheticVpnGuidance } from './synthetic-vpn-guidance.js';
+import { serviceItArticleText, serviceItArticleTitle } from './service-it-article-text.js';
 
 interface SourceEntry {
   readonly title: string;
@@ -291,86 +292,21 @@ function topicGroup(entry: SourceEntry, type: 'faq' | 'service' | 'news' | 'link
   if (/mail|postfach|email|e-mail/u.test(key)) return 'E-Mail-Postfach';
   return type === 'link' ? 'Serviceverweise' : type === 'form' ? 'Formulare' : 'Allgemein';
 }
-function safeCaseId(id: string): string { return id.slice(-6).toUpperCase(); }
-function syntheticDate(id: string): string {
-  const seed = Number.parseInt(id.slice(-2), 16);
-  const day = (seed % 28) + 1;
-  return `2026-11-${String(day).padStart(2, '0')}`;
-}
-function scenario(group: string, title: string, type: 'faq' | 'service' | 'news' | 'link' | 'form', id: string): string {
-  const g = fold(group);
-  const t = fold(title);
-  const cue = cueFor(title, type);
-  const ref = safeCaseId(id);
-  if (type === 'news') {
-    const date = syntheticDate(id);
-    const time = `${String(8 + (Number.parseInt(id.slice(-3, -1), 16) % 9)).padStart(2, '0')}:00–${String(8 + (Number.parseInt(id.slice(-3, -1), 16) % 9)).padStart(2, '0')}:20`;
-    return `${NOTICE} Diese Meldung gehört zum vollständig erfundenen Übungsfall ${ref} über ${cue}. Das Demo-Statusboard nennt für den fiktiven Demo-Standort Nord das rein fiktive Zeitfenster ${date}, ${time}; dieses Datum, die Uhrzeit und der Ort sind nur Testwerte. Prüfe im Nachrichtenentwurf, ob Betreff, Status, betroffene Demo-Funktion und nächster Prüfzeitpunkt verständlich genannt sind. Nutze für Rückfragen ausschließlich die interne Simulationsnotiz ${ref}; es gibt hier keinen realen Störungsstatus und keine reale Kontaktstelle.`;
-  }
-  if (type === 'link') {
-    if (/cloud|collaboard|rocket|speicher/u.test(`${g} ${t}`)) return `${NOTICE} Der Linkguide ${ref} beschreibt den simulierten Einstieg zu ${cue}. Öffne im Übungsportal ausschließlich den reservierten Platzhalter https://cloud-demo.invalid und lege dort den Testordner ${ref} an. Prüfe vor einer Freigabe, ob nur die vorgesehene Demo-Rolle Leserechte erhält; lade keine echten Dateien hoch und übernimm keine realen Zugangsdaten.`;
-    if (/account|anmeldung|konto/u.test(`${g} ${t}`)) return `${NOTICE} Für ${cue} wird im Fall ${ref} ein fiktives Konto im Platzhalter https://konto-demo.invalid verwendet. Kontrolliere nur die angezeigte Demo-Kennung und den Status „bereit“. Gib kein echtes Passwort ein, bestätige keine echte Anmeldung und verwende den Guide nur, um Navigation und Rückmeldungen einer Testoberfläche zu üben.`;
-    if (/mail|postfach|verteiler/u.test(`${g} ${t}`)) return `${NOTICE} Dieser Linkguide führt den Fall ${ref} für ${cue} durch ein erfundenes Mail-Labor unter https://mail-demo.invalid. Arbeite mit dem Testpostfach MAIL-${ref}, kontrolliere die simulierte Zustellung und beende den Durchlauf mit einer Vorschau. Es werden keine Nachrichten versandt, keine realen Adressen verwendet und keine Rechte geändert.`;
-    return `${NOTICE} Im Linkguide ${ref} geht es um ${cue}. Öffne den Eintrag im fiktiven Linkkatalog https://katalog-demo.invalid, gleiche Thema und Demo-Ziel ab und starte anschließend nur die Vorschau des Testfalls. Prüfe vor dem nächsten Schritt, dass das Ziel auf einer reservierten .invalid-Adresse liegt; echte Konten, Dateien und externe Aktionen bleiben außen vor.`;
-  }
-  if (type === 'form') {
-    if (/postfach|verteiler|mail/u.test(`${g} ${t}`)) return `${NOTICE} Das Formularbeispiel ${ref} übt ${cue} in einer lokalen Simulation. Fülle nur die fiktiven Angaben Demo-Antrag ${ref}, Testrolle und Zweck „Übungsfall“ ein; echte Namen, E-Mail-Adressen und Postfachkennungen sind ausgeschlossen. Vergleiche die Vorschau der gewünschten Berechtigungsart und Laufzeit, markiere die Prüfschritte als erledigt und brich vor einem tatsächlichen Versand ab. Das Formular wird nicht übermittelt.`;
-    if (/microsoft|gruppe|365/u.test(`${g} ${t}`)) return `${NOTICE} Der Formularleitfaden ${ref} simuliert ${cue} für eine erfundene Arbeitsgruppe. Verwende die Bezeichnung GRUPPE-${ref}, wähle eine Testrolle und beschreibe den Zweck ohne Personen- oder Kontaktdaten. Prüfe in der Vorschau, dass Mitgliederkreis und gewünschte Funktion zusammenpassen; der Ablauf endet vor dem Absenden und ändert keine echte Gruppe.`;
-    return `${NOTICE} Der Leitfaden ${ref} übt ${cue} anhand eines fiktiven Webspace-Antrags. Trage als Projektname WEB-${ref} und als Inhalt nur „Demo-Dateien“ ein, kontrolliere die Vorschau und notiere einen erfundenen Zuständigkeitsweg. Keine realen Namen, Domains, Kontaktdaten oder Zugangsdaten eintragen; das Formular wird nicht versandt.`;
-  }
-  if (/academic.?cloud/u.test(`${g} ${t}`)) {
-    if (/softwarecenter|install/u.test(t)) return `${NOTICE} Der Installationsfall ${ref} für ${cue} nutzt einen erfundenen Softwarekatalog https://apps-demo.invalid. Prüfe zuerst, ob das Demogerät als PC markiert ist, öffne die Detailkarte der Cloud-App und kontrolliere Version sowie Testumfang in der Vorschau. Der Ablauf endet vor dem Installieren; es wird keine Hochschulsoftware bezogen oder Lizenz zugesagt.`;
-    if (/desktop.anwend/u.test(t)) return `${NOTICE} Der Desktop-Fall ${ref} zu ${cue} nutzt ausschließlich das Testgerät PC-${ref}. Prüfe in der Vorschau, ob die Demo-App gestartet ist, öffne einen leeren Testordner und kontrolliere den simulierten Synchronisationsstatus. Lege keine realen Dateien ab und verknüpfe kein produktives Benutzerprofil.`;
-    if (/handy|smartphone|mobil/u.test(t)) return `${NOTICE} Die Mobilübung ${ref} für ${cue} richtet ein ausschließlich fiktives Gerät MOBIL-${ref} ein. Öffne im Testhandbuch die App-Übersicht, prüfe die simulierte Anmeldung und vergleiche die Vorschau für Datei- und Chatfunktionen. Installiere keine echte App, trage keine persönlichen Kontodaten ein und übernimm kein reales Geräteprofil.`;
-    if (/browser|web-browser|webbrowser/u.test(t)) return `${NOTICE} Der Browserfall ${ref} zu ${cue} startet an der reservierten Demo-Adresse https://cloud-demo.invalid. Prüfe in der Vorschau, ob die Weboberfläche den Testarbeitsraum CLOUD-${ref} öffnet, und kontrolliere anschließend nur die simulierten Datei- und Chatbereiche. Es findet keine echte Anmeldung statt und es werden keine Dateien hochgeladen.`;
-    if (/rocket\.chat|chat/u.test(t)) return `${NOTICE} Der Chatfall ${ref} übt ${cue} im fiktiven Raum CHAT-${ref}. Prüfe zuerst die Vorschau der Raumrolle, verfasse eine Nachricht mit reinem Testtext und kontrolliere, dass sie im Entwurf bleibt. Es werden keine realen Nachrichten versandt, Mitglieder eingeladen oder Konten angelegt.`;
-    if (/collaboard|board/u.test(t)) return `${NOTICE} Der Boardfall ${ref} simuliert ${cue} auf dem Testboard BOARD-${ref}. Lege eine leere Vorschau an, prüfe die Demo-Rolle für Betrachtung oder Bearbeitung und kontrolliere den Freigabeumfang vor dem Beenden. Es werden keine realen Boards oder Einladungen erstellt und keine Dateien geteilt.`;
-    if (/umfrage|abstimm/u.test(t)) return `${NOTICE} Die Umfrageübung ${ref} zu ${cue} verwendet den erfundenen Entwurf UMFRAGE-${ref}. Formuliere eine neutrale Testfrage, prüfe Antwortoptionen und Sichtbarkeit in der Vorschau und beende den Ablauf vor einer Veröffentlichung. Es werden keine echten Antworten erhoben und keine Personen eingeladen.`;
-    if (/teile|freigabe|datei|ordner/u.test(t)) return `${NOTICE} Der Freigabefall ${ref} zu ${cue} verwendet den Testordner CLOUD-${ref}. Wähle in der Vorschau eine fiktive Leseberechtigung für die Demo-Rolle, kontrolliere den Umfang für Datei und Unterordner und entferne den Testlink wieder. Es werden keine echten Dateien hochgeladen und keine externe Freigabe eingerichtet.`;
-    if (/anmeld|melde|login|einlogg|zugang|gelange/u.test(t)) return `${NOTICE} Der Zugangsfall ${ref} für ${cue} nutzt das fiktive Profil CLOUD-${ref}. Prüfe im Demo-Ablauf die Statusfolge „Kennung erkannt“, „Testprüfung“ und „Arbeitsraum geöffnet“. Verwende weder ein echtes Passwort noch einen echten zweiten Faktor; der Test bestätigt keinen realen Zugang.`;
-    return `${NOTICE} Der Cloud-Überblick ${ref} zu ${cue} vergleicht im fiktiven Arbeitsraum CLOUD-${ref} die Bereiche Dateien, Chat und Zusammenarbeit. Öffne nur die Vorschau, ordne die passende Testfunktion dem Bedarf zu und beende den Durchlauf ohne Freigabe. Es werden keine echten Konten, Dateien, Nachrichten oder Mitgliedschaften angelegt.`;
-  }
-  if (/serviceit mit wagtail|wagtail/u.test(`${g} ${t}`)) return `${NOTICE} Die fiktive Redaktion übt ${cue} im CMS-Labor https://cms-demo.invalid. Erstelle einen Entwurf mit der Referenz ${ref}, prüfe Titel, Vorschau und Sprache und kontrolliere bei Medien die erfundene Beschreibung. Änderungen bleiben im Testbereich und werden nicht veröffentlicht; es werden weder echte Seiten noch echte Formulare bearbeitet.`;
-  if (/multi.?faktor|mfa|passkey|yubikey|authenticator|totp|keepass/u.test(`${g} ${t}`)) return `${NOTICE} Die Übung ${ref} simuliert ${cue} mit dem Testprofil MFA-${ref}. Wähle in der Oberfläche eine fiktive Methode, prüfe die Bestätigung mit einem ausdrücklich synthetischen Demo-Code und entferne anschließend das Testprofil. Keine echte Passkey-, Schlüssel-, Authenticator- oder KeePass-Registrierung ausführen und keine Codes aus einem persönlichen Gerät übernehmen.`;
-  const vpnGuidance = syntheticVpnGuidance(g, cue, type);
-  if (vpnGuidance) return vpnGuidance.text;
-  if (/kurzurl|shorturl/u.test(`${g} ${t}`)) return `${NOTICE} Der URL-Fall ${ref} zeigt ${cue} mit short-demo.invalid und ziel-demo.invalid. Vergleiche zuerst die vollständige Zieladresse, öffne eine sichere Vorschau und ändere anschließend nur den fiktiven Eintrag URL-${ref}. Beide Domains sind reservierte Testnamen; eine reale Weiterleitung oder DNS-Änderung findet nicht statt.`;
-  if (/person einladen|gäste|gast|guest/u.test(`${g} ${t}`)) return `${NOTICE} Die Übung ${ref} simuliert ${cue} mit dem Profil GAST-${ref}. Wähle nur eine fiktive Laufzeit und minimale Demo-Rolle, kontrolliere in der Vorschau, dass keine echte Person oder E-Mail-Adresse eingetragen ist, und widerrufe das Testprofil am Ende. Es wird keine echte Einladung oder WLAN-Berechtigung beantragt.`;
-  if (g.includes('campuscard')) {
-    const lost = /verlust|gesperrt|bezahlfunktion/u.test(t);
-    return lost
-      ? `${NOTICE} Im Fall ${ref} wird die erfundene Karte CARD-${ref} als verloren simuliert. Markiere nur diesen Demo-Datensatz als gesperrt, notiere den erfundenen Zeitpunkt und prüfe, ob die Übungsanzeige keine echte Kartenkennung enthält. Für eine Ersatzkarte wird im Szenario ein separater Testvorgang angelegt; keine reale Karte sperren und kein Guthaben umbuchen.`
-      : `${NOTICE} Der Übungsfall ${ref} behandelt ${cue} mit der fiktiven Karte CARD-${ref}. Öffne die Vorschau des Karten-Demoprofils, wähle die passende Testfunktion und prüfe eine Anzeige mit erfundenen Demo-Punkten. Ausgabe, Aufladung, Bibliotheksfreigabe und Validierung sind ausschließlich simuliert; es werden keine realen Kartendaten oder Beträge verändert.`;
-  }
-  if (g.includes('campusmanagement')) return `${NOTICE} Für ${cue} verwendet der Fall ${ref} den erfundenen Kurs PRUEFUNG-${ref} im Testsemester. Öffne die Vorschau, prüfe Kurskennung und Status „Entwurf“ und speichere eine simulierte Auswahl, ohne sie einzureichen. Datum, Prüfung, Person und Ergebnis sind Demo-Daten; daraus folgt keine tatsächliche Anmeldung oder Frist.`;
-  if (/wlan|netzwerk/u.test(g)) return `${NOTICE} Diese Anleitung simuliert ${cue} mit dem fiktiven Profil WLAN-LAB-${ref}. Kontrolliere am Testgerät Flugmodus und gespeichertes Demo-Profil, entferne bei Bedarf nur den Laboreintrag und starte einen neuen Verbindungstest. Das Profil ist kein Hochschulnetz und benötigt weder echte Kennung noch Passwort; bei einem zweiten Testgerät wird nur der Fehlervergleich dokumentiert.`;
-  if (/netzlaufwerke|fileservice/u.test(g)) return `${NOTICE} Im Laborfall ${ref} beschreibt ${cue} eine erfundene Dateiablage. Arbeite ausschließlich im Testordner ABLAGE-${ref}; das Beispielkontingent von 250 MB und der angezeigte Verbrauch von 230 MB sind ausdrücklich frei erfundene Werte. Prüfe Dateipfad und Papierkorb, sichere eine Testkopie und beende den Lauf mit einer Vorschau. Es werden keine realen Dateien verschoben oder wiederhergestellt.`;
-  if (/informationssicherheit|security/u.test(g)) return `${NOTICE} Der Sicherheitsfall ${ref} behandelt ${cue} an einem vollständig erfundenen Beispiel. Nutze nur die Datei PHISHING-${ref}.eml und das reservierte Testziel https://warnung-demo.invalid, sichere eine Kopie der Demo-Anzeige und notiere beobachtete Merkmale ohne echte Zugangsdaten. Ein möglicher Vorfall wird hier weder gemeldet noch technisch untersucht; die Übung enthält keine reale Person oder Kontaktstelle.`;
-  if (t.includes('rss')) return `${NOTICE} Der RSS-Fall ${ref} übt ${cue} mit dem fiktiven Feed https://feed-demo.invalid/rss.xml. Füge die Testadresse in eine lokale Vorschau ein, prüfe Titel und Aktualisierungsstatus und entferne den Eintrag danach wieder. Der Feed enthält keine echten Meldungen und wird nicht mit einem persönlichen Konto verknüpft.`;
-  if (/e-mail|email|postfach/u.test(g)) return `${NOTICE} Der Postfachfall ${ref} übt ${cue} im erfundenen Mail-Labor https://mail-demo.invalid. Prüfe den Status des Testpostfachs MAIL-${ref}, vergleiche die Vorschau im zweiten Demo-Client und ändere nur eine simulierte Einstellung. Es werden keine echten Nachrichten weitergeleitet, versandt, gelöscht oder in ein persönliches Konto verschoben.`;
-  if (/teams telefonie|voice over ip/u.test(g) || (t.includes('teams') && /telefon|anruf|voip/u.test(t))) return `${NOTICE} Der Telefonie-Fall ${ref} simuliert ${cue} im Testclient TEL-${ref}. Prüfe in der Vorschau Geräteauswahl, Präsenz und eine interne Testverbindung ohne Rufnummer. Starte keinen echten Anruf, hinterlege keine private Nummer und leite keine Gespräche um.`;
-  if (/microsoft|teams/u.test(g) || /microsoft|office 365|microsoft 365|onedrive/u.test(t)) return `${NOTICE} Im Testtenant OFFICE-${ref} übt der Fall ${ref} ${cue}. Kontrolliere zuerst die Demo-Kontoeinstellung, öffne danach nur den vorgesehenen Funktionsbereich und vergleiche die Vorschau mit der gewünschten Testrolle. Dateien, Gruppen, Meetings und Lizenzen sind fiktiv; es wird kein reales Konto registriert, keine Lizenz zugesagt und nichts an echte Personen freigegeben.`;
-  if (/drucken|kopieren|scannen/u.test(g)) return `${NOTICE} Die Druckübung ${ref} nutzt die fiktive Warteschlange PRINT-${ref}. Sende eine einseitige Testseite ohne persönliche Daten, prüfe Druckvorschau und Warteschlangenstatus und entferne den Demojob anschließend. Gerät, Standort, Toner und Ergebnis sind erfunden; weder ein realer Drucker noch ein echter Druckauftrag werden verändert.`;
-  if (g.includes('webhosting')) return `${NOTICE} Im Fall ${ref} wird ${cue} auf dem erfundenen Webspace WEB-${ref} nachvollzogen. Verwende ausschließlich beispielhafte Dateien unter https://webspace-demo.invalid, prüfe zuerst eine Sicherungskopie und ändere dann eine einzelne Testseite. Die fiktive Grenze von 512 MB und die Beispielaufbewahrung von 30 Tagen sind keine realen Tarife oder Fristen.`;
-  if (/drittanbieter|software|adobe|matlab|zoom/u.test(g)) return `${NOTICE} Der Softwarefall ${ref} behandelt ${cue} in einer isolierten Lizenz-Sandbox. Öffne das fiktive Profil SOFTWARE-${ref}, prüfe den angezeigten Produktnamen und wähle nur eine Vorschau oder Testinstallation. Die Demo bestätigt keine reale Bezugsberechtigung, Lizenz oder Rabattregel; keine Installation auf einem produktiven Gerät starten.`;
-  if (/kurzurl|domain/u.test(g)) return `${NOTICE} Der URL-Fall ${ref} zeigt ${cue} mit short-demo.invalid und ziel-demo.invalid. Vergleiche zuerst die vollständige Zieladresse, öffne eine sichere Vorschau und ändere anschließend nur den fiktiven Eintrag URL-${ref}. Beide Domains sind reservierte Testnamen; eine reale Weiterleitung oder DNS-Änderung findet nicht statt.`;
-  if (g.includes('dienstausweis')) return `${NOTICE} Der Dienstausweis-Fall ${ref} simuliert ${cue} mit BADGE-${ref}. Prüfe die fiktive Funktionsliste, notiere nur den gewünschten Demo-Anwendungsfall und vergleiche ihn mit der Vorschau. Ausgabe, Zutritt und Kontaktdaten sind nicht real; aus diesem Beispiel folgt keine tatsächliche Berechtigung.`;
-  if (/zoom|konferenz/u.test(g)) return `${NOTICE} Der Konferenzfall ${ref} übt ${cue} mit dem fiktiven Meeting DEMO-${ref}. Prüfe die Vorschau von Rolle, Audio und alternativer Moderation, verwende ein Testgerät und beende den Raum nach dem Probelauf. Es gibt keine echte Einwahlnummer, Einladung oder Lizenzzusage.`;
-  return `${NOTICE} Für ${cue} beschreibt der Guide ${ref} einen abgegrenzten Testablauf im fiktiven Portal https://portal-demo.invalid. Prüfe zuerst die Demo-Kennung, führe anschließend genau einen Vorschau-Schritt aus und kontrolliere die erwartete Rückmeldung. Angaben, Zuständigkeiten und Ergebnisse sind erfunden; der Guide ist keine reale Verfahrens- oder Zugangsregel.`;
-}
 function makeDocument(entry: SourceEntry, kind: 'faq' | 'service' | 'news' | 'link' | 'form'): SyntheticDocument {
   const id = idFor(entry.url);
   const group = topicGroup(entry, kind);
   const tags = [`topic:${slug(group)}`, `kind:${kind}`, ...queryTags(group, entry.title)].filter((tag, index, all) => all.indexOf(tag) === index).slice(0, 10);
   const title = cleanTitle(entry, kind);
   const vpnGuidance = syntheticVpnGuidance(group, cueFor(entry.title, kind), kind);
-  const body = scenario(group, entry.title, kind, id);
-  const baseRevision = vpnGuidance?.text === body ? vpnGuidance.revision : 1;
+  const baseRevision = vpnGuidance?.revision ?? 1;
   const revised = kind === 'faq' ? formatSyntheticFaqTitle(id, title, baseRevision) : { title, revision: baseRevision };
-  const revision = revised.revision;
+  const articleTitle = serviceItArticleTitle(revised.title, id);
+  const body = serviceItArticleText(group, revised.title, kind, id);
+  // All published article text/labels changed once; retain the prior title migration.
+  const revision = revised.revision + 1;
   if (revised.title.length >= 200 || body.length >= 4000) fail('A generated document exceeds a field limit.');
   return {
-    id, sourceSystem: 'service_it', synthetic: true, language: 'de', title: revised.title, revision,
+    id, sourceSystem: 'service_it', synthetic: true, language: 'de', title: articleTitle, revision,
     demoAudience: demoAudience(entry.roles ?? []), tags, text: body,
     citationId: `knowledge:service_it:${id}:${String(revision)}`, publicationStatus: 'syntheticdemo',
   };
@@ -483,7 +419,7 @@ const output = {
   schemaVersion: 1,
   datasetId: 'hasi-service-it-synthetic-v1',
   synthetic: true,
-  createdAt: '2026-10-18',
+  createdAt: '2026-10-21',
   publicationStatus: 'syntheticdemo',
   rolePolicyNote: 'Demo audiences are fictional retrieval-test labels only and do not represent institutional permissions or real user rights.',
   coverage: {

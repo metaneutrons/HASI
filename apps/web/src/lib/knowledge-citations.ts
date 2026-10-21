@@ -57,7 +57,7 @@ export function knowledgeCitationFromDocument(document: KnowledgeDocument, numbe
     citationId: source.citationId,
     id: source.id,
     title: source.title,
-    sourceLabel: knowledgeSourceLabel(source.sourceSystem, source.synthetic),
+    sourceLabel: knowledgeSourceLabel(source.sourceSystem),
     revision: source.revision,
     href,
     number,
