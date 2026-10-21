@@ -5,7 +5,7 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { knowledgeDocumentSchema, knowledgeSourceLabel, type KnowledgeDocument } from "@/lib/knowledge";
-import { knowledgeChatReturnHref, type KnowledgeOrigin } from "@/lib/knowledge-navigation";
+import { knowledgeChatReturnHref, knowledgeCurrentRevisionHref, type KnowledgeOrigin } from "@/lib/knowledge-navigation";
 import { useSession } from "./session-provider";
 
 const REVALIDATE_INTERVAL_MS = 30_000;
@@ -15,10 +15,10 @@ function requestCanUpdate(mounted: boolean, controller: AbortController): boolea
   return mounted && !controller.signal.aborted;
 }
 
-export function KnowledgeDocumentPage({ documentId, revision, origin }: { documentId: string; revision?: number; origin?: KnowledgeOrigin }) {
+export function KnowledgeDocumentPage({ documentId, revision, fromRevision, origin }: { documentId: string; revision?: number; fromRevision?: number; origin?: KnowledgeOrigin }) {
   const { user } = useSession();
   return user
-    ? <DocumentReader key={`${user.id}:${documentId}:${revision === undefined ? "latest" : String(revision)}`} documentId={documentId} {...(revision === undefined ? {} : { revision })} {...(origin ? { origin } : {})} />
+    ? <DocumentReader key={`${user.id}:${documentId}:${revision === undefined ? "latest" : String(revision)}:${fromRevision === undefined ? "" : String(fromRevision)}`} documentId={documentId} {...(revision === undefined ? {} : { revision })} {...(fromRevision === undefined ? {} : { fromRevision })} {...(origin ? { origin } : {})} />
     : null;
 }
 
@@ -34,7 +34,7 @@ function documentRequestPath(documentId: string, revision?: number): string {
   return revision === undefined ? path : `${path}?revision=${String(revision)}`;
 }
 
-function DocumentReader({ documentId, revision, origin }: { documentId: string; revision?: number; origin?: KnowledgeOrigin }) {
+function DocumentReader({ documentId, revision, fromRevision, origin }: { documentId: string; revision?: number; fromRevision?: number; origin?: KnowledgeOrigin }) {
   const [activeDocument, setActiveDocument] = useState<KnowledgeDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +42,7 @@ function DocumentReader({ documentId, revision, origin }: { documentId: string; 
   const readerRef = useRef<HTMLElement>(null);
   const restoreDetailsFocus = useRef(false);
   const [revalidationHeight, setRevalidationHeight] = useState<number | null>(null);
+  const recoveryHref = revision === undefined ? undefined : knowledgeCurrentRevisionHref(documentId, revision, origin);
 
   useEffect(() => {
     let mounted = true;
@@ -112,13 +113,17 @@ function DocumentReader({ documentId, revision, origin }: { documentId: string; 
 
   return <section ref={readerRef} className="knowledge-reader" aria-label="Wissensdokument" aria-busy={loading} style={{ overflowAnchor: "none", ...(loading && revalidationHeight !== null ? { minHeight: revalidationHeight } : {}) }}>
     <Link className="knowledge-back" href={knowledgeChatReturnHref(origin)}><ArrowLeft size={18} aria-hidden="true" /> {origin ? "Zurück zur Nachricht" : "Zum Chat"}</Link>
-    {error ? <p className="knowledge-reader__status knowledge-reader__status--error" role="alert">{error}</p>
+    {error ? <>
+      <h1>Quelle nicht verfügbar</h1>
+      <p className="knowledge-reader__status knowledge-reader__status--error" role="alert">{error}</p>
+      {recoveryHref && <Link className="knowledge-reader__original" href={recoveryHref}>Aktuelle Fassung prüfen</Link>}
+    </>
       : !activeDocument ? <p className="knowledge-reader__status" role="status">{loading ? "Dokument und Zugriffsrecht werden geprüft …" : UNAVAILABLE_MESSAGE}</p>
-        : <DocumentArticle document={activeDocument} detailsOpen={sourceDetailsOpen} onDetailsChange={setSourceDetailsOpen} />}
+        : <DocumentArticle document={activeDocument} {...(fromRevision === undefined ? {} : { fromRevision })} detailsOpen={sourceDetailsOpen} onDetailsChange={setSourceDetailsOpen} />}
   </section>;
 }
 
-function DocumentArticle({ document, detailsOpen, onDetailsChange }: { document: KnowledgeDocument; detailsOpen: boolean; onDetailsChange: (open: boolean) => void }) {
+function DocumentArticle({ document, fromRevision, detailsOpen, onDetailsChange }: { document: KnowledgeDocument; fromRevision?: number; detailsOpen: boolean; onDetailsChange: (open: boolean) => void }) {
   const english = document.language === "en";
   const incident = document.incident;
   const originalHref = !document.synthetic
@@ -135,6 +140,12 @@ function DocumentArticle({ document, detailsOpen, onDetailsChange }: { document:
       <div><dt>Sprache</dt><dd>{document.language.toUpperCase()}</dd></div>
     </dl>
     <h1>{document.title}</h1>
+
+    {fromRevision !== undefined && <p className="knowledge-reader__status" role="status">
+      {document.revision === fromRevision
+        ? `Die angeforderte Fassung ${String(fromRevision)} wurde erneut geprüft und ist als aktuelle Fassung verfügbar. Die Quellenangabe in der Chatnachricht bleibt unverändert.`
+        : `Du hast Fassung ${String(fromRevision)} angefordert. Angezeigt wird die aktuell verfügbare Fassung ${String(document.revision)}; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert.`}
+    </p>}
 
     {incident && <aside className={`knowledge-reader__incident knowledge-reader__incident--${incident.status}`}>
       <strong>{incident.status === "active"
