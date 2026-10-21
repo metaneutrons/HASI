@@ -210,3 +210,11 @@ documentation-only check does not explain the stored raw responses with missing
 counters. Those observations remain unknown; no new live probe, cache hit or
 savings is claimed. CACHE-A1 still needs genuine provider evidence or an explicit
 scope decision.
+
+## Sequencing decision — 2026-10-21
+
+Fabian deferred CACHE-A1 to [M8-A10](../../plans/hasi-mvp.md#institutional-acceptance-m8)
+under plan V9. The measurement contract and all unknown/missing-counter findings
+above remain unchanged. The positive-hit proof no longer blocks M6/M7; ordinary
+model quality/security, reported usage/cost and budgets remain required. This is
+a scope transfer, not a cache result or a savings claim.
