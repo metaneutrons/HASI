@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ChatSessionList } from "@/components/chat-session-list";
 import { useChatWorkspaceStore } from "@/components/chat-sidebar-context";
 import { useSession } from "@/components/session-provider";
@@ -350,7 +350,24 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
   const activeKey = pathname.startsWith("/account/connections") ? "connections" : pathname === "/bookings" ? "bookings" : pathname === "/admin" ? "admin" : "assistant";
   const isChatPage = pathname === "/";
   const frameRef = useChatViewport(isChatPage);
+  const mobileNavRef = useRef<HTMLElement>(null);
   const initial = user ? initials(user.displayName) : "H";
+
+  useLayoutEffect(() => {
+    const navigation = mobileNavRef.current;
+    const main = navigation?.parentElement;
+    if (!navigation || !main) return;
+    const update = () => {
+      main.style.setProperty("--mobile-nav-height", `${String(navigation.getBoundingClientRect().height)}px`);
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(navigation);
+    update();
+    return () => {
+      observer.disconnect();
+      main.style.removeProperty("--mobile-nav-height");
+    };
+  }, []);
 
   async function handleLogout(): Promise<boolean> {
     setLoggingOut(true);
@@ -415,7 +432,7 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
 
         <main className="app-content">{children}</main>
 
-        <nav className="mobile-nav" aria-label="Hauptnavigation">
+        <nav ref={mobileNavRef} className="mobile-nav" aria-label="Hauptnavigation">
           {navItems.map((item) => (
             <NavLink key={item.key} href={item.href} label={item.label} icon={item.icon} active={activeKey === item.key} />
           ))}

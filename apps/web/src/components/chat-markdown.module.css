@@ -1,7 +1,7 @@
 .markdown {
   min-width: 0;
   color: var(--ink-soft);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
@@ -27,19 +27,19 @@
 .markdown a.citation { position: relative; display: inline-block; min-width: 2em; margin-inline: 0.32em; padding-inline: 0.12em; border-radius: 6px; text-align: center; font-size: 0.9em; font-weight: 620; text-decoration-thickness: 1.5px; }
 .markdown a.citation:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .markdown .citationUnavailable { margin-inline: 0.12em; color: var(--muted); font-size: 0.88em; text-decoration: underline dotted; text-underline-offset: 0.18em; cursor: help; }
-.markdown .sourcesHeading { margin: 18px 0 4px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 620; }
+.markdown .sourcesHeading { margin: 18px 0 4px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.75rem; font-weight: 620; }
 .markdown ul.sources { display: grid; gap: 4px; padding: 0; margin: 0; list-style: none; }
 .markdown .sources li + li { margin: 0; }
 .markdown .sources p { margin: 0; }
-.markdown a.sourceLink { display: block; min-height: 44px; padding: 6px 8px; border-radius: 8px; color: var(--ink); font-size: 13px; line-height: 1.5; text-decoration: none; }
-.markdown a.sourceLink small { color: var(--muted); font-size: 12px; }
+.markdown a.sourceLink { display: block; min-height: 44px; padding: 6px 8px; border-radius: 8px; color: var(--ink); font-size: 0.8125rem; line-height: 1.5; text-decoration: none; }
+.markdown a.sourceLink small { color: var(--muted); font-size: 0.75rem; }
 .markdown a.sourceLink:hover { background: var(--surface-soft); }
 .markdown a.sourceLink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (pointer: coarse) {
   .markdown a.citation { display: inline-flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; vertical-align: middle; }
 }
 .markdown :not(pre) > code { padding: 0.13em 0.38em; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-soft); color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; overflow-wrap: anywhere; }
-.markdown pre { max-width: 100%; margin: 0 0 0.95em; padding: 13px 15px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); color: var(--ink); font-size: 13px; line-height: 1.55; overscroll-behavior-x: contain; }
+.markdown pre { max-width: 100%; margin: 0 0 0.95em; padding: 13px 15px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); color: var(--ink); font-size: 0.8125rem; line-height: 1.55; overscroll-behavior-x: contain; }
 .markdown pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; }
 .tableWrap { max-width: 100%; margin: 0 0 0.95em; overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; overscroll-behavior-x: contain; }
 .tableWrap table { min-width: 100%; border-collapse: collapse; font-size: 0.9em; }

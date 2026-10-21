@@ -16,7 +16,7 @@
 }
 
 .menu:popover-open { display: flex; flex-direction: column; }
-.menu button { display: flex; min-height: 44px; flex-shrink: 0; align-items: center; gap: 12px; padding: 9px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--ink); font-size: 13px; text-align: left; cursor: pointer; }
+.menu button { display: flex; min-height: 44px; flex-shrink: 0; align-items: center; gap: 12px; padding: 9px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--ink); font-size: 0.8125rem; text-align: left; cursor: pointer; }
 .menu button svg { flex: 0 0 auto; color: var(--muted); }
 .menu button:hover:not(:disabled), .menu button:focus-visible { background: var(--surface-soft); }
 .menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
@@ -40,13 +40,13 @@
 
 .sourceDialog:not([open]) { display: none; }
 .sourceDialog::backdrop { background: rgb(0 0 0 / 38%); backdrop-filter: blur(5px); }
-.sourceDialog h2 { margin: 0 0 7px; font-size: 21px; font-weight: 620; letter-spacing: -0.025em; }
-.sourceDialog > p:not(.dialogFeedback) { margin: 0 0 15px; color: var(--muted); font-size: 13px; line-height: 1.5; }
-.sourceText { display: block; width: 100%; min-height: 220px; max-height: min(52dvh, 520px); padding: 12px; resize: vertical; border: 1px solid var(--line-strong); border-radius: 11px; background: var(--canvas); color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sourceDialog h2 { margin: 0 0 7px; font-size: 1.3125rem; font-weight: 620; letter-spacing: -0.025em; }
+.sourceDialog > p:not(.dialogFeedback) { margin: 0 0 15px; color: var(--muted); font-size: 0.8125rem; line-height: 1.5; }
+.sourceText { display: block; width: 100%; min-height: 220px; max-height: min(52dvh, 520px); padding: 12px; resize: vertical; border: 1px solid var(--line-strong); border-radius: 11px; background: var(--canvas); color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8125rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .sourceText:focus-visible { outline: 3px solid var(--accent-wash); border-color: var(--accent); }
-.dialogFeedback { min-height: 1.4em; margin: 8px 0 0; color: var(--green); font-size: 12px; }
+.dialogFeedback { min-height: 1.4em; margin: 8px 0 0; color: var(--green); font-size: 0.75rem; }
 .dialogButtons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 15px; }
-.dialogButtons button { min-height: 44px; min-width: 120px; padding: 9px 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-soft); color: var(--ink); font-size: 13px; font-weight: 560; cursor: pointer; }
+.dialogButtons button { min-height: 44px; min-width: 120px; padding: 9px 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-soft); color: var(--ink); font-size: 0.8125rem; font-weight: 560; cursor: pointer; }
 .dialogButtons button:hover:not(:disabled), .dialogButtons button:focus-visible { border-color: var(--line-strong); background: var(--surface-raised); }
 .dialogButtons .primaryButton { border-color: transparent; background: var(--accent); color: #26150e; }
 .dialogButtons .primaryButton:hover:not(:disabled), .dialogButtons .primaryButton:focus-visible { background: color-mix(in srgb, var(--accent) 86%, white); }
@@ -55,6 +55,6 @@
 
 @media (max-width: 560px) {
   .sourceDialog { padding: 18px; border-radius: 19px; }
-  .sourceText { font-size: 16px; }
+  .sourceText { font-size: 1rem; }
   .dialogButtons button { flex: 1 1 130px; }
 }
