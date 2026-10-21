@@ -76,3 +76,16 @@ required citations and absence of tool proposals only. It does not perform
 this semantic review. Do not promote draft cases or model answers to gold,
 reviewed or adjudicated status without independent human review and resolution
 of disagreements. No new model judge or keyword blacklist is introduced.
+
+## Runtime guidance under qualification
+
+The router now distinguishes the current user's language from source/tool
+language and adds source-only answer guidance on knowledge-capable steps and
+after a current knowledge result. It explicitly preserves supported technical
+specificity and fictional scope, asks for missing context, and requires canonical
+ASCII citation delimiters. Room-only steps omit this additional guidance; the
+existing serialized request-size gates remain unchanged. This is model guidance,
+not an entailment validator or an injection-prevention guarantee. Compare the
+same frozen pair against the preceding run before claiming an improvement;
+literal citation checks cannot establish semantic support. Actual run identities,
+usage, failures and review limits belong in M6 #53.
