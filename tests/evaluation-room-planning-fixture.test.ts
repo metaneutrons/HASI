@@ -52,6 +52,8 @@ describe("authenticated Anny room-planning evaluation fixture", () => {
     const fixture = await createFixture();
     expect(fixture.webOrigin).toBe("http://127.0.0.1:3001");
     expect(fixture.apiOrigin).toBe("http://127.0.0.1:4100");
+    expect(fixture.localScope).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(fixture.signingSecret).toMatch(/^[A-Za-z0-9_-]{43}$/u);
     expect(fixture.resourceIds).toEqual(["180116", "180117"]);
     expect(fixture.actor.resourceIds).toBeUndefined();
     expect(fixture.actor.customerId).toBeUndefined();
@@ -64,6 +66,7 @@ describe("authenticated Anny room-planning evaluation fixture", () => {
     expect(await json(session)).toMatchObject({
       mode: "oidc",
       user: { id: fixture.actor.subject, role: "employee" },
+      modelContext: { dataClasses: ["synthetic_demo"] },
     });
 
     const resourcesResponse = await fixture.coreFetch(request(fixture, "/api/resources"));

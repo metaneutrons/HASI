@@ -1,4 +1,4 @@
-import { generateKeyPairSync, randomUUID } from "node:crypto";
+import { generateKeyPairSync, randomBytes, randomUUID } from "node:crypto";
 import { AnnyClient } from "@hasi/anny-client";
 import { createAnnyMock, MOCK_IDS } from "@hasi/anny-mock";
 import { annyManifest, createAnnyPlugin, type Presentation } from "@hasi/anny-plugin";
@@ -137,6 +137,10 @@ export interface EvaluationRoomPlanningDiagnostics {
 export interface EvaluationRoomPlanningFixture {
   readonly webOrigin: string;
   readonly apiOrigin: string;
+  /** Synthetic web-only protected-local scope used by the route harness. */
+  readonly localScope: string;
+  /** Synthetic web-only signing material; never a deployment credential. */
+  readonly signingSecret: string;
   readonly cookie: string;
   /** Stable subject and rights are projected by the code-owned verified OIDC mapper. */
   readonly actor: ActorContext;
@@ -270,6 +274,7 @@ export async function createEvaluationRoomPlanningFixture(): Promise<EvaluationR
   const approved = approvedCatalog();
   const presentation = presentationForApprovedCatalog();
   const scope = randomUUID();
+  const signingSecret = randomBytes(32).toString("base64url");
   const apiStore = new MemoryJsonStore(`evaluation-room-planning-api-${scope}`);
   const apiObservations: EvaluationRoomPlanningObservation[] = [];
   const sourceObservations: EvaluationRoomPlanningObservation[] = [];
@@ -431,7 +436,10 @@ export async function createEvaluationRoomPlanningFixture(): Promise<EvaluationR
     });
 
     const api = await createApi({
-      mode: "test",
+      // The API's development/OIDC composition supplies synthetic model
+      // context. TestIdP, OIDC identity, and the demo account adapter remain
+      // explicitly in test mode above.
+      mode: "development",
       registry,
       identity,
       store: apiObservedStore,
@@ -497,6 +505,7 @@ export async function createEvaluationRoomPlanningFixture(): Promise<EvaluationR
 
     const allowedRoutes = new Set([
       "GET /api/session",
+      "GET /api/history/authority",
       "GET /api/tools",
       "GET /api/resources",
       "POST /api/availability",
@@ -538,6 +547,8 @@ export async function createEvaluationRoomPlanningFixture(): Promise<EvaluationR
     return {
       webOrigin,
       apiOrigin,
+      localScope: scope,
+      signingSecret,
       cookie: `hasi-session=${session}`,
       actor: Object.freeze({ ...actor, permissions: [...actor.permissions] }),
       resourceIds: Object.freeze([...resourceIds]),
