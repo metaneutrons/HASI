@@ -1,0 +1,33 @@
+{
+  "implementationRevision": "0eb8cd6ef6bf4802d400104a07aa12152f848605",
+  "baseRevision": "13fe0d0e58c26787ad39cf5f3de50b5970339a92",
+  "runtime": {
+    "node": "v26.11.1",
+    "platform": "darwin",
+    "architecture": "arm64"
+  },
+  "sourceSha256": {
+    "apps/api/src/network-policy.ts": "682f3d4456bfea8ca973d841d411cacf10ec904e48f3f3c3ec8b87396eab4d74",
+    "apps/web/src/lib/server/model-budgets.ts": "087423b1168b3bd680e2cd5e29d72bb585cc808173b4167ec2d40bd8c2d703dd",
+    "apps/web/tests/model-budgets.test.ts": "775ca79251b4366322bcb40acc24717ec754bc395c5723e9a4670b2564321f29",
+    "apps/web/tests/knowledge-route-integration.test.ts": "16f55de18bdf7520d66242621e57059dede2d8cf52a03a380238d01458fc1271",
+    "scripts/evaluation/knowledge-policy-fixture.ts": "cdb595d51ba49cb912dd7d099c3cba1295cab0f6c7cb33929af00b69c15e4413",
+    "tests/evaluation-knowledge-policy-fixture.test.ts": "03c6d23e146157e27f5e199350b7cd547beabfa69b9d28aebdbc102144588340"
+  },
+  "focusedQualification": {
+    "testsPassed": 172,
+    "filesPassed": 5,
+    "rootAndWebTypes": "passed",
+    "affectedRootAndWebLint": "passed",
+    "realProviderCalls": 0,
+    "productionBusinessActions": 0,
+    "sharedBudgetWrites": 0
+  },
+  "originalCounterprobe": {
+    "sourceSha256": "990b9ba1a3d3c43786c7aaf7375fb2576ef0000a87093e5ba5e65e4153043c35",
+    "exitCode": 1,
+    "failure": "expected 503 to be 409",
+    "test": "blocks provider dispatch when source rights change after rebuilding the history"
+  },
+  "scope": "synthetic integrated application controls, not model quality or institutional acceptance"
+}
