@@ -1,0 +1,66 @@
+{
+  "kind": "local_synthetic_provider_workflow_qualification",
+  "date": "2026-10-21",
+  "sourceCommit": "aae5a8c0bc048cfcd79b7d3bcf5c23a1d3412ffa",
+  "runtime": {
+    "node": "v26.11.1",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "sourceSha256": {
+    "apps/web/scripts/evaluate-models.ts": "5d52b206fa64367b2d109d8c4f761b7fb1a7bb6accc9aa08a96c5fa2f44c27c8",
+    "apps/web/src/lib/server/evaluation/provider-runner.ts": "3d5eb7dbdf922713ae1f8b56221d320e09dc4c2b2291406cb958104447959ad4",
+    "scripts/evaluation/anny-fixture.ts": "04921e5344b10f3c343ecef6ac9cba2d14539ac8ddc2002ee4384c6e0f9a6d3a",
+    "scripts/evaluation/provider-workflow-fixture.ts": "3fb1d02940a7ff4dcb9c4e4df1a35c2e6bb307963f86586c86d539bcb8c2613b",
+    "apps/web/src/lib/server/evaluation/input-projection.ts": "d8e2ba8f28cc86cca5cfe34c756424db5c1d60511a4d6ec2a2409569b3b7495e",
+    "apps/web/src/lib/server/evaluation/oracles.ts": "ab84e15826559a2540b0bded4743aadeb8df2a94bdb141bbca8b63c5835daa8e",
+    "apps/web/src/lib/server/evaluation/workflow-observations.ts": "657e04c1ed3c4db0dc287706ff50650db9df5f81fc6a97e610dd117770b81635",
+    "apps/web/tests/evaluation-anny-executor.test.ts": "54dab559f863bcef664dc85d0e46d7ea148365ecb9fd48de5f3fd6276a1d8c57",
+    "apps/web/tests/evaluation-anny-fixture-cleanup.test.ts": "ce8cbc1a01877dda8c9e81b15a3d66aab9e8ba8b8b850691536af298029db536",
+    "apps/web/tests/evaluation-oracles.test.ts": "cd4581f73b5f90cc0b801166a7d23073120d3d962681fd570683ed029f585603",
+    "apps/web/tests/evaluation-provider-observations.test.ts": "94617d6309f846c94232fce446b4f3c52b890f51a0b6b3003072bddcd6020bdb",
+    "apps/web/tests/evaluation-provider-runner.test.ts": "615377ee93071fd2a1a204df837db2c1f57734e073e85fa159dc6ad4e4ea94ee",
+    "apps/web/tests/evaluation-provider-suite.test.ts": "bb6d3f2b282bec4db92043efe8aedd0f565b71bb491183fde25be7a0a4d5d4ba",
+    "apps/web/tests/evaluation-provider-workflow-fixture.test.ts": "717ab4fec58cda8aac149d90cd6a4a3ff7793bcc13043b14df6e5f6f9422f4dc",
+    "apps/web/tests/evaluation-provider-workflow.test.ts": "fa81bf78798da2b8a12b2346ad28c9977efee57b5c899d29be66efe7c73dab82",
+    "apps/web/tests/evaluation-runner.test.ts": "a238086bb0138dda1c1a7add0eca8b18482fe07364b118ff2b74e6277ae78a37",
+    "apps/web/tests/evaluation-smoke-corpus.test.ts": "0dec9a7d1111a6c5d7cf06444e50eb466be596c5e9b78f0bcca43272dc980cdc",
+    "apps/web/tests/evaluation-workflow-observations.test.ts": "f2b63eb77bb7ae8fc33c9c239b34b536208f5c5a975c675b99fe0bf5f956f52d",
+    "apps/web/tests/evaluation-workflow-runner.test.ts": "3f74623f6c0b6707160d1d49c9aa85a73b420a9b8970f77ceb5066239298749a"
+  },
+  "focusedInvocation": "pnpm exec vitest run apps/web/tests/evaluation",
+  "focusedResult": {
+    "exitCode": 0,
+    "testFilesPassed": 12,
+    "testsPassed": 120
+  },
+  "rootAndWebTypecheckExit": 0,
+  "affectedLintExit": 0,
+  "independentReview": "No actionable findings after frozen-input binding and cleanup review.",
+  "providerTransport": "injected fake HTTPS fetch; not live-provider evidence",
+  "realProviderCalls": 0,
+  "productionBusinessActions": 0,
+  "applicationFixture": "actual loopback API/Anny mock and independently observed memory-store/source transitions",
+  "positiveScope": [
+    "booking and cancellation each have one target effect with a lost reply; cancellation setup effect separate",
+    "no model executor or confirmation authority",
+    "exact run/case/frozen-input observation binding; invalid/failed/reused observations ungraded",
+    "provider usage retained for ungraded observations",
+    "empty model tool set; no extra source writes during provider response",
+    "fixed-evidence default remains eleven cases; runtime workflow manifest explicit",
+    "finally closes actual loopback listener on runtime-close rejection"
+  ],
+  "shutdownCounterprobe": {
+    "originalFixtureSha256": "40f5d9912cc29f7f2b22708898e32100d12707962600469846a630800d6b2bf0",
+    "observedExitCode": 1,
+    "expectedAssertion": "expected true to be false",
+    "fixedSourceRestored": true
+  },
+  "limits": [
+    "draft development runtime variants, not original static-case acceptance",
+    "fake provider text/usage not human scores, live model quality or billing",
+    "not initial search/planning/calendar or all workflow/access/injection families",
+    "fixed model clock; private dynamic source action dates",
+    "no M2/M6/M7 or institutional acceptance"
+  ]
+}

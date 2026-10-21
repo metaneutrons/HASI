@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { chatRequestSchema, type WireMessage } from "../../chat-contract";
@@ -11,6 +11,17 @@ import { evaluationCaseSchema } from "./case-schema";
 import { digestEvaluationModelInput, projectEvaluationModelInput, type EvaluationModelInput } from "./input-projection";
 import { assessEvaluationOracle, parseEvaluationOracle, type EvaluationOracleAssessment, type EvaluationOracleResponse } from "./oracles";
 import { createProviderObservationMeter, type ProviderMeasurements } from "./provider-observations";
+import { parseEvaluationWorkflowObservation, type EvaluationWorkflowObservation } from "./workflow-observations";
+
+export interface ProviderWorkflowObservationRequest {
+  runId: string;
+  caseId: string;
+  inputDigestSha256: string;
+  response: EvaluationOracleResponse;
+}
+
+/** Trusted fixture instrumentation, never a case field or model response. */
+export type ProviderWorkflowObserver = (request: ProviderWorkflowObservationRequest) => Promise<unknown>;
 
 export interface ProviderEvaluationDependencies {
   /** Operator-selected approved profile, never taken from the case or model output. */
@@ -19,6 +30,8 @@ export interface ProviderEvaluationDependencies {
   /** Live callers must supply existing shared durable admission, never a fresh local ledger. */
   budgetAdmission: ModelBudgetAdmission;
   oracle?: unknown;
+  /** Required for an observed workflow; never creates or executes a model tool. */
+  observeWorkflow?: ProviderWorkflowObserver;
   /** Actual HTTP attempt cap, including provider-specific repair calls. */
   maxProviderRequests?: number;
   env?: Readonly<Record<string, string | undefined>>;
@@ -27,7 +40,8 @@ export interface ProviderEvaluationDependencies {
 }
 
 export interface ProviderEvaluationRun {
-  runKind: "provider_fixed_evidence";
+  runKind: "provider_fixed_evidence" | "provider_observed_workflow";
+  workflowRunId?: string;
   caseId: string;
   familyId: string;
   datasetSplit: "development" | "validation" | "blind_final";
@@ -41,13 +55,16 @@ export interface ProviderEvaluationRun {
   measurements: ProviderMeasurements;
   transport: { status: "completed"; response: EvaluationOracleResponse }
     | { status: "error"; code: string; providerStatus?: number; retryAfterSeconds?: number };
-  assessment: (Omit<EvaluationOracleAssessment, "scope"> & { scope: "synthetic_fixed_evidence_only" }) | { status: "not_assessed"; reason: "no_quality_oracle" }
-    | { status: "not_run"; reason: "provider_or_contract_error" };
+  assessment: (Omit<EvaluationOracleAssessment, "scope"> & { scope: "synthetic_fixed_evidence_only" | "synthetic_observed_workflow_only" }) | { status: "not_assessed"; reason: "no_quality_oracle" }
+    | { status: "not_run"; reason: "provider_or_contract_error" | "workflow_observer_error" | "invalid_workflow_observation" };
 }
 
-function fixedEvidenceMessages(input: EvaluationModelInput): WireMessage[] {
+function evidenceMessages(input: EvaluationModelInput): WireMessage[] {
   const messages: WireMessage[] = input.userMessages.map(content => ({ role: "user", content }));
   if (input.evidence.length) {
+    // Runtime status is frozen as evidence, through the same read-only envelope
+    // as knowledge cases. It is not a production actionContext injection or an
+    // invented authorized tool history. The independent observer owns effects.
     const toolCallId = "evaluation-fixed-evidence";
     messages.push({ role: "assistant", content: "", toolCalls: [
       { id: toolCallId, name: "knowledge_search", arguments: { query: "Feste synthetische Evaluationsquellen" } },
@@ -88,19 +105,26 @@ function responseCitations(text: string): EvaluationOracleResponse["citations"] 
 }
 
 /**
- * Executes the existing HASI router on fixed, authorized synthetic evidence.
- * It deliberately has no tool executor, source fetcher, automatic fallback,
- * storage initialization or grading-label projection. Workflow/application
- * cases require their own observed executor and cannot silently use this path.
+ * Executes the existing router on authorized evidence or a separately observed
+ * synthetic workflow. It has no model tool executor, source fetcher, automatic
+ * fallback, storage initialization or grading-label projection. Application-policy
+ * cases remain rejected; a workflow requires explicit trusted instrumentation.
  */
 export async function runProviderEvaluationCase(value: unknown, dependencies: ProviderEvaluationDependencies): Promise<ProviderEvaluationRun> {
   const evaluationCase = evaluationCaseSchema.parse(value);
-  if (evaluationCase.testLayer !== "fixed_evidence") throw new TypeError("This provider runner requires an explicit fixed-evidence case.");
+  const workflow = evaluationCase.testLayer === "workflow";
+  if (!workflow && evaluationCase.testLayer !== "fixed_evidence") {
+    throw new TypeError("Provider evaluation requires fixed evidence or a registered observed workflow.");
+  }
   if (typeof dependencies.budgetAdmission.reserve !== "function") {
     throw new TypeError("Provider evaluation requires explicitly supplied shared budget admission.");
   }
   const oracle = dependencies.oracle === undefined ? undefined : parseEvaluationOracle(dependencies.oracle);
-  if (oracle?.assertions.some(assertion => assertion.kind === "workflow_trace_exact")) {
+  const requiresWorkflow = oracle?.assertions.some(assertion => assertion.kind === "workflow_trace_exact") ?? false;
+  if (workflow && (!requiresWorkflow || typeof dependencies.observeWorkflow !== "function")) {
+    throw new TypeError("A provider workflow requires an explicit workflow oracle and trusted observer.");
+  }
+  if (!workflow && (requiresWorkflow || dependencies.observeWorkflow !== undefined)) {
     throw new TypeError("A fixed-evidence provider run cannot establish workflow observations.");
   }
   const maxProviderRequests = dependencies.maxProviderRequests ?? 16;
@@ -121,7 +145,7 @@ export async function runProviderEvaluationCase(value: unknown, dependencies: Pr
   if (!selected || !profile.allowedDataClasses.includes("synthetic_demo")) {
     throw new TypeError("The evaluation profile is not approved for this synthetic context.");
   }
-  const messages = fixedEvidenceMessages(input);
+  const messages = evidenceMessages(input);
   const request = chatRequestSchema.parse({ profileId: profile.id, messages });
   const prices = loadModelPrices(environment);
   const pricing = modelPrice(profile.id, configuration, prices);
@@ -164,11 +188,14 @@ export async function runProviderEvaluationCase(value: unknown, dependencies: Pr
     requestDigestsSha256.push(createHash("sha256").update(body).digest("hex"));
     return upstream(target, { ...init, redirect: "error" });
   };
+  const inputDigestSha256 = digestEvaluationModelInput(input);
+  const workflowRunId = workflow ? randomUUID() : undefined;
   const common = {
-    runKind: "provider_fixed_evidence" as const,
+    runKind: workflow ? "provider_observed_workflow" as const : "provider_fixed_evidence" as const,
+    ...(workflowRunId ? { workflowRunId } : {}),
     caseId: evaluationCase.id, familyId: evaluationCase.familyId,
     datasetSplit: evaluationCase.datasetSplit, reviewStatus: evaluationCase.reviewStatus,
-    inputDigestSha256: digestEvaluationModelInput(input),
+    inputDigestSha256,
     configurationDigestSha256: createHash("sha256").update(JSON.stringify(configuration)).digest("hex"),
     requestDigestsSha256,
     pricing: { ...pricing },
@@ -190,10 +217,32 @@ export async function runProviderEvaluationCase(value: unknown, dependencies: Pr
       text: reply.message.content, citations: responseCitations(reply.message.content),
       proposedCalls: (reply.message.toolCalls ?? []).map(call => ({ tool: call.name, arguments: call.arguments })),
     };
-    return { ...common,
-      measurements: meter.snapshot({ latencyMs: performance.now() - started, providerRequestCount: requestDigestsSha256.length }),
-      transport: { status: "completed", response },
-      assessment: oracle ? { ...assessEvaluationOracle(oracle, response, input), scope: "synthetic_fixed_evidence_only" } : { status: "not_assessed", reason: "no_quality_oracle" },
+    // Provider latency excludes fixture observation; retain actual provider usage
+    // even if independent instrumentation fails and the case cannot be graded.
+    const measurements = meter.snapshot({ latencyMs: performance.now() - started, providerRequestCount: requestDigestsSha256.length });
+    let observation: EvaluationWorkflowObservation | undefined;
+    if (workflow && workflowRunId && dependencies.observeWorkflow) {
+      let observed: unknown;
+      try {
+        observed = await dependencies.observeWorkflow({ runId: workflowRunId,
+          caseId: evaluationCase.id, inputDigestSha256, response: structuredClone(response) });
+      } catch {
+        return { ...common, measurements, transport: { status: "completed", response },
+          assessment: { status: "not_run", reason: "workflow_observer_error" } };
+      }
+      try {
+        observation = parseEvaluationWorkflowObservation(observed);
+        if (observation.runId !== workflowRunId || observation.caseId !== evaluationCase.id
+          || observation.inputDigestSha256 !== inputDigestSha256) throw new TypeError("Unbound workflow observation.");
+      } catch {
+        return { ...common, measurements, transport: { status: "completed", response },
+          assessment: { status: "not_run", reason: "invalid_workflow_observation" } };
+      }
+    }
+    return { ...common, measurements, transport: { status: "completed", response },
+      assessment: oracle ? { ...assessEvaluationOracle(oracle, response, input, observation),
+        scope: workflow ? "synthetic_observed_workflow_only" : "synthetic_fixed_evidence_only" }
+        : { status: "not_assessed", reason: "no_quality_oracle" },
     };
   } catch (cause) {
     const known = cause instanceof ModelRouterError ? cause : undefined;

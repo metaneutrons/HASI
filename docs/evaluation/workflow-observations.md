@@ -65,7 +65,7 @@ are not an execution of the room/cancellation workflow or a live-provider result
 
 ## Synthetic application bridge
 
-The test-only `tests/support/evaluation-anny-fixture.ts` bridge uses the actual
+The test-only `scripts/evaluation/anny-fixture.ts` bridge uses the actual
 `createDemoRuntime`, API proposal/confirmation routes, Anny plugin, execution
 journal and HTTP mock. Each run owns a fresh isolated memory store, synthetic
 employee account, Anny consent and loopback listener. A separate synthetic host
@@ -130,3 +130,15 @@ previous five harness suites passed 51 tests before the last two counter-probes
 were added; affected type-aware lint passed after those additions. Root/web type
 checks passed during development. These are local synthetic results; final
 full-suite/CI and delivery are recorded separately in the implementation PR.
+
+## Provider response integration
+
+The provider runner can use an explicitly registered workflow oracle/observer
+with actual router usage, without accepting case/model-supplied observation code.
+The [operator workflow mode](provider-observations.md#explicit-observed-workflow-mode)
+constructs fresh isolated unknown-outcome variants. Its observer response copy
+contains the provider answer/citations/proposals, not synthetic measurements.
+Only independently obtained events can grade the trace. The runtime variant
+model input contains sanitized status through frozen evidence; there is no
+model tool executor or production action-context injection. This does not
+complete the remaining access/injection families or M6 human review.

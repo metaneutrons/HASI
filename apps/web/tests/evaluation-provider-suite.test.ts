@@ -155,6 +155,33 @@ describe("provider evaluation CLI boundary", () => {
     expect(result.stderr).toBe("");
   });
 
+  it("requires explicit workflow mode and plans only the registered runtime variants without side effects", () => {
+    const result = runEvaluationCli(["--profiles", selectedProfileId, "--workflows"]);
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      kind: "provider_observed_workflow_development_plan", mode: "plan_only", providerCalls: 0, budgetAccess: false,
+      caseIds: ["anny-03-runtime", "anny-06-runtime"], actualHttpAttemptCap: 8, plannedRuns: 2,
+    });
+    expect(result.stderr).toBe("");
+  });
+
+  it("narrows registered workflows without admitting a static case or knowledge case", () => {
+    const selected = runEvaluationCli(["--profiles", selectedProfileId, "--workflows", "--cases", "anny-06-runtime"]);
+    expect(selected.status).toBe(0);
+    expect(JSON.parse(selected.stdout)).toMatchObject({ caseIds: ["anny-06-runtime"], plannedRuns: 1 });
+    for (const args of [
+      ["--workflows", "--cases", "anny-03"],
+      ["--workflows", "--cases", "sit-01"],
+      ["--cases", "anny-03-runtime"],
+      ["--workflows", "--workflows"],
+    ]) {
+      const rejected = runEvaluationCli(["--profiles", selectedProfileId, ...args]);
+      expect(rejected.status).toBe(1);
+      expect(rejected.stdout).toBe("");
+    }
+  });
+
   it("narrows an approved case selection in manifest order without increasing the default attempt cap", () => {
     const result = runEvaluationCli(["--profiles", selectedProfileId, "--cases", "sit-vpn-specificity-02,sit-vpn-grounding-01"]);
     expect(result.status).toBe(0);

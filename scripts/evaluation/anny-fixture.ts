@@ -340,8 +340,7 @@ export async function createEvaluationAnnyFixture(action: EvaluationAnnyAction):
     origin = `http://127.0.0.1:${String(address.port)}`;
     runtime = createDemoRuntime({ origin, store, secret: randomBytes(32).toString('base64url'), fetch: sourceFetch, catalog: hshDemoCatalog });
   } catch (error) {
-    await runtime?.close();
-    await closeServer(server);
+    try { await runtime?.close(); } finally { await closeServer(server); }
     throw error;
   }
 
@@ -400,9 +399,8 @@ export async function createEvaluationAnnyFixture(action: EvaluationAnnyAction):
     await authorizeAnny('owner');
     await authorizeAnny('foreign');
   } catch (error) {
-    await runtime.close();
-    await closeServer(server);
     closed = true;
+    try { await runtime.close(); } finally { await closeServer(server); }
     throw error;
   }
 
@@ -642,8 +640,7 @@ export async function createEvaluationAnnyFixture(action: EvaluationAnnyAction):
     async close() {
       if (closed) return;
       closed = true;
-      await runtime.close();
-      await closeServer(server);
+      try { await runtime.close(); } finally { await closeServer(server); }
     },
   };
 }
