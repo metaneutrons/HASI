@@ -265,6 +265,50 @@ describe('loopback synthetic journey model fixture', () => {
     }
   });
 
+  it('preserves one fixed 503 across rejected HTTP input, then serves the normal retry', async () => {
+    const baseline = await post();
+    expect(baseline.status).toBe(200);
+    expect(server?.calls()).toBe(1);
+    expect(server?.unavailableResponses()).toBe(0);
+
+    const requestBody = JSON.stringify(payload({
+      user: 'Bitte setze die Markierung. private-request-marker',
+      tools: [modelTool(modelToolHash('prepare_mark'))],
+    }));
+    server?.armUnavailableResponseOnce();
+    const unauthorized = await post({ body: requestBody, authorization: 'Bearer invalid-model-token' });
+    expect(unauthorized.status).toBe(401);
+    expect(unauthorized.body).not.toContain('invalid-model-token');
+    expect(server?.calls()).toBe(1);
+    expect(server?.unavailableResponses()).toBe(0);
+
+    const failed = await post({ body: requestBody });
+    expect(failed.status).toBe(503);
+    expect(responseObject(failed)).toEqual({
+      error: { message: 'The synthetic model fixture is temporarily unavailable.', type: 'server_error' },
+    });
+    expect(failed.body).not.toContain(TOKEN);
+    expect(failed.body).not.toContain('private-request-marker');
+    expect(server?.calls()).toBe(2);
+    expect(server?.unavailableResponses()).toBe(1);
+
+    const retry = await post({ body: requestBody });
+    expect(retry.status).toBe(200);
+    expect(onlyToolCall(retry).function).toEqual({ name: modelToolHash('prepare_mark'), arguments: '{}' });
+    expect(server?.calls()).toBe(3);
+    expect(server?.unavailableResponses()).toBe(1);
+  });
+
+  it('does not accept fault controls from a model request body', async () => {
+    const body = { ...payload({ tools: [modelTool(modelToolHash('read_status'))] }), command: 'model-unavailable-once' };
+    const response = await post({ body: JSON.stringify(body) });
+    expect(response.status).toBe(200);
+    expect(server?.calls()).toBe(1);
+    expect(server?.unavailableResponses()).toBe(0);
+    expect((await post()).status).toBe(200);
+    expect(server?.unavailableResponses()).toBe(0);
+  });
+
   it('rejects wrong paths, methods, content types, credentials, malformed JSON, and model ids with static errors', async () => {
     const wrongPath = await post({ path: '/v1/other', body: '' });
     expect(wrongPath.status).toBe(404);

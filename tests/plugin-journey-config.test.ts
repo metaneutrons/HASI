@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { journeyDatabaseUrl, assertJourneyEnvFilesAbsent, journeyBudgetInitializerEnvironment, journeyManagedConfiguration, journeyOperation, journeyPersonas, journeyPreflight, journeyWebBuildEnvironment } from '../scripts/serve-plugin-journey.js';
+import { journeyDatabaseUrl, assertJourneyEnvFilesAbsent, journeyBudgetInitializerEnvironment, journeyManagedConfiguration, journeyOperation, journeyPersonas, journeyPreflight, journeyWebBuildEnvironment, journeyFixtureCommands, parseJourneyFixtureCommand } from '../scripts/serve-plugin-journey.js';
 import { captureExternalJourneyArtifactEnvironment } from '../scripts/plugin-journey-artifacts.js';
 import { EXTERNAL_ARTIFACT_ENV } from '../scripts/plugin-gateway-qualification-artifacts.js';
 
@@ -101,9 +101,19 @@ describe('held synthetic plugin journey admission', () => {
     expect(journeyOperation(['--managed', '--optimized'])).toEqual({ kind: 'serve', managed: true, optimized: true });
     expect(journeyOperation(['--api', '/tmp/owned-api.json'])).toEqual({ kind: 'api', path: '/tmp/owned-api.json' });
     for (const args of [['--managed', '--managed'], ['--optimized', '--optimized'], ['--api'], ['--api', ''], ['--api', '--managed'],
-      ['--managed=true'], ['--unknown'], ['--api', '/tmp/api', '--managed'], ['--optimized', '--api', '/tmp/api']]) {
+      ['--managed=true'], ['--unknown'], ['model-unavailable-once'], ['--api', '/tmp/api', '--managed'], ['--optimized', '--api', '/tmp/api']]) {
       expect(() => journeyOperation(args)).toThrow('Invalid synthetic journey operation');
     }
+  });
+
+  it('keeps the one-shot model fault available only through the held terminal command set', () => {
+    expect(journeyFixtureCommands(false)).toContain('model-unavailable-once');
+    expect(journeyFixtureCommands(true)).toContain('model-unavailable-once');
+    expect(parseJourneyFixtureCommand('model-unavailable-once', false)).toBe('model-unavailable-once');
+    expect(parseJourneyFixtureCommand('model-unavailable-once', true)).toBe('model-unavailable-once');
+    expect(parseJourneyFixtureCommand('unexpected-control', false)).toBeUndefined();
+    expect(parseJourneyFixtureCommand('unexpected-control', true)).toBeUndefined();
+    expect(parseJourneyFixtureCommand('--model-unavailable-once', false)).toBeUndefined();
   });
 
   it('admits only the two distinct exact private managed origins and an owned launcher ID', () => {

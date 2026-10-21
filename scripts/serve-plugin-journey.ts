@@ -225,6 +225,22 @@ const historyAuthorityAvailabilitySchema = z.enum(['unavailable', 'available']);
 type HistoryAuthorityCommand = z.infer<typeof historyAuthorityCommandSchema>;
 type HistoryAuthorityAvailability = z.infer<typeof historyAuthorityAvailabilitySchema>;
 
+const COMMON_FIXTURE_COMMANDS = ['expire-anny', 'expire-reference', 'revoke-reference', 'unavailable-history-authority',
+  'available-history-authority', 'model-unavailable-once', 'stats', 'quit'] as const;
+const MANAGED_FIXTURE_COMMANDS = COMMON_FIXTURE_COMMANDS;
+const DIRECT_FIXTURE_COMMANDS = [...COMMON_FIXTURE_COMMANDS, 'reference-lose-ack', 'reference-source-unavailable',
+  'reference-source-available', 'reference-drop-reply', 'restart-reference', 'reference-v2', 'reference-v1'] as const;
+type JourneyFixtureCommand = typeof DIRECT_FIXTURE_COMMANDS[number];
+
+/** Terminal-only controls accepted by the held local qualification fixture. */
+export function journeyFixtureCommands(managedMode: boolean): readonly JourneyFixtureCommand[] {
+  return managedMode ? MANAGED_FIXTURE_COMMANDS : DIRECT_FIXTURE_COMMANDS;
+}
+
+export function parseJourneyFixtureCommand(line: string, managedMode: boolean): JourneyFixtureCommand | undefined {
+  return journeyFixtureCommands(managedMode).find(command => command === line);
+}
+
 /** Return the fixture-only response for the one protected history route during a controlled outage. */
 export function journeyHistoryAuthorityFaultResponse(
   method: string,
@@ -754,9 +770,7 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
     await ready(`${WEB_ORIGIN}/`, web);
     stage = 'protected-web-probe';
     await protectedWebProbe(idp.issuer);
-    const fixtureCommands = managedMode
-      ? ['expire-anny', 'expire-reference', 'revoke-reference', 'unavailable-history-authority', 'available-history-authority', 'stats', 'quit']
-      : ['expire-anny', 'expire-reference', 'revoke-reference', 'unavailable-history-authority', 'available-history-authority', 'reference-lose-ack', 'reference-source-unavailable', 'reference-source-available', 'reference-drop-reply', 'restart-reference', 'reference-v2', 'reference-v1', 'stats', 'quit'];
+    const fixtureCommands = journeyFixtureCommands(managedMode);
     const writeEvidence = async () => writeFile(join(directory, 'evidence.json'), JSON.stringify({ scope, webOrigin: WEB_ORIGIN, apiReplicas: 2, optimized: optimizedMode, hostPid: process.pid,
       apiPids: apis.map(process_ => process_.pid), ...(reference ? { referencePid: reference.pid, referenceVersion: activeRelease.evidence.pluginVersion } : {}),
       managed: managedRuntime ? await managedRuntime.snapshot() : undefined,
@@ -772,7 +786,7 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
       if (state.shutdownRequested) return;
       commands = commands.then(async () => {
         if (state.shutdownRequested) return;
-        if (!fixtureCommands.includes(line)) { console.info(JSON.stringify({ event: 'unknown-fixture-command' })); return; }
+        if (!parseJourneyFixtureCommand(line, managedMode)) { console.info(JSON.stringify({ event: 'unknown-fixture-command' })); return; }
         if (line === 'quit') { onSignal(); return; }
         if (line === 'expire-anny' || line === 'expire-reference') {
           await advanceAccountClocks(apis, line);
@@ -783,6 +797,9 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
         } else if (line === 'unavailable-history-authority' || line === 'available-history-authority') {
           await setJourneyHistoryAuthorityAvailability(apis, line);
           console.info(JSON.stringify({ event: 'history-authority-availability-applied', availability: line === 'unavailable-history-authority' ? 'unavailable' : 'available', route: '/api/history/authority', replicasAcknowledged: apis.length }));
+        } else if (line === 'model-unavailable-once') {
+          model?.armUnavailableResponseOnce();
+          console.info(JSON.stringify({ event: 'synthetic-model-unavailable-armed', unavailableResponses: model?.unavailableResponses() ?? 0 }));
         } else if (line === 'reference-lose-ack' || line === 'reference-source-unavailable' || line === 'reference-source-available') {
           const command = line === 'reference-lose-ack' ? 'lose-next-execution-ack' : line === 'reference-source-unavailable' ? 'source-unavailable' : 'source-available';
           if (!reference) throw new Error('The direct reference control is unavailable.');
@@ -804,7 +821,8 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
           console.info(JSON.stringify({ event: 'reference-process-restarted', referencePid: reference.pid, version: activeRelease.evidence.pluginVersion,
             stats: await sendReferenceCommand(reference, 'stats'), artifactDigest: activeRelease.evidence.artifactSha256 }));
         } else if (line === 'stats') {
-          console.info(JSON.stringify({ event: 'synthetic-model-stats', calls: model?.calls(), resultObservations: model?.resultObservations(), realProviderCalls: 0,
+          console.info(JSON.stringify({ event: 'synthetic-model-stats', calls: model?.calls() ?? 0,
+            unavailableResponses: model?.unavailableResponses() ?? 0, resultObservations: model?.resultObservations(), realProviderCalls: 0,
             reference: reference ? await sendReferenceCommand(reference, 'stats') : undefined,
             managed: managedRuntime ? await managedRuntime.snapshot() : undefined, proxy: referenceProxy?.stats() }));
           await writeEvidence();

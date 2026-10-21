@@ -18,6 +18,9 @@ const STATIC_TOOL_RESULT = 'Der Referenzdienst wurde über das freigegebene Werk
 const STATIC_READ_STATUS_RESULT = 'Die Referenzstatusdaten liegen im Modellkontext vor.';
 const STATIC_READ_STATUS_OMITTED = 'Die Referenzstatusdetails fehlen oder wurden ausgelassen.';
 const STATIC_CONNECT_ACCOUNT = 'Bitte verbinde zuerst dein Referenzkonto unter „Verbundene Dienste“.';
+const UNAVAILABLE_RESPONSE = {
+  error: { message: 'The synthetic model fixture is temporarily unavailable.', type: 'server_error' },
+};
 const USAGE = { prompt_tokens: 4_096, completion_tokens: 64, total_tokens: 4_160 };
 
 interface JourneyModelOptions {
@@ -252,6 +255,7 @@ async function handleRequest(
   response: ServerResponse,
   token: string,
   nextRequestId: () => number,
+  consumeUnavailableOnce: () => boolean,
   observations: ResultObservations,
 ): Promise<void> {
   if (request.url !== '/v1/chat/completions') {
@@ -317,6 +321,11 @@ async function handleRequest(
   }
 
   const requestId = nextRequestId();
+  if (consumeUnavailableOnce()) {
+    writeJson(response, 503, UNAVAILABLE_RESPONSE);
+    return;
+  }
+
   const toolResults = toolResponsesAfterUser(body.messages, userIndex);
   if (toolResults.length > 0) {
     let hasReferenceReadResult = false;
@@ -351,10 +360,14 @@ async function handleRequest(
 export async function startJourneyModel(options: JourneyModelOptions): Promise<{
   origin: string;
   calls: () => number;
+  armUnavailableResponseOnce: () => void;
+  unavailableResponses: () => number;
   resultObservations: () => Readonly<ResultObservations>;
   close: () => Promise<void>;
 }> {
   let requestCount = 0;
+  let unavailableResponseArmed = false;
+  let unavailableResponseCount = 0;
   const observations: ResultObservations = {
     referenceReadResults: 0,
     omittedResults: 0,
@@ -367,6 +380,11 @@ export async function startJourneyModel(options: JourneyModelOptions): Promise<{
     void handleRequest(request, response, options.token, () => {
       requestCount += 1;
       return requestCount;
+    }, () => {
+      if (!unavailableResponseArmed) return false;
+      unavailableResponseArmed = false;
+      unavailableResponseCount += 1;
+      return true;
     }, observations).catch(() => {
       if (!response.headersSent) reject(response, 400);
       else response.destroy();
@@ -409,6 +427,8 @@ export async function startJourneyModel(options: JourneyModelOptions): Promise<{
   return {
     origin: `https://127.0.0.1:${String(address.port)}`,
     calls: () => requestCount,
+    armUnavailableResponseOnce: () => { unavailableResponseArmed = true; },
+    unavailableResponses: () => unavailableResponseCount,
     resultObservations: () => ({ ...observations }),
     close: async () => {
       if (closed) return;
