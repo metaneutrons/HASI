@@ -219,6 +219,56 @@ export async function revokeReferenceProvider(apis: ChildProcess[]): Promise<voi
   })));
 }
 
+const HISTORY_AUTHORITY_COMMANDS = ['unavailable-history-authority', 'available-history-authority'] as const;
+const historyAuthorityCommandSchema = z.enum(HISTORY_AUTHORITY_COMMANDS);
+const historyAuthorityAvailabilitySchema = z.enum(['unavailable', 'available']);
+type HistoryAuthorityCommand = z.infer<typeof historyAuthorityCommandSchema>;
+type HistoryAuthorityAvailability = z.infer<typeof historyAuthorityAvailabilitySchema>;
+
+/** Return the fixture-only response for the one protected history route during a controlled outage. */
+export function journeyHistoryAuthorityFaultResponse(
+  method: string,
+  url: string,
+  availability: HistoryAuthorityAvailability,
+): { statusCode: 503; body: { error: 'Service unavailable.' } } | undefined {
+  const pathname = url.split('?', 1)[0];
+  if (method !== 'GET' || pathname !== '/api/history/authority' || availability !== 'unavailable') return undefined;
+  return { statusCode: 503, body: { error: 'Service unavailable.' } };
+}
+
+/** Change only the synthetic history-authority route and await both owned API replicas. */
+export async function setJourneyHistoryAuthorityAvailability(apis: ChildProcess[], command: HistoryAuthorityCommand): Promise<void> {
+  historyAuthorityCommandSchema.parse(command);
+  if (apis.length !== 2 || new Set(apis).size !== 2) throw new Error('History authority control requires both distinct synthetic API replicas.');
+  const availability: HistoryAuthorityAvailability = command === 'unavailable-history-authority' ? 'unavailable' : 'available';
+  const commandId = randomUUID();
+  const results = await Promise.allSettled(apis.map(api => new Promise<void>((done, reject) => {
+    const finish = (error?: Error) => {
+      clearTimeout(timer); api.off('message', onMessage); api.off('exit', onExit); api.off('error', onExit);
+      if (error) reject(error); else done();
+    };
+    const onExit = () => { finish(new Error('An API replica stopped before acknowledging history authority control.')); };
+    const onMessage = (message: unknown) => {
+      const ack = z.strictObject({
+        event: z.literal('history-authority-state-applied'),
+        commandId: z.uuid(),
+        command: z.literal(command),
+        route: z.literal('/api/history/authority'),
+        availability: historyAuthorityAvailabilitySchema,
+      }).safeParse(message);
+      if (!ack.success || ack.data.commandId !== commandId || ack.data.availability !== availability) return;
+      finish();
+    };
+    const timer = setTimeout(() => { finish(new Error('An API replica did not acknowledge history authority control.')); }, 5000);
+    api.on('message', onMessage); api.once('exit', onExit); api.once('error', onExit);
+    api.send({ command, commandId }, error => {
+      if (error) finish(new Error('History authority control could not be delivered to an API replica.'));
+    });
+  })));
+  const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+  if (failure) throw failure.reason instanceof Error ? failure.reason : new Error('History authority control failed.');
+}
+
 const referenceCommandSchema = z.enum(['lose-next-execution-ack', 'source-unavailable', 'source-available', 'stats']);
 const referenceStatsSchema = z.strictObject({
   marks: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
@@ -449,6 +499,11 @@ async function apiChild(path: string): Promise<void> {
       expectedManifestDigest: digest(config.referenceManifest), allowLoopback: !managed,
       sourcePolicy: { sourceId: 'synthetic-reference', revision: '1', dataClasses: ['synthetic_demo'] },
     } }] });
+  let historyAuthorityAvailability: HistoryAuthorityAvailability = 'available';
+  app.addHook('onRequest', async (request, reply) => {
+    const fault = journeyHistoryAuthorityFaultResponse(request.method, request.url, historyAuthorityAvailability);
+    if (fault) return reply.code(fault.statusCode).send(fault.body);
+  });
   app.get('/health', () => ({ status: 'ok' }));
   app.addHook('onClose', async () => { await store.close(); });
   process.on('message', (message: unknown) => {
@@ -462,6 +517,11 @@ async function apiChild(path: string): Promise<void> {
       if (!('commandId' in message) || !z.uuid().safeParse(message.commandId).success || !referenceAccountAdapter) return;
       referenceAccountAdapter.revokeAtProvider(adminSubject);
       process.send?.({ event: 'reference-provider-state-applied', commandId: message.commandId, installationId: REFERENCE_ID, persona: 'admin', status: 'revoked' });
+    } else if (historyAuthorityCommandSchema.safeParse(message.command).success) {
+      if (!('commandId' in message) || !z.uuid().safeParse(message.commandId).success) return;
+      const command = historyAuthorityCommandSchema.parse(message.command);
+      historyAuthorityAvailability = command === 'unavailable-history-authority' ? 'unavailable' : 'available';
+      process.send?.({ event: 'history-authority-state-applied', commandId: message.commandId, command, route: '/api/history/authority', availability: historyAuthorityAvailability });
     }
   });
   for (const signal of ['SIGTERM', 'SIGINT'] as const) process.once(signal, () => { void app.close().then(() => { if (process.connected) process.disconnect(); }); });
@@ -695,8 +755,8 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
     stage = 'protected-web-probe';
     await protectedWebProbe(idp.issuer);
     const fixtureCommands = managedMode
-      ? ['expire-anny', 'expire-reference', 'revoke-reference', 'stats', 'quit']
-      : ['expire-anny', 'expire-reference', 'revoke-reference', 'reference-lose-ack', 'reference-source-unavailable', 'reference-source-available', 'reference-drop-reply', 'restart-reference', 'reference-v2', 'reference-v1', 'stats', 'quit'];
+      ? ['expire-anny', 'expire-reference', 'revoke-reference', 'unavailable-history-authority', 'available-history-authority', 'stats', 'quit']
+      : ['expire-anny', 'expire-reference', 'revoke-reference', 'unavailable-history-authority', 'available-history-authority', 'reference-lose-ack', 'reference-source-unavailable', 'reference-source-available', 'reference-drop-reply', 'restart-reference', 'reference-v2', 'reference-v1', 'stats', 'quit'];
     const writeEvidence = async () => writeFile(join(directory, 'evidence.json'), JSON.stringify({ scope, webOrigin: WEB_ORIGIN, apiReplicas: 2, optimized: optimizedMode, hostPid: process.pid,
       apiPids: apis.map(process_ => process_.pid), ...(reference ? { referencePid: reference.pid, referenceVersion: activeRelease.evidence.pluginVersion } : {}),
       managed: managedRuntime ? await managedRuntime.snapshot() : undefined,
@@ -720,6 +780,9 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
         } else if (line === 'revoke-reference') {
           await revokeReferenceProvider(apis);
           console.info(JSON.stringify({ event: 'reference-provider-revocation-applied', installationId: REFERENCE_ID, persona: 'admin', replicasAcknowledged: apis.length }));
+        } else if (line === 'unavailable-history-authority' || line === 'available-history-authority') {
+          await setJourneyHistoryAuthorityAvailability(apis, line);
+          console.info(JSON.stringify({ event: 'history-authority-availability-applied', availability: line === 'unavailable-history-authority' ? 'unavailable' : 'available', route: '/api/history/authority', replicasAcknowledged: apis.length }));
         } else if (line === 'reference-lose-ack' || line === 'reference-source-unavailable' || line === 'reference-source-available') {
           const command = line === 'reference-lose-ack' ? 'lose-next-execution-ack' : line === 'reference-source-unavailable' ? 'source-unavailable' : 'source-available';
           if (!reference) throw new Error('The direct reference control is unavailable.');

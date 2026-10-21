@@ -446,6 +446,63 @@ describe("current native history access", () => {
 
 
 describe("workspace current authority fence", () => {
+  it.each(["throws", "empty", "invalid"] as const)(
+    "preserves a verified answer when the authority lookup temporarily %s",
+    async failureMode => {
+      const fixture = makeFixture();
+      const currentAuthority = "a".repeat(64);
+      const signer = createKnowledgeEvidence(SECRET, SCOPE);
+      const signedWorkspace = parseChatWorkspace({
+        ...fixture.workspace,
+        sessions: fixture.workspace.sessions.map(session => {
+          const history = session.snapshot.history.map(message => message.role === "assistant"
+            ? { ...message, evidence: signer.stamp(session.id, message, required(message.evidence).contextIds, currentAuthority) }
+            : message);
+          const messages = session.snapshot.messages.map(message => {
+            const wire = history.find(candidate => candidate.role === "assistant" && candidate.id === message.id);
+            return wire?.role === "assistant" ? { ...message, evidence: wire.evidence } : message;
+          });
+          return { ...session, snapshot: { ...session.snapshot, history, messages } };
+        }),
+      }, OWNER);
+      let lookupFails = false;
+      const authority = () => {
+        if (lookupFails) {
+          if (failureMode === "throws") return Promise.reject(new Error("temporary authority outage"));
+          if (failureMode === "empty") return Promise.resolve("");
+          return Promise.resolve("invalid-authority");
+        }
+        return Promise.resolve(currentAuthority);
+      };
+      const service = new ProtectedWorkspaceStore({
+        store: fixture.store,
+        ownerId: OWNER,
+        scope: SCOPE,
+        secret: SECRET,
+        resolve: fixture.resolve,
+        authority,
+      });
+      const saved = await service.save(null, signedWorkspace);
+      const entryBeforeFailure = JSON.stringify([...fixture.store.entries.entries()]);
+      lookupFails = true;
+
+      await expect(service.load()).rejects.toBeInstanceOf(ProtectedWorkspaceError);
+      expect(JSON.stringify([...fixture.store.entries.entries()])).toBe(entryBeforeFailure);
+      await expect(service.save(saved.revision, saved.workspace)).rejects.toBeInstanceOf(ProtectedWorkspaceError);
+      expect(JSON.stringify([...fixture.store.entries.entries()])).toBe(entryBeforeFailure);
+
+      lookupFails = false;
+      const restored = await service.load();
+      expect(restored.revision).toBe(saved.revision);
+      expect(required(restored.workspace.sessions[0]).snapshot.input).toBe("Noch eine Frage");
+      expect(required(restored.workspace.sessions[0]).snapshot.messages.map(message => message.text))
+        .toContain("Installiere den Drucker über die Systemsteuerung.");
+      expect(required(restored.workspace.sessions[0]).snapshot.history)
+        .toContainEqual(expect.objectContaining({ role: "assistant", content: "Installiere den Drucker über die Systemsteuerung." }));
+      expect(JSON.stringify([...fixture.store.entries.entries()])).toBe(entryBeforeFailure);
+    },
+  );
+
   it("retains a matching signed answer and persistently removes it after authority changes", async () => {
     const fixture = makeFixture();
     let authority = "a".repeat(64);
@@ -467,6 +524,12 @@ describe("workspace current authority fence", () => {
     expect(JSON.stringify(revoked.workspace)).not.toContain("Installiere den Drucker");
     expect(JSON.stringify([...fixture.store.entries.values()])).not.toContain("Installiere den Drucker");
     expect(required(revoked.workspace.sessions[0]).snapshot.input).toBe("Noch eine Frage");
+
+    authority = "a".repeat(64);
+    const afterAuthorityReturns = await service.load();
+    expect(JSON.stringify(afterAuthorityReturns.workspace)).not.toContain("Installiere den Drucker");
+    expect(JSON.stringify([...fixture.store.entries.values()])).not.toContain("Installiere den Drucker");
+    expect(required(afterAuthorityReturns.workspace.sessions[0]).snapshot.input).toBe("Noch eine Frage");
   });
   it("rejects an authority change during reconstruction before committing or returning mixed data", async () => {
     const fixture = makeFixture();

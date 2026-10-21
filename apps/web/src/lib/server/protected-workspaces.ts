@@ -440,11 +440,10 @@ export class ProtectedWorkspaceStore {
     let native: NativeHistoryAccess = { resources: [], bookings: [], proposals: new Map() };
     let authority: string | undefined;
     if (this.options.authority) {
-      try { authority = await this.options.authority(); } catch { authority = ""; }
-      if (!authority || !/^[a-f0-9]{64}$/u.test(authority)) {
-        authority = "";
-        native = { resources: [], bookings: [], proposals: new Map() };
-      }
+      try { authority = await this.options.authority(); } catch { throw new ProtectedWorkspaceError(); }
+      // An unavailable fence is not evidence that a source was revoked. Reject
+      // this read/write so a transient authority outage cannot persist redaction.
+      if (typeof authority !== "string" || !/^[a-f0-9]{64}$/u.test(authority)) throw new ProtectedWorkspaceError();
     }
     if (!this.options.authority || authority) {
       try { native = await this.options.resolveNative?.(workspace, [...new Set(references.map(reference => reference.proposalId))]) ?? native; } catch { /* Fail closed. */ }
