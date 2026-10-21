@@ -87,7 +87,7 @@ cached, run:
 ```sh
 env -i PATH="$PATH" HOME="$HOME" pnpm build:backend
 env -i PATH="$PATH" HOME="$HOME" HASI_APP_MODE=production pnpm --filter @hasi/web build
-env -i PATH="$PATH" HOME="$HOME" HASI_BUDGET_QUALIFY=1 \
+env -i PATH="$PATH" HOME="$HOME" HASI_BUDGET_QUALIFY=1 DOCKER_HOST="${DOCKER_HOST:-}" \
   pnpm exec tsx scripts/qualify-model-budget-topology.ts --state-loss-drill
 ```
 
@@ -96,3 +96,7 @@ rejects inherited database URLs and uses only its own container. A passing drill
 qualifies this synthetic missing-accounting behavior; it does not establish a
 real incident response, model/provider integration, production billing limit,
 or institutional acceptance.
+
+If the selected Docker context is unavailable under the chosen `HOME`, set
+`DOCKER_HOST` to the approved local Unix socket before these commands. The
+qualifier rejects remote Docker endpoints.
