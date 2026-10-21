@@ -1040,6 +1040,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       {messagesTruncated && <p className="chat-recovery-note">Die letzten 200 Nachrichten dieses Chats werden gespeichert und angezeigt.</p>}
       <div className="chat-scroller" ref={scroller}>
         {!offline && <PersonalConnectionNotice />}
+        {messages.length > 0 && <h1 className="sr-only">Unterhaltung</h1>}
         {messages.length === 0 ? (
           <div className="chat-welcome">
             <span className="chat-orb" aria-hidden="true"><HasiIcon size={36} /></span>
@@ -1084,7 +1085,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
                       availabilityChecked: message.rooms.every(room => room.checked),
                     }}
                   />}
-                  {(knowledgeCitations.sourceCards.get(message.id)?.length ?? 0) > 0 && <details className="chat-source-results"><summary>Suchtreffer <span>{knowledgeCitations.sourceCards.get(message.id)?.length}</span></summary><div className="chat-source-list" aria-label="Suchtreffer">{knowledgeCitations.sourceCards.get(message.id)?.map(source => <Link className="chat-source-card" href={knowledgeCitationHref(source, { sessionId, messageId: message.id }) ?? source.href} onClick={event => { if (!event.defaultPrevented && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && event.button === 0) rememberSourceOrigin(message.id); }} aria-label={`Quelle ${String(source.number)}: ${source.title} · ${source.sourceLabel} · Fassung ${String(source.revision)}`} key={source.citationId}><span className="chat-source-number" aria-hidden="true">{source.number}</span><span><small>{source.sourceLabel} · Fassung {source.revision}</small><strong>{source.title}</strong></span><ArrowRight size={16} aria-hidden="true" /></Link>)}</div></details>}
+                  {(knowledgeCitations.sourceCards.get(message.id)?.length ?? 0) > 0 && <details className="chat-source-results"><summary>Suchtreffer <span>{knowledgeCitations.sourceCards.get(message.id)?.length}</span></summary><div className="chat-source-list" aria-label="Suchtreffer">{knowledgeCitations.sourceCards.get(message.id)?.map(source => <Link className="chat-source-card" href={knowledgeCitationHref(source, { sessionId, messageId: message.id }) ?? source.href} onClick={event => { if (!event.defaultPrevented && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && event.button === 0) rememberSourceOrigin(message.id); }} key={source.citationId}><span className="chat-source-number">{source.number}</span><span><small>{source.sourceLabel} · Fassung {source.revision}</small><strong>{source.title}</strong></span><ArrowRight size={16} aria-hidden="true" /></Link>)}</div></details>}
                   {pluginProposal && pluginProposalView && <div className="chat-tool-card chat-proposal" role="group" tabIndex={-1} aria-label={pluginProposal.status === "pending" ? "Pluginaktionsvorschlag" : proposalPresentation(pluginProposal).label} ref={node => { if (node) proposalCards.current.set(pluginProposal.id, node); else proposalCards.current.delete(pluginProposal.id); }}>
                     <span className="chat-proposal-label">{proposalPresentation(pluginProposal).label}</span>
                     <h2>{pluginProposalView.actionTitle}</h2>

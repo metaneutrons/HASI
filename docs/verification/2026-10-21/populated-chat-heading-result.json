@@ -1,0 +1,686 @@
+{
+  "revision": "71f4dca07e06bed28d7995c4db61f5912264b6ff",
+  "checks": [
+    {
+      "at": "2026-10-21T04:52:17.115Z",
+      "label": "login-large-390-dark",
+      "h1": [
+        "Was stehtheute an?"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 390,
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 35,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:24.162Z",
+      "label": "login-large-320-light",
+      "h1": [
+        "Was stehtheute an?"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 320,
+      "width": 320,
+      "axe": {
+        "incomplete": [],
+        "passes": 35,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:24.270Z",
+      "label": "login-large-375-light",
+      "h1": [
+        "Was stehtheute an?"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 375,
+      "width": 375,
+      "axe": {
+        "incomplete": [],
+        "passes": 35,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:24.413Z",
+      "label": "login-large-390-light",
+      "h1": [
+        "Was stehtheute an?"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 390,
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 35,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:24.576Z",
+      "label": "login-large-768-light",
+      "h1": [
+        "Was stehtheute an?"
+      ],
+      "height": 1024,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 768,
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "nodes": 15
+          }
+        ],
+        "passes": 35,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:24.702Z",
+      "label": "login-large-1280-light",
+      "h1": [
+        "Was stehtheute an?"
+      ],
+      "height": 720,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 1280,
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "nodes": 15
+          }
+        ],
+        "passes": 35,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:25.409Z",
+      "label": "login-large-320-dark",
+      "h1": [
+        "Was stehtheute an?"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 320,
+      "width": 320,
+      "axe": {
+        "incomplete": [],
+        "passes": 35,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:25.584Z",
+      "label": "login-large-375-dark",
+      "h1": [
+        "Was stehtheute an?"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 375,
+      "width": 375,
+      "axe": {
+        "incomplete": [],
+        "passes": 35,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:25.740Z",
+      "label": "login-large-390-dark",
+      "h1": [
+        "Was stehtheute an?"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 390,
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 35,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:25.946Z",
+      "label": "login-large-768-dark",
+      "h1": [
+        "Was stehtheute an?"
+      ],
+      "height": 1024,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 768,
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "nodes": 15
+          }
+        ],
+        "passes": 35,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:26.116Z",
+      "label": "login-large-1280-dark",
+      "h1": [
+        "Was stehtheute an?"
+      ],
+      "height": 720,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 1280,
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "nodes": 15
+          }
+        ],
+        "passes": 35,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:50.637Z",
+      "label": "empty-chat-normal-390-dark",
+      "h1": [
+        "Was kann ich f\u00fcr dich tun?"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 390,
+      "width": 390,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          }
+        ],
+        "passes": 39,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:58.608Z",
+      "label": "populated-normal-320-light",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 320,
+      "width": 320,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 3
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 3
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:58.841Z",
+      "label": "populated-normal-375-light",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 375,
+      "width": 375,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 3
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 3
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:59.068Z",
+      "label": "populated-normal-390-light",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 390,
+      "width": 390,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 3
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 3
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:59.347Z",
+      "label": "populated-normal-768-light",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 1024,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 768,
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 4
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 33
+          }
+        ],
+        "passes": 41,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:52:59.578Z",
+      "label": "populated-normal-1280-light",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 720,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 1280,
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 3
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 32
+          }
+        ],
+        "passes": 42,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:53:00.294Z",
+      "label": "populated-normal-320-dark",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 320,
+      "width": 320,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 3
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:53:00.448Z",
+      "label": "populated-normal-375-dark",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 375,
+      "width": 375,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 3
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:53:00.599Z",
+      "label": "populated-normal-390-dark",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 844,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 390,
+      "width": 390,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 3
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:53:00.762Z",
+      "label": "populated-normal-768-dark",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 1024,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 768,
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 4
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 30
+          }
+        ],
+        "passes": 41,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:53:00.949Z",
+      "label": "populated-normal-1280-dark",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 720,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 1280,
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 3
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 29
+          }
+        ],
+        "passes": 42,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:53:01.120Z",
+      "label": "populated-large-768-dark",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 1024,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 768,
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 4
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 29
+          }
+        ],
+        "passes": 42,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:53:01.304Z",
+      "label": "populated-large-1280-dark",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 720,
+      "openDialog": false,
+      "root": "32px",
+      "scrollWidth": 1280,
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 3
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 26
+          }
+        ],
+        "passes": 42,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:53:11.020Z",
+      "label": "new-empty-chat-normal-1280-dark",
+      "h1": [
+        "Was kann ich f\u00fcr dich tun?"
+      ],
+      "height": 720,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 1280,
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 2
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 27
+          }
+        ],
+        "passes": 41,
+        "violations": []
+      }
+    },
+    {
+      "at": "2026-10-21T04:53:27.174Z",
+      "label": "returned-populated-normal-1280-dark",
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 720,
+      "openDialog": false,
+      "root": "16px",
+      "scrollWidth": 1280,
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "nodes": 1
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 4
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 31
+          }
+        ],
+        "passes": 42,
+        "violations": []
+      }
+    }
+  ],
+  "browser": {
+    "platform": "MacIntel",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
+  },
+  "inactiveConversation": {
+    "activeH1": [
+      "Was kann ich f\u00fcr dich tun?"
+    ],
+    "hiddenSections": 1,
+    "totalH1": 2
+  },
+  "inputs": {
+    "apps/web/src/components/assistant-page.tsx": "bd1b332ae9dd5ba468d5222a68ebaf961f7bb70cb4fc0a7289ad2ba134ebff83",
+    "apps/web/src/app/globals.css": "6387039a220f588ebadb2851b190c37845f291e6dedf6c98d9f908aab9906ffc",
+    "scripts/serve-plugin-journey.ts": "208630ee3234c56b6326533297be95ec40e0a8d0c8f1d12655a034ff755778d5",
+    "pnpm-lock.yaml": "d17165ca9989d72401f3eaa9718d1ffa43bc1adb486113602760f30db13317ba"
+  },
+  "axe": {
+    "version": "4.14.0",
+    "sha256": "20c09fe157a8a34a30e241aaa1fcdade657734f08ab379ecfbeb7d45cc46e878"
+  },
+  "counterprobe": "Preceding actual optimized PR175 matrix records page-has-heading-one in four populated desktop/tablet scans; this slice does not suppress that rule.",
+  "fixture": {
+    "optimized": true,
+    "apiReplicas": 2,
+    "postgres": true,
+    "testIdp": true,
+    "managedContainers": false,
+    "referenceProcess": "separate workspace-derived fixture, not independent distribution proof",
+    "syntheticModelCalls": 0,
+    "realProviderCalls": 0
+  },
+  "cleanup": {
+    "normalShutdown": true,
+    "ownedProcessesStopped": true,
+    "callerDatabaseRetained": true,
+    "testIdentitySignedOut": true,
+    "fontReset16": true,
+    "viewportReset": true,
+    "ownedTabClosed": 92,
+    "isolatedHomeRemoved": true
+  },
+  "limits": [
+    "Reported reduced user-agent is not a full native engine/OS build identity.",
+    "Axe incomplete contrast and closed-popup references remain unqualified.",
+    "Default-font preference is not native page zoom or a software-keyboard test.",
+    "No model quality, physical-device/native assistive technology or fullM7 acceptance."
+  ]
+}
