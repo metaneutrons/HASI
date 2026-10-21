@@ -1,0 +1,2361 @@
+{
+  "sourceCommit": "d4bdc8c58a80eb905bb9b8e6ea9a1c152c0d2045",
+  "baseCommit": "d11882e7c6458f8cbb5c429eacc5be04ccb52bf5",
+  "fixture": "/tmp/hasi-plugin-journey-49tezZ/evidence.json",
+  "checks": [
+    {
+      "label": "current-default-1280-normal-control",
+      "at": "2026-10-21T08:07:15.159Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 720,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Du hast Fassung 3 angefordert. Angezeigt wird die aktuell verfügbare Fassung 4; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "16px",
+      "scrollWidth": 1280,
+      "theme": "dark",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=3",
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "article > dl > div:nth-child(1) > dt"
+              ],
+              [
+                "article > dl > div:nth-child(1) > dd"
+              ],
+              [
+                "article > dl > div:nth-child(2) > dt"
+              ],
+              [
+                "article > dl > div:nth-child(2) > dd"
+              ],
+              [
+                "div:nth-child(3) > dt"
+              ],
+              [
+                "div:nth-child(3) > dd"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__status"
+              ],
+              [
+                ".knowledge-body"
+              ],
+              [
+                ".knowledge-source-details > summary"
+              ]
+            ]
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      }
+    },
+    {
+      "label": "current-320-dark-large",
+      "at": "2026-10-21T08:07:30.380Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Du hast Fassung 3 angefordert. Angezeigt wird die aktuell verfügbare Fassung 4; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 320,
+      "theme": "dark",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=3",
+      "width": 320,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".mobile-nav > .nav-link[href$=\"bookings\"] > span"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "current-375-dark-large",
+      "at": "2026-10-21T08:07:30.518Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Du hast Fassung 3 angefordert. Angezeigt wird die aktuell verfügbare Fassung 4; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 375,
+      "theme": "dark",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=3",
+      "width": 375,
+      "axe": {
+        "incomplete": [],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "current-390-dark-large",
+      "at": "2026-10-21T08:07:30.661Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Du hast Fassung 3 angefordert. Angezeigt wird die aktuell verfügbare Fassung 4; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 390,
+      "theme": "dark",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=3",
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "current-768-dark-large",
+      "at": "2026-10-21T08:07:30.868Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Du hast Fassung 3 angefordert. Angezeigt wird die aktuell verfügbare Fassung 4; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 768,
+      "theme": "dark",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=3",
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "article > dl > div:nth-child(1) > dt"
+              ],
+              [
+                "article > dl > div:nth-child(1) > dd"
+              ],
+              [
+                "article > dl > div:nth-child(2) > dt"
+              ],
+              [
+                "article > dl > div:nth-child(2) > dd"
+              ],
+              [
+                "div:nth-child(3) > dt"
+              ],
+              [
+                "div:nth-child(3) > dd"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__status"
+              ],
+              [
+                ".knowledge-body"
+              ],
+              [
+                ".knowledge-source-details > summary"
+              ]
+            ]
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      }
+    },
+    {
+      "label": "current-1280-dark-large",
+      "at": "2026-10-21T08:07:31.013Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Du hast Fassung 3 angefordert. Angezeigt wird die aktuell verfügbare Fassung 4; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 1280,
+      "theme": "dark",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=3",
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "article > dl > div:nth-child(1) > dt"
+              ],
+              [
+                "article > dl > div:nth-child(1) > dd"
+              ],
+              [
+                "article > dl > div:nth-child(2) > dt"
+              ],
+              [
+                "article > dl > div:nth-child(2) > dd"
+              ],
+              [
+                "div:nth-child(3) > dt"
+              ],
+              [
+                "div:nth-child(3) > dd"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__status"
+              ],
+              [
+                ".knowledge-body"
+              ],
+              [
+                ".knowledge-source-details > summary"
+              ]
+            ]
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      }
+    },
+    {
+      "label": "old-320-dark-large",
+      "at": "2026-10-21T08:07:31.603Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/svc-catalog-6c79c1e68f04?fromRevision=3"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 320,
+      "theme": "dark",
+      "url": "/sources/svc-catalog-6c79c1e68f04?revision=3",
+      "width": 320,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "old-375-dark-large",
+      "at": "2026-10-21T08:07:31.737Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/svc-catalog-6c79c1e68f04?fromRevision=3"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 375,
+      "theme": "dark",
+      "url": "/sources/svc-catalog-6c79c1e68f04?revision=3",
+      "width": 375,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "old-390-dark-large",
+      "at": "2026-10-21T08:07:31.896Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/svc-catalog-6c79c1e68f04?fromRevision=3"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 390,
+      "theme": "dark",
+      "url": "/sources/svc-catalog-6c79c1e68f04?revision=3",
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "old-768-dark-large",
+      "at": "2026-10-21T08:07:32.089Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/svc-catalog-6c79c1e68f04?fromRevision=3"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 768,
+      "theme": "dark",
+      "url": "/sources/svc-catalog-6c79c1e68f04?revision=3",
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__original"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "old-1280-dark-large",
+      "at": "2026-10-21T08:07:32.226Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/svc-catalog-6c79c1e68f04?fromRevision=3"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 1280,
+      "theme": "dark",
+      "url": "/sources/svc-catalog-6c79c1e68f04?revision=3",
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__original"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-old-320-dark-large",
+      "at": "2026-10-21T08:07:32.804Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/int-013?fromRevision=1"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 320,
+      "theme": "dark",
+      "url": "/sources/int-013?revision=1",
+      "width": 320,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-old-375-dark-large",
+      "at": "2026-10-21T08:07:32.901Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/int-013?fromRevision=1"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 375,
+      "theme": "dark",
+      "url": "/sources/int-013?revision=1",
+      "width": 375,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-old-390-dark-large",
+      "at": "2026-10-21T08:07:33.085Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/int-013?fromRevision=1"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 390,
+      "theme": "dark",
+      "url": "/sources/int-013?revision=1",
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-old-768-dark-large",
+      "at": "2026-10-21T08:07:33.201Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/int-013?fromRevision=1"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 768,
+      "theme": "dark",
+      "url": "/sources/int-013?revision=1",
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__original"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-old-1280-dark-large",
+      "at": "2026-10-21T08:07:33.407Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/int-013?fromRevision=1"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 1280,
+      "theme": "dark",
+      "url": "/sources/int-013?revision=1",
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__original"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-current-320-dark-large",
+      "at": "2026-10-21T08:07:33.940Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 320,
+      "theme": "dark",
+      "url": "/sources/int-013?fromRevision=1",
+      "width": 320,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-current-375-dark-large",
+      "at": "2026-10-21T08:07:34.075Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 375,
+      "theme": "dark",
+      "url": "/sources/int-013?fromRevision=1",
+      "width": 375,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-current-390-dark-large",
+      "at": "2026-10-21T08:07:34.182Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 390,
+      "theme": "dark",
+      "url": "/sources/int-013?fromRevision=1",
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-current-768-dark-large",
+      "at": "2026-10-21T08:07:34.451Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 768,
+      "theme": "dark",
+      "url": "/sources/int-013?fromRevision=1",
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "h1"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-current-1280-dark-large",
+      "at": "2026-10-21T08:07:34.588Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 1280,
+      "theme": "dark",
+      "url": "/sources/int-013?fromRevision=1",
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "h1"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "current-320-light-large",
+      "at": "2026-10-21T08:07:45.747Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Du hast Fassung 3 angefordert. Angezeigt wird die aktuell verfügbare Fassung 4; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 320,
+      "theme": "light",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=3",
+      "width": 320,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".mobile-nav > .nav-link[href$=\"bookings\"] > span"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "current-375-light-large",
+      "at": "2026-10-21T08:07:45.887Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Du hast Fassung 3 angefordert. Angezeigt wird die aktuell verfügbare Fassung 4; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 375,
+      "theme": "light",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=3",
+      "width": 375,
+      "axe": {
+        "incomplete": [],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "current-390-light-large",
+      "at": "2026-10-21T08:07:45.984Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Du hast Fassung 3 angefordert. Angezeigt wird die aktuell verfügbare Fassung 4; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 390,
+      "theme": "light",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=3",
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "current-768-light-large",
+      "at": "2026-10-21T08:07:46.089Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Du hast Fassung 3 angefordert. Angezeigt wird die aktuell verfügbare Fassung 4; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 768,
+      "theme": "light",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=3",
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "article > dl > div:nth-child(1) > dt"
+              ],
+              [
+                "article > dl > div:nth-child(1) > dd"
+              ],
+              [
+                "article > dl > div:nth-child(2) > dt"
+              ],
+              [
+                "article > dl > div:nth-child(2) > dd"
+              ],
+              [
+                "div:nth-child(3) > dt"
+              ],
+              [
+                "div:nth-child(3) > dd"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__status"
+              ],
+              [
+                ".knowledge-body"
+              ],
+              [
+                ".knowledge-source-details > summary"
+              ]
+            ]
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      }
+    },
+    {
+      "label": "current-1280-light-large",
+      "at": "2026-10-21T08:07:46.205Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Du hast Fassung 3 angefordert. Angezeigt wird die aktuell verfügbare Fassung 4; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 1280,
+      "theme": "light",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=3",
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "article > dl > div:nth-child(1) > dt"
+              ],
+              [
+                "article > dl > div:nth-child(1) > dd"
+              ],
+              [
+                "article > dl > div:nth-child(2) > dt"
+              ],
+              [
+                "article > dl > div:nth-child(2) > dd"
+              ],
+              [
+                "div:nth-child(3) > dt"
+              ],
+              [
+                "div:nth-child(3) > dd"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__status"
+              ],
+              [
+                ".knowledge-body"
+              ],
+              [
+                ".knowledge-source-details > summary"
+              ]
+            ]
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      }
+    },
+    {
+      "label": "old-320-light-large",
+      "at": "2026-10-21T08:07:46.720Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/svc-catalog-6c79c1e68f04?fromRevision=3"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 320,
+      "theme": "light",
+      "url": "/sources/svc-catalog-6c79c1e68f04?revision=3",
+      "width": 320,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "old-375-light-large",
+      "at": "2026-10-21T08:07:46.886Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/svc-catalog-6c79c1e68f04?fromRevision=3"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 375,
+      "theme": "light",
+      "url": "/sources/svc-catalog-6c79c1e68f04?revision=3",
+      "width": 375,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "old-390-light-large",
+      "at": "2026-10-21T08:07:46.989Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/svc-catalog-6c79c1e68f04?fromRevision=3"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 390,
+      "theme": "light",
+      "url": "/sources/svc-catalog-6c79c1e68f04?revision=3",
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "old-768-light-large",
+      "at": "2026-10-21T08:07:47.135Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/svc-catalog-6c79c1e68f04?fromRevision=3"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 768,
+      "theme": "light",
+      "url": "/sources/svc-catalog-6c79c1e68f04?revision=3",
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__original"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "old-1280-light-large",
+      "at": "2026-10-21T08:07:47.245Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/svc-catalog-6c79c1e68f04?fromRevision=3"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 1280,
+      "theme": "light",
+      "url": "/sources/svc-catalog-6c79c1e68f04?revision=3",
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__original"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-old-320-light-large",
+      "at": "2026-10-21T08:07:47.806Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/int-013?fromRevision=1"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 320,
+      "theme": "light",
+      "url": "/sources/int-013?revision=1",
+      "width": 320,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-old-375-light-large",
+      "at": "2026-10-21T08:07:47.945Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/int-013?fromRevision=1"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 375,
+      "theme": "light",
+      "url": "/sources/int-013?revision=1",
+      "width": 375,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-old-390-light-large",
+      "at": "2026-10-21T08:07:48.099Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/int-013?fromRevision=1"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 390,
+      "theme": "light",
+      "url": "/sources/int-013?revision=1",
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-old-768-light-large",
+      "at": "2026-10-21T08:07:48.195Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/int-013?fromRevision=1"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 768,
+      "theme": "light",
+      "url": "/sources/int-013?revision=1",
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__original"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-old-1280-light-large",
+      "at": "2026-10-21T08:07:48.315Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [
+        "/sources/int-013?fromRevision=1"
+      ],
+      "rootFont": "32px",
+      "scrollWidth": 1280,
+      "theme": "light",
+      "url": "/sources/int-013?revision=1",
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "h1"
+              ],
+              [
+                ".knowledge-reader__original"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-current-320-light-large",
+      "at": "2026-10-21T08:07:48.909Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 320,
+      "theme": "light",
+      "url": "/sources/int-013?fromRevision=1",
+      "width": 320,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-current-375-light-large",
+      "at": "2026-10-21T08:07:49.012Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 375,
+      "theme": "light",
+      "url": "/sources/int-013?fromRevision=1",
+      "width": 375,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-current-390-light-large",
+      "at": "2026-10-21T08:07:49.149Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 390,
+      "theme": "light",
+      "url": "/sources/int-013?fromRevision=1",
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 34,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-current-768-light-large",
+      "at": "2026-10-21T08:07:49.315Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 768,
+      "theme": "light",
+      "url": "/sources/int-013?fromRevision=1",
+      "width": 768,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "h1"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "denied-current-1280-light-large",
+      "at": "2026-10-21T08:07:49.448Z",
+      "bodyVisible": false,
+      "h1": [
+        "Quelle nicht verfügbar"
+      ],
+      "height": 1024,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [],
+      "rootFont": "32px",
+      "scrollWidth": 1280,
+      "theme": "light",
+      "url": "/sources/int-013?fromRevision=1",
+      "width": 1280,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-session-menu"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                ".knowledge-back"
+              ],
+              [
+                "h1"
+              ]
+            ]
+          }
+        ],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "admin-authorized-int013-390-light-normal",
+      "at": "2026-10-21T08:08:00.892Z",
+      "bodyVisible": true,
+      "h1": [
+        "Freigabe einer Gremientagesordnung"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": true,
+      "leakedRestrictedTitle": true,
+      "notices": [],
+      "recoveryLinks": [],
+      "rootFont": "16px",
+      "scrollWidth": 390,
+      "theme": "light",
+      "url": "/sources/int-013",
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "source-cards-390-light-normal",
+      "at": "2026-10-21T08:08:13.775Z",
+      "bodyVisible": false,
+      "h1": [
+        "Unterhaltung"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [],
+      "recoveryLinks": [],
+      "rootFont": "16px",
+      "scrollWidth": 390,
+      "theme": "light",
+      "url": "/",
+      "width": 390,
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-prohibited-attr",
+            "targets": [
+              [
+                ".chat-source-list"
+              ]
+            ]
+          },
+          {
+            "id": "aria-valid-attr-value",
+            "targets": [
+              [
+                ".chat-history-toggle"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_5_-menu\"]"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "targets": [
+              [
+                ".chat-source-card:nth-child(1) > .chat-source-number"
+              ],
+              [
+                ".chat-source-card:nth-child(2) > .chat-source-number"
+              ],
+              [
+                ".chat-source-card:nth-child(3) > .chat-source-number"
+              ]
+            ]
+          }
+        ],
+        "passes": 41,
+        "violations": []
+      }
+    },
+    {
+      "label": "explicit-recovery-390-light-normal",
+      "at": "2026-10-21T08:08:15.107Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Du hast Fassung 3 angefordert. Angezeigt wird die aktuell verfügbare Fassung 4; sie kann vom damaligen Text abweichen. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "16px",
+      "scrollWidth": 390,
+      "theme": "light",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=3&chat=209fd5ff-d028-4750-9f38-ee231027c1f0&message=2055bebd-5094-48b0-8da8-655a40e98f87",
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 37,
+        "violations": []
+      }
+    },
+    {
+      "label": "same-revision-390-light-normal",
+      "at": "2026-10-21T08:08:33.771Z",
+      "bodyVisible": true,
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "height": 844,
+      "leakedRestrictedBody": false,
+      "leakedRestrictedTitle": false,
+      "notices": [
+        "Die angeforderte Fassung 4 wurde erneut geprüft und ist als aktuelle Fassung verfügbar. Die Quellenangabe in der Chatnachricht bleibt unverändert."
+      ],
+      "recoveryLinks": [],
+      "rootFont": "16px",
+      "scrollWidth": 390,
+      "theme": "light",
+      "url": "/sources/svc-catalog-6c79c1e68f04?fromRevision=4&chat=209fd5ff-d028-4750-9f38-ee231027c1f0&message=2055bebd-5094-48b0-8da8-655a40e98f87",
+      "width": 390,
+      "axe": {
+        "incomplete": [],
+        "passes": 37,
+        "violations": []
+      }
+    }
+  ],
+  "flow": [
+    {
+      "case": "direct-old-route-full-navigation-and-reader-reload",
+      "draftPreserved": false,
+      "focusPreserved": true,
+      "note": "Direct goto bypassed source-card origin navigation; repeat actual user link flow before attributing cause."
+    },
+    {
+      "case": "actual-source-card-reader-reload-return",
+      "draft": "R177: Dieser ungesendete Entwurf muss erhalten bleiben.",
+      "focus": "chat-209fd5ff-d028-4750-9f38-ee231027c1f0-message-2055bebd-5094-48b0-8da8-655a40e98f87",
+      "at": "2026-10-21T08:03:39.401Z"
+    },
+    {
+      "case": "explicit-old-to-current-to-origin-return",
+      "draft": "R177: Dieser ungesendete Entwurf muss erhalten bleiben.",
+      "sourceHref": "/sources/svc-catalog-6c79c1e68f04?revision=4&chat=209fd5ff-d028-4750-9f38-ee231027c1f0&message=2055bebd-5094-48b0-8da8-655a40e98f87",
+      "at": "2026-10-21T08:04:29.101Z"
+    },
+    {
+      "case": "invalid-query-rejected",
+      "query": "revision=4&revision=3",
+      "h1": [
+        "404"
+      ],
+      "bodyVisible": 0
+    },
+    {
+      "case": "invalid-query-rejected",
+      "query": "revision=4&fromRevision=3",
+      "h1": [
+        "404"
+      ],
+      "bodyVisible": 0
+    },
+    {
+      "case": "invalid-query-rejected",
+      "query": "fromRevision=9007199254740993",
+      "h1": [
+        "404"
+      ],
+      "bodyVisible": 0
+    },
+    {
+      "case": "student-authorized-public-source-invalid-origin",
+      "backHref": "/",
+      "bodyVisible": 1
+    },
+    {
+      "case": "v2-regular-link-old-revision-explicit-current-full-reload-return",
+      "draft": "R177: Dieser ungesendete Entwurf muss erhalten bleiben.",
+      "focus": "chat-209fd5ff-d028-4750-9f38-ee231027c1f0-message-2055bebd-5094-48b0-8da8-655a40e98f87"
+    },
+    {
+      "case": "v2-chat-citation-unchanged",
+      "href": "/sources/svc-catalog-6c79c1e68f04?revision=4&chat=209fd5ff-d028-4750-9f38-ee231027c1f0&message=2055bebd-5094-48b0-8da8-655a40e98f87"
+    }
+  ],
+  "captureNote": "Fresh final scans. Earlier collector reset detached its closure and produced an empty JSON; that file is withdrawn. These records are returned and checked before storage.",
+  "browser": {
+    "surface": "Codex in-app browser",
+    "reportedUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "reportedPlatform": "MacIntel",
+    "browserGetVersion": "unsupported by raw CDP bridge"
+  },
+  "axe": {
+    "version": "4.14.0",
+    "sha256": "20c09fe157a8a34a30e241aaa1fcdade657734f08ab379ecfbeb7d45cc46e878"
+  },
+  "counterprobe": {
+    "sourceCommit": "4b2134b3247471763651085b348f8392f253873f",
+    "fixture": "/tmp/hasi-plugin-journey-EMO6DY/evidence.json",
+    "labelMismatchTargets": [
+      ".chat-source-card:nth-child(1)",
+      ".chat-source-card:nth-child(2)",
+      ".chat-source-card:nth-child(3)"
+    ],
+    "diagnosticDomEditsExcluded": true
+  },
+  "limitations": [
+    "Viewport/default-font emulation; no native iPhone/Safari/keyboard/assistive technology qualification.",
+    "Standard font32 with actual root32px, not native browser page zoom.",
+    "The old-revision route is deliberately modified from a persisted current revision4 citation, not a historical persisted revision3 citation migration.",
+    "Axe incomplete results retained; no whole-product accessibility acceptance.",
+    "A direct hard navigation immediately after editing once lost the draft; actual source-card navigation plus reader reload preserved it. Hard-navigation timing remains a separate concern.",
+    "Stale corpus runtime YlRDY6 rejected; final backend prebuilt before optimized launch."
+  ]
+}
