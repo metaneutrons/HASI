@@ -15,6 +15,7 @@ import {
   ModelBudgetError,
   ModelBudgetLedger,
   PostgresJsonStore,
+  type JsonStore,
   type ModelBudgetSnapshot,
 } from '@hasi/state';
 import { ProductionAuthorityDirectory, createProductionRuntime, stableOidcSubject } from '../apps/api/src/production-runtime.js';
@@ -35,8 +36,11 @@ const expectedBudgetDenial = 'Das gemeinsame Tagesbudget für Modellanfragen ist
 const expectedBudgetUnavailable = 'Die gemeinsame Budgetprüfung ist vorübergehend nicht verfügbar. Es werden keine weiteren Modellanfragen gestartet. Vorhandene Buchungskarten bleiben nutzbar.';
 const raceSize = 4;
 const raceDeadlineMs = 15_000;
+export const BUDGET_RECOVERY_CLOCK_MARGIN_MS = 60_000;
 let stage = 'preflight';
 let qualificationReport: Record<string, unknown> | undefined;
+
+export type QualificationMode = 'topology' | 'state-loss-drill';
 
 interface ProbeResponse {
   status: number;
@@ -69,6 +73,60 @@ interface RoutedChat {
 }
 
 class QualificationError extends Error {}
+
+export function parseQualificationMode(args: readonly string[]): QualificationMode {
+  if (args.length === 0) return 'topology';
+  if (args.length === 1 && args[0] === '--state-loss-drill') return 'state-loss-drill';
+  throw new QualificationError('Use --state-loss-drill to add the optional budget-loss recovery drill.');
+}
+
+export function validateQualificationEnvironment(
+  mode: unknown,
+  environment: Readonly<Record<string, string | undefined>>,
+): void {
+  assert(mode === 'topology' || mode === 'state-loss-drill', 'qualification_mode_invalid');
+  assert(environment.HASI_BUDGET_QUALIFY === '1', 'explicit_opt_in_required');
+  assert(!environment.DATABASE_URL && !environment.TEST_DATABASE_URL, 'inherited_database_url_forbidden');
+}
+
+export function budgetRecoverySafeAt(
+  latestPossibleProviderDispatchAt: number,
+  windowMs: number = ASSISTANT_BUDGET_POLICY.windowMs,
+): number {
+  if (!Number.isSafeInteger(latestPossibleProviderDispatchAt) || latestPossibleProviderDispatchAt < 0
+    || !Number.isSafeInteger(windowMs) || windowMs <= 0) {
+    throw new QualificationError('budget_recovery_boundary_invalid');
+  }
+  const windowEnd = (Math.floor(latestPossibleProviderDispatchAt / windowMs) + 1) * windowMs;
+  const safeAt = windowEnd + BUDGET_RECOVERY_CLOCK_MARGIN_MS;
+  if (!Number.isSafeInteger(safeAt)) throw new QualificationError('budget_recovery_boundary_invalid');
+  return safeAt;
+}
+
+/** Qualification-only gate. The production initializer remains an operator-controlled command. */
+export function assertBudgetRecoveryBoundaryPassed(now: number, latestPossibleProviderDispatchAt: number): number {
+  const safeAt = budgetRecoverySafeAt(latestPossibleProviderDispatchAt);
+  if (!Number.isSafeInteger(now) || now < safeAt) throw new QualificationError('budget_recovery_window_not_safe');
+  return safeAt;
+}
+
+export function assertOwnedBudgetLedgerRemoval(input: {
+  readonly mode: QualificationMode;
+  readonly namespace: string;
+  readonly ledgerKey: string;
+  readonly containerName: string;
+  readonly expectedOwnerLabel: string;
+  readonly actualOwnerLabel: string | undefined;
+}): void {
+  const ownedContainerName = /^hasi-m2-budget-proof-pg-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+  const ownerLabel = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+  assert(input.mode === 'state-loss-drill', 'state_loss_drill_not_enabled');
+  assert(input.namespace === ASSISTANT_BUDGET_NAMESPACE, 'budget_loss_namespace_not_owned');
+  assert(/^model-budget:v1:[a-f0-9]{64}$/u.test(input.ledgerKey), 'budget_loss_ledger_key_invalid');
+  assert(ownedContainerName.test(input.containerName), 'budget_loss_container_name_invalid');
+  assert(ownerLabel.test(input.expectedOwnerLabel)
+    && input.actualOwnerLabel === input.expectedOwnerLabel, 'budget_loss_container_ownership_unverified');
+}
 
 function assert(value: unknown, message: string): asserts value {
   if (!value) throw new QualificationError(message);
@@ -644,6 +702,16 @@ function budgetDenial(response: ProbeResponse | undefined): boolean {
   }
 }
 
+function budgetUnavailable(response: ProbeResponse | undefined): boolean {
+  if (response?.status !== 503) return false;
+  try {
+    const payload: unknown = JSON.parse(response.text) as unknown;
+    return isRecord(payload) && payload.error === expectedBudgetUnavailable;
+  } catch {
+    return false;
+  }
+}
+
 async function closeServer(server: Server): Promise<void> {
   server.closeAllConnections();
   await new Promise<void>((done, reject) => server.close(error => {
@@ -652,9 +720,8 @@ async function closeServer(server: Server): Promise<void> {
   }));
 }
 
-async function main(): Promise<void> {
-  assert(process.env.HASI_BUDGET_QUALIFY === '1', 'Set HASI_BUDGET_QUALIFY=1 to run the disposable local budget qualification.');
-  assert(!process.env.DATABASE_URL && !process.env.TEST_DATABASE_URL, 'Do not run this qualifier with an inherited database URL.');
+async function main(mode: QualificationMode): Promise<void> {
+  validateQualificationEnvironment(mode, process.env);
 
   const dockerHost = localDockerEndpoint();
   const directory = await mkdtemp(join(tmpdir(), 'hasi-m2-budget-proof-'));
@@ -711,7 +778,8 @@ async function main(): Promise<void> {
       assert(selected !== undefined, 'A Next.js replica port was not assigned.');
       return selected;
     }, (path, targetPort) => {
-      if (path === '/api/chat' && (stage === 'budget-race' || stage === 'budget-restart-proof')) {
+      if (path === '/api/chat' && (stage === 'budget-race' || stage === 'budget-restart-proof'
+        || stage === 'budget-loss-drill' || stage === 'budget-loss-restart-proof')) {
         routedChats.push({ stage, targetPort });
       }
     });
@@ -773,7 +841,21 @@ async function main(): Promise<void> {
       poolConfig: { connectionString, max: 4 },
     });
     await budgetStore.initialize();
-    const ledger = new ModelBudgetLedger(budgetStore, budgetPolicy);
+    const ownedBudgetStore = budgetStore;
+    let budgetLedgerStoreKey: string | undefined;
+    const observeBudgetLedgerKey = (key: string) => {
+      budgetLedgerStoreKey ??= key;
+      assert(budgetLedgerStoreKey === key, 'The budget ledger attempted to access more than its one owned row.');
+    };
+    const ledgerStore: JsonStore = {
+      read: key => { observeBudgetLedgerKey(key); return ownedBudgetStore.read(key); },
+      compareAndSet: (key, revision, value, expiresAt) => {
+        observeBudgetLedgerKey(key);
+        return ownedBudgetStore.compareAndSet(key, revision, value, expiresAt);
+      },
+      delete: key => { observeBudgetLedgerKey(key); return ownedBudgetStore.delete(key); },
+    };
+    const ledger = new ModelBudgetLedger(ledgerStore, budgetPolicy);
 
     stage = 'missing-ledger-counterprobe';
     const missingNamespace = 'model-budget-missing-' + randomUUID();
@@ -1151,6 +1233,172 @@ async function main(): Promise<void> {
       && afterRestart.reservationsInWindow === exhausted.reservationsInWindow,
     'The restart proof changed shared ledger usage or created denied reservations.');
 
+    let stateLossDrill: Record<string, unknown> | undefined;
+    if (mode === 'state-loss-drill') {
+      stage = 'budget-loss-drill';
+      assert(budgetLedgerStoreKey !== undefined, 'The owned budget ledger key was not observed.');
+      const removedLedgerKey = budgetLedgerStoreKey;
+      const actualOwnershipLabel = containerName && containerOwnershipLabel
+        ? ownedContainerLabel(containerName, dockerEnvironment)
+        : undefined;
+      assertOwnedBudgetLedgerRemoval({
+        mode,
+        namespace: ASSISTANT_BUDGET_NAMESPACE,
+        ledgerKey: removedLedgerKey,
+        containerName: containerName ?? '',
+        expectedOwnerLabel: containerOwnershipLabel ?? '',
+        actualOwnerLabel: actualOwnershipLabel,
+      });
+      const spentLedgerRow = await ownedBudgetStore.read(removedLedgerKey);
+      assert(spentLedgerRow !== undefined, 'The spent fixture ledger row was already missing before the state-loss drill.');
+
+      // Delete exactly the owned ledger row after synthetic spending. The identity/session rows and table remain intact.
+      await ownedBudgetStore.delete(removedLedgerKey);
+      assert(await ownedBudgetStore.read(removedLedgerKey) === undefined,
+        'The owned fixture ledger row remained visible after deletion.');
+      const lossDetectedAt = Date.now();
+      const providerRequestsAtLoss = fakeProviderCount(fakeProvider, 'requests');
+      const unavailableLogsBeforeLoss = logObservers.reduce((total, observer) => total + observer.unavailable(), 0);
+
+      const postUnavailableChat = async (index: number): Promise<ProbeResponse> => {
+        const attempt = makeAttempt(index);
+        const message = await stampMessage(webOrigin, cert, cookie, attempt);
+        return probe(webOrigin + '/api/chat', cert, {
+          method: 'POST',
+          cookie,
+          origin: webOrigin,
+          body: { profileId: modelProfileId, conversationId: attempt.conversationId, messages: [message] },
+        });
+      };
+
+      const lossOutcomes = await Promise.all([postUnavailableChat(20), postUnavailableChat(21)]);
+      assert(lossOutcomes.every(budgetUnavailable),
+        'Both live Next.js processes must return budget_unavailable after spent accounting is removed.');
+      const lossRoutes = routedChats.filter(item => item.stage === 'budget-loss-drill');
+      assert(lossRoutes.length === 2 && new Set(lossRoutes.map(item => item.targetPort)).size === 2
+        && webPorts.every(port => lossRoutes.some(route => route.targetPort === port)),
+      'The missing-accounting probes did not traverse both live Next.js processes.');
+      assert(fakeProviderCount(fakeProvider, 'requests') === providerRequestsAtLoss,
+        'A request reached the fake provider after spent accounting was removed.');
+      assert(await ownedBudgetStore.read(removedLedgerKey) === undefined,
+        'The missing-accounting route created a fresh budget row.');
+      await waitUntil(
+        () => logObservers.reduce((total, observer) => total + observer.unavailable(), 0) >= unavailableLogsBeforeLoss + 2,
+        3_000,
+        'Both live Next.js processes did not report budget_unavailable after the state loss.',
+      );
+
+      stage = 'budget-loss-restart-proof';
+      const nextIndex = apiPorts.length;
+      const oldNext = children[nextIndex];
+      const firstNextPort = webPorts[0];
+      assert(oldNext && firstNextPort !== undefined, 'The first Next.js process was not available for the state-loss restart proof.');
+      const originalPid = oldNext.pid;
+      await stopChild(oldNext);
+      const observer = createLogObserver();
+      logObservers.push(observer);
+      const replacement = startChild([
+        join(root, 'apps/web/node_modules/next/dist/bin/next'),
+        'start',
+        join(root, 'apps/web'),
+        '--hostname',
+        '127.0.0.1',
+        '--port',
+        String(firstNextPort),
+      ], nextEnvironment, chunk => { observer.feed(chunk); });
+      children[nextIndex] = replacement;
+      await readyWeb('http://127.0.0.1:' + String(firstNextPort) + '/', cert, replacement);
+      assert(replacement.pid !== originalPid, 'The state-loss replacement Next.js process did not get a new process ID.');
+
+      const restartUnavailableLogsBefore = logObservers.reduce((total, item) => total + item.unavailable(), 0);
+      const lossRestartOutcomes = await Promise.all([postUnavailableChat(22), postUnavailableChat(23)]);
+      assert(lossRestartOutcomes.every(budgetUnavailable),
+        'Both Next.js processes must return budget_unavailable after process replacement with missing accounting.');
+      const lossRestartRoutes = routedChats.filter(item => item.stage === 'budget-loss-restart-proof');
+      assert(lossRestartRoutes.length === 2 && new Set(lossRestartRoutes.map(item => item.targetPort)).size === 2
+        && webPorts.every(port => lossRestartRoutes.some(route => route.targetPort === port)),
+      'The post-loss retry probes did not traverse both surviving and replaced Next.js processes.');
+      assert(fakeProviderCount(fakeProvider, 'requests') === providerRequestsAtLoss,
+        'A retry or restarted process reached the fake provider while accounting was missing.');
+      assert(await ownedBudgetStore.read(removedLedgerKey) === undefined,
+        'A retry or restarted process created a fresh budget row.');
+      await waitUntil(
+        () => logObservers.reduce((total, item) => total + item.unavailable(), 0) >= restartUnavailableLogsBefore + 2,
+        3_000,
+        'The post-loss retry and replacement process did not report budget_unavailable.',
+      );
+
+      // Use the real PostgreSQL row with an injected clock to qualify the UTC hold without waiting a full day.
+      // This is ledger-level evidence; it does not change the production router's wall clock.
+      const safeRecoveryAt = budgetRecoverySafeAt(lossDetectedAt);
+      let recoveryNow = lossDetectedAt;
+      const recoveryLedger = new ModelBudgetLedger(ownedBudgetStore, { ...budgetPolicy, now: () => recoveryNow });
+      const assertRecoveryDenied = async (id: string): Promise<void> => {
+        let deniedForMissingAccounting = false;
+        try {
+          await recoveryLedger.reserve({ id, inputTokens: 1, outputTokens: 1 });
+        } catch (error) {
+          deniedForMissingAccounting = isExpectedBudgetError(error);
+        }
+        assert(deniedForMissingAccounting, 'The missing PostgreSQL ledger did not fail closed at the simulated time.');
+        assert(await ownedBudgetStore.read(removedLedgerKey) === undefined,
+          'A denied ledger-level attempt created a budget row.');
+      };
+
+      await assertRecoveryDenied('state-loss-before-boundary');
+      const currentWindowEnd = Math.floor(lossDetectedAt / ASSISTANT_BUDGET_POLICY.windowMs)
+        * ASSISTANT_BUDGET_POLICY.windowMs + ASSISTANT_BUDGET_POLICY.windowMs;
+      recoveryNow = currentWindowEnd;
+      await assertRecoveryDenied('state-loss-after-boundary-before-initialize');
+      recoveryNow = safeRecoveryAt - 1;
+      let prematureInitializationBlocked = false;
+      try {
+        assertBudgetRecoveryBoundaryPassed(recoveryNow, lossDetectedAt);
+      } catch {
+        prematureInitializationBlocked = true;
+      }
+      assert(prematureInitializationBlocked, 'The recovery boundary guard allowed initialization before its safety margin.');
+      recoveryNow = safeRecoveryAt;
+      assert(assertBudgetRecoveryBoundaryPassed(recoveryNow, lossDetectedAt) === safeRecoveryAt,
+        'The recovery boundary guard returned an unexpected safe time.');
+      await assertRecoveryDenied('state-loss-at-safe-boundary-before-initialize');
+
+      // Mirrors the explicit operator initializer only after the runbook's safe UTC boundary.
+      await recoveryLedger.initialize();
+      const initializedAfterWindow = await recoveryLedger.snapshot();
+      assertBudgetBound(initializedAfterWindow);
+      assert(initializedAfterWindow.initialized && initializedAfterWindow.windowStart === currentWindowEnd
+        && initializedAfterWindow.microUsdUsed === 0,
+      'Explicit initialization after the safe boundary did not create an empty current-window ledger.');
+      const recoveredReservationId = randomUUID();
+      await recoveryLedger.reserve({ id: recoveredReservationId, inputTokens: 1, outputTokens: 1 });
+      await recoveryLedger.settle(recoveredReservationId, { inputTokens: 1, outputTokens: 1 });
+      const recoveredLedger = await recoveryLedger.snapshot();
+      assertBudgetBound(recoveredLedger);
+      assert(recoveredLedger.microUsdUsed > 0, 'The explicitly initialized PostgreSQL ledger did not admit a bounded synthetic reservation.');
+      stateLossDrill = {
+        scope: 'missing-accounting-after-synthetic-spending',
+        spentBeforeRemovalMicroUsd: afterRestart.microUsdUsed,
+        onlyOwnedBudgetLedgerRowRemoved: true,
+        productionChatUnavailableResponses: lossOutcomes.length + lossRestartOutcomes.length,
+        replacementProcessStarted: true,
+        replacementAndSurvivingReplicasDenied: true,
+        budgetRowCreatedByDeniedRequests: false,
+        providerRequestsBeforeRemoval: providerRequestsAtLoss,
+        providerRequestsAfterLossRetries: fakeProviderCount(fakeProvider, 'requests'),
+        latestPossibleProviderDispatchAt: new Date(lossDetectedAt).toISOString(),
+        nextUtcWindowEnd: new Date(currentWindowEnd).toISOString(),
+        safeRecoveryAt: new Date(safeRecoveryAt).toISOString(),
+        deniedBeforeWindowEnd: true,
+        deniedAfterWindowEndUntilExplicitInitialization: true,
+        initializedAfterSafeBoundary: true,
+        recoveredWindowStart: new Date(initializedAfterWindow.windowStart).toISOString(),
+        recoveredLedgerLevelMicroUsdUsed: recoveredLedger.microUsdUsed,
+        clockPhase: 'real-postgresql-ledger-with-injected-clock; not production-router wall clock',
+        realProviderCalls: 0,
+      };
+    }
+
     stage = 'qualification-output';
     const raceLatencies = resolvedRace.map(value => value.result?.elapsedMs ?? 0).sort((left, right) => left - right);
     const percentile = (values: readonly number[], p: number) => Math.round((values[Math.ceil(values.length * p) - 1] ?? 0) * 100) / 100;
@@ -1199,6 +1447,7 @@ async function main(): Promise<void> {
         providerRequestsAfterRestart: fakeProviderCount(fakeProvider, 'requests') - admitted,
         deniedReservations: afterRestart.reservationsInWindow - exhausted.reservationsInWindow,
       },
+      ...(stateLossDrill ? { stateLossDrill } : {}),
       businessActions: 0,
       realProviderCalls: 0,
       remaining: ['full-model-and-budget-evaluation', 'browser-workflows', 'institutional-data-approval'],
@@ -1232,20 +1481,26 @@ async function main(): Promise<void> {
   console.info(JSON.stringify(qualificationReport));
 }
 
-if (process.argv[2] === '--api') {
-  const configurationPath = process.argv[3];
-  assert(configurationPath, 'Missing synthetic API fixture configuration.');
-  await apiChild(configurationPath).catch(() => {
-    console.error('Synthetic production API startup failed.');
-    process.exitCode = 1;
-  });
-} else {
-  await main().catch((error: unknown) => {
+async function runCli(): Promise<void> {
+  try {
+    if (process.argv[2] === '--api') {
+      const configurationPath = process.argv[3];
+      assert(configurationPath, 'Missing synthetic API fixture configuration.');
+      await apiChild(configurationPath);
+      return;
+    }
+    await main(parseQualificationMode(process.argv.slice(2)));
+  } catch (error: unknown) {
     const frame = error instanceof Error
       ? error.stack?.split('\n').find(line => line.includes(script))?.match(/:(\d+):(\d+)\)?$/u)?.[1]
       : undefined;
     const reason = error instanceof QualificationError ? error.message : 'Check the isolated fixture prerequisites.';
-    console.error('Model budget topology qualification failed at ' + stage + (frame ? ' (script line ' + frame + ')' : '') + ': ' + reason);
+    console.error((process.argv[2] === '--api' ? 'Synthetic production API startup failed.' : 'Model budget topology qualification failed at ' + stage)
+      + (frame ? ' (script line ' + frame + ')' : '') + ': ' + reason);
     process.exitCode = 1;
-  });
+  }
+}
+
+if (process.argv[1] !== undefined && resolve(process.argv[1]) === script) {
+  await runCli();
 }

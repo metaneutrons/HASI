@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "implementedRevision": "de6cdf65e7a1cade2ddbaf67dbc759b9ffe9f5bc",
+  "inputs": {
+    "scripts/qualify-model-budget-topology.ts": "da3f18756a3aa7bf819e290d29d23e96cdc2d24e9b512148379d9e799c5c1b2a",
+    "tests/model-budget-topology-qualification.test.ts": "9330f052c5d078e5eb12320b52388529caf467756b0e1570aa5e4271a2ba54d3",
+    "docs/operations/demo-budget-loss.md": "8b67542647cb00d7c369229a6e45897151f24071a03d10e26ba4a46657c32587",
+    "apps/web/src/lib/server/model-budgets.ts": "990b9ba1a3d3c43786c7aaf7375fb2576ef0000a87093e5ba5e65e4153043c35",
+    "packages/state/src/model-budget.ts": "c7ba925018100a2926f23013f21eb96910d8744293f0824fd9096f29b3ca7932",
+    "pnpm-lock.yaml": "d17165ca9989d72401f3eaa9718d1ffa43bc1adb486113602760f30db13317ba"
+  },
+  "testedInstructionsSha256": "a8eb9e61133051e7bae0485a9af4c3145e6c6537e831c4f8a9a730e4dccfd276",
+  "preflightCounterprobes": [
+    {
+      "name": "missing-opt-in",
+      "exit": 1,
+      "expectedDenialObserved": true
+    },
+    {
+      "name": "inherited-database",
+      "exit": 1,
+      "expectedDenialObserved": true
+    },
+    {
+      "name": "unknown-mode",
+      "exit": 1,
+      "expectedDenialObserved": true
+    }
+  ],
+  "runs": [
+    {
+      "kind": "sanitized-owned-home",
+      "result": {
+        "event": "model_budget_topology_qualified",
+        "scope": "isolated-synthetic-openai-compatible",
+        "node": "v24.21.0",
+        "apiProcesses": 2,
+        "nextProcesses": 2,
+        "sharedPostgres": true,
+        "oidcSession": true,
+        "trustedTlsOnly": true,
+        "budgetPolicyDigest": "7b5dc2b8fad6cd27d420dc9de0b12e14fb28d915b872ef62a547b7a7fb78e291",
+        "budget": {
+          "windowMs": 86400000,
+          "inputTokenLimit": 1250000,
+          "outputTokenLimit": 250000,
+          "microUsdLimit": 1000000,
+          "inputTokensUsed": 12494,
+          "outputTokensUsed": 247501,
+          "prefillsMicroUsd": 990000,
+          "prefillIsUnknownUsageReservation": true,
+          "finalMicroUsdUsed": 1000000
+        },
+        "missingLedger": {
+          "failsClosed": true,
+          "status": 503,
+          "budgetUnavailableCodes": 1,
+          "providerRequestsBeforeInitialization": 0
+        },
+        "race": {
+          "requests": 4,
+          "admitted": 1,
+          "denied": 3,
+          "providerRequests": 1,
+          "providerResponses": 1,
+          "deniedBeforeProviderRelease": 3,
+          "budgetExhaustedCodes": 3,
+          "p50Ms": 68.2,
+          "p95Ms": 95.27
+        },
+        "restartProof": {
+          "processReplaced": true,
+          "replicasBudgetDenied": 2,
+          "budgetExhaustedCodes": 2,
+          "providerRequestsAfterRestart": 0,
+          "deniedReservations": 0
+        },
+        "stateLossDrill": {
+          "scope": "missing-accounting-after-synthetic-spending",
+          "spentBeforeRemovalMicroUsd": 1000000,
+          "onlyOwnedBudgetLedgerRowRemoved": true,
+          "productionChatUnavailableResponses": 4,
+          "replacementProcessStarted": true,
+          "replacementAndSurvivingReplicasDenied": true,
+          "budgetRowCreatedByDeniedRequests": false,
+          "providerRequestsBeforeRemoval": 1,
+          "providerRequestsAfterLossRetries": 1,
+          "latestPossibleProviderDispatchAt": "2026-10-21T04:37:34.464Z",
+          "nextUtcWindowEnd": "2026-10-22T00:00:00.000Z",
+          "safeRecoveryAt": "2026-10-22T00:01:00.000Z",
+          "deniedBeforeWindowEnd": true,
+          "deniedAfterWindowEndUntilExplicitInitialization": true,
+          "initializedAfterSafeBoundary": true,
+          "recoveredWindowStart": "2026-10-22T00:00:00.000Z",
+          "recoveredLedgerLevelMicroUsdUsed": 5,
+          "clockPhase": "real-postgresql-ledger-with-injected-clock; not production-router wall clock",
+          "realProviderCalls": 0
+        },
+        "businessActions": 0,
+        "realProviderCalls": 0,
+        "remaining": [
+          "full-model-and-budget-evaluation",
+          "browser-workflows",
+          "institutional-data-approval"
+        ],
+        "tlsCertificateDigest": "570aa578ade59fa262fdb0e255c1de1b63da69453d729bb07d13981d03a9f68e"
+      }
+    },
+    {
+      "kind": "verbatim-runbook-isolated-drill-instructions",
+      "result": {
+        "event": "model_budget_topology_qualified",
+        "scope": "isolated-synthetic-openai-compatible",
+        "node": "v24.21.0",
+        "apiProcesses": 2,
+        "nextProcesses": 2,
+        "sharedPostgres": true,
+        "oidcSession": true,
+        "trustedTlsOnly": true,
+        "budgetPolicyDigest": "7b5dc2b8fad6cd27d420dc9de0b12e14fb28d915b872ef62a547b7a7fb78e291",
+        "budget": {
+          "windowMs": 86400000,
+          "inputTokenLimit": 1250000,
+          "outputTokenLimit": 250000,
+          "microUsdLimit": 1000000,
+          "inputTokensUsed": 12494,
+          "outputTokensUsed": 247501,
+          "prefillsMicroUsd": 990000,
+          "prefillIsUnknownUsageReservation": true,
+          "finalMicroUsdUsed": 1000000
+        },
+        "missingLedger": {
+          "failsClosed": true,
+          "status": 503,
+          "budgetUnavailableCodes": 1,
+          "providerRequestsBeforeInitialization": 0
+        },
+        "race": {
+          "requests": 4,
+          "admitted": 1,
+          "denied": 3,
+          "providerRequests": 1,
+          "providerResponses": 1,
+          "deniedBeforeProviderRelease": 3,
+          "budgetExhaustedCodes": 3,
+          "p50Ms": 91.9,
+          "p95Ms": 127.39
+        },
+        "restartProof": {
+          "processReplaced": true,
+          "replicasBudgetDenied": 2,
+          "budgetExhaustedCodes": 2,
+          "providerRequestsAfterRestart": 0,
+          "deniedReservations": 0
+        },
+        "stateLossDrill": {
+          "scope": "missing-accounting-after-synthetic-spending",
+          "spentBeforeRemovalMicroUsd": 1000000,
+          "onlyOwnedBudgetLedgerRowRemoved": true,
+          "productionChatUnavailableResponses": 4,
+          "replacementProcessStarted": true,
+          "replacementAndSurvivingReplicasDenied": true,
+          "budgetRowCreatedByDeniedRequests": false,
+          "providerRequestsBeforeRemoval": 1,
+          "providerRequestsAfterLossRetries": 1,
+          "latestPossibleProviderDispatchAt": "2026-10-21T04:39:19.659Z",
+          "nextUtcWindowEnd": "2026-10-22T00:00:00.000Z",
+          "safeRecoveryAt": "2026-10-22T00:01:00.000Z",
+          "deniedBeforeWindowEnd": true,
+          "deniedAfterWindowEndUntilExplicitInitialization": true,
+          "initializedAfterSafeBoundary": true,
+          "recoveredWindowStart": "2026-10-22T00:00:00.000Z",
+          "recoveredLedgerLevelMicroUsdUsed": 5,
+          "clockPhase": "real-postgresql-ledger-with-injected-clock; not production-router wall clock",
+          "realProviderCalls": 0
+        },
+        "businessActions": 0,
+        "realProviderCalls": 0,
+        "remaining": [
+          "full-model-and-budget-evaluation",
+          "browser-workflows",
+          "institutional-data-approval"
+        ],
+        "tlsCertificateDigest": "a967e344c44123c67ad378cac2c32f9afebb29a067302ac83c2078e2dbec2751"
+      }
+    }
+  ],
+  "verification": {
+    "focusedTestsPassed": 4,
+    "rootTypecheck": true,
+    "affectedEslint": true,
+    "backendBuild": true,
+    "optimizedWebBuild": true,
+    "realProviderCalls": 0,
+    "businessActions": 0,
+    "reportEmittedOnlyAfterOwnedCleanup": true,
+    "callerDatabaseNotUsed": true
+  },
+  "limits": [
+    "Only accounting ledger removed after synthetic spending; identity/session rows retained in the disposable fixture.",
+    "UTC boundary checked through real PostgreSQL ledger with an injected clock, not the production router clock.",
+    "Initializer boundary helper is qualification-only; production operator must enforce the documented hold.",
+    "No production incident, backups, actual provider billing, browser/mobile qualification or fullM7 acceptance."
+  ]
+}
