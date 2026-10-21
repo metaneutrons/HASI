@@ -10,11 +10,12 @@ vi.mock("server-only", () => ({}));
 import exampleCases from "../../../docs/evaluation/example-cases.json";
 import { parseEvaluationDataset, type EvaluationCase } from "../src/lib/server/evaluation/case-schema";
 import { createProviderEvaluationPlan } from "../src/lib/server/evaluation/provider-suite";
+import { projectEvaluationModelInput } from "../src/lib/server/evaluation/input-projection";
 import { loadModelConfiguration } from "../src/lib/server/model-config";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const selectedProfileId = "groq-oss-120b";
-const fixedCaseIds = ["sit-01", "sit-02", "intra-01", "intra-02", "sit-03", "sit-04", "intra-03"];
+const fixedCaseIds = ["sit-01", "sit-02", "intra-01", "intra-02", "sit-03", "sit-04", "intra-03", "sit-vpn-grounding-01", "sit-vpn-specificity-02"];
 
 function runEvaluationCli(args: readonly string[], environmentOverrides: Partial<NodeJS.ProcessEnv> = {}) {
   const controlledPath = [dirname(process.execPath), process.env.PATH].filter(Boolean).join(delimiter);
@@ -84,7 +85,7 @@ describe("operator-owned provider evaluation plan", () => {
     })).toThrow(/no approved price/u);
   });
 
-  it("grades only the seven fixed-evidence cases and explicitly excludes other layers", () => {
+  it("grades only the nine fixed-evidence cases and explicitly excludes other layers", () => {
     const corpus = parseEvaluationDataset(exampleCases);
     const plan = createProviderEvaluationPlan(exampleCases, [selectedProfileId], {});
     const selectedIds = plan.cases.map((item) => item.evaluationCase.id);
@@ -111,6 +112,29 @@ describe("operator-owned provider evaluation plan", () => {
     expect(kinds).not.toContain("text_contains");
     expect(kinds).not.toContain("workflow_trace_exact");
   });
+
+  it("keeps the VPN pair source-bound while excluding grading labels and unapproved revisions", () => {
+    const corpus = structuredClone(parseEvaluationDataset(exampleCases));
+    const vpn = corpus.find(item => item.id === "sit-vpn-grounding-01");
+    if (!vpn?.modelEvidence?.[0]) throw new Error("Expected VPN evidence.");
+    vpn.expected.behavior = "VPN-GRADING-ONLY-CANARY";
+    vpn.authenticatedContext.entitlements.push("fixture:attacker.read");
+    vpn.modelEvidence.push({ ...vpn.modelEvidence[0], revision: 999, text: "UNAPPROVED-VPN-REVISION-CANARY" });
+    const plan = createProviderEvaluationPlan(corpus, [selectedProfileId], {});
+    const fixture = plan.cases.find(item => item.evaluationCase.id === vpn.id);
+    if (!fixture) throw new Error("Expected an authorized VPN case.");
+    const input = projectEvaluationModelInput(fixture.evaluationCase, fixture.serverAuthorizedEvidence);
+    expect(input.evidence.map(item => [item.sourceId, item.revision])).toEqual([
+      ["svc-catalog-6c79c1e68f04", 2],
+      ["svc-catalog-9b30ce8b226d", 2],
+      ["svc-catalog-94f501ccd7be", 2],
+    ]);
+    expect(JSON.stringify(input)).not.toMatch(/VPN-GRADING-ONLY|UNAPPROVED-VPN-REVISION/u);
+    const counter = plan.cases.find(item => item.evaluationCase.id === "sit-vpn-specificity-02");
+    if (!counter) throw new Error("Expected the specificity countercase.");
+    expect(projectEvaluationModelInput(counter.evaluationCase, counter.serverAuthorizedEvidence).evidence[0]?.text)
+      .toContain("Cisco AnyConnect in Version 4.10");
+  });
 });
 
 describe("provider evaluation CLI boundary", () => {
@@ -131,9 +155,38 @@ describe("provider evaluation CLI boundary", () => {
     expect(result.stderr).toBe("");
   });
 
+  it("narrows an approved case selection in manifest order without increasing the default attempt cap", () => {
+    const result = runEvaluationCli(["--profiles", selectedProfileId, "--cases", "sit-vpn-specificity-02,sit-vpn-grounding-01"]);
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      mode: "plan_only", providerCalls: 0, budgetAccess: false, actualHttpAttemptCap: 8, plannedRuns: 2,
+      caseIds: ["sit-vpn-grounding-01", "sit-vpn-specificity-02"],
+    });
+  });
+
+  it.each(["attacker-case", "anny-01"])("rejects case %s before creating a live report", async caseId => {
+    const directory = await mkdtemp(join(tmpdir(), "hasi-provider-suite-"));
+    try {
+      const output = join(directory, "new.ndjson");
+      const result = runEvaluationCli(["--profiles", selectedProfileId, "--cases", caseId, "--run", "--output", output], {
+        HASI_MODEL_EVALUATION: "1",
+        HASI_EVALUATION_BUILD_REVISION: "a".repeat(40),
+        DATABASE_URL: "postgresql://unused@127.0.0.1:1/unused",
+      });
+      expect(result.status).toBe(1);
+      await expect(readFile(output, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it.each([
     ["invalid options", (output: string) => ["--profiles", selectedProfileId, "--run", "--output", output, "--unknown"]],
     ["duplicate profiles", (output: string) => ["--profiles", `${selectedProfileId},${selectedProfileId}`, "--run", "--output", output]],
+    ["duplicate cases", (output: string) => ["--profiles", selectedProfileId, "--cases", "sit-01,sit-01", "--run", "--output", output]],
+    ["empty case", (output: string) => ["--profiles", selectedProfileId, "--cases", "sit-01,", "--run", "--output", output]],
+    ["unknown case", (output: string) => ["--profiles", selectedProfileId, "--cases", "attacker-case", "--run", "--output", output]],
+    ["non-fixed case", (output: string) => ["--profiles", selectedProfileId, "--cases", "anny-01", "--run", "--output", output]],
   ])("rejects %s before touching an existing report", async (_label, argsFor) => {
     const directory = await mkdtemp(join(tmpdir(), "hasi-provider-suite-"));
     try {

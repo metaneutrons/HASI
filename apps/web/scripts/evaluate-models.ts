@@ -7,8 +7,8 @@ import { runProviderEvaluationCase } from "../src/lib/server/evaluation/provider
 
 // Only this code-reviewed bundled synthetic development corpus may be sent.
 // Updating the corpus requires updating this explicit pin in the same review.
-const CORPUS_SHA256 = "6fdea232bd20d4fb79b25ba0a52012fedd7766e38fed0601f39049a1208cd366";
-const USAGE = "Usage: pnpm evaluate:models --profiles <id,id> [--max-calls 1..64] [--repetitions 1..3] [--run --output <new.ndjson>]";
+const CORPUS_SHA256 = "f4c543a711875b6e93cea32f26aaeffeec2cb90ea24207da161c590d6eaca8ef";
+const USAGE = "Usage: pnpm evaluate:models --profiles <id,id> [--cases id,id] [--max-calls 1..64] [--repetitions 1..3] [--run --output <new.ndjson>]";
 
 function options(argv: readonly string[]) {
   const values = new Map<string, string>();
@@ -16,12 +16,14 @@ function options(argv: readonly string[]) {
   for (let index = 0; index < argv.length; index++) {
     const name = argv[index];
     if (name === "--run" && !run) { run = true; continue; }
-    if (!name || !["--profiles", "--max-calls", "--repetitions", "--output"].includes(name) || values.has(name)) throw new TypeError(USAGE);
+    if (!name || !["--profiles", "--cases", "--max-calls", "--repetitions", "--output"].includes(name) || values.has(name)) throw new TypeError(USAGE);
     const value = argv[++index];
     if (!value || value.startsWith("--")) throw new TypeError(USAGE);
     values.set(name, value);
   }
   const profileIds = values.get("--profiles")?.split(",") ?? [];
+  const caseIds = values.get("--cases")?.split(",");
+  if (caseIds && (caseIds.some(id => !id) || new Set(caseIds).size !== caseIds.length)) throw new TypeError(USAGE);
   const maxCallsText = values.get("--max-calls") ?? "8";
   const repetitionsText = values.get("--repetitions") ?? "1";
   const maxCalls = Number(maxCallsText);
@@ -29,7 +31,7 @@ function options(argv: readonly string[]) {
   if (!/^[1-9]\d?$/u.test(maxCallsText) || maxCalls > 64 || !/^[1-3]$/u.test(repetitionsText)) throw new TypeError(USAGE);
   const output = values.get("--output");
   if (profileIds.length === 0 || (run && !output) || (!run && output)) throw new TypeError(USAGE);
-  return { run, profileIds, maxCalls, repetitions, output };
+  return { run, profileIds, caseIds, maxCalls, repetitions, output };
 }
 
 async function writeRecord(file: FileHandle, record: unknown) {
@@ -44,11 +46,18 @@ async function main() {
   const corpusDigestSha256 = createHash("sha256").update(bytes).digest("hex");
   if (corpusDigestSha256 !== CORPUS_SHA256) throw new TypeError("The bundled corpus differs from its reviewed operator pin.");
   const plan = createProviderEvaluationPlan(JSON.parse(bytes.toString("utf8")) as unknown, selected.profileIds, process.env);
-  const plannedRuns = plan.cases.length * plan.profiles.length * selected.repetitions;
+  // Selection narrows the reviewed server manifest; it never grants new evidence.
+  if (selected.caseIds?.some(id => !plan.cases.some(item => item.evaluationCase.id === id))) {
+    throw new TypeError("Selected cases must belong to the approved fixed-evidence manifest.");
+  }
+  const selectedCases = selected.caseIds
+    ? plan.cases.filter(item => selected.caseIds?.includes(item.evaluationCase.id))
+    : plan.cases;
+  const plannedRuns = selectedCases.length * plan.profiles.length * selected.repetitions;
   const metadata = {
     schemaVersion: 1, kind: "provider_fixed_evidence_development_plan", corpusDigestSha256,
     configurationDigestSha256: plan.configurationDigestSha256,
-    profiles: plan.profiles, caseIds: plan.cases.map(item => item.evaluationCase.id), excludedCases: plan.excludedCases,
+    profiles: plan.profiles, caseIds: selectedCases.map(item => item.evaluationCase.id), excludedCases: plan.excludedCases,
     repetitions: selected.repetitions, plannedRuns, actualHttpAttemptCap: selected.maxCalls,
     schedule: "case-major-rotating-profile-order", fallback: "disabled",
     limits: ["draft development corpus", "answer-only fixed evidence; no tool execution", "literal citation presence only; semantic quality requires human review", "not gold, blind comparison or M6 acceptance", "cache and resolved alias versions unknown"],
@@ -76,8 +85,8 @@ async function main() {
     // process-local fallback, per-evaluation budget or quota reset is permitted.
     const budgetAdmission = await getDurableModelBudgetAdmission();
     outer: for (let repetition = 0; repetition < selected.repetitions; repetition++) {
-      for (let caseIndex = 0; caseIndex < plan.cases.length; caseIndex++) {
-        const fixture = plan.cases[caseIndex];
+      for (let caseIndex = 0; caseIndex < selectedCases.length; caseIndex++) {
+        const fixture = selectedCases[caseIndex];
         if (!fixture) throw new Error("Evaluation schedule is incomplete.");
         for (let offset = 0; offset < plan.profiles.length; offset++) {
           const profile = plan.profiles[(offset + caseIndex + repetition) % plan.profiles.length];

@@ -150,7 +150,7 @@ its user turns, authorized evidence, approved tool definitions/results and any
 sanitized backend action status needed for the current task. Fixture approval
 events do not become model-controlled tool arguments.
 
-The [20 draft development smoke cases](example-cases.json) illustrate the format using
+The [22 draft development smoke cases](example-cases.json) illustrate the format using
 fictitious documents, roles and room data. They are not real HsH policy or a
 validated model benchmark. Their assertion strings are grading specifications,
 not executable quality judgments. The bounded TypeScript runner validates and
@@ -189,7 +189,7 @@ a text benchmark cannot establish keyboard, touch or SSO quality.
 
 ## Run protocol
 
-- Check profile capability, adapter and data-policy eligibility on the 20-case
+- Check profile capability, adapter and data-policy eligibility on the development
   smoke suite. Configure synthetic/public cases first; internal material may
   only reach endpoints approved for its full context.
 - Freeze a semantic task prompt, source ordering, tool schemas, corpus/index
