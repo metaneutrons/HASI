@@ -1,7 +1,9 @@
 # Plugin operator runbook
 
-Status: M2 candidate, 2026-10-18. Supported operations below do not establish
-institutional approval or complete the P4/P5/P6 acceptance criteria.
+Updated: 2026-10-21. This runbook describes the current technical operations.
+The [criterion evidence map](../verification/2026-10-19/m2-evidence-reconciliation.md#m2-criterion-evidence)
+identifies demonstrated paths and remaining qualification. Supported operations
+do not establish institutional approval or complete P4/P5/P6 by themselves.
 
 ## Connect and configure an approved service
 
@@ -184,10 +186,16 @@ image build, deployed route proxy, or actual-device recovery.
 Rollback revalidates current publisher, credential, configuration and review
 authority. Irreversible migrations require an approved restore/forward-recovery
 plan; an old image cannot reverse migrated state. The remote registry alone has
-no automatic artifact rollback operation. Production shared-store wiring, a
-healthy immutable image, runtime denial and actual recovery exercises remain
-qualification gates. Never mount the Docker Engine socket into a plugin or
-expose it to the demo admin. Vercel functions cannot host this installer.
+no automatic artifact rollback operation. The older standalone-process exercise
+above does not establish managed Docker recovery. The later
+[managed state/container qualification](../verification/2026-10-21/managed-state-container-lifecycle.md)
+uses the shared PostgreSQL authority and actual immutable plugin images: it
+retains effects across update, process failure, restart and rollback, and
+reconciles the same execution without replay. This qualifies that current-format
+synthetic composition; it does not promise that an incompatible historical host
+image can read a newer history format. Never mount the Docker Engine socket
+into a plugin or expose it to the demo administrator. The current Coolify demo
+and operator-worker boundary are separate from the retired Vercel platform.
 
 ### Operator-managed configuration and candidate cleanup
 
@@ -219,8 +227,13 @@ routes dispatch its reviewed stage, approval, activation and rollback commands.
 Current configuration, custody, publisher/reviewer trust and pending-action
 bindings are checked by that composition. The separate
 [managed pending-action qualification](../verification/2026-10-20/managed-pending-lifecycle.md)
-records an actual isolated TestIdP/API/Docker/PostgreSQL journey. Complete browser
-setup, update review and recovery qualification remains open.
+records an actual isolated TestIdP/API/Docker/PostgreSQL journey. The later
+[joined browser record](../verification/2026-10-21/external-plugin-joined-qualification.md)
+adds actual setup, chat use and update/rollback without rebuilding the host. Its
+original failure observations remain in that dated report; the
+[criterion evidence map](../verification/2026-10-19/m2-evidence-reconciliation.md#m2-criterion-evidence)
+links the specific later lost-response, renewal and authority-outage repairs.
+A successful stage or connection check alone is not this complete journey.
 
 The disposable local PostgreSQL/gateway exercise is:
 
@@ -238,7 +251,12 @@ two separately packaged versions; it tests committed lost-reply recovery,
 restart, failed preflight, cancellation after configuration change, rollback,
 revocation and route withdrawal. All authority and actions are synthetic. On
 uncertain runtime cleanup it retains durable recovery rows and returns failure.
-This does not qualify deployed Linux topology or independent distribution.
+This gateway command alone does not qualify deployed Linux topology or
+independent distribution. See the later
+[independent artifact/source qualification](../verification/2026-10-21/plugin-release-provenance.md)
+and joined browser record for their separately pinned sources, publisher
+envelopes, artifacts and runtime observations. No public marketplace or arbitrary
+repository installer is implied.
 
 See [v2 contracts](plugin-contract-v2.md), [budget provisioning](model-budget.md),
 [criterion evidence](../verification/2026-10-18/m2-foundation.md),

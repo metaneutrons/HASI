@@ -1,5 +1,10 @@
 # Rendered contrast pairs and confirmation keyboard geometry
 
+The [corrected rendered-text report](rendered-contrast.md) now supplies separate
+qualified measurements for 72 named desktop groups. The provisional numbers in
+this older record remain unaccepted; its confirmation-keyboard geometry evidence
+retains its separate scope.
+
 ## Contrast correction
 
 The welcome paragraph now uses the stronger existing `--ink-soft` text color
