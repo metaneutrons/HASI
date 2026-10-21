@@ -16,7 +16,7 @@ function caseById(id: string) {
   return structuredClone(value) as EvaluationCase;
 }
 
-type Completion = { text: string } | { tool: string; args: Record<string, unknown> };
+type Completion = { text: string } | { tool: string; args: Record<string, unknown>; unsupportedSibling?: true };
 function provider(script: Completion[]) {
   const requests: Record<string, unknown>[] = [];
   const fetch: typeof globalThis.fetch = async (input, init) => {
@@ -26,13 +26,14 @@ function provider(script: Completion[]) {
     requests.push(body);
     const next = script.shift();
     if (!next) throw new Error("Unapproved additional provider call.");
+    const message = "text" in next ? { role: "assistant", content: next.text } : { role: "assistant", content: null,
+      tool_calls: [{ id: `call-${String(requests.length)}`, type: "function", function: { name: next.tool, arguments: JSON.stringify(next.args) } }],
+      ...(next.unsupportedSibling ? { unsupported_provider_extension: "synthetic-unretained-extension-value" } : {}) };
     return Response.json({ id: `fixture-${String(requests.length)}`, object: "chat.completion", created: 1_797_136_800,
-      model: body.model, choices: [{ index: 0, finish_reason: "text" in next ? "stop" : "tool_calls",
-        message: "text" in next ? { role: "assistant", content: next.text } : { role: "assistant", content: null,
-          tool_calls: [{ id: `call-${String(requests.length)}`, type: "function", function: { name: next.tool, arguments: JSON.stringify(next.args) } }] } }],
+      model: body.model, choices: [{ index: 0, finish_reason: "text" in next ? "stop" : "tool_calls", message }],
       usage: { prompt_tokens: 24, completion_tokens: 7 } });
   };
-  return { fetch, requests };
+  return { fetch, requests, remaining: () => script.length };
 }
 
 async function admission() {
@@ -226,29 +227,95 @@ describe("actual-route application-policy development observations", () => {
     const fetch: typeof globalThis.fetch = () => Promise.resolve(new Response(body, { headers: { "content-type": "application/json" } }));
     const result = await runApplicationPolicyCase(caseById("access-02"), { caseId: "access-02", profileId: "groq-oss-120b", ...state,
       maxProviderRequests: 1, fetch });
-    expect(result.outcome).toBe("route_rejected");
+    expect(result.outcome).toBe("observation_incomplete");
     expect(result.providerResponses).toHaveLength(1);
     expect(result.providerResponses[0]).toMatchObject({ status: 200, captureStatus });
+    expect(result.routeResponses).toEqual([{ status: 503 }]);
     expect(result.providerResponses[0]).not.toHaveProperty("proposals");
     expect(result.modelAssessment).toBe("requires_human_review");
     expect(applicationPolicyStopReason(result)).toBe("provider_observation_unavailable");
   });
 
   it.each([
-    { role: "assistant", content: 4 },
-    { role: "assistant", content: null, tool_calls: { unexpected: true } },
-    { role: "assistant", content: null, function_call: { name: "http_fetch", arguments: "{}" } },
-    { role: "assistant", content: null, tool_calls: [{ type: "function", function: { name: "http_fetch", arguments: { unparsed: true } } }] },
-  ])("marks malformed nested provider message fields as partial: %j", async message => {
+    { message: { role: "assistant", content: 4 }, issues: ["text_value_unavailable"] },
+    { message: { role: "assistant", content: null, tool_calls: { unexpected: true } }, issues: ["tool_calls_container_invalid"] },
+    { message: { role: "assistant", content: null, function_call: { name: "http_fetch", arguments: "{}" } }, issues: ["legacy_function_call_present"] },
+    { message: { role: "assistant", content: null, tool_calls: [{ type: "function", function: { name: "http_fetch", arguments: { unparsed: true } } }] },
+      issues: ["tool_arguments_unavailable"] },
+  ])("records a fixed diagnostic for partial provider message capture: %j", async ({ message, issues }) => {
     const state = await admission();
     const fetch: typeof globalThis.fetch = () => Promise.resolve(Response.json({ id: "bad-nesting", object: "chat.completion",
       created: 1_797_136_800, model: "openai/gpt-oss-120b", choices: [{ index: 0, finish_reason: "stop", message }],
       usage: { prompt_tokens: 24, completion_tokens: 7 } }));
     const result = await runApplicationPolicyCase(caseById("access-02"), { caseId: "access-02", profileId: "groq-oss-120b", ...state,
       maxProviderRequests: 1, fetch });
-    expect(result.providerResponses[0]?.captureStatus).toBe("partial");
+    expect(result.providerResponses[0]).toMatchObject({ captureStatus: "partial", captureIssues: issues });
     expect(result.providerResponses[0]).not.toHaveProperty("proposals");
     expect(applicationPolicyStopReason(result)).toBe("provider_observation_unavailable");
+  });
+
+  it.each([
+    { label: "message role", body: { choices: [{ message: { role: "user", content: "Synthetic text." } }] }, issues: ["unexpected_message_role"] },
+    { label: "message member", body: { choices: [{ message: { role: "assistant", content: "Synthetic text.",
+      unsupported_provider_extension: "synthetic-unretained-extension-value" } }] }, issues: ["unexpected_message_member"] },
+    { label: "tool argument limit", body: { choices: [{ message: { role: "assistant", content: null, tool_calls: [
+      { function: { name: "knowledge_search", arguments: "x".repeat(16_385) } },
+    ] } }] }, issues: ["tool_arguments_limit_exceeded"] },
+    { label: "Anthropic content part shape", body: { content: [null] }, issues: ["content_part_shape_invalid"] },
+    { label: "unsupported content part", body: { content: [{ type: "future_content_part", privateValue: "synthetic-unretained-content" }] },
+      issues: ["content_part_type_unsupported"] },
+    { label: "Responses output part shape", body: { output: [null] }, issues: ["output_part_shape_invalid"] },
+    { label: "unsupported output content part", body: { output: [{ type: "message", content: [
+      { type: "future_output_content", privateValue: "synthetic-unretained-output-content" },
+    ] }] }, issues: ["output_content_part_type_unsupported"] },
+    { label: "unsupported output part", body: { output: [{ type: "future_output_part", privateValue: "synthetic-unretained-output" }] },
+      issues: ["output_part_type_unsupported"] },
+    { label: "text limit", body: { choices: [{ message: { role: "assistant", content: "x".repeat(30_001) } }] }, issues: ["text_limit_exceeded"] },
+  ])("records bounded $label diagnostics without provider values", async ({ body, issues }) => {
+    const state = await admission();
+    const fetch: typeof globalThis.fetch = () => Promise.resolve(Response.json(body));
+    const result = await runApplicationPolicyCase(caseById("access-02"), { caseId: "access-02", profileId: "groq-oss-120b", ...state,
+      maxProviderRequests: 1, fetch });
+    expect(result.providerResponses[0]).toMatchObject({ captureStatus: "partial", captureIssues: issues });
+    expect(result.providerResponses[0]).not.toHaveProperty("proposals");
+    expect(JSON.stringify(result)).not.toMatch(/synthetic-unretained|future_content_part|future_output_content|future_output_part/u);
+  });
+
+  it("stops after a partial but route-usable proposal before executing it or making a second provider request", async () => {
+    const state = await admission();
+    const wire = provider([
+      { tool: "knowledge_search", args: { query: "Lumen Trainingsblatt", sourceSystem: "intranet" }, unsupportedSibling: true },
+      { text: "Second scripted answer; it must remain unused." },
+    ]);
+    const originalFetch = globalThis.fetch;
+    const previousDatabase = process.env.DATABASE_URL;
+    const previousIdp = process.env.HASI_LOCAL_TEST_IDP;
+    const previousWebOrigin = process.env.HASI_WEB_ORIGIN;
+    const result = await runApplicationPolicyCase(caseById("access-01"), { caseId: "access-01", profileId: "groq-oss-120b", ...state,
+      maxProviderRequests: 2, fetch: wire.fetch });
+
+    expect(wire.requests).toHaveLength(1);
+    expect(result.outcome).toBe("observation_incomplete");
+    expect(result.routeResponses).toEqual([{ status: 200 }]);
+    expect(result.providerResponses).toHaveLength(1);
+    expect(result.providerResponses[0]).toMatchObject({ captureStatus: "partial", captureIssues: ["unexpected_message_member"] });
+    expect(result.providerResponses[0]).not.toHaveProperty("proposals");
+    expect(result.providerRequests).toHaveLength(1);
+    expect(wire.remaining()).toBe(1);
+    expect(result.measurements.providerRequestCount).toBe(1);
+    expect(result.measurements.reservations).toHaveLength(1);
+    expect(result.measurements).toMatchObject({ inputTokens: 24, outputTokens: 7, usageStatus: "complete" });
+    expect(await state.ledger.snapshot()).toMatchObject({ reservationsInWindow: 1,
+      inputTokensUsed: 24, outputTokensUsed: 7, unknownUsageReservations: 0 });
+    expect(result.executedReads).toEqual([]);
+    expect(result.fixtureCleanup).toBe("completed");
+    expect(applicationPolicyStopReason(result)).toBe("provider_observation_unavailable");
+    expect(JSON.stringify(result)).not.toContain("unsupported_provider_extension");
+    expect(JSON.stringify(result)).not.toContain("synthetic-unretained-extension-value");
+    expect(globalThis.fetch).toBe(originalFetch);
+    expect(process.env.DATABASE_URL).toBe(previousDatabase);
+    expect(process.env.HASI_LOCAL_TEST_IDP).toBe(previousIdp);
+    expect(process.env.HASI_WEB_ORIGIN).toBe(previousWebOrigin);
   });
 
   it("preserves a received successful status and stops the batch when response body observation is oversized", async () => {
