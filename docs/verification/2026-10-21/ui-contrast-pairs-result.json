@@ -1417,8 +1417,14 @@
     }
   },
   "limits": [
+    "No contrast target in this result is accepted until color-space calibration and affected measurements are independently verified. allPassed fields describe the provisional analyzer only.",
     "No full contrast qualification of all retained admin and populated-chat targets.",
     "Welcome candidate measurements are browser overlay observations, not actual deployed CSS.",
     "Native device, keyboard and assistive technology remain M8."
-  ]
+  ],
+  "qualification": {
+    "accepted": false,
+    "reason": "Screenshot pipeline calibration is incomplete. Fixed viewport CSS clips with page offsets and paint waits pass actual white/black and two-band coordinate controls, but screenshots serialize color-managed primaries without an ICC profile. The original sRGB-only analyzer cannot establish normative contrast. Preserve these as provisional raw-channel observations, not P6 acceptance.",
+    "supersedesAnyImplicitPassClaim": true
+  }
 }

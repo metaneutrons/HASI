@@ -2,51 +2,50 @@
 
 ## Contrast correction
 
-The welcome paragraph uses the stronger existing `--ink-soft` text color.
-The previous `--muted` color had a conservative minimum contrast of 3.970:1
-against the rendered light-theme decoration. The rectangle includes whitespace,
-so this is a rejected conservative check, not a claim that a particular glyph
-pixel definitively failed. The stronger color provides margin across the whole
-rectangle: 6.968:1 in light mode and 9.661:1 in dark mode, above the 4.5:1 target.
+The welcome paragraph now uses the stronger existing `--ink-soft` text color
+instead of `--muted`. This is a bounded visual contrast improvement. It does
+not close the outstanding contrast qualification gate.
 
-The [measured results](ui-contrast-pairs-result.json) bind observations to deployed
-base `f55d20ed809ef4e6015abf5ccda3774af34c71b8`. The candidate welcome rule was
-temporarily overlaid in the browser and then removed. These candidate readings
-are not proof that the new source rule has been deployed. All 15 retained
-welcome text targets passed in both candidate themes at 1280×900.
+The [provisional observations](ui-contrast-pairs-result.json) bind the initial
+measurements to deployed base `f55d20ed809ef4e6015abf5ccda3774af34c71b8`.
+They retain the candidate overlay results and 56 mobile navigation pairs, but
+**none of these contrast results is accepted as normative P6 evidence**. The
+nested `allPassed` values describe the provisional analyzer, not acceptance.
+The candidate welcome rule was temporarily overlaid and removed; it is not
+post-deployment verification of the source rule.
 
 ![Light welcome candidate](welcome-text-light-candidate.png)
 
-The same measurement passed 56 actual mobile navigation text pairs: Chats,
-Bookings, Connections and Administration, at 320/375/390×844, light/dark, with
-the chat or administration route active; the administration route also has a
-390px/32px-root sample in each theme. Minimum observed ratios are 5.058:1 in
-light and 6.144:1 in dark. These readings qualify those specific navigation
-pairs; they do not silently accept all earlier incomplete admin/chat targets.
+## Measurement correction and remaining work
 
-## Method and countercases
+The original analyzer compared computed sRGB foregrounds with untagged PNG
+backing channels as though both had the same color interpretation. Subsequent
+actual browser controls exposed two separate limitations:
 
-Chrome 155.0.0.0, DPR 1. Axe 4.14.0 identified retained targets but could not
-decide their gradient/overlap contrast. For each text-node Range rectangle,
-the instrument records the actual computed opaque foreground and checks
-foreground opacity, blend, filter, masks, text shadow and center hit targets.
-It temporarily makes only the selected text fill transparent, captures all
-underlying pixels as lossless PNG at explicit CSS-pixel scale, then restores
-the original styles. Layout, text geometry and original foreground must match
-after restoration. Other elements, gradients, decoration and blur remain.
+- A default viewport screenshot may use a different pixel-coordinate scale.
+  Explicit CSS-pixel clips, the document scroll offset and settled paint are
+  required. A calibrated 100×40 CSS-pixel reference correctly preserves its
+  red/blue half boundary. The unqualified whole-viewport and unstable-scroll
+  experimental batches are excluded entirely.
+- The screenshot pipeline changes known CSS primary-color channel values and
+  supplies no ICC profile. Black-on-white and white-on-white controls give
+  the expected 21:1/1:1 and exit 0/1, but those neutral controls cannot prove
+  the color interpretation for the actual backgrounds. An sRGB-only numerical
+  result is insufficient. Color-space calibration and independent validation
+  remain required before claiming normative contrast ratios or accepting pairs.
 
-The analyzer computes WCAG luminance contrast against every backing pixel;
-the minimum must meet the text-size-specific threshold. Bounding rectangles
-include whitespace, so rejection can be conservative. A heading child whose
-rectangle included neighboring heading glyphs was measured with its parent
-heading's fill masked, using the identical child rectangle and foreground.
-The initial conservative rejection is not counted as a product defect.
+A corrected exploratory capture waits for paint after applying and restoring
+text-fill-only masking and includes the page scroll offset. The 15 welcome
+candidates in each theme reproduce the original provisional channel ratios,
+but this does not repair the missing color-space qualification. The source
+paragraph change is retained; the numerical acceptance claim is withdrawn.
 
-An actual white-PNG positive/negative pair passed through the same decoder and
-analyzer: black-on-white gives 21:1 and exit 0; white-on-white gives 1:1 and
-exit 1. The result records the analyzer digest and each result-file digest.
-This is rendered backing-pixel evidence, not a token-only color comparison or
-a claim about contrast of antialiased edge pixels.
+The remaining measurement must bind actual foreground/background composition,
+clipping and overlap to the current rendered source and verify its coordinate,
+color and rejection behavior. A reported artifact may not turn a failed or
+uncertain measurement into an accepted contrast result. This record explicitly
+keeps those targets open under P6-A3. The relevant distinction between encoded
+color spaces is documented by [CSS Color 4](https://www.w3.org/TR/css-color-4/#color-conversion-code).
 
 ## Confirmation with simulated software keyboard
 
