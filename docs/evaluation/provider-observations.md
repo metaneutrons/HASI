@@ -15,12 +15,24 @@ pnpm evaluate:models --profiles groq-oss-120b,gwdg-qwen3-30b,deepinfra-deepseek-
 ```
 
 This emits a plan without resolving credentials, opening a database or calling
-a provider. It selects seven fixed-evidence development cases and lists the
+a provider. It selects nine fixed-evidence development cases and lists the
 remaining workflow/application-policy cases as requiring separate observers.
 Only the explicitly pinned bundled corpus can be used; the command accepts no
 arbitrary input file. Source authorization is an operator-owned manifest of
 exact source/revision identities. Case roles, entitlements and expected labels
 never establish grants. Grading labels are excluded from model input.
+
+The [VPN grounding pair](vpn-grounding-review.md) can be planned separately:
+
+```sh
+pnpm evaluate:models --profiles groq-oss-120b,gwdg-qwen3-30b --cases sit-vpn-grounding-01,sit-vpn-specificity-02 --max-calls 4
+```
+
+`--cases` only narrows the reviewed fixed-evidence manifest, preserving manifest
+order and source authorization. Unknown, duplicate or non-fixed case IDs fail
+before database access, report creation or dispatch. The default HTTP attempt
+cap remains eight; selecting all nine cases with that cap can yield an
+explicitly incomplete report. A repair attempt also consumes the cap.
 
 Profiles must already be selectable under server policy, eligible for
 `synthetic_demo` and priced. No provider is automatically added or enabled.
