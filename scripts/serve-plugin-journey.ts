@@ -29,6 +29,13 @@ import { PluginDeploymentBinding } from '../apps/api/src/plugin-deployment-bindi
 import { createManagedPluginContractClient, createManagedPluginRpcClient } from '../apps/api/src/managed-plugin-rpc.js';
 import { startManagedJourneyRuntime } from './managed-plugin-journey-runtime.js';
 import { createManagedReferenceManifest } from './reference-managed-state-profile.js';
+import { ExternalPluginArtifactInputError } from './plugin-gateway-qualification-artifacts.js';
+import {
+  captureExternalJourneyArtifactEnvironment,
+  journeyArtifactEvidence,
+  loadExternalJourneyArtifactPair,
+  snapshotExternalJourneyArtifacts,
+} from './plugin-journey-artifacts.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = fileURLToPath(import.meta.url);
@@ -109,6 +116,26 @@ export async function assertJourneyEnvFilesAbsent(root = ROOT): Promise<void> {
       if (present) throw new Error('Local dotenv configuration must be absent for the synthetic journey.');
     }
   }
+}
+
+/** Apply local opt-in and configuration gates before reading operator artifact paths. */
+export async function journeyPreflight(input: {
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly managedMode: boolean;
+  readonly workspaceRoot?: string;
+}): Promise<{
+  readonly connectionString: string;
+  readonly externalArtifactPair: Awaited<ReturnType<typeof loadExternalJourneyArtifactPair>>;
+}> {
+  const connectionString = journeyDatabaseUrl(input.environment);
+  await assertJourneyEnvFilesAbsent(input.workspaceRoot ?? ROOT);
+  const externalArtifactEnvironment = captureExternalJourneyArtifactEnvironment(input.environment);
+  const externalArtifactPair = await loadExternalJourneyArtifactPair({
+    environment: externalArtifactEnvironment,
+    workspaceRoot: input.workspaceRoot ?? ROOT,
+    managedMode: input.managedMode,
+  });
+  return { connectionString, externalArtifactPair };
 }
 
 async function advanceAccountClocks(apis: ChildProcess[], command: 'expire-anny' | 'expire-reference'): Promise<void> {
@@ -474,8 +501,11 @@ async function protectedWebProbe(issuer: string): Promise<void> {
 
 /** A held, explicit synthetic composition for actual browser qualification. */
 async function serve(managedMode = false, optimizedMode = false): Promise<void> {
-  const connectionString = journeyDatabaseUrl(process.env);
-  await assertJourneyEnvFilesAbsent();
+  const preflight = await journeyPreflight({
+    environment: process.env,
+    managedMode,
+  });
+  const { connectionString, externalArtifactPair } = preflight;
   for (const port of [3001, 4100, 4101, 4102, 4103]) await available(port);
   const directory = await mkdtemp(join(tmpdir(), 'hasi-plugin-journey-'));
   const children: ChildProcess[] = [];
@@ -551,14 +581,17 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
   let timer: ReturnType<typeof setTimeout> | undefined;
   let input: ReturnType<typeof createInterface> | undefined;
   try {
-    console.info(JSON.stringify({ event: 'journey-preparing', syntheticOnly: true, realProviderCalls: false }));
-    // Packaging is offline. Its subprocesses must not inherit operator credentials.
+    console.info(JSON.stringify({ event: 'journey-preparing', syntheticOnly: true, realProviderCalls: false,
+      artifactInputMode: externalArtifactPair ? 'external-prebuilt-pair' : 'workspace-reference-fixture' }));
+    // Subsequent fixture subprocesses use only the allowlisted environment.
     const inherited = cleanEnvironment();
     for (const name of Object.keys(process.env)) if (!(name in inherited) && !['TEST_DATABASE_URL', 'HASI_PLUGIN_JOURNEY', 'DOCKER_HOST'].includes(name)) Reflect.deleteProperty(process.env, name);
-    stage = 'independent-artifacts';
-    const packaged = await artifacts(directory, managedMode);
+    stage = 'reference-artifacts';
+    const packaged = externalArtifactPair
+      ? await snapshotExternalJourneyArtifacts(externalArtifactPair, directory)
+      : { ...(await artifacts(directory, managedMode)), artifactInputMode: 'workspace-reference-fixture' as const };
     const first = packaged.releases[0];
-    if (!first || packaged.releases.length !== 2) throw new Error('Independent release pair missing.');
+    if (!first || packaged.releases.length !== 2) throw new Error('Reference release pair missing.');
     const keys = generateKeyPairSync('ed25519');
     const publicKey = keys.publicKey.export({ type: 'spki', format: 'pem' }).toString();
     const privateKeyPath = join(directory, 'signing.pem');
@@ -661,10 +694,11 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
       apiPids: apis.map(process_ => process_.pid), ...(reference ? { referencePid: reference.pid, referenceVersion: activeRelease.evidence.pluginVersion } : {}),
       managed: managedRuntime ? await managedRuntime.snapshot() : undefined,
       persistentReferenceState: true, referenceStateMode: managedMode ? 'host-managed-mcp' : 'private-sqlite', referenceProxy: referenceProxy?.stats(),
-      releases: packaged.releases.map(release => ({ sourceSha: release.sourceSha, ...release.evidence })) }, null, 2), { mode: 0o600 });
+      ...journeyArtifactEvidence(packaged) }, null, 2), { mode: 0o600 });
     await writeEvidence();
     console.info(JSON.stringify({ event: 'plugin-journey-ready', webOrigin: WEB_ORIGIN, evidence: join(directory, 'evidence.json'), apiReplicas: 2, optimized: optimizedMode,
-      ...(reference ? { independentReferencePid: reference.pid } : {}), managed: managedMode, syntheticOnly: true, commands: fixtureCommands }));
+      ...(reference ? { independentReferencePid: reference.pid } : {}), managed: managedMode, syntheticOnly: true,
+      artifactInputMode: packaged.artifactInputMode, commands: fixtureCommands }));
     stage = 'ready';
     input = createInterface({ input: process.stdin, terminal: false });
     input.on('line', line => {
@@ -750,6 +784,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     await (operation.kind === 'api' ? apiChild(operation.path) : serve(operation.managed, operation.optimized));
   } catch (error) {
     console.error(JSON.stringify({ event: 'synthetic-plugin-journey-failed', stage, operatorCredentialsUsed: false, productionStateUsed: false,
+      ...(error instanceof ExternalPluginArtifactInputError ? { diagnostic: error.category } : {}),
       ...(error instanceof ReferencePackagingCommandError ? { diagnostic: error.message } : {}) }));
     process.exitCode = 1;
   }

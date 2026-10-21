@@ -2,7 +2,9 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { journeyDatabaseUrl, assertJourneyEnvFilesAbsent, journeyBudgetInitializerEnvironment, journeyManagedConfiguration, journeyOperation, journeyPersonas, journeyWebBuildEnvironment } from '../scripts/serve-plugin-journey.js';
+import { journeyDatabaseUrl, assertJourneyEnvFilesAbsent, journeyBudgetInitializerEnvironment, journeyManagedConfiguration, journeyOperation, journeyPersonas, journeyPreflight, journeyWebBuildEnvironment } from '../scripts/serve-plugin-journey.js';
+import { captureExternalJourneyArtifactEnvironment } from '../scripts/plugin-journey-artifacts.js';
+import { EXTERNAL_ARTIFACT_ENV } from '../scripts/plugin-gateway-qualification-artifacts.js';
 
 const valid = { HASI_PLUGIN_JOURNEY: '1', TEST_DATABASE_URL: 'postgresql://postgres@127.0.0.1:32775/hasi_topology_test' };
 
@@ -38,13 +40,31 @@ describe('held synthetic plugin journey admission', () => {
     } finally { await rm(root, { recursive: true, force: true }); }
   });
 
+  it('applies opt-in and database admission before inspecting partial external artifact paths', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hasi-journey-preflight-'));
+    const partial = { [EXTERNAL_ARTIFACT_ENV.aDirectory]: '/must-not-be-opened' };
+    try {
+      await expect(journeyPreflight({ environment: partial, managedMode: true, workspaceRoot: root }))
+        .rejects.toThrow('Set HASI_PLUGIN_JOURNEY=1');
+      await expect(journeyPreflight({
+        environment: { HASI_PLUGIN_JOURNEY: '1', TEST_DATABASE_URL: 'postgresql://db.invalid/hasi', ...partial },
+        managedMode: true,
+        workspaceRoot: root,
+      })).rejects.toThrow('loopback hasi_topology_test');
+      await expect(journeyPreflight({ environment: { ...valid, ...partial }, managedMode: true, workspaceRoot: root }))
+        .rejects.toThrow('external_artifact_inputs_incomplete');
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+
   it('builds the optimized web app with only the clean environment and its fixed local API origin', () => {
+    const externalInputs = Object.fromEntries(Object.values(EXTERNAL_ARTIFACT_ENV).map(name => [name, '/private/operator/input']));
     const environment = journeyWebBuildEnvironment({
       PATH: '/synthetic/bin', HOME: '/synthetic/home', XDG_CONFIG_HOME: '/synthetic/config', TMPDIR: '/synthetic/tmp',
       LANG: 'en_US.UTF-8', npm_config_store_dir: '/synthetic/store', DOCKER_HOST: 'tcp://remote.invalid',
       TEST_DATABASE_URL: valid.TEST_DATABASE_URL, DATABASE_URL: valid.TEST_DATABASE_URL, HASI_APP_MODE: 'production',
       HASI_LOCAL_TEST_IDP: '1', HASI_CHAT_SIGNING_SECRET: 'synthetic-signing-secret', CUSTOM_API_KEY: 'synthetic-model-token',
       HASI_LLM_CONFIG: 'synthetic-model-config', GROQ_API_KEY: 'operator-secret',
+      ...externalInputs,
     });
 
     expect(environment).toEqual({
@@ -52,6 +72,9 @@ describe('held synthetic plugin journey admission', () => {
       LANG: 'en_US.UTF-8', npm_config_store_dir: '/synthetic/store', NODE_ENV: 'production', NEXT_TELEMETRY_DISABLED: '1',
       HASI_API_ORIGIN: 'http://127.0.0.1:4100',
     });
+    expect(Object.values(EXTERNAL_ARTIFACT_ENV).some(name => name in environment)).toBe(false);
+    expect(captureExternalJourneyArtifactEnvironment({ ...externalInputs, GROQ_API_KEY: 'operator-secret' }))
+      .toEqual(externalInputs);
   });
 
   it('isolates durable budget initialization to the validated test database and synthetic tariff', () => {
