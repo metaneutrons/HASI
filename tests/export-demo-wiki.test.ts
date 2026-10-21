@@ -65,12 +65,13 @@ describe('synthetic demo MediaWiki XML export', () => {
 
     const pagesByTitle = new Map(pages.map(page => [page.title, page]));
     expect(pagesByTitle.has('Main Page')).toBe(false);
-    expect(pagesByTitle.get('HASI Demo')?.text).toContain('[[Demo:Service-IT/Inventory|Service-IT inventory]]');
-    expect(pagesByTitle.get('HASI Demo')?.text).toContain('[[Demo:Intranet/Inventory|Intranet inventory]]');
-    expect(pagesByTitle.get('Demo:Service-IT/Inventory')?.text).toContain('30 Dokumente.');
-    expect(pagesByTitle.get('Demo:Intranet/Inventory')?.text).toContain('30 Dokumente.');
-    expect(pagesByTitle.get('Demo:Service-IT/Inventory')?.text).toContain('Navigation: [[HASI Demo|HASI Wissen]]');
-    expect(pagesByTitle.get('Demo:Intranet/Inventory')?.text).toContain('Navigation: [[HASI Demo|HASI Wissen]]');
+    expect(pagesByTitle.get('HASI Wissen')?.text).toContain('[[Wissen:Service-IT/Inventory|Service-IT inventory]]');
+    expect(pagesByTitle.get('HASI Wissen')?.text).toContain('[[Wissen:Intranet/Inventory|Intranet inventory]]');
+    expect(pagesByTitle.get('Wissen:Service-IT/Inventory')?.text).toContain('30 Dokumente.');
+    expect(pagesByTitle.get('Wissen:Intranet/Inventory')?.text).toContain('30 Dokumente.');
+    expect(pagesByTitle.get('Wissen:Service-IT/Inventory')?.text).toContain('Navigation: [[HASI Wissen]]');
+    expect(pagesByTitle.get('Wissen:Intranet/Inventory')?.text).toContain('Navigation: [[HASI Wissen]]');
+    expect(pages.every(page => !/demo/iu.test(page.title) && !/demo/iu.test(page.text))).toBe(true);
 
     const expectedTimestamp = `${seed.createdAt}T00:00:00Z`;
     for (const page of pages) expect(page.timestamp).toBe(expectedTimestamp);
@@ -81,12 +82,12 @@ describe('synthetic demo MediaWiki XML export', () => {
       expect(page?.text).toContain(`<nowiki>${document.title}</nowiki>`);
       expect(page?.text).toContain(`Zielgruppe: <nowiki>${document.demoAudience.join(', ')}</nowiki>`);
       expect(page?.text).not.toMatch(/demo|fictional|synthetic/iu);
-      const inventoryTitle = document.sourceSystem === 'service_it' ? 'Demo:Service-IT/Inventory' : 'Demo:Intranet/Inventory';
+      const inventoryTitle = document.sourceSystem === 'service_it' ? 'Wissen:Service-IT/Inventory' : 'Wissen:Intranet/Inventory';
       const safeLabel = document.title.replace(/&/gu, '&amp;').replace(/</gu, '&lt;').replace(/>/gu, '&gt;');
       expect(pagesByTitle.get(inventoryTitle)?.text).toContain(`* [[${title}|<nowiki>${safeLabel}</nowiki> — ${document.id}]]`);
     }
 
-    const documentPages = pages.filter(page => page.title.startsWith('Demo:') && !page.title.endsWith('/Inventory'));
+    const documentPages = pages.filter(page => page.title.startsWith('Wissen:') && !page.title.endsWith('/Inventory'));
     expect(documentPages).toHaveLength(60);
     expect(documentPages.every(page => !page.text.includes('This is not a source modification date.'))).toBe(true);
     expect(pages.every(page => !page.text.includes('[[Main Page'))).toBe(true);
@@ -112,7 +113,7 @@ describe('synthetic demo MediaWiki XML export', () => {
     seed.documents[0]!.title = '../</nowiki>{{unsafe}}|New page';
     const xml = generateDemoWikiXml(seed);
     const page = pagesByTitle(parseExport(xml)).get(createDemoWikiPageTitle(seed.documents[0]!));
-    expect(page?.title).toMatch(/^Demo:Service-IT\/[a-z0-9]+(?:-[a-z0-9]+)*--svc-001$/u);
+    expect(page?.title).toMatch(/^Wissen:Service-IT\/[a-z0-9]+(?:-[a-z0-9]+)*--svc-001$/u);
     expect(page?.text).toContain('== <nowiki>../&lt;/nowiki&gt;{{unsafe}}|New page</nowiki> ==');
 
     const unsafeIdSeed = structuredClone(seed);

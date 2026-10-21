@@ -32,8 +32,9 @@ instead of unrelated phishing or software-catalogue prose.
 
 The central HASI notice remains. Source cards, the document reader, the restricted
 Service-IT portal and exported Wiki article prose no longer repeat disclosures.
-The legacy Wiki page namespace is a routing identity, not an article disclosure.
-HTML escaping, inert Wiki text and source-origin/revision checks remain in place.
+Wiki pages, navigation and site identity use `HASI Wissen` / `Wissen:`; the rollout
+redirects the legacy page titles. HTML escaping, inert Wiki text and
+source-origin/revision checks remain in place.
 Deploying the application alone does not update a separately running source
 replica: the Service-IT image and Wiki import require separate verified rollout.
 

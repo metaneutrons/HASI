@@ -1,4 +1,4 @@
-# HASI demo MediaWiki
+# HASI Wissen MediaWiki
 
 This container runs the pinned MediaWiki 1.43.11 image behind Coolify Traefik
 on internal port 80. Build it from this directory. Configure Coolify to route
@@ -7,7 +7,7 @@ the canonical HTTPS host to the container's port 80.
 Set `WG_SERVER` to the public HTTPS origin, for example
 `https://wiki.example.edu`. It must not contain a path, query, or fragment.
 Articles use `/wiki/$1`, the API stays at `/api.php`, and the main page is
-served at `/` and `/wiki/` from the dedicated `HASI_Demo` landing page. Other
+served at `/` and `/wiki/` from the dedicated `HASI_Wissen` landing page. Other
 articles, including `Main Page`, remain available through `/wiki/$1`.
 
 Attach persistent volumes at `/var/www/config` and `/var/www/html/images`.
@@ -41,7 +41,8 @@ Its Apache/PHP settings use six workers and a 192 MiB PHP memory limit for a
 small deployment. The container health check queries MediaWiki API site info
 locally and does not read secret files.
 
-Import the demo seed separately after the first successful startup. The seed
-should provide the `HASI Demo` landing page and set `MediaWiki:Mainpage` to it;
+Import the synthetic knowledge seed separately after the first successful
+startup. The seed should provide the `HASI Wissen` landing page and set
+`MediaWiki:Mainpage` to it;
 the startup route already targets that title. Network access controls belong on
 the parent-managed proxy and its private network.

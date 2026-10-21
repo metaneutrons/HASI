@@ -2,6 +2,8 @@
 declare(strict_types=1);
 
 $wgServer = getenv('WG_SERVER') ?: $wgServer;
+$wgSitename = 'HASI Wissen';
+$wgMetaNamespace = 'HASI_Wissen';
 $wgScriptPath = '';
 $wgArticlePath = '/wiki/$1';
 

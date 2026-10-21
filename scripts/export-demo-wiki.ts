@@ -168,9 +168,9 @@ function assertSafeDocumentId(sourceSystem: DemoWikiSourceSystem, id: string): v
 export function createDemoWikiPageTitle(document: Pick<DemoWikiDocument, 'id' | 'sourceSystem' | 'title'>): string {
   assertSafeDocumentId(document.sourceSystem, document.id);
   const section = document.sourceSystem === 'service_it' ? 'Service-IT' : 'Intranet';
-  const pageTitle = `Demo:${section}/${titleSlug(document.title)}--${document.id}`;
-  if (!/^Demo:(Service-IT|Intranet)\/[a-z0-9]+(?:-[a-z0-9]+)*--(?:svc|int)-\d{3}$/u.test(pageTitle)) {
-    throw new Error('Generated demo wiki page title is unsafe.');
+  const pageTitle = `Wissen:${section}/${titleSlug(document.title)}--${document.id}`;
+  if (!/^Wissen:(Service-IT|Intranet)\/[a-z0-9]+(?:-[a-z0-9]+)*--(?:svc|int)-\d{3}$/u.test(pageTitle)) {
+    throw new Error('Generated wiki page title is unsafe.');
   }
   return pageTitle;
 }
@@ -192,7 +192,7 @@ function renderDocumentPage(document: DemoWikiDocument): ExportPage {
 
 function renderInventoryPage(seed: DemoWikiSeed, sourceSystem: DemoWikiSourceSystem): ExportPage {
   const section = sourceSystem === 'service_it' ? 'Service-IT' : 'Intranet';
-  const inventoryTitle = `Demo:${section}/Inventory`;
+  const inventoryTitle = `Wissen:${section}/Inventory`;
   const documents = seed.documents.filter(document => document.sourceSystem === sourceSystem)
     .sort((first, second) => first.id.localeCompare(second.id, 'en'));
   const links = documents.map(document => {
@@ -207,21 +207,21 @@ function renderInventoryPage(seed: DemoWikiSeed, sourceSystem: DemoWikiSourceSys
       '',
       ...links,
       '',
-      'Navigation: [[HASI Demo|HASI Wissen]]',
+      'Navigation: [[HASI Wissen]]',
     ].join('\n'),
   };
 }
 
 function renderMainPage(seed: DemoWikiSeed): ExportPage {
   return {
-    title: 'HASI Demo',
+    title: 'HASI Wissen',
     text: [
       '== HASI Wissen ==',
       'Wissensartikel zu Service IT und Intranet.',
       `${String(seed.documents.length)} Dokumente · Stand: ${seed.createdAt}.`,
       '',
-      '* [[Demo:Service-IT/Inventory|Service-IT inventory]]',
-      '* [[Demo:Intranet/Inventory|Intranet inventory]]',
+      '* [[Wissen:Service-IT/Inventory|Service-IT inventory]]',
+      '* [[Wissen:Intranet/Inventory|Intranet inventory]]',
     ].join('\n'),
   };
 }
@@ -260,7 +260,7 @@ function renderPageXml(page: ExportPage, pageId: number, timestamp: string): str
     `      <id>${String(revisionId)}</id>`,
     `      <timestamp>${timestamp}</timestamp>`,
     '      <contributor><ip>127.0.0.1</ip></contributor>',
-    '      <comment>Generated synthetic demo import; timestamp derived from fixture createdAt.</comment>',
+    '      <comment>Generated seeded import; timestamp derived from fixture createdAt.</comment>',
     `      <origin>${String(revisionId)}</origin>`,
     '      <model>wikitext</model>',
     '      <format>text/x-wiki</format>',
@@ -280,9 +280,9 @@ export function generateDemoWikiXml(input: unknown): string {
     '<?xml version="1.0" encoding="UTF-8"?>',
     `<mediawiki xmlns="${mediaWikiNamespace}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="${mediaWikiNamespace} https://www.mediawiki.org/xml/export-0.11.xsd" version="0.11" xml:lang="en">`,
     '  <siteinfo>',
-    '    <sitename>HASI Synthetic Demo Wiki</sitename>',
-    '    <dbname>hasi_synthetic_demo</dbname>',
-    '    <generator>HASI deterministic demo exporter</generator>',
+    '    <sitename>HASI Wissen</sitename>',
+    '    <dbname>hasi_knowledge</dbname>',
+    '    <generator>HASI deterministic wiki exporter</generator>',
     '    <case>first-letter</case>',
     '    <namespaces>',
     '      <namespace key="0" case="first-letter" />',

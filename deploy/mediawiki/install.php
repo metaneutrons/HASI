@@ -70,7 +70,7 @@ unset($adminPassword, $databasePassword);
 
 $GLOBALS['argv'] = [
 	'/var/www/html/maintenance/install.php',
-	'HASI Demo Wiki',
+	'HASI Wissen',
 	$adminName,
 	'--lang=en',
 	'--server=' . $server,

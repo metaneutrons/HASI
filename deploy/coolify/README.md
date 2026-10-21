@@ -189,9 +189,9 @@ decryption recovery exercise remains open.
 Generate an XML import from the checked-in fictional fixture with
 [`scripts/export-demo-wiki.ts`](../../scripts/export-demo-wiki.ts). The export
 contains 63 pages: 30 Service-IT documents, 30 Intranet documents, the `HASI
-Demo` landing page and two inventory pages. Import the generated XML with
+Wissen` landing page and two inventory pages. Import the generated XML with
 MediaWiki's maintenance `importDump.php` command, then set
-`MediaWiki:Mainpage` to `HASI Demo`. The MediaWiki image configures `/` and
+`MediaWiki:Mainpage` to `HASI Wissen`. The MediaWiki image configures `/` and
 `/wiki/` to open that landing page. After CLI imports/message edits, restart
 the wiki container to clear its in-process APCu message cache; verify the
 current main page through API site info and read the imported revisions.
@@ -206,7 +206,7 @@ do not by themselves approve source access for HASI.
 
 The synthetic wiki is running on the new server with a valid DNS-01 HTTPS
 certificate. All 63 seed titles and three sample current revisions were
-verified from the server, and API site info resolves `HASI Demo` as its main
+verified from the server, and API site info resolved `HASI Demo` as its main
 page. Requests outside the allowlist returned HTTP 403 over both IPv4 and IPv6;
 spoofed forwarding headers and a request through ZeroTier were also denied.
 An affirmative request from the HsH campus network remains to be checked there.
