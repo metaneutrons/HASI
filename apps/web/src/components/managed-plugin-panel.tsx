@@ -425,7 +425,7 @@ export function ManagedPluginPanel({ onChanged }: ManagedPluginPanelProps) {
                 />
 
                 {allReleases.length > 0 && (
-                  <div className={styles.releaseStates} aria-label="Installierte Release-Zustände">
+                  <div className={styles.releaseStates} role="group" aria-label="Installierte Release-Zustände">
                     {allReleases.map(({ key, title, release: item }) => (
                       <section className={styles.releaseState} key={key}>
                         <div className={styles.releaseStateHeading}>

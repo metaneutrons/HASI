@@ -18,7 +18,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ChatSessionList } from "@/components/chat-session-list";
-import { useChatWorkspaceStore } from "@/components/chat-sidebar-context";
+import { ProtectedWorkspaceNotice, useChatWorkspaceStore } from "@/components/chat-sidebar-context";
 import { useSession } from "@/components/session-provider";
 import { PublicDemoNotice } from "@/components/public-demo-notice";
 import { useChatViewport } from "@/components/use-chat-viewport";
@@ -430,6 +430,7 @@ function AppFrame({ children }: Readonly<{ children: ReactNode }>) {
           </div>
         </header>
 
+        <ProtectedWorkspaceNotice />
         <main className="app-content">{children}</main>
 
         <nav ref={mobileNavRef} className="mobile-nav" aria-label="Hauptnavigation">

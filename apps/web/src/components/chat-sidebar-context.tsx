@@ -14,7 +14,25 @@ import { refreshProtectedWorkspace } from "@/lib/protected-workspace-refresh";
 import { protectWorkspaceNavigation } from "@/lib/protected-workspace-navigation";
 
 const ChatWorkspaceStoreContext = createContext<ChatWorkspaceStore | null>(null);
+const ProtectedWorkspaceNoticeContext = createContext<{
+  message: string;
+  disabled: boolean;
+  retrying: boolean;
+  retry: () => void;
+} | null>(null);
 const WORKSPACE_ENDPOINT = "/api/chat/workspace";
+
+/** The shell reserves space for recovery feedback inside its viewport. */
+export function ProtectedWorkspaceNotice() {
+  const notice = useContext(ProtectedWorkspaceNoticeContext);
+  if (!notice) return null;
+  return <div className="chat-storage-notice" role="status">
+    <span>{notice.message}</span>
+    <button type="button" disabled={notice.disabled} onClick={notice.retry}>
+      {notice.retrying ? "Wird erneut versucht …" : "Erneut versuchen"}
+    </button>
+  </div>;
+}
 
 export function ChatWorkspaceStoreProvider({ store, children }: { store: ChatWorkspaceStore; children: ReactNode }) {
   return <ChatWorkspaceStoreContext.Provider value={store}>{children}</ChatWorkspaceStoreContext.Provider>;
@@ -178,12 +196,15 @@ function ProtectedStoreWorkspaceProvider({ store, children }: { store: ChatWorks
     };
   }, [refreshRemote, store]);
 
+  const notice = view.protectedPersistence && view.protectedPersistence.state !== "saved" ? {
+    message: view.protectedPersistence.message ?? "Der geschützte Chat-Speicher ist nicht synchronisiert.",
+    disabled: retrying || store.hasBusyChats() || store.hasAuthorityChange(),
+    retrying,
+    retry: () => { void retry(); },
+  } : null;
+
   return <ChatWorkspaceStoreProvider store={store}>
-    {view.protectedPersistence && view.protectedPersistence.state !== "saved" && <div className="chat-storage-notice" role="status">
-      <span>{view.protectedPersistence.message ?? "Der geschützte Chat-Speicher ist nicht synchronisiert."}</span>
-      <button type="button" disabled={retrying || store.hasBusyChats() || store.hasAuthorityChange()} onClick={() => { void retry(); }}>{retrying ? "Wird erneut versucht …" : "Erneut versuchen"}</button>
-    </div>}
-    {children}
+    <ProtectedWorkspaceNoticeContext.Provider value={notice}>{children}</ProtectedWorkspaceNoticeContext.Provider>
   </ChatWorkspaceStoreProvider>;
 }
 
