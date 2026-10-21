@@ -1,0 +1,119 @@
+{
+  "truncated": false,
+  "requestsAfterReload": [
+    {
+      "sequence": 163,
+      "type": "Stylesheet",
+      "method": "GET",
+      "path": "/_next/static/chunks/2ysqjna1toyhx.css"
+    },
+    {
+      "sequence": 168,
+      "type": "Stylesheet",
+      "method": "GET",
+      "path": "/_next/static/chunks/2vdqzxx6cex6w.css"
+    },
+    {
+      "sequence": 173,
+      "type": "Script",
+      "method": "GET",
+      "path": "/_next/static/chunks/0cio0f5edad-_.js"
+    },
+    {
+      "sequence": 178,
+      "type": "Script",
+      "method": "GET",
+      "path": "/_next/static/chunks/0z-wwj46n-xps.js"
+    },
+    {
+      "sequence": 183,
+      "type": "Script",
+      "method": "GET",
+      "path": "/_next/static/chunks/0emhk8gange03.js"
+    },
+    {
+      "sequence": 188,
+      "type": "Script",
+      "method": "GET",
+      "path": "/_next/static/chunks/turbopack-2c3mg3r-05n1w.js"
+    },
+    {
+      "sequence": 193,
+      "type": "Script",
+      "method": "GET",
+      "path": "/_next/static/chunks/0cfdxyf-0p-m_.js"
+    },
+    {
+      "sequence": 198,
+      "type": "Script",
+      "method": "GET",
+      "path": "/_next/static/chunks/0-lv3-iws-wfx.js"
+    },
+    {
+      "sequence": 203,
+      "type": "Script",
+      "method": "GET",
+      "path": "/_next/static/chunks/2bzsx-cxs-ieb.js"
+    },
+    {
+      "sequence": 208,
+      "type": "Script",
+      "method": "GET",
+      "path": "/_next/static/chunks/36d41iolio4_1.js"
+    },
+    {
+      "sequence": 213,
+      "type": "Script",
+      "method": "GET",
+      "path": "/_next/static/chunks/3-r3w3egceiyc.js"
+    },
+    {
+      "sequence": 218,
+      "type": "Script",
+      "method": "GET",
+      "path": "/_next/static/chunks/20_w993npnvnb.js"
+    },
+    {
+      "sequence": 240,
+      "type": "Other",
+      "method": "GET",
+      "path": "/icon.svg"
+    },
+    {
+      "sequence": 241,
+      "type": "Fetch",
+      "method": "GET",
+      "path": "/api/session"
+    },
+    {
+      "sequence": 256,
+      "type": "Fetch",
+      "method": "GET",
+      "path": "/api/chat"
+    },
+    {
+      "sequence": 258,
+      "type": "Fetch",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "sequence": 270,
+      "type": "Fetch",
+      "method": "GET",
+      "path": "/api/plugin-accounts"
+    },
+    {
+      "sequence": 271,
+      "type": "Fetch",
+      "method": "GET",
+      "path": "/api/plugin-accounts"
+    },
+    {
+      "sequence": 274,
+      "type": "Fetch",
+      "method": "GET",
+      "path": "/"
+    }
+  ]
+}
