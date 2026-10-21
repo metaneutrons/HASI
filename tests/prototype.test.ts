@@ -48,7 +48,8 @@ describe('prototype identity, plugin and external API boundaries', () => {
       const tomorrow = new Date(Date.now() + 86400000); tomorrow.setUTCHours(9, 0, 0, 0);
       const args = { resourceId: data.resources[0]!.id, serviceId: data.resources[0]!.serviceId, startDate: tomorrow.toISOString(), endDate: new Date(tomorrow.getTime() + 3600000).toISOString() };
       const forbidden = await api.inject({ method: 'POST', url: '/api/proposals', headers: { ...headers, cookie: student }, payload: { ...args, resourceId: '00000000-0000-4000-8000-000000000103' } });
-      expect(forbidden.statusCode).toBe(403);
+      // Resource eligibility is enforced by the plugin, as for generic tool calls.
+      expect(forbidden.statusCode).toBe(502);
       expect((await api.inject({ method: 'POST', url: '/api/tools/call', headers: { ...headers, cookie: student }, payload: { pluginId: annyManifest.id, name: 'anny.execute_booking', arguments: args } })).statusCode).toBe(403);
       const response = await api.inject({ method: 'POST', url: '/api/proposals', headers: { ...headers, cookie: student }, payload: args });
       expect(response.statusCode, response.body).toBe(200);
