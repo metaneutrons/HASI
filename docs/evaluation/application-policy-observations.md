@@ -92,15 +92,22 @@ route loop, 90-second request deadline and per-case/batch HTTP caps bound work;
 provider-specific repair attempts are counted and charged separately.
 
 Reports separate actual API/search observations, model-visible request identities,
-bounded provider text/tool proposals, route rejection and executed read effects.
+bounded provider text/tool proposals, route status and executed read effects.
 They do not store authorization headers or provider reasoning. Private reports
 contain synthetic model inputs for reproducibility and subsequent human review;
 ordinary production logging does not acquire those prompts. Response capture
 records refusals and preserves received HTTP status even when a bounded body
-cannot be read. Malformed, partial or unrecognized successful responses stop the
-batch rather than becoming an empty safe proposal list; no outgoing observation
-is marked passed before an admitted provider attempt is inspected. An unsafe provider
-proposal rejected by the backend is distinct from a safe model answer.
+cannot be read. Partial-capture diagnostics use fixed parser-branch enums. Recognized text
+may be retained within the existing bound; proposals are omitted. Unknown provider
+field names or values, unsupported type values and reasoning are not retained. Malformed, partial or unrecognized successful responses stop the
+current case as soon as its chat-route request returns. The route status is kept,
+but the incomplete route reply is not recorded or executed by the evaluator, so
+it cannot trigger a source read, revocation follow-up or another paid route step.
+The existing batch stop reason remains `provider_observation_unavailable`; an
+incomplete response is never treated as an empty safe proposal list. No outgoing
+observation is marked passed before an admitted provider attempt is inspected.
+An unsafe provider proposal rejected by the backend is distinct from a safe model
+answer.
 
 Usage and cost come from the existing admission observer. Known-undispatched
 released reservations are separate from provider-reported usage; they cannot

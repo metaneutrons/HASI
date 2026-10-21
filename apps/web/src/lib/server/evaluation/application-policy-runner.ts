@@ -40,13 +40,14 @@ export interface ApplicationPolicyRun {
   apiObservations: { path: string; method: string; status: number }[];
   providerRequests: { requestDigestSha256: string; effectiveInputDigestSha256: string; modelInput: Record<string, unknown> }[];
   providerResponses: { status: number; responseDigestSha256?: string; captureStatus: "captured" | "partial" | "unrecognized_shape" | "invalid_json" | "body_unavailable";
+    captureIssues?: ProviderCaptureIssue[];
     text?: string; proposals?: { tool: string; argumentsText: string }[] }[];
   routeResponses: { status: number; text?: string; proposedCalls?: { tool: string; arguments: Record<string, unknown> }[]; contextChanged?: boolean }[];
   executedReads: { tool: "knowledge_search"; sourceIds: string[] }[];
   blockedDestinations: { origin: string; destinationDigestSha256: string }[];
   controls: { sourceProbe: "passed" | "failed" | "not_observed"; outboundEvidence: "passed" | "failed" | "not_observed"; revokedContext: "passed" | "failed" | "not_observed" };
   measurements: ProviderMeasurements;
-  outcome: "completed" | "route_rejected" | "tool_not_executed" | "step_limit" | "scenario_not_exercised" | "evaluation_error";
+  outcome: "completed" | "route_rejected" | "tool_not_executed" | "step_limit" | "scenario_not_exercised" | "observation_incomplete" | "evaluation_error";
   modelAssessment: "requires_human_review";
   fixtureCleanup: "completed" | "failed" | "not_created";
 }
@@ -55,59 +56,70 @@ function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+type ProviderCaptureIssue = "unexpected_message_member" | "unexpected_message_role" | "legacy_function_call_present" | "audio_payload_present"
+  | "text_value_unavailable" | "tool_calls_container_invalid" | "tool_call_shape_invalid" | "tool_name_unavailable" | "tool_name_limit_exceeded"
+  | "tool_arguments_unavailable" | "tool_arguments_limit_exceeded" | "tool_proposal_limit_exceeded"
+  | "content_part_shape_invalid" | "content_part_type_unsupported" | "output_part_shape_invalid" | "output_message_content_invalid"
+  | "output_content_part_type_unsupported" | "output_part_type_unsupported" | "text_limit_exceeded";
+
 /** Excludes reasoning and response headers; these observations never authorize tools. */
 function providerAnswer(value: unknown) {
   const text: string[] = [];
   const proposals: { tool: string; argumentsText: string }[] = [];
+  const captureIssues = new Set<ProviderCaptureIssue>();
   let recognized = false;
-  let partial = false;
-  const addText = (value: unknown) => { if (typeof value === "string") text.push(value); else partial = true; };
+  const markPartial = (issue: ProviderCaptureIssue) => { captureIssues.add(issue); };
+  const addText = (value: unknown) => { if (typeof value === "string") text.push(value); else markPartial("text_value_unavailable"); };
   const addCall = (name: unknown, arguments_: unknown, encoding: "string" | "object" = "string") => {
-    if (typeof name !== "string" || name.length > 128) { partial = true; return; }
-    if (encoding === "string" ? typeof arguments_ !== "string" : !object(arguments_)) { partial = true; return; }
+    if (typeof name !== "string") { markPartial("tool_name_unavailable"); return; }
+    if (name.length > 128) { markPartial("tool_name_limit_exceeded"); return; }
+    if (encoding === "string" ? typeof arguments_ !== "string" : !object(arguments_)) { markPartial("tool_arguments_unavailable"); return; }
     const argumentsText = typeof arguments_ === "string" ? arguments_ : JSON.stringify(arguments_ ?? null);
-    if (argumentsText.length <= 16_384 && proposals.length < 32) proposals.push({ tool: name, argumentsText });
-    else partial = true;
+    if (argumentsText.length > 16_384) { markPartial("tool_arguments_limit_exceeded"); return; }
+    if (proposals.length >= 32) { markPartial("tool_proposal_limit_exceeded"); return; }
+    proposals.push({ tool: name, argumentsText });
   };
   if (object(value)) {
     const choice = Array.isArray(value.choices) ? value.choices[0] as unknown : undefined;
     if (object(choice) && object(choice.message)) {
       recognized = "content" in choice.message || Array.isArray(choice.message.tool_calls) || typeof choice.message.refusal === "string";
       const messageKeys = new Set(["role", "content", "tool_calls", "reasoning", "reasoning_content", "refusal", "annotations", "audio", "function_call"]);
-      if (Object.keys(choice.message).some(key => !messageKeys.has(key)) || choice.message.role !== "assistant") partial = true;
-      if (choice.message.function_call !== undefined && choice.message.function_call !== null) partial = true;
-      if (choice.message.audio !== undefined && choice.message.audio !== null) partial = true;
+      if (Object.keys(choice.message).some(key => !messageKeys.has(key))) markPartial("unexpected_message_member");
+      if (choice.message.role !== "assistant") markPartial("unexpected_message_role");
+      if (choice.message.function_call !== undefined && choice.message.function_call !== null) markPartial("legacy_function_call_present");
+      if (choice.message.audio !== undefined && choice.message.audio !== null) markPartial("audio_payload_present");
       if (choice.message.refusal !== undefined && choice.message.refusal !== null) addText(choice.message.refusal);
       if (choice.message.content !== null && choice.message.content !== undefined) addText(choice.message.content);
-      if (choice.message.tool_calls !== undefined && choice.message.tool_calls !== null && !Array.isArray(choice.message.tool_calls)) partial = true;
+      if (choice.message.tool_calls !== undefined && choice.message.tool_calls !== null && !Array.isArray(choice.message.tool_calls)) markPartial("tool_calls_container_invalid");
       for (const call of Array.isArray(choice.message.tool_calls) ? choice.message.tool_calls : []) {
         if (object(call) && object(call.function)) addCall(call.function.name, call.function.arguments);
-        else partial = true;
+        else markPartial("tool_call_shape_invalid");
       }
     }
     if (Array.isArray(value.content) || Array.isArray(value.output)) recognized = true;
     for (const part of Array.isArray(value.content) ? value.content : []) {
-      if (!object(part)) { partial = true; continue; }
+      if (!object(part)) { markPartial("content_part_shape_invalid"); continue; }
       if (part.type === "text") addText(part.text);
       else if (part.type === "tool_use") addCall(part.name, part.input, "object");
-      else if (part.type !== "thinking" && part.type !== "redacted_thinking") partial = true;
+      else if (part.type !== "thinking" && part.type !== "redacted_thinking") markPartial("content_part_type_unsupported");
     }
     for (const part of Array.isArray(value.output) ? value.output : []) {
-      if (!object(part)) { partial = true; continue; }
+      if (!object(part)) { markPartial("output_part_shape_invalid"); continue; }
       if (part.type === "function_call") addCall(part.name, part.arguments);
       else if (part.type === "message") {
-        if (!Array.isArray(part.content)) partial = true;
+        if (!Array.isArray(part.content)) markPartial("output_message_content_invalid");
         for (const content of Array.isArray(part.content) ? part.content : []) {
           if (object(content) && content.type === "output_text") addText(content.text);
           else if (object(content) && content.type === "refusal") addText(content.refusal);
-          else partial = true;
+          else markPartial("output_content_part_type_unsupported");
         }
-      } else if (part.type !== "reasoning") partial = true;
+      } else if (part.type !== "reasoning") markPartial("output_part_type_unsupported");
     }
   }
   if (!recognized) return { captureStatus: "unrecognized_shape" as const };
   const joined = text.join("\n");
-  if (partial || joined.length > 30_000) return { captureStatus: "partial" as const,
+  if (joined.length > 30_000) markPartial("text_limit_exceeded");
+  if (captureIssues.size) return { captureStatus: "partial" as const, captureIssues: [...captureIssues],
     ...(text.length ? { text: joined.slice(0, 30_000) } : {}) };
   return { captureStatus: "captured" as const, ...(text.length ? { text: joined } : {}), proposals };
 }
@@ -289,22 +301,28 @@ export async function runApplicationPolicyCase(value: unknown, dependencies: {
     const messages: WireMessage[] = planned.evaluationCase.userMessages.map(content => ({ role: "user", content }));
     let routingToken: string | undefined;
     for (let step = 0; step < 4; step++) {
+      const providerResponseStart = record.providerResponses.length;
       const response = await post(new Request(`${fixture.webOrigin}/api/chat`, { method: "POST", signal: deadline,
         headers: { host: new URL(fixture.webOrigin).host, origin: fixture.webOrigin,
           cookie: fixture.cookies[planned.definition.role], "content-type": "application/json" },
         body: JSON.stringify({ profileId: profile.id, conversationId, ...(routingToken ? { routingToken } : {}), messages }),
       }));
+      const routeObservation: ApplicationPolicyRun["routeResponses"][number] = { status: response.status };
+      record.routeResponses.push(routeObservation);
+      if (record.providerResponses.slice(providerResponseStart)
+        .some(item => item.status < 400 && item.captureStatus !== "captured")) {
+        record.outcome = "observation_incomplete";
+        break;
+      }
       if (!response.ok) {
-        record.routeResponses.push({ status: response.status });
         record.outcome = "route_rejected";
         break;
       }
       const reply = modelReplySchema.parse(await response.json());
       if (reply.profile.id !== profile.id || reply.profile.modelId !== profile.modelId) throw new Error("Unexpected returned profile.");
-      record.routeResponses.push({ status: response.status, text: reply.message.content,
+      Object.assign(routeObservation, { text: reply.message.content,
         proposedCalls: (reply.message.toolCalls ?? []).map(call => ({ tool: call.name, arguments: call.arguments })),
-        ...(reply.contextNotice ? { contextChanged: true } : {}),
-      });
+        ...(reply.contextNotice ? { contextChanged: true } : {}) });
       routingToken = reply.routingToken;
       messages.push(reply.message);
       const calls = reply.message.toolCalls ?? [];
