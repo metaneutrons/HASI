@@ -30,11 +30,12 @@ The HASI dialog mark is a product identity; the institution is attributed separa
 - **Model budgets:** a CAS-backed shared USD 1/day admission ledger covers provider attempts, retries and fallbacks. Missing deployed state fails closed and requires explicit bootstrap. GWDG uses an expressly approved temporary Groq-Qwen price estimate, not a verified invoice tariff. See [budget policy and provisioning](docs/architecture/model-budget.md).
 - **Test identity:** visitors can select student, employee or administrator demo personas in an isolated workspace. They are fixtures, not HsH identities or institutional permissions. The local `--test-idp` launcher additionally exercises real OIDC redirects, PKCE/state/nonce and signed test ID tokens; it is not institutional SSO.
 
-Synthetic FAQ labels use reviewed complete questions, with document and citation
-revisions advanced together. The original demo bodies and access labels are
-preserved; historical source links continue to request their exact revision and
-are never silently rewritten to a newer document. See the
-[title and supplied-dialogue follow-up](docs/verification/2026-10-21/supplied-dialogue-followup.md).
+Knowledge articles and citations are versioned together. All 301 current
+articles use ordinary prose; the editorial rewrite advanced their revisions
+while retaining access metadata and earlier evaluation cases and answers as
+history. Source links request their exact revision; unavailable versions are
+never silently replaced by a newer article. See the
+[editorial source update](docs/verification/2026-10-21/editorial-knowledge-sources.md).
 
 The [public demo](https://hasi.metaneutrons.cc) uses a server-backed runtime and isolated synthetic state. On first use of anny, the chat offers an explicit test-account connection and continues the original request after confirmation; **Verbundene Dienste** also manages connections. HASI does not ask users to supply internal resource IDs to work around missing account access. Disconnecting removes tool access and invalidates pending confirmations; it does not undo an existing booking or delete chat history. Public-demo chat transcripts and profile settings stay in browser storage; the server stores workspace sessions, proposals, integration settings and simulated bookings. There is no live anny tenant, institutional knowledge source or real SSO connection.
 
@@ -51,6 +52,13 @@ anzeigen** to inspect it. Paste source directly into the composer; indentation
 and Markdown hard breaks survive sending and storage. Messages are limited to
 4,000 characters; an oversized paste is rejected without truncating the draft.
 Raw HTML and remote images are not rendered or fetched.
+
+While an answer is being generated, **Antwort stoppen** replaces Send. It
+retains the unsent draft and discards late model replies before they can start
+tools. The control stops inference; bookings and cancellations retain their
+separate confirmation and status workflow. See the
+[generation lifecycle](docs/architecture/generation-stop.md) and
+[bounded browser/transport evidence](docs/verification/2026-10-21/generation-stop.md).
 
 Knowledge answers show numbered source links matching their cards, with title,
 source and revision. Links open the authorized reader in the same tab; **Zurück
@@ -301,7 +309,7 @@ HASI is an incomplete MVP prototype, not an operational Hochschule Hannover serv
 
 Versioned GHCR images for `linux/amd64` and `linux/arm64` are built only through Release Please. The workflow and local Compose demo are implemented; no GHCR image has been published, and hosted native qualification is recorded separately in [D3](https://github.com/metaneutrons/HASI/issues/17). See the [container runtime and release boundaries](docs/architecture/container-runtime.md) before building or selecting a release image. Read-only mainline qualification uploads CI artifacts without creating a tag or release.
 
-The roadmap additionally covers [public web search restricted to operator-approved URL scopes](docs/architecture/restricted-web-search.md), Moodle, Stud.IP, HISinOne (including exam registration and student records), SAP leave/time workflows, and a versioned knowledge base of examination regulations for every degree programme, including scanned PDFs, OCR and exact page citations. These integrations are planned, not implemented.
+The roadmap additionally covers [public web search restricted to operator-approved URL scopes](docs/architecture/restricted-web-search.md), Moodle, Stud.IP, HISinOne (including exam registration and student records), SAP leave/time workflows, HsH library catalogue search, and a versioned knowledge base of examination regulations for every degree programme, including scanned PDFs, OCR and exact page citations. These integrations are planned, not implemented.
 
 The synthetic demo is disposable and has no backup acceptance requirement; production backup/restore and off-host replication remain final M8-A8 gates. API p95 ≤ 1 second with five concurrent users is deferred to M8-A9; local UI feedback ≤ 200 ms remains in M2/M7. Independent health monitoring and durable session/action/budget controls remain technical requirements.
 
@@ -310,7 +318,7 @@ Technical milestones M1–M7 may qualify with Test-IdP, synthetic content, contr
 Track delivery in the [unified index #47](https://github.com/metaneutrons/HASI/issues/47),
 later integrations in [roadmap #55](https://github.com/metaneutrons/HASI/issues/55),
 and the six plugin qualification groups P1–P6 in [M2 #49](https://github.com/metaneutrons/HASI/issues/49).
-The approved [v7 plan](docs/plans/consolidated-delivery.md#v3-issue-graph)
+The approved [v8 plan](docs/plans/consolidated-delivery.md#v3-issue-graph)
 consolidates the initiative into 13 primary tracking records while preserving all acceptance criteria and evidence; completed records close with their evidence in the issue index.
 The MCP registry supports approved endpoints, compatible updates, schema-driven
 configuration and registry-driven chat tool discovery. Arbitrary plugin code

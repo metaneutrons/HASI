@@ -1,8 +1,8 @@
 # Proposed technical basis for hasi
 
-Created: 2026-10-09. Updated: 2026-10-16. Status: architecture with an initial
-local prototype under development; no institutional production provisioning has been
-performed. The agreed MVP covers permission-aware
+Created: 2026-10-09. Updated: 2026-10-21. Status: target architecture with a
+deployed synthetic demo and local prototype; no institutional production
+provisioning has been performed. The agreed MVP covers permission-aware
 knowledge search with citations across intranet.hs-hannover.de and
 service.it.hs-hannover.de, plus anny room booking. Microsoft 365 Bookings is
 deferred.
@@ -36,11 +36,18 @@ are local research utilities and introduce no production runtime dependency.
 | Verification | Focused backend/integration tests and browser flow tests, e.g. Vitest and Playwright | Verify identities, permissions, action integrity, retrieval and actual UI behavior |
 
 Initial prototype package versions and compatibility are pinned in the workspace
-manifests and lockfile. The public prototype is hosted on Vercel; GroqCloud is
-the first integrated model provider for the synthetic-data prototype. The
-institutional production platform, exact model, embedding model and retention
-policy remain open. See [LLM router credentials](llm-router-credentials.md) for
-the agreed separation of provider configuration and server-side secrets.
+manifests and lockfile. The first public prototype used Vercel and Neon; both
+were retired in October 2026. The historical cutover and its Vercel qualification
+evidence are recorded in the [hosting cutover](../verification/2026-10-18/selfhost-cutover.md)
+and [database cutover](../verification/2026-10-18/local-postgres-cutover.md).
+The current synthetic public demo runs on Hetzner under Coolify with private
+PostgreSQL 18.6. Its source controller automatically deploys the exact current
+`main` revision only after required CI succeeds. This main-source deployment is
+separate from Release Please's versioned multi-platform container releases.
+GroqCloud was the first integrated model provider for the synthetic-data
+prototype. The institutional production platform, exact model, embedding model
+and retention policy remain open. See [LLM router credentials](llm-router-credentials.md)
+for the agreed separation of provider configuration and server-side secrets.
 
 Next.js is a frontend/BFF choice, not the location of the business authorization
 rules. Those rules belong to the application API. A React/Vite SPA is a viable

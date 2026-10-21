@@ -207,10 +207,13 @@ Sources: [Groq Prompt Guard 2](https://console.groq.com/docs/model/meta-llama/ll
 GroqCloud was the first selected prototype provider; GWDG SAIA and an
 operator-configured OpenAI-compatible connection are additional selectable
 demo profiles. Credentials are stored server-side in the deployment secret
-store; model profiles and provider connections carry secret references only. A
-HASI-owned resolver separates Vercel environment variables from future
-institutional secret-manager storage. Model/plugin/client input cannot choose
-those references or endpoints.
+store; model profiles and provider connections carry secret references only.
+For the public demo, `GROQ_API_KEY` and `GWDG_API_KEY` are held in encrypted
+fnox custody and provisioned as hidden Coolify runtime variables. Vercel and
+Neon are retired. A HASI-owned resolver reads allow-listed environment-variable
+references; an institution-operated secret manager can replace deployment-side
+secret resolution later. Model/plugin/client input cannot choose those
+references or endpoints.
 The [LLM router credential decision](llm-router-credentials.md) defines provider
 connections, administration visibility, deployment scopes, rotation and required
 implementation checks. This decision does not mark runtime integration complete.
