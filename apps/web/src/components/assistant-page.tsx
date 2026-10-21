@@ -1040,6 +1040,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       {messagesTruncated && <p className="chat-recovery-note">Die letzten 200 Nachrichten dieses Chats werden gespeichert und angezeigt.</p>}
       <div className="chat-scroller" ref={scroller}>
         {!offline && <PersonalConnectionNotice />}
+        {messages.length > 0 && <h1 className="sr-only">Unterhaltung</h1>}
         {messages.length === 0 ? (
           <div className="chat-welcome">
             <span className="chat-orb" aria-hidden="true"><HasiIcon size={36} /></span>
