@@ -155,6 +155,8 @@ describe('managed browser journey external artifacts', () => {
   it('rejects external artifacts in local non-managed mode', async () => {
     const input = await fixture();
     await expect(admit(input.environment, input.workspace, false)).rejects.toThrow('external_artifact_mode_requires_managed');
+    await expect(admit({ [EXTERNAL_ARTIFACT_ENV.aDirectory]: '/not-a-readable-artifact' }, ROOT, false))
+      .rejects.toThrow('external_artifact_mode_requires_managed');
   });
 
   it('rejects versions outside the current managed runtime fixture contract', async () => {

@@ -88,13 +88,15 @@ export async function loadExternalJourneyArtifactPair(input: {
   readonly workspaceRoot: string;
   readonly managedMode: boolean;
 }): Promise<ExternalJourneyArtifactPair | undefined> {
+  if (!input.managedMode && Object.values(EXTERNAL_ARTIFACT_ENV).some(name => input.environment[name] !== undefined)) {
+    fail('external_artifact_mode_requires_managed');
+  }
   const pair = await loadExternalPluginArtifactPair({
     env: input.environment,
     workspaceRoot: input.workspaceRoot,
     readArtifactManifest: readArtifactManifestSafely,
   });
   if (!pair) return undefined;
-  if (!input.managedMode) fail('external_artifact_mode_requires_managed');
 
   if (pair.a.evidence.pluginVersion !== EXPECTED_RELEASE_VERSIONS[0]
     || pair.b.evidence.pluginVersion !== EXPECTED_RELEASE_VERSIONS[1]) {
