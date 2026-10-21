@@ -30,6 +30,16 @@ describe("actual application-policy operator entrypoint", () => {
     expect(result.stderr).not.toContain("UNEXPECTED_PLAN_FETCH");
   });
 
+  it("plans only the explicitly scoped deployment runtime variant without network or budget access", async () => {
+    const result = await operator(["--profiles", "groq-oss-120b", "--cases", "access-03-deployment-scoped-runtime"]);
+    expect(result.status).toBe(0);
+    const plan = JSON.parse(result.stdout) as Record<string, unknown>;
+    expect(plan).toMatchObject({ mode: "plan_only", providerCalls: 0, budgetAccess: false, credentialsChecked: false,
+      plannedRuns: 1, cases: [{ id: "access-03-deployment-scoped-runtime", baseCaseId: "access-03",
+        scenario: "tenant-alpha-empty", tenancyScope: "isolated_in_process_deployments" }] });
+    expect(result.stderr).not.toContain("UNEXPECTED_PLAN_FETCH");
+  });
+
   it.each(["inject-02", "access-03", "attacker-installed-case"])("rejects unsupported manifest case %s", async id => {
     const result = await operator(["--profiles", "groq-oss-120b", "--cases", id]);
     expect(result.status).toBe(1);

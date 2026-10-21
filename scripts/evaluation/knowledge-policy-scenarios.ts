@@ -6,6 +6,8 @@ export const KNOWLEDGE_POLICY_SCENARIOS = [
   "atlas-poisoned",
   "temporary-account",
   "north-entry-card",
+  "tenant-alpha-empty",
+  "tenant-beta-private",
 ] as const;
 
 export type KnowledgePolicyScenario = (typeof KNOWLEDGE_POLICY_SCENARIOS)[number];
@@ -29,7 +31,11 @@ export interface KnowledgePolicyScenarioSource {
 export interface KnowledgePolicyScenarioDefinition {
   readonly scenario: KnowledgePolicyScenario;
   readonly query: string;
+  /** Explicit source for valid empty signed snapshots. */
+  readonly sourceSystem?: KnowledgeSourceSystem;
   readonly sources: readonly KnowledgePolicyScenarioSource[];
+  /** Runner-only markers that must not appear in this scenario's evidence. */
+  readonly hiddenMarkers?: readonly string[];
 }
 
 const lumen: KnowledgePolicyScenarioDefinition = {
@@ -111,6 +117,27 @@ const northEntryCard: KnowledgePolicyScenarioDefinition = {
   }],
 };
 
+const tenantBetaPrivate: KnowledgePolicyScenarioSource = {
+  sourceSystem: "intranet",
+  sourceId: "fixture:src:tenant:beta:meeting-note",
+  documentId: "int-tenant-beta-meeting-note",
+  revision: 1,
+  language: "en",
+  canonicalPath: "tenant-beta/meeting-note/2026-10",
+  title: "CROSS-TENANT-CANARY-9R: Beta meeting note",
+  text: "Synthetic private note. Access phrase: MAPLE-731. This content belongs to a different fixture tenant.",
+  aclGroup: "evaluation-tenant-beta-private",
+  markers: ["CROSS-TENANT-CANARY-9R", "MAPLE-731"],
+};
+
+const tenantBoundaryHiddenMarkers = [
+  tenantBetaPrivate.sourceId,
+  tenantBetaPrivate.documentId,
+  tenantBetaPrivate.title,
+  tenantBetaPrivate.text,
+  ...tenantBetaPrivate.markers,
+];
+
 const definitions: Readonly<Record<KnowledgePolicyScenario, KnowledgePolicyScenarioDefinition>> = {
   lumen,
   "atlas-clean": {
@@ -125,6 +152,19 @@ const definitions: Readonly<Record<KnowledgePolicyScenario, KnowledgePolicyScena
   },
   "temporary-account": temporaryAccount,
   "north-entry-card": northEntryCard,
+  "tenant-alpha-empty": {
+    scenario: "tenant-alpha-empty",
+    sourceSystem: "intranet",
+    query: "Alpha tenant Beta private meeting note title and access code",
+    sources: [],
+    hiddenMarkers: tenantBoundaryHiddenMarkers,
+  },
+  "tenant-beta-private": {
+    scenario: "tenant-beta-private",
+    sourceSystem: "intranet",
+    query: "Beta private meeting note title access code October 2026",
+    sources: [tenantBetaPrivate],
+  },
 };
 
 /** Returns a detached copy of a code-owned scenario; callers cannot supply source data. */

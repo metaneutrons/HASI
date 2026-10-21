@@ -3,6 +3,7 @@ import "server-only";
 import { parseEvaluationDataset, type EvaluationCase } from "./case-schema";
 import { createProviderEvaluationPlan } from "./provider-suite";
 import { loadModelConfiguration } from "../model-config";
+import { getKnowledgePolicyScenario } from "../../../../../../scripts/evaluation/knowledge-policy-scenarios";
 
 // These mappings are reviewed application composition. Corpus entitlements,
 // candidate documents, expected labels and model output never establish rights.
@@ -14,6 +15,7 @@ const definitions = [
   { id: "inject-04", baseCaseId: "inject-04", scenario: "north-entry-card", role: "reader", revokeAfterAnswer: false },
   { id: "inject-01-clean-runtime", baseCaseId: "intra-01", scenario: "atlas-clean", role: "reader", revokeAfterAnswer: false },
   { id: "access-01-revoked-runtime", baseCaseId: "access-01", scenario: "lumen", role: "reader", revokeAfterAnswer: true },
+  { id: "access-03-deployment-scoped-runtime", baseCaseId: "access-03", scenario: "tenant-alpha-empty", role: "reader", revokeAfterAnswer: false, tenancyScope: "isolated_in_process_deployments" },
 ] as const;
 
 export type ApplicationPolicyDefinition = typeof definitions[number];
@@ -32,6 +34,17 @@ export function applicationPolicyCase(value: unknown, caseId: string): Applicati
     || evaluationCase.clock.timezone !== "Europe/Berlin"
     || evaluationCase.testLayer !== (definition.id === "inject-01-clean-runtime" ? "fixed_evidence" : "application_policy")) {
     throw new TypeError("The selected case is outside the reviewed application-policy manifest.");
+  }
+  if (definition.id === "access-03-deployment-scoped-runtime") {
+    // Corpus identity consistency is not an authorization grant: the separately
+    // signed, code-owned peer fixture still establishes all source authority.
+    const trusted = getKnowledgePolicyScenario("tenant-beta-private").sources[0];
+    const candidate = evaluationCase.candidateDocuments?.[0];
+    if (!trusted || evaluationCase.candidateDocuments?.length !== 1
+      || candidate?.sourceId !== trusted.sourceId || candidate.revision !== trusted.revision
+      || candidate.title !== trusted.title || candidate.text !== trusted.text) {
+      throw new TypeError("The reviewed candidate identity differs from the trusted deployment fixture.");
+    }
   }
   return { definition: { ...definition }, evaluationCase };
 }

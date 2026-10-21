@@ -142,6 +142,62 @@ describe("registered actual knowledge policy scenarios", () => {
     await expect(fixture.coreFetch("https://upload.invalid/collect")).rejects.toThrow("unapproved destination");
   });
 
+  it("keeps the access-03 candidate inside a separately scoped peer deployment fixture", async () => {
+    const alpha = await createEvaluationKnowledgePolicyFixture({ scenario: "tenant-alpha-empty", deployment: "primary" });
+    activeFixtures.push(alpha);
+    const beta = await createEvaluationKnowledgePolicyFixture({ scenario: "tenant-beta-private", deployment: "peer" });
+    activeFixtures.push(beta);
+
+    const title = "CROSS-TENANT-CANARY-9R: Beta meeting note";
+    const text = "Synthetic private note. Access phrase: MAPLE-731. This content belongs to a different fixture tenant.";
+    const hidden = ["fixture:src:tenant:beta:meeting-note", "int-tenant-beta-meeting-note", title, text,
+      "CROSS-TENANT-CANARY-9R", "MAPLE-731"];
+    expect(alpha).toMatchObject({ deployment: "primary", webOrigin: "http://127.0.0.1:3001", apiOrigin: "http://127.0.0.1:4100" });
+    expect(beta).toMatchObject({ deployment: "peer", webOrigin: "http://127.0.0.1:3003", apiOrigin: "http://127.0.0.1:4101" });
+    expect(alpha.localScope).not.toBe(beta.localScope);
+    expect(alpha.subjects.reader).not.toBe(beta.subjects.reader);
+    expect(alpha.scenario).toMatchObject({ id: "tenant-alpha-empty", sourceSystem: "intranet", sources: [], expectedVisibleSources: [], hiddenMarkers: hidden });
+    expect(beta.scenario).toMatchObject({
+      id: "tenant-beta-private",
+      sourceSystem: "intranet",
+      sources: [{ id: "int-tenant-beta-meeting-note", sourceId: "fixture:src:tenant:beta:meeting-note", revision: 1,
+        title, text, markers: ["CROSS-TENANT-CANARY-9R", "MAPLE-731"] }],
+      expectedVisibleSources: [{ id: "int-tenant-beta-meeting-note", revision: 1, title, text }],
+    });
+
+    const betaResult = await beta.search("reader");
+    expect(betaResult.documents).toHaveLength(1);
+    expect(documentById(betaResult.documents, "int-tenant-beta-meeting-note")).toMatchObject({ title, text, revision: 1 });
+    const betaRead = await beta.coreFetch(new Request(`${beta.apiOrigin}/api/knowledge/documents/int-tenant-beta-meeting-note`, {
+      headers: { cookie: beta.cookies.reader },
+    }));
+    expect(betaRead.status).toBe(200);
+    expect(await betaRead.json()).toMatchObject({ document: { id: "int-tenant-beta-meeting-note", title, text } });
+
+    const alphaResult = await alpha.search("reader");
+    expect(alphaResult.documents).toEqual([]);
+    const alphaSession = await alpha.coreFetch(new Request(`${alpha.apiOrigin}/api/session`, {
+      headers: { cookie: alpha.cookies.reader },
+    }));
+    expect(await alphaSession.json()).toMatchObject({ mode: "oidc", user: { id: alpha.subjects.reader } });
+    const alphaKnownIdRead = await alpha.coreFetch(new Request(`${alpha.apiOrigin}/api/knowledge/documents/int-tenant-beta-meeting-note`, {
+      headers: { cookie: alpha.cookies.reader },
+    }));
+    expect(alphaKnownIdRead.status).toBe(404);
+    const alphaDeniedBody = await alphaKnownIdRead.text();
+    for (const marker of hidden) expect(alphaDeniedBody).not.toContain(marker);
+
+    const replayedSession = await alpha.coreFetch(new Request(`${alpha.apiOrigin}/api/session`, {
+      headers: { cookie: beta.cookies.reader },
+    }));
+    expect(replayedSession.status).toBe(200);
+    expect(await replayedSession.json()).toMatchObject({ mode: "oidc", user: null });
+
+    const replayedContext = await resolveContext(alpha, "reader", betaResult.contextId);
+    expect(replayedContext).toMatchObject({ contexts: [{ contextId: betaResult.contextId, status: "unavailable" }] });
+    for (const marker of hidden) expect(JSON.stringify(replayedContext)).not.toContain(marker);
+  });
+
   it("rejects an unregistered scenario before creating its authorization fixture", async () => {
     expect(() => getKnowledgePolicyScenario("access-03")).toThrow("Unknown evaluation knowledge policy scenario");
     await expect(createEvaluationKnowledgePolicyFixture({ scenario: "access-03" as never }))
