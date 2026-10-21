@@ -19,7 +19,7 @@
 
 .panelHeader h2 {
   margin: 5px 0 4px;
-  font-size: clamp(19px, 2.3vw, 23px);
+  font-size: clamp(1.1875rem, 2.3vw, 1.4375rem);
   font-weight: 650;
   letter-spacing: -0.04em;
   line-height: 1.2;
@@ -29,12 +29,12 @@
   max-width: 690px;
   margin: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .kicker {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 720;
   letter-spacing: 0.14em;
 }
@@ -51,7 +51,7 @@
   border: 1px solid transparent;
   border-radius: 12px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 630;
   line-height: 1.3;
   text-align: center;
@@ -136,7 +136,7 @@
   border-radius: 13px;
   background: var(--surface-raised);
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .loadError {
@@ -156,8 +156,8 @@
 }
 
 .empty div { display: grid; gap: 3px; }
-.empty strong { color: var(--ink); font-size: 13px; }
-.empty span { color: var(--muted); font-size: 12px; }
+.empty strong { color: var(--ink); font-size: 0.8125rem; }
+.empty span { color: var(--muted); font-size: 0.75rem; }
 
 .installationGrid {
   display: grid;
@@ -197,8 +197,8 @@
 }
 
 .installationName { display: grid; min-width: 0; flex: 1; gap: 2px; }
-.installationName h3 { margin: 0; overflow-wrap: anywhere; font-size: 15px; font-weight: 680; letter-spacing: -0.025em; }
-.installationName code { overflow-wrap: anywhere; color: var(--muted); font-size: 10px; }
+.installationName h3 { margin: 0; overflow-wrap: anywhere; font-size: 0.9375rem; font-weight: 680; letter-spacing: -0.025em; }
+.installationName code { overflow-wrap: anywhere; color: var(--muted); font-size: 0.625rem; }
 
 .status,
 .approvedTag,
@@ -213,7 +213,7 @@
   border-radius: 999px;
   background: var(--surface-soft);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 650;
   line-height: 1.2;
   text-align: center;
@@ -245,11 +245,11 @@
 .configuration div,
 .releaseDetails div { display: grid; min-width: 0; gap: 2px; }
 .configuration dt,
-.releaseDetails dt { color: var(--muted); font-size: 10px; font-weight: 590; }
+.releaseDetails dt { color: var(--muted); font-size: 0.625rem; font-weight: 590; }
 .configuration dd,
-.releaseDetails dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--ink-soft); font-size: 11px; }
+.releaseDetails dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--ink-soft); font-size: 0.6875rem; }
 .configuration dd code,
-.releaseDetails dd code { overflow-wrap: anywhere; color: var(--ink-soft); font-size: 10px; }
+.releaseDetails dd code { overflow-wrap: anywhere; color: var(--ink-soft); font-size: 0.625rem; }
 
 .configurationNote,
 .gateNote {
@@ -258,7 +258,7 @@
   border-left: 3px solid var(--accent);
   background: var(--accent-wash);
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .releaseStates { display: grid; gap: 8px; }
@@ -274,7 +274,7 @@
 }
 
 .releaseStateHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.releaseStateHeading strong { font-size: 11px; font-weight: 700; }
+.releaseStateHeading strong { font-size: 0.6875rem; font-weight: 700; }
 .releaseState .releaseDetails { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .releaseState .releaseDetails > div:first-child { grid-column: 1 / -1; }
 
@@ -287,7 +287,7 @@
   border-top: 1px solid var(--line);
 }
 
-.fieldLabel { color: var(--ink-soft); font-size: 11px; font-weight: 650; }
+.fieldLabel { color: var(--ink-soft); font-size: 0.6875rem; font-weight: 650; }
 
 .select,
 .input {
@@ -298,7 +298,7 @@
   border-radius: 11px;
   background: var(--surface-solid);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .releaseDetailsExpanded {
@@ -324,8 +324,8 @@
   background: var(--accent-wash);
 }
 
-.reviewHeading { display: flex; align-items: center; gap: 8px; color: var(--accent-deep); font-size: 12px; }
-.reviewBox > p { margin: 0; color: var(--ink-soft); font-size: 11px; }
+.reviewHeading { display: flex; align-items: center; gap: 8px; color: var(--accent-deep); font-size: 0.75rem; }
+.reviewBox > p { margin: 0; color: var(--ink-soft); font-size: 0.6875rem; }
 .reviewBox .gateNote { margin-top: -3px; }
 
 .reconcileBox {
@@ -338,7 +338,7 @@
   border-top: 1px solid var(--line);
 }
 
-.reconcileBox p { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--red); font-size: 11px; }
+.reconcileBox p { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--red); font-size: 0.6875rem; }
 
 .pendingBox {
   flex-wrap: wrap;
@@ -373,7 +373,7 @@
 @media (max-width: 620px) {
   .panel { gap: 14px; padding: 15px; }
   .panelHeader { gap: 10px; }
-  .panelHeader p { font-size: 12px; }
+  .panelHeader p { font-size: 0.75rem; }
   .cardHeader { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: start; }
   .installationIcon { grid-column: 1; grid-row: 1; }
   .installationName { grid-column: 2; grid-row: 1; padding-top: 2px; }
