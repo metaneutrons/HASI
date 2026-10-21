@@ -384,7 +384,7 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .welcome-copy h1 span, .assistant-hero h1 span, .admin-hero h1 span { color: var(--accent); }
 .welcome-copy h1 span, .assistant-hero h1 span, .admin-hero h1 span { display: inline-block; transform: translateX(-0.025em); }
 .welcome-copy h1 { font-size: clamp(3.35rem, 16vw, 4.5rem); }
-.welcome-lede { max-width: 445px; margin: 25px 0 0; color: var(--muted); font-size: clamp(0.9375rem, 1.5vw, 1.0625rem); line-height: 1.75; }
+.welcome-lede { max-width: 445px; margin: 25px 0 0; color: var(--ink-soft); font-size: clamp(0.9375rem, 1.5vw, 1.0625rem); line-height: 1.75; }
 .welcome-note { display: flex; max-width: 390px; align-items: center; gap: 12px; margin-top: 29px; color: var(--ink-soft); font-size: 0.8125rem; }
 .welcome-note-icon { display: inline-flex; width: 35px; height: 35px; flex: 0 0 auto; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); color: var(--accent); }
 .welcome-orbit { position: absolute; right: -70px; bottom: -31px; width: 148px; height: 148px; opacity: 0.25; pointer-events: none; }

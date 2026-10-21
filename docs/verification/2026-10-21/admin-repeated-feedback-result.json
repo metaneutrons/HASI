@@ -1,0 +1,1591 @@
+{
+  "schemaVersion": 1,
+  "title": "Admin UI repeated-feedback latency qualification",
+  "captureDate": "2026-10-21",
+  "recordedBaseCommit": "f55d20ed809ef4e6015abf5ccda3774af34c71b8",
+  "scope": {
+    "application": "HASI admin UI components",
+    "implementation": "Optimized actual React components in a production, minified browser bundle",
+    "reactVersion": "19.3.1",
+    "reactDomVersion": "19.3.1",
+    "syntheticApi": "In-memory loopback API",
+    "providerCalls": 0,
+    "excludedClaims": [
+      "No provider integration latency claim",
+      "No plugin-process, installer, or database latency claim",
+      "No full-application performance acceptance claim"
+    ],
+    "browser": "Chrome 155.0.0.0",
+    "theme": "light",
+    "visibility": "visible",
+    "viewportBatches": [
+      {
+        "firstSampleId": 1,
+        "lastSampleId": 21,
+        "width": 390,
+        "height": 1600
+      },
+      {
+        "firstSampleId": 22,
+        "lastSampleId": 125,
+        "width": 1280,
+        "height": 1800
+      }
+    ],
+    "mockApiDelays": {
+      "pendingFeedbackMs": 120,
+      "errorFeedbackMs": 0,
+      "errorTimingIncludesImmediateLoopbackHttp": true
+    }
+  },
+  "gate": {
+    "thresholdMs": 200,
+    "normalControl": {
+      "id": 124,
+      "elapsedMs": 9.8,
+      "status": "PASS"
+    },
+    "delayedControl": {
+      "id": 125,
+      "configuredServerDelayMs": 250,
+      "elapsedMs": 262.1,
+      "status": "FAIL"
+    }
+  },
+  "outcomeCounts": {
+    "records": 125,
+    "statusCounts": {
+      "PASS": 123,
+      "INVALID": 1,
+      "FAIL": 1
+    },
+    "sourceCounts": {
+      "app": 123,
+      "probe-normal": 1,
+      "probe-delayed": 1
+    },
+    "validAppPasses": 122,
+    "normalProbePasses": 1,
+    "delayedProbeFailures": 1,
+    "invalidAppAttemptsExcluded": 1
+  },
+  "appPassMetrics": [
+    {
+      "kind": "expand config",
+      "passed": 20,
+      "minimumMs": 9.6,
+      "medianMs": 13.1,
+      "maximumMs": 13.6
+    },
+    {
+      "kind": "checkbox",
+      "passed": 21,
+      "minimumMs": 11.2,
+      "medianMs": 17.8,
+      "maximumMs": 19
+    },
+    {
+      "kind": "edit field",
+      "passed": 20,
+      "minimumMs": 8.5,
+      "medianMs": 12.6,
+      "maximumMs": 16.7
+    },
+    {
+      "kind": "feedback busy",
+      "passed": 41,
+      "minimumMs": 8,
+      "medianMs": 10.8,
+      "maximumMs": 16.6
+    },
+    {
+      "kind": "feedback error",
+      "passed": 20,
+      "minimumMs": 19.3,
+      "medianMs": 20.1,
+      "maximumMs": 21.6
+    }
+  ],
+  "excludedAttempt": {
+    "id": 21,
+    "kind": "checkbox",
+    "status": "INVALID",
+    "elapsedMs": null,
+    "viewport": {
+      "width": 390,
+      "height": 1600
+    },
+    "reason": "After locator autoscroll, the linked app-owned change marker was behind the measurement overlay. Instrumentation interference invalidated this sample; it is not a product defect."
+  },
+  "fixtureFinalSnapshot": {
+    "status": "empty",
+    "configurationRevision": 42,
+    "activeConfigurationRevision": 0,
+    "configurationReady": false,
+    "currentViewStatus": "empty",
+    "commandCount": 0,
+    "draftMode": "server-error",
+    "draftFeedbackDelayMs": 0,
+    "counters": {
+      "catalogReads": 42,
+      "configurationReads": 1,
+      "draftSavePosts": 61,
+      "draftSaved": 41,
+      "draftServerErrors": 20,
+      "configurationActivatePosts": 0,
+      "stagePosts": 0,
+      "reviewPosts": 0,
+      "releaseActivatePosts": 0,
+      "statusReads": 0,
+      "unknownRoutes": 0
+    }
+  },
+  "observations": [
+    {
+      "id": 1,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 12.3,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 2,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 10.9,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 3,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.6,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 4,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 12.8,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 5,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.1,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 6,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.6,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 7,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 12.6,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 8,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.1,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 9,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.1,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 10,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.2,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 11,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.3,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 12,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.5,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 13,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.2,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 14,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.5,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 15,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.3,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 16,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 12.2,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 17,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 12.8,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 18,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 12.2,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 19,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.2,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 20,
+      "kind": "expand config",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.4,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 21,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "INVALID",
+      "elapsedMs": null,
+      "viewport": {
+        "width": 390,
+        "height": 1600
+      }
+    },
+    {
+      "id": 22,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 15,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 23,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 24,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 14.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 25,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 16.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 26,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 27,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 18.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 28,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 16.6,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 29,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 18.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 30,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 16.1,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 31,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 19,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 32,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 15.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 33,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 15.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 34,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 8.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 35,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 16.2,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 36,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.6,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 37,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 14,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 38,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.6,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 39,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 17.9,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 40,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 10,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 41,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 17.9,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 42,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 16.2,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 43,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 19,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 44,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 10.1,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 45,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 11.2,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 46,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 10,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 47,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 17.8,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 48,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 8.6,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 49,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 17.8,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 50,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 8.6,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 51,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 18.2,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 52,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.6,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 53,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 11.9,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 54,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 15.9,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 55,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 18.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 56,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 16.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 57,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 18,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 58,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 8.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 59,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 18.5,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 60,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 61,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 16.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 62,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 16.2,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 63,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 64,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 10.2,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 65,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 66,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 67,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 15.2,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 68,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 11.2,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 69,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 15.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 70,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 71,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 14.6,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 72,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 73,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 16.4,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 74,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 8,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 75,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 13.6,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 76,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 11.9,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 77,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 8.5,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 78,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.8,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 79,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 16.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 80,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 11.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 81,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 16.6,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 82,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 10.5,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 83,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 10.1,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 84,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 10.8,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 85,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 10.1,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 86,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.8,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 87,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.1,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 88,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 11.2,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 89,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 9.5,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 90,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 11.8,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 91,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 12.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 92,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 11.2,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 93,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 10.8,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 94,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 11,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 95,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 14.9,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 96,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 12,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 97,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 10.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 98,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 12.1,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 99,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 12.5,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 100,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 11.1,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 101,
+      "kind": "edit field",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 12.4,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 102,
+      "kind": "feedback busy",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 10.6,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 103,
+      "kind": "checkbox",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 14.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 104,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 20.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 105,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 21.6,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 106,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 19.8,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 107,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 19.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 108,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 19.4,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 109,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 20.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 110,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 20.1,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 111,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 20.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 112,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 20.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 113,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 20,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 114,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 21,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 115,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 20.9,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 116,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 20.6,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 117,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 20.1,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 118,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 21.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 119,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 19.5,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 120,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 19.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 121,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 19.3,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 122,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 20,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 123,
+      "kind": "feedback error",
+      "source": "app",
+      "status": "PASS",
+      "elapsedMs": 19.7,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 124,
+      "kind": "normal DOM probe",
+      "source": "probe-normal",
+      "status": "PASS",
+      "elapsedMs": 9.8,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    },
+    {
+      "id": 125,
+      "kind": "250 ms delayed countercase",
+      "source": "probe-delayed",
+      "status": "FAIL",
+      "elapsedMs": 262.1,
+      "viewport": {
+        "width": 1280,
+        "height": 1800
+      }
+    }
+  ],
+  "hashBindings": {
+    "inputJsonSha256": {
+      "results.json": "20837e8fada3bf1e19200698427fb387455837f51f4b62fd7d61c33dcc7036c0",
+      "summary.json": "542c6f78872355e6b57a3bb5a95d3101cda5295c5685e147eddc94a978144979",
+      "fixture-state.json": "090f26b3dba993aae861292d1a89a894272e816b8c7213a2766b736d3878baa3"
+    },
+    "componentAndSdkArtifacts": {
+      "managedPluginPanel": {
+        "file": "apps/web/src/components/managed-plugin-panel.tsx",
+        "sha256": "fb076f836b31fd772e124530f568305d00beae1865e71de669876351afeec315"
+      },
+      "managedPluginPanelCss": {
+        "file": "apps/web/src/components/managed-plugin-panel.module.css",
+        "sha256": "3aef417d53bd8ce21ab643e6515700a67a2a2e47d4858738efca967d8e3c2553"
+      },
+      "pluginConfigPanel": {
+        "file": "apps/web/src/components/plugin-config-panel.tsx",
+        "sha256": "8460b9e3a3490867bddf382125e99e39b0ec5f33ef34ea6e58ebe60454d1372c"
+      },
+      "pluginConfigFields": {
+        "file": "apps/web/src/components/plugin-config-fields.tsx",
+        "sha256": "93e01ae80c4fcffa271d4e6ac57791dd90d8251a4e20a6fbe2313587b117f4e9"
+      },
+      "pluginConfiguration": {
+        "file": "apps/web/src/lib/plugin-configuration.ts",
+        "sha256": "59c34ebff7a3c4097585666c76dafeecc774801f64eeac88f467e1332549700b"
+      },
+      "pluginSdkDeploymentAdmin": {
+        "file": "packages/plugin-sdk/dist/deployment-admin.js",
+        "sha256": "1e268687eed70ad8af455521d08d05aaad5262e679fe6b03dbaa99f989b73f83"
+      },
+      "pluginSdkConfiguration": {
+        "file": "packages/plugin-sdk/dist/configuration.js",
+        "sha256": "5a1bc8124d4f0930f614d84f8ceedc4528cb8abea237c72440a80c333580cf3c"
+      }
+    },
+    "harnessSources": {
+      "entry": "32034c498ae3d0a0e108878e619a099f707fa3c11aedf2c9f30df5b008a8a5b6",
+      "latencyInstrument": "5592aeb689c211d422685c1e24acfeba9978a3ac936ebb71327b5e1e8054e491",
+      "server": "b89b55dfc0e85d9f0b9b6b64e507307cdf02b4ae6f1c524445e22fcdc689e674"
+    },
+    "productionBundle": {
+      "mode": "production",
+      "minified": true,
+      "reactVersion": "19.3.1",
+      "reactDomVersion": "19.3.1",
+      "bundleSha256": {
+        "bundle.js": "a953a9ab7baf3277639ba3769ba185b32bac19b4eb20621a7af7a64d4fada00c",
+        "bundle.css": "0d4f068505de226482d5ceff3bc5eb08faf59a79576a19b3a1414b31d6453cb1"
+      }
+    },
+    "globalCss": {
+      "asset": "apps/web/.next/static/chunks/17biss_iokrrj.css",
+      "sourceSha256Recorded": "c4b822edf2602132fa5e3fd4d11ed81c1f669079b80eb7daf9cc46ef21ccae17",
+      "compiledSha256RecordedAndVerified": "8c9813f4472b43c268a7b4741ab9bba06c5f21c53ccbc8a2c9ec32637787bdba",
+      "baseCommitSourceSha256": "9bc838264d5950faa1d8ba72e359b1f1bbdbdbea0048ea563b5d1b714c611ece",
+      "currentSourceSha256": "c4b822edf2602132fa5e3fd4d11ed81c1f669079b80eb7daf9cc46ef21ccae17",
+      "compiledRule": ".welcome-lede color: var(--muted)",
+      "sourceEditAfterCompile": ".welcome-lede color changed from var(--muted) to var(--ink-soft)"
+    }
+  },
+  "sanitization": {
+    "elapsedMsPrecision": 0.1,
+    "omitted": [
+      "Absolute workstation and temporary fixture paths",
+      "API request paths and request/response bodies",
+      "Raw detail and target strings"
+    ],
+    "elapsedMsRoundedToNearest0_1Ms": true
+  },
+  "reportFile": "admin-repeated-feedback.md"
+}

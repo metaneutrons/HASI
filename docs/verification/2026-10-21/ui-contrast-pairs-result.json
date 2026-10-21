@@ -1,0 +1,1430 @@
+{
+  "recordedBase": "f55d20ed809ef4e6015abf5ccda3774af34c71b8",
+  "browser": "Chrome 155.0.0.0",
+  "axe": "4.14.0",
+  "deviceScaleFactor": 1,
+  "welcomeCandidate": "Transient .welcome-lede { color: var(--ink-soft) !important } overlay on deployed base; equivalent local source rule is uncommitted at capture, not deployed qualification.",
+  "method": "Opaque computed foreground against all lossless rendered background pixels in text-node DOMRange rectangles, text-fill-only masking restored and identical layout/foreground, guarded opacity/filter/mask and center hit tests. Bounding rectangles conservatively include whitespace.",
+  "controls": {
+    "positiveBlackOnWhite": {
+      "ratio": 21,
+      "exitCode": 0
+    },
+    "negativeWhiteOnWhite": {
+      "ratio": 1,
+      "exitCode": 1
+    },
+    "analyzerSha256": "1db82cb9b3fd7ba2be5dbd09af2f87d06cf1b183139be10911ca18ed2b014866"
+  },
+  "results": {
+    "desktop-dark": {
+      "sha256": "065faa06876045cf4ca81297a37075f76e01962f8ffd2e4d1c1553ce7bc7a01e",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".brand-link > .brand-lockup > .brand-name",
+          "threshold": 3,
+          "minimumContrast": 16.368134149544446,
+          "backingPixels": 1160,
+          "passed": true,
+          "text": [
+            "hasi"
+          ]
+        },
+        {
+          "selector": ".brand-caption",
+          "threshold": 4.5,
+          "minimumContrast": 8.587414630523364,
+          "backingPixels": 1740,
+          "passed": true,
+          "text": [
+            "Hochschule Hannover"
+          ]
+        },
+        {
+          "selector": ".prototype-label",
+          "threshold": 4.5,
+          "minimumContrast": 7.588148170276684,
+          "backingPixels": 765,
+          "passed": true,
+          "text": [
+            "Prototyp"
+          ]
+        },
+        {
+          "selector": ".eyebrow",
+          "threshold": 4.5,
+          "minimumContrast": 8.587414630523364,
+          "backingPixels": 2412,
+          "passed": true,
+          "text": [
+            "CAMPUS, KLARER ORGANISIERT"
+          ]
+        },
+        {
+          "selector": "h1",
+          "threshold": 3,
+          "minimumContrast": 5.883846623479009,
+          "backingPixels": 80142,
+          "passed": true,
+          "text": [
+            "Was steht",
+            "heute an?"
+          ]
+        },
+        {
+          "selector": "h1 > span",
+          "threshold": 3,
+          "minimumContrast": 5.883846623479009,
+          "backingPixels": 39900,
+          "passed": true,
+          "text": [
+            "heute an?"
+          ]
+        },
+        {
+          "selector": ".welcome-lede",
+          "threshold": 4.5,
+          "minimumContrast": 6.772464129547569,
+          "backingPixels": 26019,
+          "passed": true,
+          "text": [
+            "Frag HASI. Finde Informationen, plane deinen n\u00e4chsten Schritt und erledige Aufgaben direkt im Gespr\u00e4ch. Raumsuche und Buchung kannst du bereits ausprobieren."
+          ]
+        },
+        {
+          "selector": ".welcome-note > span:nth-child(2)",
+          "threshold": 4.5,
+          "minimumContrast": 12.250316851490037,
+          "backingPixels": 5056,
+          "passed": true,
+          "text": [
+            "Zum Ausprobieren einfach ein Testkonto ausw\u00e4hlen."
+          ]
+        },
+        {
+          "selector": ".login-kicker",
+          "threshold": 4.5,
+          "minimumContrast": 9.071026327405873,
+          "backingPixels": 1140,
+          "passed": true,
+          "text": [
+            "TESTUMGEBUNG"
+          ]
+        },
+        {
+          "selector": "#login-title",
+          "threshold": 3,
+          "minimumContrast": 14.71052969218714,
+          "backingPixels": 7595,
+          "passed": true,
+          "text": [
+            "Anmelden und loslegen"
+          ]
+        },
+        {
+          "selector": ".login-intro",
+          "threshold": 4.5,
+          "minimumContrast": 7.7177653083294215,
+          "backingPixels": 5232,
+          "passed": true,
+          "text": [
+            "W\u00e4hle die Perspektive, die du ausprobieren m\u00f6chtest."
+          ]
+        },
+        {
+          "selector": ".login-card-foot > span:nth-child(2)",
+          "threshold": 4.5,
+          "minimumContrast": 7.740734580095192,
+          "backingPixels": 2388,
+          "passed": true,
+          "text": [
+            "Demo-Zugang \u00b7 keine echten Kontodaten"
+          ]
+        },
+        {
+          "selector": "footer > span:nth-child(1)",
+          "threshold": 4.5,
+          "minimumContrast": 8.587414630523364,
+          "backingPixels": 1272,
+          "passed": true,
+          "text": [
+            "Hochschule Hannover"
+          ]
+        },
+        {
+          "selector": "footer > span:nth-child(3)",
+          "threshold": 4.5,
+          "minimumContrast": 8.587414630523364,
+          "backingPixels": 1536,
+          "passed": true,
+          "text": [
+            "HASI \u00b7 Hochschulassistent"
+          ]
+        },
+        {
+          "selector": ".welcome-footer-right",
+          "threshold": 4.5,
+          "minimumContrast": 8.587414630523364,
+          "backingPixels": 1992,
+          "passed": true,
+          "text": [
+            "Ein Prototyp f\u00fcr den Campusalltag"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "desktop-light": {
+      "sha256": "3d257c8517461d4b684557e1ce923c7439f496b560a5fd68b2b6251704065b31",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".brand-link > .brand-lockup > .brand-name",
+          "threshold": 3,
+          "minimumContrast": 14.57463251017255,
+          "backingPixels": 1160,
+          "passed": true,
+          "text": [
+            "hasi"
+          ]
+        },
+        {
+          "selector": ".brand-caption",
+          "threshold": 4.5,
+          "minimumContrast": 4.811816137381857,
+          "backingPixels": 1740,
+          "passed": true,
+          "text": [
+            "Hochschule Hannover"
+          ]
+        },
+        {
+          "selector": ".prototype-label",
+          "threshold": 4.5,
+          "minimumContrast": 4.623480360511904,
+          "backingPixels": 765,
+          "passed": true,
+          "text": [
+            "Prototyp"
+          ]
+        },
+        {
+          "selector": ".eyebrow",
+          "threshold": 4.5,
+          "minimumContrast": 4.811816137381857,
+          "backingPixels": 2412,
+          "passed": true,
+          "text": [
+            "CAMPUS, KLARER ORGANISIERT"
+          ]
+        },
+        {
+          "selector": "h1",
+          "threshold": 3,
+          "minimumContrast": 3.27090390535926,
+          "backingPixels": 80142,
+          "passed": true,
+          "text": [
+            "Was steht",
+            "heute an?"
+          ]
+        },
+        {
+          "selector": "h1 > span",
+          "threshold": 3,
+          "minimumContrast": 3.27090390535926,
+          "backingPixels": 39900,
+          "passed": true,
+          "text": [
+            "heute an?"
+          ]
+        },
+        {
+          "selector": ".welcome-lede",
+          "threshold": 4.5,
+          "minimumContrast": 3.970471097617795,
+          "backingPixels": 26019,
+          "passed": false,
+          "text": [
+            "Frag HASI. Finde Informationen, plane deinen n\u00e4chsten Schritt und erledige Aufgaben direkt im Gespr\u00e4ch. Raumsuche und Buchung kannst du bereits ausprobieren."
+          ]
+        },
+        {
+          "selector": ".welcome-note > span:nth-child(2)",
+          "threshold": 4.5,
+          "minimumContrast": 8.444329538550077,
+          "backingPixels": 5056,
+          "passed": true,
+          "text": [
+            "Zum Ausprobieren einfach ein Testkonto ausw\u00e4hlen."
+          ]
+        },
+        {
+          "selector": ".login-kicker",
+          "threshold": 4.5,
+          "minimumContrast": 8.576834317026627,
+          "backingPixels": 1140,
+          "passed": true,
+          "text": [
+            "TESTUMGEBUNG"
+          ]
+        },
+        {
+          "selector": "#login-title",
+          "threshold": 3,
+          "minimumContrast": 15.643900621339435,
+          "backingPixels": 7595,
+          "passed": true,
+          "text": [
+            "Anmelden und loslegen"
+          ]
+        },
+        {
+          "selector": ".login-intro",
+          "threshold": 4.5,
+          "minimumContrast": 5.164835093359618,
+          "backingPixels": 5232,
+          "passed": true,
+          "text": [
+            "W\u00e4hle die Perspektive, die du ausprobieren m\u00f6chtest."
+          ]
+        },
+        {
+          "selector": ".login-card-foot > span:nth-child(2)",
+          "threshold": 4.5,
+          "minimumContrast": 5.199764776781156,
+          "backingPixels": 2388,
+          "passed": true,
+          "text": [
+            "Demo-Zugang \u00b7 keine echten Kontodaten"
+          ]
+        },
+        {
+          "selector": "footer > span:nth-child(1)",
+          "threshold": 4.5,
+          "minimumContrast": 4.811816137381857,
+          "backingPixels": 1272,
+          "passed": true,
+          "text": [
+            "Hochschule Hannover"
+          ]
+        },
+        {
+          "selector": "footer > span:nth-child(3)",
+          "threshold": 4.5,
+          "minimumContrast": 4.811816137381857,
+          "backingPixels": 1536,
+          "passed": true,
+          "text": [
+            "HASI \u00b7 Hochschulassistent"
+          ]
+        },
+        {
+          "selector": ".welcome-footer-right",
+          "threshold": 4.5,
+          "minimumContrast": 4.811816137381857,
+          "backingPixels": 1992,
+          "passed": true,
+          "text": [
+            "Ein Prototyp f\u00fcr den Campusalltag"
+          ]
+        }
+      ],
+      "allPassed": false
+    },
+    "desktop-light-candidate": {
+      "sha256": "8eb5606ccb8be86680b4354ce22d82245c5263960b5945a42891ae4669375eab",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".brand-link > .brand-lockup > .brand-name",
+          "threshold": 3,
+          "minimumContrast": 14.57463251017255,
+          "backingPixels": 1160,
+          "passed": true,
+          "text": [
+            "hasi"
+          ]
+        },
+        {
+          "selector": ".brand-caption",
+          "threshold": 4.5,
+          "minimumContrast": 4.811816137381857,
+          "backingPixels": 1740,
+          "passed": true,
+          "text": [
+            "Hochschule Hannover"
+          ]
+        },
+        {
+          "selector": ".prototype-label",
+          "threshold": 4.5,
+          "minimumContrast": 4.623480360511904,
+          "backingPixels": 765,
+          "passed": true,
+          "text": [
+            "Prototyp"
+          ]
+        },
+        {
+          "selector": ".eyebrow",
+          "threshold": 4.5,
+          "minimumContrast": 4.811816137381857,
+          "backingPixels": 2412,
+          "passed": true,
+          "text": [
+            "CAMPUS, KLARER ORGANISIERT"
+          ]
+        },
+        {
+          "selector": "h1",
+          "threshold": 3,
+          "minimumContrast": 3.27090390535926,
+          "backingPixels": 80142,
+          "passed": true,
+          "text": [
+            "Was steht",
+            "heute an?"
+          ]
+        },
+        {
+          "selector": "h1 > span",
+          "threshold": 3,
+          "minimumContrast": 3.27090390535926,
+          "backingPixels": 39900,
+          "passed": true,
+          "text": [
+            "heute an?"
+          ]
+        },
+        {
+          "selector": ".welcome-lede",
+          "threshold": 4.5,
+          "minimumContrast": 6.967840294458153,
+          "backingPixels": 26019,
+          "passed": true,
+          "text": [
+            "Frag HASI. Finde Informationen, plane deinen n\u00e4chsten Schritt und erledige Aufgaben direkt im Gespr\u00e4ch. Raumsuche und Buchung kannst du bereits ausprobieren."
+          ]
+        },
+        {
+          "selector": ".welcome-note > span:nth-child(2)",
+          "threshold": 4.5,
+          "minimumContrast": 8.444329538550077,
+          "backingPixels": 5056,
+          "passed": true,
+          "text": [
+            "Zum Ausprobieren einfach ein Testkonto ausw\u00e4hlen."
+          ]
+        },
+        {
+          "selector": ".login-kicker",
+          "threshold": 4.5,
+          "minimumContrast": 8.576834317026627,
+          "backingPixels": 1140,
+          "passed": true,
+          "text": [
+            "TESTUMGEBUNG"
+          ]
+        },
+        {
+          "selector": "#login-title",
+          "threshold": 3,
+          "minimumContrast": 15.643900621339435,
+          "backingPixels": 7595,
+          "passed": true,
+          "text": [
+            "Anmelden und loslegen"
+          ]
+        },
+        {
+          "selector": ".login-intro",
+          "threshold": 4.5,
+          "minimumContrast": 5.164835093359618,
+          "backingPixels": 5232,
+          "passed": true,
+          "text": [
+            "W\u00e4hle die Perspektive, die du ausprobieren m\u00f6chtest."
+          ]
+        },
+        {
+          "selector": ".login-card-foot > span:nth-child(2)",
+          "threshold": 4.5,
+          "minimumContrast": 5.199764776781156,
+          "backingPixels": 2388,
+          "passed": true,
+          "text": [
+            "Demo-Zugang \u00b7 keine echten Kontodaten"
+          ]
+        },
+        {
+          "selector": "footer > span:nth-child(1)",
+          "threshold": 4.5,
+          "minimumContrast": 4.811816137381857,
+          "backingPixels": 1272,
+          "passed": true,
+          "text": [
+            "Hochschule Hannover"
+          ]
+        },
+        {
+          "selector": "footer > span:nth-child(3)",
+          "threshold": 4.5,
+          "minimumContrast": 4.811816137381857,
+          "backingPixels": 1536,
+          "passed": true,
+          "text": [
+            "HASI \u00b7 Hochschulassistent"
+          ]
+        },
+        {
+          "selector": ".welcome-footer-right",
+          "threshold": 4.5,
+          "minimumContrast": 4.811816137381857,
+          "backingPixels": 1992,
+          "passed": true,
+          "text": [
+            "Ein Prototyp f\u00fcr den Campusalltag"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "desktop-dark-candidate": {
+      "sha256": "1507c7e5aa8ea6ccf69cd82069c71c1730958513d0c47be2aa1a8d04bca0282b",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".brand-link > .brand-lockup > .brand-name",
+          "threshold": 3,
+          "minimumContrast": 16.368134149544446,
+          "backingPixels": 1160,
+          "passed": true,
+          "text": [
+            "hasi"
+          ]
+        },
+        {
+          "selector": ".brand-caption",
+          "threshold": 4.5,
+          "minimumContrast": 8.587414630523364,
+          "backingPixels": 1740,
+          "passed": true,
+          "text": [
+            "Hochschule Hannover"
+          ]
+        },
+        {
+          "selector": ".prototype-label",
+          "threshold": 4.5,
+          "minimumContrast": 7.588148170276684,
+          "backingPixels": 765,
+          "passed": true,
+          "text": [
+            "Prototyp"
+          ]
+        },
+        {
+          "selector": ".eyebrow",
+          "threshold": 4.5,
+          "minimumContrast": 8.587414630523364,
+          "backingPixels": 2412,
+          "passed": true,
+          "text": [
+            "CAMPUS, KLARER ORGANISIERT"
+          ]
+        },
+        {
+          "selector": "h1",
+          "threshold": 3,
+          "minimumContrast": 5.883846623479009,
+          "backingPixels": 80142,
+          "passed": true,
+          "text": [
+            "Was steht",
+            "heute an?"
+          ]
+        },
+        {
+          "selector": "h1 > span",
+          "threshold": 3,
+          "minimumContrast": 5.883846623479009,
+          "backingPixels": 39900,
+          "passed": true,
+          "text": [
+            "heute an?"
+          ]
+        },
+        {
+          "selector": ".welcome-lede",
+          "threshold": 4.5,
+          "minimumContrast": 9.661211787470434,
+          "backingPixels": 26019,
+          "passed": true,
+          "text": [
+            "Frag HASI. Finde Informationen, plane deinen n\u00e4chsten Schritt und erledige Aufgaben direkt im Gespr\u00e4ch. Raumsuche und Buchung kannst du bereits ausprobieren."
+          ]
+        },
+        {
+          "selector": ".welcome-note > span:nth-child(2)",
+          "threshold": 4.5,
+          "minimumContrast": 12.250316851490037,
+          "backingPixels": 5056,
+          "passed": true,
+          "text": [
+            "Zum Ausprobieren einfach ein Testkonto ausw\u00e4hlen."
+          ]
+        },
+        {
+          "selector": ".login-kicker",
+          "threshold": 4.5,
+          "minimumContrast": 9.071026327405873,
+          "backingPixels": 1140,
+          "passed": true,
+          "text": [
+            "TESTUMGEBUNG"
+          ]
+        },
+        {
+          "selector": "#login-title",
+          "threshold": 3,
+          "minimumContrast": 14.71052969218714,
+          "backingPixels": 7595,
+          "passed": true,
+          "text": [
+            "Anmelden und loslegen"
+          ]
+        },
+        {
+          "selector": ".login-intro",
+          "threshold": 4.5,
+          "minimumContrast": 7.7177653083294215,
+          "backingPixels": 5232,
+          "passed": true,
+          "text": [
+            "W\u00e4hle die Perspektive, die du ausprobieren m\u00f6chtest."
+          ]
+        },
+        {
+          "selector": ".login-card-foot > span:nth-child(2)",
+          "threshold": 4.5,
+          "minimumContrast": 7.740734580095192,
+          "backingPixels": 2388,
+          "passed": true,
+          "text": [
+            "Demo-Zugang \u00b7 keine echten Kontodaten"
+          ]
+        },
+        {
+          "selector": "footer > span:nth-child(1)",
+          "threshold": 4.5,
+          "minimumContrast": 8.587414630523364,
+          "backingPixels": 1272,
+          "passed": true,
+          "text": [
+            "Hochschule Hannover"
+          ]
+        },
+        {
+          "selector": "footer > span:nth-child(3)",
+          "threshold": 4.5,
+          "minimumContrast": 8.587414630523364,
+          "backingPixels": 1536,
+          "passed": true,
+          "text": [
+            "HASI \u00b7 Hochschulassistent"
+          ]
+        },
+        {
+          "selector": ".welcome-footer-right",
+          "threshold": 4.5,
+          "minimumContrast": 8.587414630523364,
+          "backingPixels": 1992,
+          "passed": true,
+          "text": [
+            "Ein Prototyp f\u00fcr den Campusalltag"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-admin-dark-320": {
+      "sha256": "217cd31e49d2dc0b4ab2490add125ddaa01b7cd2dc22b0b9bce17561e4447cf1",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.3988044699651345,
+          "backingPixels": 490,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.3988044699651345,
+          "backingPixels": 1020,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.469010272255649,
+          "backingPixels": 1800,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 6.143964285068524,
+          "backingPixels": 1050,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-admin-dark-375": {
+      "sha256": "0c61562ef7025e2390936914d76b405465f1e05fdcae3d180c1f377e17c65ef7",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.375126959167656,
+          "backingPixels": 490,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.380977086099522,
+          "backingPixels": 938,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.463207179454578,
+          "backingPixels": 1740,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 6.143964285068524,
+          "backingPixels": 966,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-admin-dark-390-large": {
+      "sha256": "5609353ddcb86699a77b78641aa4e23286ae051f8cf2b2fcea4d948c2487a13f",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.550703587206185,
+          "backingPixels": 1820,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.637524141110624,
+          "backingPixels": 3472,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.221535570951148,
+          "backingPixels": 6020,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 6.143964285068524,
+          "backingPixels": 3556,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-admin-dark-390": {
+      "sha256": "9e8e868d41b2f154e4dda26c655bf1dacfafb22264975c91269eddaff22cc4f3",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.3988044699651345,
+          "backingPixels": 490,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.550703587206185,
+          "backingPixels": 938,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.550703587206185,
+          "backingPixels": 1770,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 6.143964285068524,
+          "backingPixels": 966,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-admin-light-320": {
+      "sha256": "11b668d706246fde049e5502dd5d1998b0a567e8476c436fc4fefc08c943fa2f",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.145937396396267,
+          "backingPixels": 490,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.145937396396267,
+          "backingPixels": 1020,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.1902524184298935,
+          "backingPixels": 1800,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.84753031112251,
+          "backingPixels": 1050,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-admin-light-375": {
+      "sha256": "41c434fd6f5a8fe8a8cff0178cdf5df49b82679b9c2985b628795d63c2dd4b34",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.145937396396267,
+          "backingPixels": 490,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.145937396396267,
+          "backingPixels": 938,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.187115152642757,
+          "backingPixels": 1740,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.84753031112251,
+          "backingPixels": 966,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-admin-light-390-large": {
+      "sha256": "7efbc13e90a7f7beb4fcf1e192c4e5dc13ceb6ef5d3a4789efee80daf60d7825",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.1902524184298935,
+          "backingPixels": 1820,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.234800643897806,
+          "backingPixels": 3472,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.058005561393324,
+          "backingPixels": 6020,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.84753031112251,
+          "backingPixels": 3556,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-admin-light-390": {
+      "sha256": "5a1f50e50c6e6e353f949eaee987f626a94d024c499eee3c38e5f10820e37459",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.145937396396267,
+          "backingPixels": 490,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.1902524184298935,
+          "backingPixels": 938,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.1902524184298935,
+          "backingPixels": 1770,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.84753031112251,
+          "backingPixels": 966,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-chat-dark-320": {
+      "sha256": "db117e05355afee2a0204ceaea7c869d12aba403b7877c236525bd0ce04ceb52",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 6.143964285068524,
+          "backingPixels": 504,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.723575368785077,
+          "backingPixels": 1020,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.723575368785077,
+          "backingPixels": 1800,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.723575368785077,
+          "backingPixels": 1020,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-chat-dark-375": {
+      "sha256": "ebae9789d7fcea3050c6b9b54904a5447d92c594d87adc2d03bfa99b57f220cf",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 6.143964285068524,
+          "backingPixels": 490,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.723575368785077,
+          "backingPixels": 938,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.723575368785077,
+          "backingPixels": 1740,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.723575368785077,
+          "backingPixels": 938,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-chat-dark-390": {
+      "sha256": "8c6ecc6abb373b056cfc89ae6ca398e2a91bdd46570dedc420eb504d7f0305ed",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 6.143964285068524,
+          "backingPixels": 504,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.723575368785077,
+          "backingPixels": 938,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.723575368785077,
+          "backingPixels": 1770,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 7.723575368785077,
+          "backingPixels": 938,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-chat-light-320": {
+      "sha256": "7f36fc260e174eba95f99f7a514036e326c246b86a6558bbd9acdcb375efeaaf",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.84753031112251,
+          "backingPixels": 504,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.231646634891808,
+          "backingPixels": 1020,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.231646634891808,
+          "backingPixels": 1800,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.231646634891808,
+          "backingPixels": 1020,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-chat-light-375": {
+      "sha256": "22cf70172ed8973a84d959e1f8629e52c6f06aaf012c01df909d75d3bf063f1e",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.84753031112251,
+          "backingPixels": 490,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.231646634891808,
+          "backingPixels": 938,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.231646634891808,
+          "backingPixels": 1740,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.231646634891808,
+          "backingPixels": 938,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    },
+    "mobile-chat-light-390": {
+      "sha256": "13c63ab795f67c5d78744cffedb5d960186fb858a58fe40f0744cef16f6e9ea0",
+      "method": "CSS foreground against every rendered backing pixel in direct text-node Range rectangles; temporary text-fill transparency only, restored with unchanged layout; conservative bounding rectangles, no glyph antialias contrast claim",
+      "controls": {
+        "blackOnWhite": 21,
+        "whiteOnWhite": 1,
+        "passAccepted": true,
+        "failureRejected": true
+      },
+      "cases": [
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.84753031112251,
+          "backingPixels": 504,
+          "passed": true,
+          "text": [
+            "Chats"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/bookings\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.231646634891808,
+          "backingPixels": 938,
+          "passed": true,
+          "text": [
+            "Buchungen"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/account/connections\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.1902524184298935,
+          "backingPixels": 1770,
+          "passed": true,
+          "text": [
+            "Verbundene Dienste"
+          ]
+        },
+        {
+          "selector": ".mobile-nav .nav-link[href=\"/admin\"] > span",
+          "threshold": 4.5,
+          "minimumContrast": 5.231646634891808,
+          "backingPixels": 938,
+          "passed": true,
+          "text": [
+            "Verwaltung"
+          ]
+        }
+      ],
+      "allPassed": true
+    }
+  },
+  "limits": [
+    "No contrast target in this result is accepted until color-space calibration and affected measurements are independently verified. allPassed fields describe the provisional analyzer only.",
+    "No full contrast qualification of all retained admin and populated-chat targets.",
+    "Welcome candidate measurements are browser overlay observations, not actual deployed CSS.",
+    "Native device, keyboard and assistive technology remain M8."
+  ],
+  "qualification": {
+    "accepted": false,
+    "reason": "Screenshot pipeline calibration is incomplete. Fixed viewport CSS clips with page offsets and paint waits pass actual white/black and two-band coordinate controls, but screenshots serialize color-managed primaries without an ICC profile. The original sRGB-only analyzer cannot establish normative contrast. Preserve these as provisional raw-channel observations, not P6 acceptance.",
+    "supersedesAnyImplicitPassClaim": true
+  }
+}
