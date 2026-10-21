@@ -323,7 +323,7 @@ function localCommand(command: string, arguments_: string[], cwd: string): strin
     stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8', timeout: 60_000, maxBuffer: 4 * 1024 * 1024 }).trim();
 }
 
-export async function artifacts(directory: string, managedMode = false): Promise<{ manifest: PluginManifestV2; releases: { directory: string; sourceSha: string; evidence: ReferencePluginArtifactEvidence }[] }> {
+export async function artifacts(directory: string, managedMode = false): Promise<{ manifest: PluginManifestV2; releases: { directory: string; sourceSha: string; sourceIdentity: { repository: string; revision: string; tag: string }; evidence: ReferencePluginArtifactEvidence }[] }> {
   const source = join(directory, 'independent-source');
   await mkdir(join(source, 'src'), { recursive: true, mode: 0o700 });
   for (const path of ['package.json', 'README.md', 'src/server.js', 'src/state.js', 'src/manifest.json']) await cp(join(REFERENCE_SOURCE, path), join(source, path));
@@ -335,7 +335,7 @@ export async function artifacts(directory: string, managedMode = false): Promise
   if (managedMode) {
     await writeFile(join(source, 'src/manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   }
-  const releases: { directory: string; sourceSha: string; evidence: ReferencePluginArtifactEvidence }[] = [];
+  const releases: { directory: string; sourceSha: string; sourceIdentity: { repository: string; revision: string; tag: string }; evidence: ReferencePluginArtifactEvidence }[] = [];
   for (const version of ['1.0.0', '1.0.1']) {
     const metadata = JSON.parse(await readFile(join(source, 'package.json'), 'utf8')) as Record<string, unknown>;
     await writeFile(join(source, 'package.json'), `${JSON.stringify({ ...metadata, version }, null, 2)}\n`);
@@ -343,9 +343,16 @@ export async function artifacts(directory: string, managedMode = false): Promise
     localCommand('git', ['add', 'package.json', 'README.md', 'src'], source);
     localCommand('git', ['-c', 'user.name=HASI local qualification', '-c', 'user.email=qualification@example.test', 'commit', '--quiet', '-m', `test: prepare independent reference ${version}`], source);
     const sourceSha = localCommand('git', ['rev-parse', 'HEAD'], source);
+    const sourceTag = `v${version}`;
+    localCommand('git', ['tag', sourceTag, sourceSha], source);
     const output = join(directory, `reference-${version}`);
     const evidence = await packageReferencePlugin({ sourceDirectory: source, outputDirectory: output });
-    releases.push({ directory: output, sourceSha, evidence });
+    releases.push({
+      directory: output,
+      sourceSha,
+      sourceIdentity: { repository: pathToFileURL(source).href, revision: sourceSha, tag: sourceTag },
+      evidence,
+    });
   }
   return { manifest, releases };
 }

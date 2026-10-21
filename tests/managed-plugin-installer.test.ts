@@ -2,17 +2,19 @@ import { generateKeyPairSync, randomUUID, sign } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryJsonStore, type JsonStore } from '@hasi/state';
 import { digest, type PluginManifest } from '@hasi/plugin-sdk';
+import { pluginReleaseInventoryDigest } from '@hasi/plugin-sdk/releases';
 import { managedPluginCommandResultSchema, type ManagedPluginCommand } from '@hasi/plugin-sdk/deployment-admin';
 import { ManagedPluginInstaller, type ManagedPluginInstallerOptions } from '../apps/api/src/managed-plugin-installer.js';
 import { DeploymentDriverError, pluginReleaseSigningBytes, type DeploymentDriver, type UnsignedPluginRelease } from '../apps/api/src/plugin-artifacts.js';
+import { TEST_PLUGIN_PROVENANCE } from './plugin-release-fixtures.js';
 
 const keys = generateKeyPairSync('ed25519');
 const otherKeys = generateKeyPairSync('ed25519');
 const manifest = (version = '1.0.0', pluginId = 'reference'): PluginManifest => ({ manifestVersion: 2, id: pluginId, version, name: pluginId, description: 'Synthetic', apiVersion: '2.0.0', mcpVersion: '2026-07-28', tools: [{ name: `${pluginId}.read`, title: 'Read', description: 'Synthetic read', effect: 'read', requiredPermissions: ['read'], inputSchema: { type: 'object' }, outputSchema: { type: 'object' } }] });
 function release(id: string, version: string, configSchemaVersion = 1, pluginId = 'reference', publisherId = 'publisher', signingKey = keys.privateKey) {
   const m = manifest(version, pluginId);
-  const unsigned: UnsignedPluginRelease = { schemaVersion: 1, pluginId: m.id, version, manifestDigest: digest(m), publisherId, image: `registry.example.test/hasi/${pluginId}@sha256:${id.repeat(64)}`, configSchemaVersion, stateMigration: 'none' };
-  return { id, manifest: m, envelope: { ...unsigned, signature: sign(null, pluginReleaseSigningBytes(unsigned), signingKey).toString('base64url') }, launch: { network: { mode: 'none' as const } }, secretAssignments: [], license: 'GPL-3.0-only', inventoryDigest: 'c'.repeat(64) };
+  const unsigned: UnsignedPluginRelease = { schemaVersion: 2, pluginId: m.id, version, manifestDigest: digest(m), publisherId, image: `registry.example.test/hasi/${pluginId}@sha256:${id.repeat(64)}`, configSchemaVersion, stateMigration: 'none', provenance: TEST_PLUGIN_PROVENANCE };
+  return { id, manifest: m, envelope: { ...unsigned, signature: sign(null, pluginReleaseSigningBytes(unsigned), signingKey).toString('base64url') }, launch: { network: { mode: 'none' as const } }, secretAssignments: [] };
 }
 async function fixture(store: JsonStore = new MemoryJsonStore('installer-test')) {
   const active = new Map<string, string>();
@@ -75,6 +77,19 @@ describe('trusted managed installer', () => {
     expect((await f.command('activate')).view.current?.version).toBe('1.1.0');
     expect((await f.command('rollback')).view.current?.version).toBe('1.0.0');
     expect(f.preflight).toHaveBeenCalledTimes(5);
+  });
+  it('derives displayed license and inventory metadata from signed provenance', async () => {
+    const f = await fixture();
+    const listed = await f.view();
+
+    expect(listed.releases[0]).toMatchObject({
+      license: TEST_PLUGIN_PROVENANCE.license,
+      inventoryDigest: pluginReleaseInventoryDigest(TEST_PLUGIN_PROVENANCE),
+    });
+
+    Object.assign(f.catalog[0]!.releases[0]!, { license: 'MIT', inventoryDigest: 'e'.repeat(64) });
+    await expect(f.service.list('admin')).rejects.toThrow();
+    expect(f.stage).not.toHaveBeenCalled();
   });
   it('reuses an existing command result after process reconstruction without redispatch', async () => {
     const f = await fixture();

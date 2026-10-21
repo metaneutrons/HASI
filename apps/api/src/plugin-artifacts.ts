@@ -3,11 +3,12 @@ import { digest } from '@hasi/plugin-sdk';
 import type { JsonStore } from '@hasi/state';
 import { valid as validSemver } from 'semver';
 import { z } from 'zod';
+import { unsignedPluginReleaseSchema, pluginReleaseEnvelopeSchema, pluginReleaseSigningBytes as signingBytes, type UnsignedPluginRelease, type PluginReleaseEnvelope } from '@hasi/plugin-sdk/releases';
+export type { UnsignedPluginRelease, PluginReleaseEnvelope } from '@hasi/plugin-sdk/releases';
 
 const PLUGIN_ID = /^[a-z0-9](?:[a-z0-9._-]{0,126}[a-z0-9])?$/;
 const OPAQUE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
-const RELEASE_DOMAIN = 'hasi-plugin-release-v1\0';
 const DEFAULT_CPU_MILLICORES = 500;
 const DEFAULT_MEMORY_BYTES = 256 * 1024 * 1024;
 const DEFAULT_PIDS_LIMIT = 64;
@@ -29,23 +30,8 @@ export class DeploymentDriverError extends Error {
   }
 }
 
-const unsignedReleaseSchema = z.strictObject({
-  schemaVersion: z.literal(1),
-  pluginId: z.string().min(1).max(128).regex(PLUGIN_ID),
-  version: z.string().min(1).max(128),
-  manifestDigest: z.string().regex(SHA256),
-  image: z.string().min(1).max(512),
-  publisherId: z.string().min(1).max(128).regex(PLUGIN_ID),
-  configSchemaVersion: z.number().int().positive().max(2_147_483_647),
-  stateMigration: z.enum(['none', 'reversible', 'irreversible']),
-});
-
-const releaseEnvelopeSchema = unsignedReleaseSchema.extend({
-  signature: z.string().regex(/^[A-Za-z0-9_-]{86}$/),
-});
-
-export type UnsignedPluginRelease = z.infer<typeof unsignedReleaseSchema>;
-export type PluginReleaseEnvelope = z.infer<typeof releaseEnvelopeSchema>;
+const unsignedReleaseSchema = unsignedPluginReleaseSchema;
+const releaseEnvelopeSchema = pluginReleaseEnvelopeSchema;
 
 const verifiedReleaseBrand: unique symbol = Symbol('hasi.verified-plugin-release');
 const verifiedReleases = new WeakSet();
@@ -131,13 +117,14 @@ function unsignedFromEnvelope(envelope: PluginReleaseEnvelope): UnsignedPluginRe
     publisherId: envelope.publisherId,
     configSchemaVersion: envelope.configSchemaVersion,
     stateMigration: envelope.stateMigration,
+    provenance: envelope.provenance,
   };
 }
 
 /** Returns the canonical, domain-separated bytes publishers sign with Ed25519. */
 export function pluginReleaseSigningBytes(input: unknown): Buffer {
   const release = validateUnsignedRelease(input);
-  return Buffer.from(`${RELEASE_DOMAIN}${digest(release)}`, 'utf8');
+  return signingBytes(release);
 }
 
 function normalizePublicKey(input: PublisherApproval['publicKey']): KeyObject {
@@ -187,7 +174,7 @@ export function verifyPluginRelease(input: unknown, resolvePublisher: PublisherA
     throw new PluginArtifactError('Plugin release signature is invalid.');
   }
   const key = normalizePublicKey(approval.publicKey);
-  const signedBytes = Buffer.from(`${RELEASE_DOMAIN}${digest(unsigned)}`, 'utf8');
+  const signedBytes = signingBytes(unsigned);
   if (!verify(null, signedBytes, key, signature)) throw new PluginArtifactError('Plugin release signature is invalid.');
 
   const releaseDigest = digest(unsigned);

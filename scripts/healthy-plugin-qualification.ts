@@ -8,7 +8,9 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createInvocationToken, digest, manifestSchema, type ActorContext, type PluginManifestV2 } from '@hasi/plugin-sdk';
+import { PLUGIN_IMAGE_PROVENANCE_LABEL, pluginImageProvenanceLabel, type PluginReleaseProvenance } from '@hasi/plugin-sdk/releases';
 import type { ReferencePluginArtifactEvidence } from './package-reference-plugin.js';
+import { artifactPluginProvenance, type ArtifactSourceIdentity } from './plugin-release-provenance.js';
 import {
   buildPluginContainerLaunchPolicy,
   DeploymentDriverError,
@@ -22,6 +24,7 @@ import {
 } from '../apps/api/src/plugin-artifacts.js';
 import {
   createDockerPluginDriver,
+  DockerPluginDriverError,
   type DockerPluginDriverOptions,
 } from '../apps/api/src/docker-plugin-driver.js';
 import { DOCKER_PLUGIN_MANAGED_VALUE, dockerPluginContainerName, PLUGIN_RELAY_IMAGE, PLUGIN_RELAY_RESOURCES } from '../apps/api/src/docker-plugin-relay.js';
@@ -84,6 +87,7 @@ interface PreparedArtifact {
   readonly directory: string;
   readonly evidence: ReferencePluginArtifactEvidence;
   readonly manifest: ArtifactManifest;
+  readonly source: ArtifactSourceIdentity;
 }
 
 interface NativeMcpResult {
@@ -210,16 +214,49 @@ function sha256(value: string | Buffer): string {
   return createHash('sha256').update(value).digest('hex');
 }
 
-async function pluginSourceSha256(): Promise<string> {
-  const sourcePaths = ['package.json', 'src/manifest.json', 'src/server.js'] as const;
+async function pluginSourceSha256(sourceDirectory = REFERENCE_PLUGIN_ROOT): Promise<string> {
+  const sourcePaths = ['package.json', 'README.md', 'src/manifest.json', 'src/server.js', 'src/state.js'] as const;
   const hash = createHash('sha256');
   for (const path of sourcePaths) {
     hash.update(path, 'utf8');
     hash.update('\0', 'utf8');
-    hash.update(await readFile(join(REFERENCE_PLUGIN_ROOT, path)));
+    hash.update(await readFile(join(sourceDirectory, path)));
     hash.update('\0', 'utf8');
   }
   return hash.digest('hex');
+}
+
+async function workspacePluginSourceIdentity(): Promise<ArtifactSourceIdentity> {
+  const packageMetadata = JSON.parse(await readFile(join(WORKSPACE_ROOT, 'package.json'), 'utf8')) as {
+    readonly repository?: { readonly type?: unknown; readonly url?: unknown };
+  };
+  const repositoryValue = packageMetadata.repository?.url;
+  assert(typeof repositoryValue === 'string' && repositoryValue.startsWith('git+https://'),
+    'prebuilt_artifact_source_binding_invalid');
+  const repository = repositoryValue.slice('git+'.length);
+  const gitEnvironment = {
+    ...childEnvironment(),
+    GIT_CONFIG_GLOBAL: '/dev/null',
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_TERMINAL_PROMPT: '0',
+  };
+  const revision = execFileSync('git', ['-C', WORKSPACE_ROOT, 'rev-parse', '--verify', 'HEAD^{commit}'], {
+    encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    env: gitEnvironment,
+  }).trim();
+  assert(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(revision), 'prebuilt_artifact_source_binding_invalid');
+  const parsedRepository = new URL(repository);
+  assert(parsedRepository.protocol === 'https:' && parsedRepository.href === repository
+    && !parsedRepository.username && !parsedRepository.password && !parsedRepository.search && !parsedRepository.hash,
+  'prebuilt_artifact_source_binding_invalid');
+  for (const path of ['package.json', 'README.md', 'src/manifest.json', 'src/server.js', 'src/state.js']) {
+    const working = await readFile(join(REFERENCE_PLUGIN_ROOT, path));
+    const committed = execFileSync('git', ['-C', WORKSPACE_ROOT, 'show', `${revision}:examples/reference-plugin/${path}`], {
+      stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: MAX_ARTIFACT_FILE_BYTES, env: gitEnvironment,
+    });
+    assert(working.equals(committed), 'prebuilt_artifact_source_binding_invalid');
+  }
+  return { repository, revision };
 }
 
 function assertArtifactBinding(
@@ -253,13 +290,15 @@ function createSignedRelease(unsigned: UnsignedPluginRelease, privateKey: KeyObj
 function createAndVerifySyntheticRelease(input: {
   readonly artifact: ArtifactManifest;
   readonly image: string;
+  readonly provenance: PluginReleaseProvenance;
 }) {
   const keyPair = generateKeyPairSync('ed25519');
   const unsigned: UnsignedPluginRelease = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     pluginId: input.artifact.pluginId,
     version: input.artifact.pluginVersion,
     manifestDigest: input.artifact.manifestDigest,
+    provenance: input.provenance,
     image: input.image,
     publisherId: 'local-qualifier',
     configSchemaVersion: 1,
@@ -275,6 +314,15 @@ function createAndVerifySyntheticRelease(input: {
   };
   const resolvePublisher = (publisherId: string) => publisherId === approval.publisherId ? approval : undefined;
   const release = verifyPluginRelease(envelope, resolvePublisher);
+
+  const changedCommit = `${input.provenance.source.commit.startsWith('0') ? '1' : '0'}${input.provenance.source.commit.slice(1)}`;
+  const signedSourceIdentityCounterprobe = verifyPluginRelease(createSignedRelease({
+    ...unsigned,
+    provenance: {
+      ...input.provenance,
+      source: { ...input.provenance.source, commit: changedCommit },
+    },
+  }, keyPair.privateKey), resolvePublisher);
 
   const differentSignatureBytes = Buffer.from(envelope.signature, 'base64url');
   assert(differentSignatureBytes.byteLength === 64, 'synthetic_release_signature_fixture_invalid');
@@ -300,7 +348,7 @@ function createAndVerifySyntheticRelease(input: {
     'plugin_version_counterprobe_failed',
   );
 
-  return release;
+  return { release, signedSourceIdentityCounterprobe };
 }
 
 async function ephemeralLoopbackPort(): Promise<number> {
@@ -628,9 +676,16 @@ function isSha256(value: unknown): value is string {
   return typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value);
 }
 
-function parsePreparedArtifactEvidence(value: unknown, sourceSha256: string): ReferencePluginArtifactEvidence {
-  assert(isRecord(value) && value.schemaVersion === 1 && value.pluginSourceSha256 === sourceSha256,
+function parsePreparedArtifactEvidence(value: unknown, sourceSha256: string): {
+  readonly evidence: ReferencePluginArtifactEvidence;
+  readonly source: ArtifactSourceIdentity;
+} {
+  assert(isRecord(value) && value.schemaVersion === 1 && value.pluginSourceSha256 === sourceSha256
+    && isRecord(value.source) && Object.keys(value).sort().join(',') === 'artifactEvidence,pluginSourceSha256,schemaVersion,source'
+    && Object.keys(value.source).sort().join(',') === 'repository,revision'
+    && typeof value.source.repository === 'string' && typeof value.source.revision === 'string',
     'prebuilt_artifact_source_binding_invalid');
+  const source = { repository: value.source.repository, revision: value.source.revision };
   const rawEvidence = value.artifactEvidence;
   assert(isRecord(rawEvidence)
     && rawEvidence.pluginId === 'hasi.reference'
@@ -652,7 +707,9 @@ function parsePreparedArtifactEvidence(value: unknown, sourceSha256: string): Re
       && typeof license.license === 'string' && license.license.length > 0 && license.license.length <= 512,
     'prebuilt_artifact_evidence_invalid');
   }
-  return rawEvidence as unknown as ReferencePluginArtifactEvidence;
+  const evidence = rawEvidence as unknown as ReferencePluginArtifactEvidence;
+  try { artifactPluginProvenance(evidence, source); } catch { fail('prebuilt_artifact_source_binding_invalid'); }
+  return { evidence, source };
 }
 
 async function loadPreparedArtifact(path: string, sourceSha256: string): Promise<PreparedArtifact> {
@@ -675,16 +732,18 @@ async function loadPreparedArtifact(path: string, sourceSha256: string): Promise
   } catch {
     fail('prebuilt_artifact_evidence_invalid');
   }
-  const evidence = parsePreparedArtifactEvidence(parsedEvidence, sourceSha256);
+  const { evidence, source } = parsePreparedArtifactEvidence(parsedEvidence, sourceSha256);
+  assert(await pluginSourceSha256(directory) === sourceSha256, 'prebuilt_artifact_source_binding_invalid');
   const manifest = await readArtifactManifest(directory, evidence);
-  return { directory, evidence, manifest };
+  return { directory, evidence, manifest, source };
 }
 
-function dockerImageIdentity(tag: string, ownerId: string): { readonly id: string; readonly repoDigest: string } {
-  const output = runDocker(['image', 'inspect', '--format', '{{.Id}}|{{json .RepoDigests}}|{{index .Config.Labels "' + OWNER_LABEL + '"}}', tag],
+function dockerImageIdentity(tag: string, ownerId: string, expectedProvenanceLabel: string): { readonly id: string; readonly repoDigest: string } {
+  const output = runDocker(['image', 'inspect', '--format', '{{.Id}}|{{json .RepoDigests}}|{{index .Config.Labels "' + OWNER_LABEL + '"}}|{{index .Config.Labels "' + PLUGIN_IMAGE_PROVENANCE_LABEL + '"}}', tag],
     'built_image_inspection_failed');
-  const [id, repoDigestsJson, ownerLabel] = output.split('|');
-  assert(typeof id === 'string' && /^sha256:[a-f0-9]{64}$/u.test(id) && ownerLabel === ownerId, 'built_image_metadata_invalid');
+  const [id, repoDigestsJson, ownerLabel, provenanceLabel] = output.split('|');
+  assert(typeof id === 'string' && /^sha256:[a-f0-9]{64}$/u.test(id) && ownerLabel === ownerId
+    && provenanceLabel === expectedProvenanceLabel, 'built_image_metadata_invalid');
   let repoDigests: unknown;
   try { repoDigests = JSON.parse(repoDigestsJson ?? '') as unknown; } catch { fail('built_image_repo_digests_invalid'); }
   assert(Array.isArray(repoDigests) && repoDigests.every((value: unknown) => typeof value === 'string'), 'built_image_repo_digests_missing');
@@ -1076,6 +1135,17 @@ export async function runHealthyPluginContainerQualification(): Promise<Record<s
     const artifactEvidence = preparedArtifact?.evidence
       ?? packageReferencePluginWithAllowlistedEnvironment(artifactDirectory);
     const artifact = preparedArtifact?.manifest ?? await readArtifactManifest(artifactDirectory, artifactEvidence);
+    assert(await pluginSourceSha256(artifactDirectory) === sourceSha256, 'prebuilt_artifact_source_binding_invalid');
+    const sourceIdentity = preparedArtifact?.source ?? await workspacePluginSourceIdentity();
+    let provenance: PluginReleaseProvenance;
+    try { provenance = artifactPluginProvenance(artifactEvidence, sourceIdentity); }
+    catch { fail('prebuilt_artifact_source_binding_invalid'); }
+    const provenanceLabel = pluginImageProvenanceLabel({
+      pluginId: artifact.pluginId,
+      version: artifact.pluginVersion,
+      manifestDigest: artifact.manifestDigest,
+      provenance,
+    });
     const dockerfile = pluginLauncherDockerfile();
     const dockerfileSha256 = sha256(dockerfile);
     await writeFile(dockerfilePath, dockerfile, 'utf8');
@@ -1095,11 +1165,13 @@ export async function runHealthyPluginContainerQualification(): Promise<Record<s
     imageBuildAttempted = true;
     runDocker([
       'build', '--network=none', '--pull=false', '--label', `${OWNER_LABEL}=${ownerId}`,
+      '--label', `${PLUGIN_IMAGE_PROVENANCE_LABEL}=${provenanceLabel}`,
       '--tag', imageTag, '--file', dockerfilePath, artifactDirectory,
     ], 'offline_image_build_failed', 180_000);
-    const identity = dockerImageIdentity(imageTag, ownerId);
+    const identity = dockerImageIdentity(imageTag, ownerId, provenanceLabel);
     imageId = identity.id;
-    const syntheticRelease = createAndVerifySyntheticRelease({ artifact, image: identity.repoDigest });
+    const releaseFixtures = createAndVerifySyntheticRelease({ artifact, image: identity.repoDigest, provenance });
+    const syntheticRelease = releaseFixtures.release;
     assert(syntheticRelease.imageDigest === identity.repoDigest.slice(identity.repoDigest.lastIndexOf('@sha256:') + 8),
       'built_image_digest_binding_failed');
 
@@ -1148,6 +1220,34 @@ export async function runHealthyPluginContainerQualification(): Promise<Record<s
       secretAssignments,
     } as const;
     const activeDriver = driver;
+
+    const sourceIdentityCounterprobe = releaseFixtures.signedSourceIdentityCounterprobe;
+    assert(sourceIdentityCounterprobe.image === syntheticRelease.image
+      && sourceIdentityCounterprobe.provenance.source.commit !== syntheticRelease.provenance.source.commit,
+    'signed_source_identity_counterprobe_invalid');
+    const provenanceCounterprobeInput = {
+      ...baseInput,
+      release: sourceIdentityCounterprobe,
+      policy: launchPolicy(sourceIdentityCounterprobe, internalNetwork, hostPort),
+    } as const;
+    const containersBeforeProvenanceCounterprobe = exactContainerList();
+    const secretResolutionsBeforeProvenanceCounterprobe = secretResolutions;
+    try {
+      const unexpected = await activeDriver.stage(provenanceCounterprobeInput);
+      stagedDeploymentId = unexpected.deploymentId;
+      fail('signed_source_identity_image_label_counterprobe_failed');
+    } catch (error) {
+      if (error instanceof QualificationFailure) throw error;
+      if (!(error instanceof DockerPluginDriverError) || error.outcome !== 'failed' || error.reason !== 'image_provenance_mismatch') {
+        fail('signed_source_identity_image_label_counterprobe_failed');
+      }
+    }
+    const containersAfterProvenanceCounterprobe = exactContainerList();
+    assert([...containersAfterProvenanceCounterprobe].every(id => containersBeforeProvenanceCounterprobe.has(id))
+      && [...containersBeforeProvenanceCounterprobe].every(id => containersAfterProvenanceCounterprobe.has(id)),
+    'signed_source_identity_counterprobe_changed_container_inventory');
+    assert(secretResolutions === secretResolutionsBeforeProvenanceCounterprobe,
+      'signed_source_identity_counterprobe_resolved_secrets');
 
     const denials: readonly [string, PluginContainerLaunchPolicy][] = [
       ['read-only root filesystem', { ...policy, readOnlyRootFilesystem: false } as unknown as PluginContainerLaunchPolicy],
@@ -1239,13 +1339,17 @@ export async function runHealthyPluginContainerQualification(): Promise<Record<s
         artifactSha256: artifactEvidence.artifactSha256,
         artifactManifestSha256: artifactEvidence.artifactManifestSha256,
         pluginSourceSha256: sourceSha256,
+        sourceIdentity,
+        sourceIdentityAssurance: preparedArtifact ? 'prepared-sidecar-assertion-bound-to-source-files' : 'workspace-commit-matched-to-source-files',
         dockerfileSha256,
         configurationSha256,
         payloadFileCount: artifactEvidence.payloadFileCount,
         runtimePackageCount: artifactEvidence.runtimePackageCount,
         cleanupVerified: false,
         qualificationCounts: {
-          releaseCounterprobes: 4,
+          releaseCounterprobes: 5,
+          imageProvenanceLabelCounterprobes: 1,
+          preflightSecretResolutionCounterprobes: 1,
           staticPolicyDenials: denials.length + 1,
           assignedSecretResolutions: secretResolutions,
           nativeReadStatusCalls: 0,
@@ -1255,6 +1359,7 @@ export async function runHealthyPluginContainerQualification(): Promise<Record<s
         },
         probes: {
           syntheticPublisherSignatureVerified: true,
+          signedChangedSourceCommitRejectedBeforeContainerOrSecret: true,
           packagedManifestIdentityMatched: true,
           runningManifestDigestMatched: false,
           nativeMcpReadMatchedSyntheticContext: false,
@@ -1304,18 +1409,23 @@ export async function runHealthyPluginContainerQualification(): Promise<Record<s
       artifactSha256: artifactEvidence.artifactSha256,
       artifactManifestSha256: artifactEvidence.artifactManifestSha256,
       pluginSourceSha256: sourceSha256,
+      sourceIdentity,
+      sourceIdentityAssurance: preparedArtifact ? 'prepared-sidecar-assertion-bound-to-source-files' : 'workspace-commit-matched-to-source-files',
       dockerfileSha256,
       configurationSha256,
       payloadFileCount: artifactEvidence.payloadFileCount,
       runtimePackageCount: artifactEvidence.runtimePackageCount,
       qualificationCounts: {
-        releaseCounterprobes: 4,
+        releaseCounterprobes: 5,
+        imageProvenanceLabelCounterprobes: 1,
+        preflightSecretResolutionCounterprobes: 1,
         staticPolicyDenials: denials.length + 1,
         assignedSecretResolutions: secretResolutions,
         nativeReadStatusCalls: 1,
       },
       probes: {
         syntheticPublisherSignatureVerified: true,
+        signedChangedSourceCommitRejectedBeforeContainerOrSecret: true,
         packagedManifestIdentityMatched: true,
         runningManifestDigestMatched: true,
         nativeMcpReadMatchedSyntheticContext: true,

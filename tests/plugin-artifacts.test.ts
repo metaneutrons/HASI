@@ -1,3 +1,5 @@
+import { TEST_PLUGIN_PROVENANCE } from './plugin-release-fixtures.js';
+import { pluginReleaseSigningBytes as publisherSigningBytes } from '@hasi/plugin-sdk/releases';
 import { generateKeyPairSync, sign } from 'node:crypto';
 import { MemoryJsonStore, type JsonStore } from '@hasi/state';
 import { describe, expect, it } from 'vitest';
@@ -30,7 +32,8 @@ const approval: PublisherApproval = {
 
 function unsignedRelease(overrides: Partial<UnsignedPluginRelease> = {}): UnsignedPluginRelease {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
+    provenance: TEST_PLUGIN_PROVENANCE,
     pluginId: 'weather',
     version: '1.2.3',
     manifestDigest: MANIFEST_DIGEST,
@@ -280,6 +283,35 @@ describe('signed plugin release admission', () => {
     const valid = envelope();
     expect(() => verifyPluginRelease({ ...valid, signature: Buffer.alloc(64, 1).toString('base64url') }, resolvePublisher)).toThrow(PluginArtifactError);
     expect(() => verifyPluginRelease({ ...valid, manifestDigest: 'c'.repeat(64) }, resolvePublisher)).toThrow(PluginArtifactError);
+  });
+
+  it('accepts a publisher SDK signature and rejects mutation of every provenance claim', () => {
+    const unsigned = unsignedRelease();
+    const release = { ...unsigned, signature: sign(null, publisherSigningBytes(unsigned), keys.privateKey).toString('base64url') };
+    expect(verifyPluginRelease(release, resolvePublisher).provenance).toEqual(TEST_PLUGIN_PROVENANCE);
+    for (const provenance of [
+      { ...release.provenance, source: { ...release.provenance.source, commit: 'e'.repeat(40) } },
+      { ...release.provenance, source: { ...release.provenance.source, repository: 'https://other.example.test/plugin' } },
+      { ...release.provenance, artifactDigest: 'e'.repeat(64) },
+      { ...release.provenance, license: 'MIT' },
+      { ...release.provenance, packages: [{ ...release.provenance.packages[0], license: 'MIT' }] },
+    ]) {
+      expect(() => verifyPluginRelease({ ...release, provenance }, resolvePublisher)).toThrow(PluginArtifactError);
+    }
+    expect(() => verifyPluginRelease({ ...release, schemaVersion: 1 }, resolvePublisher)).toThrow(PluginArtifactError);
+    const { provenance: omitted, ...withoutProvenance } = release;
+    expect(omitted).toBeDefined();
+    expect(() => verifyPluginRelease(withoutProvenance, resolvePublisher)).toThrow(PluginArtifactError);
+  });
+
+  it('freezes the complete verified provenance rather than only its outer release', () => {
+    const release = verifyPluginRelease(envelope(), resolvePublisher);
+    expect(Object.isFrozen(release.provenance)).toBe(true);
+    expect(Object.isFrozen(release.provenance.source)).toBe(true);
+    expect(Object.isFrozen(release.provenance.packages)).toBe(true);
+    expect(Object.isFrozen(release.provenance.packages[0])).toBe(true);
+    expect(() => { (release.provenance.source as { commit: string }).commit = 'f'.repeat(40); }).toThrow(TypeError);
+    expect(release.provenance.source.commit).toBe(TEST_PLUGIN_PROVENANCE.source.commit);
   });
 
   it('rejects mutable tags, unapproved publisher/plugin/source, and malformed image digests', () => {

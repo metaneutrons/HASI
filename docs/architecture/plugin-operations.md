@@ -159,6 +159,11 @@ The local reference package is produced by
 `scripts/package-reference-plugin.ts`. It contains the built SDK and its locked
 production dependency tree, per-file SHA-256 records, the canonical manifest
 digest, an artifact payload digest and the package-version/license inventory.
+Managed images bind these records and their source commit in a version-2
+publisher envelope and canonical image label; see the
+[release provenance contract](plugin-release-provenance.md). The driver verifies
+the label before container creation or secret resolution. Catalog license and
+inventory metadata cannot override signed release metadata.
 Run `pnpm reference:prepare` before qualification to populate pnpm's deployment
 metadata and production dependency cache. This explicit online step uses a
 frozen lockfile with the normal supply-chain policies enabled; it does not

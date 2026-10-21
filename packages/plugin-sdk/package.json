@@ -17,6 +17,10 @@
     "./deployment-admin": {
       "types": "./dist/deployment-admin.d.ts",
       "import": "./dist/deployment-admin.js"
+    },
+    "./releases": {
+      "types": "./dist/releases.d.ts",
+      "import": "./dist/releases.js"
     }
   },
   "files": [

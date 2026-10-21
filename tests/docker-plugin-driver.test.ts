@@ -1,3 +1,5 @@
+import { PLUGIN_IMAGE_PROVENANCE_LABEL, pluginImageProvenanceLabel } from '@hasi/plugin-sdk/releases';
+import { TEST_PLUGIN_PROVENANCE } from './plugin-release-fixtures.js';
 import { createHash, generateKeyPairSync, sign } from 'node:crypto';
 import { MemoryJsonStore } from '@hasi/state';
 import { describe, expect, it, vi } from 'vitest';
@@ -36,7 +38,8 @@ const approval: PublisherApproval = {
 
 function unsignedRelease(overrides: Partial<UnsignedPluginRelease> = {}): UnsignedPluginRelease {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
+    provenance: TEST_PLUGIN_PROVENANCE,
     pluginId: 'weather',
     version: '1.2.3',
     manifestDigest: MANIFEST_DIGEST,
@@ -91,6 +94,7 @@ class FakeDockerEngine implements DockerEngineTransport {
   imageRepoDigests: string[] = [unsignedRelease().image];
   relayImageRepoDigests: string[] = [PLUGIN_RELAY_IMAGE];
   imageVolumes: unknown = null;
+  imageLabels: unknown = { [PLUGIN_IMAGE_PROVENANCE_LABEL]: pluginImageProvenanceLabel(unsignedRelease()) };
   daemonSecurityOptions: string[] = ['name=seccomp,profile=builtin'];
   networkInternal = true;
   networkIsolated = true;
@@ -136,7 +140,8 @@ class FakeDockerEngine implements DockerEngineTransport {
         Entrypoint: created.Entrypoint,
         Cmd: created.Cmd,
         Env: [...BASE_ENV, ...(created.Env as string[])],
-        Labels: !relay && this.inspectedLabels ? this.inspectedLabels : created.Labels,
+        // Docker inherits image labels; admission must work after that merge too.
+        Labels: !relay && this.inspectedLabels ? this.inspectedLabels : { ...(!relay ? record(this.imageLabels ?? {}) : {}), ...record(created.Labels) },
         ExposedPorts: created.ExposedPorts,
         Volumes: null,
       },
@@ -164,7 +169,7 @@ class FakeDockerEngine implements DockerEngineTransport {
     if (path.startsWith('/images/')) {
       const image = decodeURIComponent(path.slice('/images/'.length, -'/json'.length));
       const relay = image === PLUGIN_RELAY_IMAGE;
-      return Promise.resolve(response(200, { RepoDigests: relay ? this.relayImageRepoDigests : this.imageRepoDigests, Config: { Volumes: relay ? null : this.imageVolumes, Env: BASE_ENV } }));
+      return Promise.resolve(response(200, { RepoDigests: relay ? this.relayImageRepoDigests : this.imageRepoDigests, Config: { Volumes: relay ? null : this.imageVolumes, Env: BASE_ENV, Labels: relay ? {} : this.imageLabels } }));
     }
     if (path.startsWith('/networks/')) {
       const name = decodeURIComponent(path.slice('/networks/'.length));
@@ -198,7 +203,7 @@ class FakeDockerEngine implements DockerEngineTransport {
       const wanted = record(filters).label as string[] | undefined;
       const rows = [...this.containers.values()].filter(item => !this.absent(item)).map(item => ({
         Id: item.id,
-        Labels: !this.inspectedLabels || record(item.body.Labels)['hasi.role'] === 'relay' ? item.body.Labels : this.inspectedLabels,
+        Labels: record(record(this.inspection(item)).Config).Labels,
         State: item.running ? 'running' : 'exited',
       }));
       return Promise.resolve(response(200, rows.filter(item => (wanted ?? []).every(filter => {
@@ -389,6 +394,64 @@ describe('operator-local Docker plugin driver', () => {
       await expect(driver.stage(stageInput())).rejects.toBeInstanceOf(DockerPluginDriverError);
       expect(engine.requests.some(request => request.method === 'POST' && request.path.startsWith('/containers/create?'))).toBe(false);
     }
+  });
+
+  it('rejects missing or rebound image provenance before creating a container or resolving a secret', async () => {
+    const original = pluginImageProvenanceLabel(unsignedRelease());
+    for (const imageLabels of [
+      null, {},
+      { [PLUGIN_IMAGE_PROVENANCE_LABEL]: `${original} ` },
+      { [PLUGIN_IMAGE_PROVENANCE_LABEL]: pluginImageProvenanceLabel({ ...unsignedRelease(), provenance: {
+        ...TEST_PLUGIN_PROVENANCE, source: { ...TEST_PLUGIN_PROVENANCE.source, commit: 'e'.repeat(40) },
+      } }) },
+      { [PLUGIN_IMAGE_PROVENANCE_LABEL]: pluginImageProvenanceLabel({ ...unsignedRelease(), version: '1.2.4' }) },
+      { [PLUGIN_IMAGE_PROVENANCE_LABEL]: pluginImageProvenanceLabel({ ...unsignedRelease(), provenance: { ...TEST_PLUGIN_PROVENANCE, license: 'MIT' } }) },
+    ]) {
+      const engine = new FakeDockerEngine();
+      engine.imageLabels = imageLabels;
+      const { routing } = routingController();
+      const resolveSecret = vi.fn(() => 'never-used-test-value');
+      const driver = createDockerPluginDriver({ ...driverOptions(engine, routing), resolveSecret });
+      await expect(driver.stage(stageInput())).rejects.toMatchObject({ outcome: 'failed', reason: 'image_provenance_mismatch' });
+      expect(resolveSecret).not.toHaveBeenCalled();
+      expect(engine.requests.some(request => request.method === 'POST')).toBe(false);
+    }
+    const engine = new FakeDockerEngine();
+    const { routing } = routingController();
+    const driver = createDockerPluginDriver(driverOptions(engine, routing));
+    await expect(driver.stage(stageInput())).resolves.toEqual({ deploymentId: CONTAINER_ID });
+  });
+
+  it('rejects a freshly signed metadata change for an unchanged image until its build label matches', async () => {
+    const verified = verifyPluginRelease(envelope({ provenance: {
+      ...TEST_PLUGIN_PROVENANCE,
+      source: { ...TEST_PLUGIN_PROVENANCE.source, commit: 'e'.repeat(40) },
+    } }), publisher => publisher === approval.publisherId ? approval : undefined);
+    const policy = buildPluginContainerLaunchPolicy(verified, {
+      network: { mode: 'internal', name: 'hasi-plugin-net' }, hostPort: 43121, containerPort: 3000,
+    });
+    const engine = new FakeDockerEngine();
+    const { routing } = routingController();
+    const resolveSecret = vi.fn(() => 'synthetic-test-value');
+    const driver = createDockerPluginDriver({ ...driverOptions(engine, routing), resolveSecret });
+    const input = { ...stageInput(), release: verified, policy };
+    await expect(driver.stage(input)).rejects.toMatchObject({ outcome: 'failed', reason: 'image_provenance_mismatch' });
+    expect(resolveSecret).not.toHaveBeenCalled();
+    expect(engine.requests.some(request => request.method === 'POST')).toBe(false);
+
+    // Fake-engine positive probe: a publisher-built image with matching metadata.
+    engine.imageLabels = { [PLUGIN_IMAGE_PROVENANCE_LABEL]: pluginImageProvenanceLabel(verified) };
+    await expect(driver.stage(input)).resolves.toEqual({ deploymentId: CONTAINER_ID });
+    expect(resolveSecret).toHaveBeenCalledOnce();
+  });
+
+  it('distinguishes an earlier image-admission denial from a provenance mismatch', async () => {
+    const engine = new FakeDockerEngine();
+    engine.imageRepoDigests = [];
+    const { routing } = routingController();
+    const driver = createDockerPluginDriver(driverOptions(engine, routing));
+    await expect(driver.stage(stageInput())).rejects.toMatchObject({ outcome: 'failed', reason: null });
+    expect(engine.requests.some(request => request.method === 'POST')).toBe(false);
   });
 
   it('requires an exact built-in daemon seccomp profile and rejects unconfined or unknown profiles', async () => {

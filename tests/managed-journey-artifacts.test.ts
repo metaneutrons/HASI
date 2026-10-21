@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { manifestSchema, type PluginManifestV2 } from '@hasi/plugin-sdk';
 import type { ReferencePluginArtifactEvidence } from '../scripts/package-reference-plugin.js';
@@ -23,6 +24,8 @@ type PackageReferencePlugin = (input: {
 interface PackageObservation {
   manifest: PluginManifestV2;
   committedManifest: PluginManifestV2;
+  revision: string;
+  sourceFiles: ReadonlyMap<string, Buffer>;
 }
 
 const packageMock = packageReferencePluginMock as unknown as Mock<PackageReferencePlugin>;
@@ -44,7 +47,16 @@ describe('journey artifact source profiles', () => {
         env: { PATH: process.env.PATH, GIT_CONFIG_GLOBAL: '/dev/null',
           GIT_CONFIG_NOSYSTEM: '1', GIT_TERMINAL_PROMPT: '0' },
       });
-      observations.push({ manifest, committedManifest: JSON.parse(committed) as PluginManifestV2 });
+      const gitEnvironment = { PATH: process.env.PATH, GIT_CONFIG_GLOBAL: '/dev/null',
+        GIT_CONFIG_NOSYSTEM: '1', GIT_TERMINAL_PROMPT: '0' };
+      const revision = execFileSync('git', ['rev-parse', 'HEAD'], {
+        cwd: input.sourceDirectory, env: gitEnvironment, encoding: 'utf8',
+      }).trim();
+      const sourceFiles = new Map<string, Buffer>();
+      for (const path of ['package.json', 'README.md', 'src/manifest.json', 'src/server.js', 'src/state.js']) {
+        sourceFiles.set(path, await readFile(join(input.sourceDirectory, path)));
+      }
+      observations.push({ manifest, committedManifest: JSON.parse(committed) as PluginManifestV2, revision, sourceFiles });
       return {
         pluginId: manifest.id,
         pluginVersion: manifest.version,
@@ -81,6 +93,30 @@ describe('journey artifact source profiles', () => {
         expect(observation.manifest.mcpVersion).toBe('2025-11-25');
         expect(observation.manifest.managedState).toEqual(managed.manifest.managedState);
         expect(observation.committedManifest).toEqual(observation.manifest);
+      }
+      for (const release of managed.releases) {
+        const source = fileURLToPath(release.sourceIdentity.repository);
+        const gitEnvironment = {
+          PATH: process.env.PATH,
+          GIT_CONFIG_GLOBAL: '/dev/null',
+          GIT_CONFIG_NOSYSTEM: '1',
+          GIT_TERMINAL_PROMPT: '0',
+        };
+        expect(release.sourceIdentity.revision).toBe(release.sourceSha);
+        const observation = observations.find(item => item.manifest.version === release.evidence.pluginVersion);
+        if (!observation) throw new Error('The package observation is missing.');
+        expect(observation.revision).toBe(release.sourceSha);
+        expect(execFileSync('git', ['rev-parse', release.sourceIdentity.tag], {
+          cwd: source, env: gitEnvironment, encoding: 'utf8',
+        }).trim()).toBe(release.sourceSha);
+        for (const path of ['package.json', 'README.md', 'src/manifest.json', 'src/server.js', 'src/state.js']) {
+          const committed = execFileSync('git', ['show', `${release.sourceSha}:${path}`], {
+            cwd: source, env: gitEnvironment,
+          });
+          const packagedSourceBytes = observation.sourceFiles.get(path);
+          if (!packagedSourceBytes) throw new Error(`The packaged source file ${path} is missing.`);
+          expect(committed.equals(packagedSourceBytes)).toBe(true);
+        }
       }
 
       observations.splice(0);

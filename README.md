@@ -263,6 +263,14 @@ first installation. Deployed lifecycle, independent artifact distribution and
 the remaining M2 qualification are still open; this does not enable arbitrary
 repository execution in the public demo.
 
+Managed release envelopes authenticate source commit, payload digest and
+package/license inventory together with the reviewed image. A canonical image
+label must match before container creation or secret resolution. Publishers use
+the separate `@hasi/plugin-sdk/releases` contract; see
+[release provenance and the pre-release transition](docs/architecture/plugin-release-provenance.md).
+This authenticates publisher assertions; independent distribution and the full
+update/recovery qualification remain separate acceptance gates.
+
 The production host adopts the active contract through a separate authenticated
 installer read, including current tool schemas and logical credential readiness.
 It does not copy plugin secrets into the API process. A lifecycle revision pins

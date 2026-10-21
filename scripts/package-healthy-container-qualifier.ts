@@ -8,11 +8,12 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { packageReferencePlugin, type ReferencePluginArtifactEvidence } from './package-reference-plugin.js';
+import { artifactPluginProvenance, type ArtifactSourceIdentity } from './plugin-release-provenance.js';
 
 const WORKSPACE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REFERENCE_PLUGIN_ROOT = join(WORKSPACE_ROOT, 'examples/reference-plugin');
 const NODE_BASE_IMAGE = 'docker.io/library/node@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5';
-const SOURCE_PATHS = ['package.json', 'src/manifest.json', 'src/server.js'] as const;
+const SOURCE_PATHS = ['package.json', 'README.md', 'src/manifest.json', 'src/server.js', 'src/state.js'] as const;
 const MAX_INVENTORY_ENTRIES = 25_000;
 const MAX_INVENTORY_FILE_BYTES = 64 * 1024 * 1024;
 const MAX_INVENTORY_TOTAL_BYTES = 1024 * 1024 * 1024;
@@ -38,6 +39,7 @@ interface EsbuildMetafile {
 interface PreparedEvidence {
   readonly schemaVersion: 1;
   readonly pluginSourceSha256: string;
+  readonly source: ArtifactSourceIdentity;
   readonly artifactEvidence: ReferencePluginArtifactEvidence;
 }
 
@@ -91,18 +93,48 @@ async function readRegularFile(path: string): Promise<Buffer> {
   return readFile(path);
 }
 
-async function sourceFiles(): Promise<{ readonly files: ReadonlyMap<string, Buffer>; readonly sourceSha256: string }> {
+async function sourceFiles(): Promise<{
+  readonly files: ReadonlyMap<string, Buffer>;
+  readonly sourceSha256: string;
+  readonly source: ArtifactSourceIdentity;
+}> {
+  const gitEnvironment: NodeJS.ProcessEnv = {
+    ...(process.env.PATH === undefined ? {} : { PATH: process.env.PATH }),
+    GIT_CONFIG_GLOBAL: '/dev/null',
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_TERMINAL_PROMPT: '0',
+  };
   const files = new Map<string, Buffer>();
   const hasher = createHash('sha256');
+  const revision = execFileSync('git', ['-C', WORKSPACE_ROOT, 'rev-parse', '--verify', 'HEAD^{commit}'], {
+    encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: gitEnvironment,
+  }).trim();
+  assert(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(revision), 'plugin_source_commit_invalid');
   for (const path of SOURCE_PATHS) {
     const bytes = await readRegularFile(join(REFERENCE_PLUGIN_ROOT, path));
+    const committed = execFileSync('git', ['-C', WORKSPACE_ROOT, 'show', `${revision}:examples/reference-plugin/${path}`], {
+      stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: MAX_INVENTORY_FILE_BYTES, env: gitEnvironment,
+    });
+    assert(committed.equals(bytes), 'plugin_source_not_bound_to_git_commit');
     files.set(path, bytes);
     hasher.update(path, 'utf8');
     hasher.update('\0', 'utf8');
     hasher.update(bytes);
     hasher.update('\0', 'utf8');
   }
-  return { files, sourceSha256: hasher.digest('hex') };
+  const workspacePackage = JSON.parse(await readFile(join(WORKSPACE_ROOT, 'package.json'), 'utf8')) as {
+    readonly repository?: { readonly type?: unknown; readonly url?: unknown };
+  };
+  const repositoryValue = workspacePackage.repository?.url;
+  assert(typeof repositoryValue === 'string' && repositoryValue.startsWith('git+https://'), 'plugin_source_repository_unavailable');
+  const source = { repository: repositoryValue.slice('git+'.length), revision };
+  assert(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(source.revision), 'plugin_source_commit_invalid');
+  const parsedRepository = new URL(source.repository);
+  assert(parsedRepository.protocol === 'https:' && parsedRepository.href === source.repository
+    && !parsedRepository.username && !parsedRepository.password && !parsedRepository.search && !parsedRepository.hash,
+  'plugin_source_repository_invalid');
+  const sourceSha256 = hasher.digest('hex');
+  return { files, sourceSha256, source };
 }
 
 async function createSourceLayout(outputRoot: string, files: ReadonlyMap<string, Buffer>): Promise<string> {
@@ -124,8 +156,6 @@ async function createPackagingSource(
   for (const [path, bytes] of files) {
     await writeFile(join(sourceRoot, path), bytes, { mode: 0o600, flag: 'wx' });
   }
-  const readme = await readRegularFile(join(REFERENCE_PLUGIN_ROOT, 'README.md'));
-  await writeFile(join(sourceRoot, 'README.md'), readme, { mode: 0o600, flag: 'wx' });
   return sourceRoot;
 }
 
@@ -437,6 +467,7 @@ async function verifyPreparedArtifactCounterchecks(
   readonly validPrebuilt: 'accepted_before_missing_docker_executable';
   readonly copiedPrebuilt: 'accepted_before_missing_docker_executable';
   readonly mismatchedContext: 'rejected_before_docker_executable_lookup';
+  readonly corruptedSource: 'rejected_before_docker_executable_lookup';
   readonly corruptedPayload: 'rejected_before_docker_executable_lookup';
 }> {
   const bundleScript = join(outputRoot, 'scripts/qualify-healthy-plugin-container.mjs');
@@ -474,6 +505,17 @@ async function verifyPreparedArtifactCounterchecks(
     expectBundleBlocker(bundleScript, {
       ...preflightEnvironment,
       HASI_PREBUILT_QUALIFICATION_ARTIFACT: countertestArtifact,
+    }, 'prebuilt_artifact_source_binding_invalid', 'prebuilt_source_corruption_countercheck_failed');
+    await writeFile(tamperedFile, originalBytes);
+    const payloadFile = join(countertestArtifact, 'LICENSE');
+    const payloadMetadata = await lstat(payloadFile);
+    assert(payloadMetadata.isFile() && !payloadMetadata.isSymbolicLink(), 'countertest_license_payload_invalid');
+    const payloadBytes = await readFile(payloadFile);
+    await unlink(payloadFile);
+    await writeFile(payloadFile, Buffer.concat([payloadBytes, Buffer.from('\n')]), { mode: payloadMetadata.mode & 0o777 });
+    expectBundleBlocker(bundleScript, {
+      ...preflightEnvironment,
+      HASI_PREBUILT_QUALIFICATION_ARTIFACT: countertestArtifact,
     }, 'artifact_payload_entry_mismatch', 'prebuilt_artifact_corruption_countercheck_failed');
   } finally {
     await rm(countertestRoot, { recursive: true, force: true });
@@ -482,6 +524,7 @@ async function verifyPreparedArtifactCounterchecks(
     validPrebuilt: 'accepted_before_missing_docker_executable',
     copiedPrebuilt: 'accepted_before_missing_docker_executable',
     mismatchedContext: 'rejected_before_docker_executable_lookup',
+    corruptedSource: 'rejected_before_docker_executable_lookup',
     corruptedPayload: 'rejected_before_docker_executable_lookup',
   };
 }
@@ -580,10 +623,12 @@ async function makeBundle(): Promise<void> {
       outputDirectory: join(prebuiltRoot, 'artifact'),
       sourceDirectory: packagingSource,
     });
+    artifactPluginProvenance(artifactEvidence, source.source);
     await rm(packagingSource, { recursive: true, force: true });
     const evidence: PreparedEvidence = {
       schemaVersion: 1,
       pluginSourceSha256: source.sourceSha256,
+      source: { repository: source.source.repository, revision: source.source.revision },
       artifactEvidence,
     };
     await writeFile(join(prebuiltRoot, 'artifact-evidence.json'), `${JSON.stringify(evidence, null, 2)}\n`, {

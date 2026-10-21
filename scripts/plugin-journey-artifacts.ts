@@ -21,7 +21,7 @@ export interface JourneyArtifactRelease {
   readonly directory: string;
   readonly sourceSha: string;
   readonly evidence: ReferencePluginArtifactEvidence;
-  readonly sourceIdentity?: ExternalPluginSourceIdentity;
+  readonly sourceIdentity: ExternalPluginSourceIdentity;
 }
 
 export interface PreparedJourneyArtifacts {
@@ -164,13 +164,12 @@ export function journeyArtifactEvidence(artifacts: PreparedJourneyArtifacts): {
   return {
     artifactInputMode: artifacts.artifactInputMode,
     independentDistributionAcceptance: false,
-    sourceIdentityAssurance: external ? OPERATOR_DECLARED_SOURCE_IDENTITY : 'workspace-reference-fixture',
+    sourceIdentityAssurance: external
+      ? OPERATOR_DECLARED_SOURCE_IDENTITY
+      : 'workspace-local-git-fixture-not-external-publisher-proof',
     releases: artifacts.releases.map(release => ({
       sourceSha: release.sourceSha,
-      sourceIdentity: release.sourceIdentity ?? {
-        kind: 'workspace-reference-fixture',
-        revision: release.sourceSha,
-      },
+      sourceIdentity: release.sourceIdentity,
       ...release.evidence,
     })),
   };

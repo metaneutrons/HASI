@@ -11,6 +11,7 @@ export default defineConfig({
       ['@hasi/api', './apps/api/src/index.ts'],
       ['@hasi/state', './packages/state/src/index.ts'],
       ['@hasi/plugin-sdk/deployment-admin', './packages/plugin-sdk/src/deployment-admin.ts'],
+      ['@hasi/plugin-sdk/releases', './packages/plugin-sdk/src/releases.ts'],
       ['@hasi/plugin-sdk/schema-pattern', './packages/plugin-sdk/src/schema-pattern.ts'],
       ['@hasi/plugin-sdk', './packages/plugin-sdk/src/index.ts'],
       ['@hasi/anny-client', './packages/anny-client/src/index.ts'],

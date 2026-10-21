@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { PLUGIN_IMAGE_PROVENANCE_LABEL, pluginImageProvenanceLabel } from '@hasi/plugin-sdk/releases';
 import { request as httpRequest, type IncomingMessage } from 'node:http';
 import { isAbsolute } from 'node:path';
 import { buildPluginContainerLaunchPolicy, DeploymentDriverError, type DeploymentDriver, type DeploymentObservation, type LogicalSecretAssignment, type PluginContainerLaunchPolicy, type VerifiedPluginRelease } from './plugin-artifacts.js';
@@ -651,6 +652,10 @@ export function createDockerPluginDriver(options: DockerPluginDriverOptions): Do
     const repoDigests = response.body.RepoDigests;
     if (!Array.isArray(repoDigests) || !hasLocalRepoDigest(release.image, repoDigests)) throw new DockerPluginDriverError('failed');
     const imageConfig = response.body.Config;
+    if (!isRecord(imageConfig) || !isRecord(imageConfig.Labels)
+      || imageConfig.Labels[PLUGIN_IMAGE_PROVENANCE_LABEL] !== pluginImageProvenanceLabel({ pluginId: release.pluginId, version: release.version, manifestDigest: release.manifestDigest, provenance: release.provenance })) {
+      throw new DockerPluginDriverError('failed', 'image_provenance_mismatch');
+    }
     if (isRecord(imageConfig) && isRecord(imageConfig.Volumes) && Object.keys(imageConfig.Volumes).length > 0) {
       // Image-declared volumes create anonymous writable mounts even with no HostConfig mounts.
       throw new DockerPluginDriverError('failed');
