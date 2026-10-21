@@ -14,6 +14,7 @@ export type ModelRouterErrorCode =
   | "budget_unavailable"
   | "budget_unpriced"
   | "budget_usage_invalid"
+  | "request_cancelled"
   | "provider_unavailable"
   | "provider_rate_limited"
   | "invalid_model_response";

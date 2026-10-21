@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleChatPost, handleTimestampPost } from "../src/lib/server/chat-http";
-import { modelReplySchema, type ModelReply } from "../src/lib/chat-contract";
+import { modelReplySchema, type ChatRequest, type ModelReply } from "../src/lib/chat-contract";
 import { ModelRouterError } from "../src/lib/server/model-router-error";
 import { z } from "zod";
 
@@ -9,7 +9,7 @@ import { createMessageClock } from "../src/lib/server/message-timestamps";
 const origin = "https://hasi.metaneutrons.cc";
 const validBody = { profileId: "groq-oss-120b", messages: [{ role: "user", content: "Hallo" }] };
 const reply: ModelReply = { message: { role: "assistant", content: "Hallo!" }, profile: { id: "groq-oss-120b", modelId: "openai/gpt-oss-120b", label: "GPT-OSS 120B", provider: "groq" }, usage: { inputTokens: 12, outputTokens: 3 } };
-const request = (body: unknown = validBody, source = origin) => new Request(`${origin}/api/chat`, { method: "POST", headers: { origin: source, "content-type": "application/json" }, body: JSON.stringify(body) });
+const request = (body: unknown = validBody, source = origin, signal?: AbortSignal) => new Request(`${origin}/api/chat`, { method: "POST", headers: { origin: source, "content-type": "application/json" }, body: JSON.stringify(body), ...(signal ? { signal } : {}) });
 const timestampResponseSchema = z.object({
   timestamps: z.array(z.object({
     id: z.string(),
@@ -95,10 +95,49 @@ describe("public chat admission and error boundary", () => {
 
   it("passes a valid request to the selected model after admission", async () => {
     const run = vi.fn(() => Promise.resolve(reply));
-    const response = await handleChatPost(request(), { run, admit: () => Promise.resolve(true), allowedOrigins: [origin] });
+    const incoming = request();
+    const response = await handleChatPost(incoming, { run, admit: () => Promise.resolve(true), allowedOrigins: [origin] });
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(reply);
-    expect(run).toHaveBeenCalledWith(validBody);
+    expect(run).toHaveBeenCalledWith(validBody, incoming.signal);
+  });
+
+  it("returns a sanitized 499 before admission for a pre-aborted request", async () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const controller = new AbortController();
+    controller.abort("private cancellation detail");
+    const run = vi.fn(() => Promise.resolve(reply));
+    const finalize = vi.fn(() => Promise.resolve());
+    const admit = vi.fn(() => Promise.resolve(true));
+    const response = await handleChatPost(request(validBody, origin, controller.signal), { run, finalize, admit, allowedOrigins: [origin] });
+    expect(response.status).toBe(499);
+    expect(await response.json()).toEqual({ code: "request_cancelled", error: "Die Anfrage wurde abgebrochen." });
+    expect(run).not.toHaveBeenCalled();
+    expect(finalize).not.toHaveBeenCalled();
+    expect(admit).not.toHaveBeenCalled();
+    expect(JSON.stringify(warning.mock.calls)).not.toContain("private cancellation detail");
+    warning.mockRestore();
+  });
+
+  it("does not finalize or return a late result after request cancellation", async () => {
+    const controller = new AbortController();
+    const incoming = request(validBody, origin, controller.signal);
+    let releaseRun!: (value: ModelReply) => void;
+    let started!: () => void;
+    const runStarted = new Promise<void>(resolve => { started = resolve; });
+    const run = vi.fn((_input: ChatRequest, _signal: AbortSignal) => new Promise<ModelReply>(resolve => {
+      releaseRun = resolve;
+      started();
+    }));
+    const finalize = vi.fn(() => Promise.resolve());
+    const pending = handleChatPost(incoming, { run, finalize, admit: () => Promise.resolve(true), allowedOrigins: [origin] });
+    await runStarted;
+    controller.abort("private cancellation detail");
+    releaseRun(reply);
+    const response = await pending;
+    expect(response.status).toBe(499);
+    expect(await response.text()).not.toContain("private cancellation detail");
+    expect(finalize).not.toHaveBeenCalled();
   });
 
   it("returns a sanitized denial for forbidden model choices and routing receipts", async () => {

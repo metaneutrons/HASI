@@ -59,6 +59,8 @@ interface RouterOptions {
   budgetAdmission?: ModelBudgetAdmission;
   /** Current source access is checked again immediately before every provider attempt. */
   beforeProviderCall?: () => Promise<void>;
+  /** The HTTP request's signal; cancellation is never an eligible timeout fallback. */
+  signal?: AbortSignal;
   /** Current authenticated status only; client statuses are never accepted. */
   actionContext?: ActionContext;
   /** Conservative per-call protocol overhead included in admission, defaulting to 4096 tokens. */
@@ -186,7 +188,15 @@ function budgetAdmissionError(cause: unknown): ModelRouterError {
   return new ModelRouterError(code === "exhausted" ? "budget_exhausted" : "budget_unavailable", "The model budget could not admit this attempt.");
 }
 
-function createPinnedFetch(connection: ProviderConnection, upstream: typeof fetch, onResponse?: (response: Response) => void): typeof fetch {
+function requestCancelled(): ModelRouterError {
+  return new ModelRouterError("request_cancelled", "The chat request was cancelled.");
+}
+
+function throwIfRequestCancelled(signal?: AbortSignal): void {
+  if (signal?.aborted) throw requestCancelled();
+}
+
+function createPinnedFetch(connection: ProviderConnection, upstream: typeof fetch, onResponse?: (response: Response) => void, onDispatch?: () => void): typeof fetch {
   const endpoint = new URL(connection.baseURL);
   const basePath = endpoint.pathname.replace(/\/+$/u, "");
   return async (input, init) => {
@@ -207,6 +217,7 @@ function createPinnedFetch(connection: ProviderConnection, upstream: typeof fetc
       throw new Error("Rejected provider destination.");
     }
 
+    onDispatch?.();
     const response = await upstream(input, { ...init, redirect: "error" });
     if (response.redirected || (response.status >= 300 && response.status < 400)) {
       throw new Error("Rejected provider redirect.");
@@ -359,6 +370,7 @@ function invalidModelResponse(): ModelRouterError {
 }
 
 export async function runModelStep(input: ChatRequest, options: RouterOptions = {}): Promise<ModelReply> {
+  throwIfRequestCancelled(options.signal);
   if (process.env.NODE_ENV === "production" && !options.context) throw new ModelRouterError("profile_not_approved", "Production model calls require an explicit trusted context policy.");
   if (process.env.NODE_ENV === "production" && !options.budgetAdmission) throw new ModelRouterError("budget_unavailable", "Production model calls require shared budget admission.");
   const parsed = chatRequestSchema.safeParse(input);
@@ -383,6 +395,7 @@ export async function runModelStep(input: ChatRequest, options: RouterOptions = 
   let candidates: string[] = [];
   let rule = config.policy.fallbacks.find(rule => rule.from === actualId);
   for (;;) {
+    throwIfRequestCancelled(options.signal);
     const profile = config.profiles.find(profile => profile.id === actualId);
     if (!profile || !eligible(profile, options)) throw new ModelRouterError("profile_not_approved", "The profile is not eligible for this context.");
     const providerConnection = configuredConnection(config, profile.connectionId);
@@ -390,12 +403,14 @@ export async function runModelStep(input: ChatRequest, options: RouterOptions = 
     if (!apiKey) throw new ModelRouterError("missing_credentials", "The selected model provider is not configured.");
     try {
       const result = await generateProfile(request, { ...profile, provider: providerConnection.provider }, resolveModelConnection(providerConnection), apiKey, options, budget);
+      throwIfRequestCancelled(options.signal);
       if (actualId !== request.profileId) {
         if (!turnId || !options.routingPins) throw new ModelRouterError("profile_not_approved", "Fallback requires a current authenticated turn.");
         result.routingToken = options.routingPins.issue({ ...expected, actualProfileId: actualId, attemptedProfileIds: attempted });
       }
       return result;
     } catch (cause) {
+      if (options.signal?.aborted || (cause instanceof ModelRouterError && cause.code === "request_cancelled")) throw requestCancelled();
       const transientFailure = cause instanceof ModelRouterError ? cause.transientFailure : undefined;
       if (!(cause instanceof ModelRouterError) || !transientFailure || budget.remaining < 1 || Date.now() >= budget.deadline || !turnId || !options.routingPins) throw cause;
       if (!rule?.on.includes(transientFailure)) {
@@ -427,10 +442,18 @@ export async function runModelStep(input: ChatRequest, options: RouterOptions = 
 }
 
 type ResolvedProfile = ModelConfiguration["profiles"][number] & { provider: ModelConfiguration["connections"][number]["provider"] };
+function providerRequestWasDispatched(state: { started: boolean }): boolean {
+  return state.started;
+}
+
 async function generateProfile(request: ChatRequest, profile: ResolvedProfile, connection: ReturnType<typeof resolveModelConnection>, apiKey: string, options: RouterOptions, budget: { remaining: number; deadline: number }): Promise<ModelReply> {
   let rateLimits: GroqRateLimitDiagnostics | undefined;
+  const providerDispatch = { started: false };
   const pinnedFetch = createPinnedFetch(connection, options.fetch ?? fetch, response => {
     if (connection.adapter === "groq") rateLimits = parseGroqRateLimitDiagnostics(response.headers, undefined, getNow(options.now));
+  }, () => {
+    throwIfRequestCancelled(options.signal);
+    providerDispatch.started = true;
   });
   const adapterOptions = { apiKey, baseURL: connection.baseURL, fetch: pinnedFetch };
   const model = connection.adapter === "groq" ? createGroq(adapterOptions)(profile.modelId)
@@ -481,23 +504,29 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
     }
     let reservation: Awaited<ReturnType<ModelBudgetAdmission["reserve"]>> | undefined;
     try {
+      throwIfRequestCancelled(options.signal);
       reservation = await options.budgetAdmission?.reserve({ profileId: profile.id, inputTokens, outputTokens });
     } catch (cause) {
+      if (options.signal?.aborted || (cause instanceof ModelRouterError && cause.code === "request_cancelled")) throw requestCancelled();
       throw budgetAdmissionError(cause);
     }
 
     let settlementAttempted = false;
+    providerDispatch.started = false;
     try {
+      throwIfRequestCancelled(options.signal);
       try { await options.beforeProviderCall?.(); }
       catch (cause) {
-        if (reservation) { settlementAttempted = true; await reservation.settle({ inputTokens: 0, outputTokens: 0 }); }
+        if (options.signal?.aborted || (cause instanceof ModelRouterError && cause.code === "request_cancelled")) throw requestCancelled();
         if (cause instanceof ModelRouterError && cause.code === "action_context_changed") throw cause;
         throw new ModelRouterError("context_unavailable", "Source authority changed before provider dispatch");
       }
+      throwIfRequestCancelled(options.signal);
       const result = await generateText({
         model,
         instructions: attemptInstructions,
         messages,
+        ...(options.signal ? { abortSignal: options.signal } : {}),
         tools: allowedTools,
         ...(needsInitialSearch ? { toolChoice: { type: "tool" as const, toolName: "anny_search_resources" } } : {}),
         ...(profile.parameters.temperature === null ? {} : { temperature: retry ? 0 : profile.parameters.temperature }),
@@ -514,17 +543,25 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
         if (!usage || usage.inputTokens > inputTokens || usage.outputTokens > outputTokens) {
           settlementAttempted = true;
           try { await reservation.settle(); } catch { throw new ModelRouterError("budget_unavailable", "Model usage could not be settled safely."); }
+          throwIfRequestCancelled(options.signal);
           throw new ModelRouterError("budget_usage_invalid", "The provider did not report usage within the admitted limit.");
         }
         settlementAttempted = true;
         try { await reservation.settle(usage); } catch { throw new ModelRouterError("budget_unavailable", "Model usage could not be settled safely."); }
       }
+      throwIfRequestCancelled(options.signal);
       return result;
     } catch (cause) {
       if (reservation && !settlementAttempted) {
         settlementAttempted = true;
-        try { await reservation.settle(); } catch { throw new ModelRouterError("budget_unavailable", "The failed model attempt could not be settled safely."); }
+        try {
+          if (providerRequestWasDispatched(providerDispatch)) await reservation.settle();
+          else await reservation.settle({ inputTokens: 0, outputTokens: 0 });
+        } catch {
+          throw new ModelRouterError("budget_unavailable", "The failed model attempt could not be settled safely.");
+        }
       }
+      if (options.signal?.aborted || (cause instanceof ModelRouterError && cause.code === "request_cancelled")) throw requestCancelled();
       throw cause;
     }
   };
@@ -533,6 +570,7 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
     try {
       result = await generate(false);
     } catch (cause) {
+      if (options.signal?.aborted || (cause instanceof ModelRouterError && cause.code === "request_cancelled")) throw requestCancelled();
       // Retry only failed native tool generation, never transport/auth/quota
       // failures or any business action. Failed output is never replayed.
       if (connection.adapter !== "groq" || !APICallError.isInstance(cause) || cause.statusCode !== 400 ||
@@ -541,6 +579,7 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
       result = await generate(true);
     }
   } catch (cause) {
+    if (options.signal?.aborted || (cause instanceof ModelRouterError && cause.code === "request_cancelled")) throw requestCancelled();
     if (cause instanceof ModelRouterError && ["budget_exhausted", "budget_unavailable", "budget_unpriced", "budget_usage_invalid", "tools_unavailable", "context_unavailable", "action_context_changed", "configuration_invalid"].includes(cause.code)) throw cause;
     const status = APICallError.isInstance(cause) ? cause.statusCode : undefined;
     const failedQuota = connection.adapter === "groq" && APICallError.isInstance(cause)
@@ -600,6 +639,7 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
   ) {
     throw invalidModelResponse();
   }
+  throwIfRequestCancelled(options.signal);
 
   // The Groq SDK preserves cache-read absence but defaults a missing prompt
   // total to zero. Require the explicit raw total; never log raw usage itself.
@@ -629,6 +669,7 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
 
   const replyResult = modelReplySchema.safeParse(reply);
   if (!replyResult.success) throw invalidModelResponse();
+  throwIfRequestCancelled(options.signal);
   options.telemetry?.({ outcome: "success", profileId: profile.id, attempts, systemChars: instructions.length, historyChars: JSON.stringify(request.messages).length, modelHistoryChars: JSON.stringify(messages).length, ...reply.usage, ...(cache ? { cache } : {}), ...(rateLimits && Object.keys(rateLimits).length ? { rateLimits } : {}) });
   return replyResult.data;
 }

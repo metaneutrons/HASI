@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   let actionIds: readonly string[] = [];
   let actions: ActionContext = [];
   const assertNotCancelled = () => {
-    if (access.request.signal.aborted) throw new ModelRouterError("context_unavailable", "Chat request cancelled");
+    if (access.request.signal.aborted) throw new ModelRouterError("request_cancelled", "Chat request cancelled");
   };
   const assertCurrent = async () => {
     assertNotCancelled();
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     }
   };
   return handleChatPost(access.request, {
-    run: async (input: ChatRequest) => {
+    run: async (input: ChatRequest, signal: AbortSignal) => {
       assertNotCancelled();
       if (signer) {
         authorityDigest = await productionHistoryAuthority(access.request);
@@ -75,12 +75,13 @@ export async function POST(request: Request) {
       actionIds = input.proposalIds ?? [];
       actions = await loadActionContext(access.request, actionIds);
       assertNotCancelled();
-      const reply = await runModelStep(request, { context: access.modelContext, budgetAdmission: await getModelBudgetAdmission(), routingPins: access.routingPins, authorizedTools: await loadAuthorizedModelTools(access.request), messageTimes: request.messages.map(message => access.clock.verify(message, message.timestamp)), actionContext: actions, beforeProviderCall: assertCurrent, telemetry: metrics => { console.info("HASI model usage", JSON.stringify(metrics)); } });
+      const reply = await runModelStep(request, { context: access.modelContext, budgetAdmission: await getModelBudgetAdmission(), routingPins: access.routingPins, authorizedTools: await loadAuthorizedModelTools(access.request), messageTimes: request.messages.map(message => access.clock.verify(message, message.timestamp)), actionContext: actions, beforeProviderCall: assertCurrent, signal, telemetry: metrics => { console.info("HASI model usage", JSON.stringify(metrics)); } });
       await assertCurrent();
       if (rebuilt?.changed) reply.contextNotice = "Frühere Inhalte ohne aktuelle Quellenfreigabe wurden aus dem Modellkontext entfernt.";
       return reply;
     },
-    finalize: (reply, input) => {
+    finalize: (reply, input, signal) => {
+      if (signal.aborted) throw new ModelRouterError("request_cancelled", "Chat request cancelled");
       if (signer && input.conversationId) {
         if (!authorityDigest) throw new ModelRouterError("context_unavailable", "Current conversation authority is unavailable");
         reply.message.evidence = signer.stamp(input.conversationId, reply.message, rebuilt?.contextIds ?? [], authorityDigest, rebuilt?.toolContextIds ?? []);

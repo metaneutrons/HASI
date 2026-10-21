@@ -9,14 +9,26 @@ const headers = { "cache-control": "private, no-store", "x-content-type-options"
 
 export interface ChatHttpDependencies {
   clock?: ReturnType<typeof createMessageClock>;
-  finalize?: (reply: ModelReply, input: ChatRequest) => Promise<void>;
-  run: (input: ChatRequest) => Promise<ModelReply>;
+  finalize?: (reply: ModelReply, input: ChatRequest, signal: AbortSignal) => Promise<void>;
+  run: (input: ChatRequest, signal: AbortSignal) => Promise<ModelReply>;
   admit: (request: Request) => Promise<boolean>;
   allowedOrigins: readonly string[];
 }
 
 function error(message: string, status: number) {
   return Response.json({ error: message }, { status, headers });
+}
+
+function cancellationResponse(): Response {
+  return Response.json({ code: "request_cancelled", error: "Die Anfrage wurde abgebrochen." }, { status: 499, headers });
+}
+
+function isRequestCancelled(cause: unknown): boolean {
+  return cause instanceof ModelRouterError && cause.code === "request_cancelled";
+}
+
+function requestIsAborted(request: Request): boolean {
+  return request.signal.aborted;
 }
 
 async function readBody(request: Request): Promise<unknown> {
@@ -44,6 +56,7 @@ async function readBody(request: Request): Promise<unknown> {
 }
 
 export async function handleChatPost(request: Request, dependencies: ChatHttpDependencies): Promise<Response> {
+  if (requestIsAborted(request)) return cancellationResponse();
   const origin = request.headers.get("origin");
   if (!origin || !dependencies.allowedOrigins.includes(origin) || origin !== new URL(request.url).origin) {
     return error("Diese Anfrage stammt nicht aus einer zugelassenen HASI-Oberfläche.", 403);
@@ -54,27 +67,37 @@ export async function handleChatPost(request: Request, dependencies: ChatHttpDep
   let input: ChatRequest;
   try {
     const result = chatRequestSchema.safeParse(await readBody(request));
+    if (requestIsAborted(request)) return cancellationResponse();
     if (!result.success) return error("Die Nachricht oder der Gesprächsverlauf ist ungültig oder zu lang. Beginne gegebenenfalls einen neuen Chat.", 400);
     input = result.data;
   } catch {
+    if (requestIsAborted(request)) return cancellationResponse();
     return error("Die Anfrage ist ungültig oder überschreitet die zulässige Größe.", 400);
   }
   try {
-    if (!await dependencies.admit(request)) {
+    const admitted = await dependencies.admit(request);
+    if (requestIsAborted(request)) return cancellationResponse();
+    if (!admitted) {
       return Response.json({ error: "Das Anfragelimit der Demo ist erreicht. Bitte versuche es später erneut." }, { status: 429, headers: { ...headers, "retry-after": "60" } });
     }
   } catch {
+    if (requestIsAborted(request)) return cancellationResponse();
     return error("Der Anfrageschutz ist vorübergehend nicht verfügbar. Bitte versuche es später erneut.", 503);
   }
   try {
-    const reply = await dependencies.run(input);
+    if (requestIsAborted(request)) return cancellationResponse();
+    const reply = await dependencies.run(input, request.signal);
+    if (requestIsAborted(request)) return cancellationResponse();
     if (dependencies.clock) {
       reply.message.id = randomUUID();
       reply.message.timestamp = dependencies.clock.stamp(reply.message);
     }
-    await dependencies.finalize?.(reply, input);
+    if (requestIsAborted(request)) return cancellationResponse();
+    await dependencies.finalize?.(reply, input, request.signal);
+    if (requestIsAborted(request)) return cancellationResponse();
     return Response.json(reply, { headers });
   } catch (cause) {
+    if (requestIsAborted(request) || isRequestCancelled(cause)) return cancellationResponse();
     // Provider/SDK errors can contain request bodies, headers or credentials.
     // Serialize allowlisted metadata so nested schema issue names remain visible.
     // Never log the cause or provider payload.

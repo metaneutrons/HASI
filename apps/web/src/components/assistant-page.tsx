@@ -2,7 +2,7 @@
 
 import { asksForActionControls, currentActionControls } from "@/lib/chat-action-guidance";
 
-import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, MessageCircle, PanelLeft, Plus, Search, X } from "lucide-react";
+import { ArrowRight, ArrowUp, BookOpen, CalendarDays, Check, MessageCircle, PanelLeft, Plus, Search, Square, X } from "lucide-react";
 import Link from "next/link";
 import { HasiIcon } from "@/components/hasi-icon";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject, type SyntheticEvent } from "react";
@@ -151,6 +151,8 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   const [input, setInput] = useState(initial.input);
   const [inputNotice, setInputNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generationStopped, setGenerationStopped] = useState(false);
   const [activity, setActivity] = useState("");
   const [request, setRequest] = useState<RoomRequest>(initial.request);
   const roomIntent = useRef<RoomRequest>(initial.request);
@@ -170,6 +172,8 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   const [fallbackLabel, setFallbackLabel] = useState<string | null>(null);
   const toolBridge = useRef<ReturnType<typeof createAnnyChatTools> | null>(null);
   const pendingRequest = useRef<AbortController | null>(null);
+  const pendingGeneration = useRef<{ controller: AbortController; stopped: boolean } | null>(null);
+  const pendingStopFocus = useRef(false);
   const scroller = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
   useLayoutEffect(() => {
@@ -294,6 +298,15 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     target.focus({ preventScroll: true });
   }, [active, busy, messages]);
 
+  useEffect(() => {
+    if (busy || !pendingStopFocus.current) return;
+    pendingStopFocus.current = false;
+    const field = composer.current;
+    if (active && field?.getClientRects().length && field.ownerDocument.activeElement === field.ownerDocument.body) {
+      field.focus({ preventScroll: true });
+    }
+  }, [active, busy]);
+
 
   async function requestForChat<T>(path: string, init: RequestInit = {}, onRequestStart?: () => void): Promise<T> {
     const signal = pendingRequest.current?.signal;
@@ -406,9 +419,21 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     actionHelpLocation.current = null;
     pendingRequest.current = new AbortController();
     setInterrupted(false);
+    setGenerationStopped(false);
     setBusy(true);
     setActivity(label);
     return true;
+  }
+
+  function stopGeneration() {
+    const generation = pendingGeneration.current;
+    if (!generation || generation.stopped) return;
+    generation.stopped = true;
+    pendingStopFocus.current = true;
+    generation.controller.abort();
+    setGenerating(false);
+    setGenerationStopped(true);
+    setActivity("Antwort wird gestoppt …");
   }
 
   async function finish() {
@@ -476,6 +501,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     const latestUserText = history.current.findLast(message => message.role === "user")?.content ?? "";
     const mixedRequest = isMixedKnowledgeRequest(latestUserText, roomContext);
     const stepLimit = mixedRequest ? 3 : MAX_MODEL_STEPS;
+    let stopped = false;
     try {
       const authorizedTools = await loadModelTools();
       if (!await checkAnnyAccess(annyWorkflow(history.current), authorizedTools)) return;
@@ -483,11 +509,31 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       for (let step = 0; step < stepLimit; step += 1) {
         setActivity(`${resolvedProfile.current ? modelProviderName(resolvedProfile.current) : providerLabel ?? "Das Modell"} antwortet …`);
         await stampMessages();
-        const response = await fetch("/api/chat", {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ profileId, conversationId: sessionId, ...(routingToken.current ? { routingToken: routingToken.current } : {}), proposalIds: [...new Set(messages.flatMap(message => message.proposal ? [message.proposal.id] : []))].slice(-8), messages: history.current }), signal: controller.signal,
-        });
-        const payload: unknown = await response.json().catch(() => ({ error: "Der Chat-Dienst ist gerade nicht erreichbar. Bitte versuche es später erneut." }));
+        controller.signal.throwIfAborted();
+        // Stop is limited to inference. Tool requests and confirmed actions keep
+        // their separate request lifecycle and authoritative outcome handling.
+        const generation = { controller: new AbortController(), stopped: false };
+        pendingGeneration.current = generation;
+        setGenerating(true);
+        let response: Response;
+        let payload: unknown;
+        try {
+          response = await fetch("/api/chat", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ profileId, conversationId: sessionId, ...(routingToken.current ? { routingToken: routingToken.current } : {}), proposalIds: [...new Set(messages.flatMap(message => message.proposal ? [message.proposal.id] : []))].slice(-8), messages: history.current }), signal: AbortSignal.any([controller.signal, generation.controller.signal]),
+          });
+          payload = await response.json().catch(() => ({ error: "Der Chat-Dienst ist gerade nicht erreichbar. Bitte versuche es später erneut." }));
+          // A late response from a transport that ignored abort must not render
+          // an answer or dispatch the proposed tools.
+          generation.controller.signal.throwIfAborted();
+          controller.signal.throwIfAborted();
+        } finally {
+          stopped = generation.stopped;
+          if (pendingGeneration.current === generation) {
+            pendingGeneration.current = null;
+            setGenerating(false);
+          }
+        }
         if (!response.ok) {
           if (response.status === 409 && payload && typeof payload === "object" && "code" in payload && payload.code === "required_tools_unavailable") {
             if (!await checkAnnyAccess(annyWorkflow(history.current), await loadModelTools())) return;
@@ -581,6 +627,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       }
       add({ role: "assistant", text: "Die maximale Zahl an Modellschritten für diese Nachricht ist erreicht. Du kannst die angezeigten Karten nutzen oder eine weitere Nachricht schreiben." });
     } catch (cause) {
+      if (stopped) return;
       appendHistory("assistant", "Die Verarbeitung der letzten Nachricht wurde durch einen technischen Fehler unterbrochen. Offene Schritte wurden nicht automatisch fortgesetzt; berücksichtige die bereits vorliegenden Tool-Ergebnisse.");
       throw cause;
     }
@@ -1122,6 +1169,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
           </div>
         )}
         {busy && <div className="chat-activity" role="status"><span className="spinner" />{activity}</div>}
+        {generationStopped && !busy && <div className="chat-activity" role="status">Antwort gestoppt. Du kannst weiterschreiben.</div>}
       </div>
       <div className="chat-composer-dock">
         <form className="chat-composer" onSubmit={submit}>
@@ -1136,7 +1184,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
             }
           }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(input); } }} />
           {inputNotice && <p className="chat-input-notice" id={`${inputId}-notice`} role="alert">{inputNotice}</p>}
-          <div className="chat-composer-bottom"><span><span className="status-dot" /> {offline ? "Dialog-Demo · ohne Sprachmodell" : modelLoading ? "Modellstatus wird geladen …" : selectedProfile?.configured ? `${providerLabel ?? "Modellanbieter"} · anny-Testdaten` : `${providerLabel ?? "Modellanbieter"} nicht konfiguriert`}</span><button type="submit" aria-label="Nachricht senden" disabled={busy || !canSend || !input.trim()}><ArrowUp size={20} aria-hidden="true" /></button></div>
+          <div className="chat-composer-bottom"><span><span className="status-dot" /> {offline ? "Dialog-Demo · ohne Sprachmodell" : modelLoading ? "Modellstatus wird geladen …" : selectedProfile?.configured ? `${providerLabel ?? "Modellanbieter"} · anny-Testdaten` : `${providerLabel ?? "Modellanbieter"} nicht konfiguriert`}</span>{generating ? <button key="stop-generation" type="button" aria-label="Antwort stoppen" title="Antwort stoppen" onClick={(event) => { event.preventDefault(); stopGeneration(); }}><Square size={17} fill="currentColor" aria-hidden="true" /></button> : <button key="send-message" type="submit" aria-label="Nachricht senden" disabled={busy || !canSend || !input.trim()}><ArrowUp size={20} aria-hidden="true" /></button>}</div>
         </form>
         <p className="chat-footnote">{offline ? "Dialog-Demo mit Testdaten · synthetisches IT- und Intranet-Wissen" : `Nachrichten und ausgewählte Toolergebnisse gehen an ${providerLabel ?? "den ausgewählten Modellanbieter"}. Bitte nur Testdaten eingeben.${selectedProfile?.fallbackLabels?.length ? ` Konfigurierte Ausweichmodelle: ${selectedProfile.fallbackLabels.join(", ")}.` : ""}`}</p>
       </div>
