@@ -11,7 +11,7 @@
   --ink: #20221f;
   --ink-soft: #454843;
   --muted: #686d66;
-  --faint: #858a82;
+  --faint: #686d66;
   --line: rgba(42, 47, 40, 0.1);
   --line-strong: rgba(42, 47, 40, 0.17);
   --accent: #cf6b43;
@@ -397,7 +397,7 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .orbit-spark--two { bottom: 36px; left: 29px; width: 5px; height: 5px; opacity: 0.68; }
 .login-card { position: relative; z-index: 1; width: 100%; max-width: 465px; justify-self: end; padding: clamp(24px, 3.3vw, 39px); border: 1px solid var(--line); border-radius: 25px; background: var(--surface); box-shadow: var(--shadow); backdrop-filter: blur(20px); }
 .login-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.login-kicker { color: var(--accent); font-size: 9px; }
+.login-kicker { color: var(--accent-ink); font-size: 9px; }
 .login-card h2 { margin: 7px 0 0; font-size: clamp(21px, 2.3vw, 25px); font-weight: 620; letter-spacing: -0.045em; line-height: 1.15; }
 .login-lock { display: inline-flex; width: 43px; height: 43px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-solid); color: var(--accent); flex: 0 0 auto; }
 .login-intro { margin: 13px 0 20px; color: var(--muted); font-size: 13px; line-height: 1.6; }
