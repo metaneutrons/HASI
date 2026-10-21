@@ -225,7 +225,7 @@ describe("ProtectedWorkspaceStore", () => {
     const saved = await fixture.service.save(null, workspace);
     const savedCard = sourceCard(saved.workspace);
     expect(savedCard).toMatchObject({
-      text: "Gefundene Demoquellen.",
+      text: "Gefundene freigegebene Quellen.",
       sourceContextId: CONTEXT_ID,
       sources: [expect.objectContaining({ id: "svc-printer-guide", revision: 1, text: "Fresh authorized demo text." })],
     });
@@ -234,13 +234,13 @@ describe("ProtectedWorkspaceStore", () => {
 
     const loaded = await fixture.service.load();
     expect(sourceCard(loaded.workspace)).toMatchObject({
-      text: "Gefundene Demoquellen.",
+      text: "Gefundene freigegebene Quellen.",
       sourceContextId: CONTEXT_ID,
       sources: [expect.objectContaining({ id: "svc-printer-guide", revision: 1, text: "Fresh authorized demo text." })],
     });
     const resaved = await fixture.service.save(loaded.revision, loaded.workspace);
     expect(sourceCard(resaved.workspace)).toMatchObject({
-      text: "Gefundene Demoquellen.",
+      text: "Gefundene freigegebene Quellen.",
       sourceContextId: CONTEXT_ID,
       sources: [expect.objectContaining({ id: "svc-printer-guide", revision: 1, text: "Fresh authorized demo text." })],
     });

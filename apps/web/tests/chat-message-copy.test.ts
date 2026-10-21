@@ -36,7 +36,7 @@ describe("message clipboard content", () => {
 
   it("includes source citations and navigable document links, not hidden source text", () => {
     const text = chatMessageCopyText({ ...message, sources: [sourceDocument] }, origin);
-    expect(text).toContain("WLAN\nService IT · Demo · Fassung 1\nhttps://hasi.example/sources/svc-001?revision=1");
+    expect(text).toContain("WLAN\nService IT · Fassung 1\nhttps://hasi.example/sources/svc-001?revision=1");
     expect(text).not.toContain(sourceDocument.citationId);
     expect(text).not.toContain("Hidden retrieval context");
   });
