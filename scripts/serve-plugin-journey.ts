@@ -33,6 +33,7 @@ import { createManagedReferenceManifest } from './reference-managed-state-profil
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = fileURLToPath(import.meta.url);
 const WEB_ORIGIN = 'http://127.0.0.1:3001';
+const WEB_API_ORIGIN = 'http://127.0.0.1:4100';
 const REFERENCE_ID = 'hasi.reference';
 const ANNY_ID = 'de.hsh.hasi.anny';
 const REFERENCE_PERMISSIONS = ['reference:read', 'reference:prepare', 'reference:execute'];
@@ -63,6 +64,37 @@ export function journeyDatabaseUrl(environment: Readonly<Record<string, string |
     throw new Error('Use only the explicit loopback hasi_topology_test database without URL overrides.');
   }
   return url.href;
+}
+
+const CLEAN_ENVIRONMENT_KEYS = ['PATH', 'HOME', 'XDG_CONFIG_HOME', 'TMPDIR', 'LANG', 'npm_config_store_dir'] as const;
+
+function cleanEnvironment(environment: Readonly<Record<string, string | undefined>> = process.env): NodeJS.ProcessEnv {
+  return Object.fromEntries(CLEAN_ENVIRONMENT_KEYS.flatMap(name => environment[name] ? [[name, environment[name]]] : []));
+}
+
+/** The optimized local app build receives no runtime identity, database, Docker or model configuration. */
+export function journeyWebBuildEnvironment(environment: Readonly<Record<string, string | undefined>> = process.env): NodeJS.ProcessEnv {
+  return {
+    ...cleanEnvironment(environment),
+    NODE_ENV: 'production',
+    NEXT_TELEMETRY_DISABLED: '1',
+    HASI_API_ORIGIN: WEB_API_ORIGIN,
+  };
+}
+
+/** Use the existing initializer against only the admitted local database; it preserves prior usage. */
+export function journeyBudgetInitializerEnvironment(
+  databaseUrl: string,
+  modelPrices: readonly { provider: string; baseURL: string; modelId: string; inputMicroUsdPerMillion: number; outputMicroUsdPerMillion: number; basis: string }[],
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+): NodeJS.ProcessEnv {
+  const validatedDatabaseUrl = journeyDatabaseUrl({ HASI_PLUGIN_JOURNEY: '1', TEST_DATABASE_URL: databaseUrl });
+  return {
+    ...cleanEnvironment(environment),
+    NODE_ENV: 'production',
+    DATABASE_URL: validatedDatabaseUrl,
+    HASI_MODEL_PRICES: JSON.stringify(modelPrices),
+  };
 }
 
 /** Next must not load an operator dotenv file into this synthetic composition. */
@@ -158,10 +190,6 @@ export async function revokeReferenceProvider(apis: ChildProcess[]): Promise<voi
       if (error) finish(new Error('Reference provider revocation could not be delivered to an API replica.'));
     });
   })));
-}
-
-function cleanEnvironment(): NodeJS.ProcessEnv {
-  return Object.fromEntries(['PATH', 'HOME', 'XDG_CONFIG_HOME', 'TMPDIR', 'LANG', 'npm_config_store_dir'].flatMap(name => process.env[name] ? [[name, process.env[name]]] : []));
 }
 
 const referenceCommandSchema = z.enum(['lose-next-execution-ack', 'source-unavailable', 'source-available', 'stats']);
@@ -445,7 +473,7 @@ async function protectedWebProbe(issuer: string): Promise<void> {
 }
 
 /** A held, explicit synthetic composition for actual browser qualification. */
-async function serve(managedMode = false): Promise<void> {
+async function serve(managedMode = false, optimizedMode = false): Promise<void> {
   const connectionString = journeyDatabaseUrl(process.env);
   await assertJourneyEnvFilesAbsent();
   for (const port of [3001, 4100, 4101, 4102, 4103]) await available(port);
@@ -462,7 +490,16 @@ async function serve(managedMode = false): Promise<void> {
   let shutdown: (() => void) | undefined;
   const complete = new Promise<void>(done => { shutdown = done; });
   const state = { unexpectedExit: false, cleanupFailed: false, shutdownRequested: false };
-  const onSignal = () => { state.shutdownRequested = true; shutdown?.(); };
+  let startupCommand: ChildProcess | undefined;
+  let cancelStartupCommand: ((reason: 'signal' | 'timeout') => void) | undefined;
+  const onSignal = () => {
+    state.shutdownRequested = true;
+    if (startupCommand?.exitCode === null && startupCommand.signalCode === null) {
+      if (cancelStartupCommand) cancelStartupCommand('signal');
+      else startupCommand.kill('SIGTERM');
+    }
+    shutdown?.();
+  };
   for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, onSignal);
   let failure: Error | undefined;
   let stopping = false;
@@ -472,6 +509,44 @@ async function serve(managedMode = false): Promise<void> {
       environment: { ...cleanEnvironment(), ...environment }, ipc, children,
       onUnexpectedExit: () => { if (!stopping && !retiring.has(spawned)) { state.unexpectedExit = true; onSignal(); } } });
     return spawned;
+  };
+  const runStartupCommand = async (arguments_: string[], environment: NodeJS.ProcessEnv, executable: string, timeoutMs: number): Promise<void> => {
+    if (state.shutdownRequested) throw new Error('Synthetic journey startup was interrupted.');
+    const spawned = spawnJourneyChild({ executable, arguments: arguments_, cwd: ROOT,
+      environment: { ...cleanEnvironment(), ...environment }, ipc: false, children,
+      onUnexpectedExit: () => undefined });
+    startupCommand = spawned;
+    let resolveCancellation: (reason: 'signal' | 'timeout') => void = () => undefined;
+    let cancellation: 'signal' | 'timeout' | undefined;
+    let stop: Promise<void> | undefined;
+    const cancelled = new Promise<'signal' | 'timeout'>(resolve => { resolveCancellation = resolve; });
+    const cancel = (reason: 'signal' | 'timeout') => {
+      if (cancellation) return;
+      cancellation = reason;
+      resolveCancellation(reason);
+      stop ??= stopJourneyChild(spawned);
+    };
+    cancelStartupCommand = cancel;
+    const timeout = setTimeout(() => { cancel('timeout'); }, timeoutMs);
+    try {
+      const outcome = await Promise.race([
+        once(spawned, 'exit').then(([code, signal]) => ({ kind: 'exit' as const, code: code as number | null, signal: signal as NodeJS.Signals | null })),
+        cancelled.then(reason => ({ kind: 'cancel' as const, reason })),
+      ]);
+      if (outcome.kind === 'cancel') {
+        try { await stop; } catch {
+          state.cleanupFailed = true;
+          throw new Error('An optimized web preparation process did not stop.');
+        }
+        throw new Error(outcome.reason === 'timeout' ? 'An optimized web preparation command timed out.' : 'Synthetic journey startup was interrupted.');
+      }
+      const { code, signal } = outcome;
+      if (code !== 0 || signal !== null) throw new Error('An optimized web preparation command failed.');
+    } finally {
+      clearTimeout(timeout);
+      if (cancelStartupCommand === cancel) cancelStartupCommand = undefined;
+      if (startupCommand === spawned) startupCommand = undefined;
+    }
   };
   let timer: ReturnType<typeof setTimeout> | undefined;
   let input: ReturnType<typeof createInterface> | undefined;
@@ -559,13 +634,21 @@ async function serve(managedMode = false): Promise<void> {
       connectionId: 'synthetic-journey', modelId: 'hasi-synthetic-fixture', capabilities: { tools: true }, allowedDataClasses: ['synthetic_demo'],
       parameters: { temperature: null, maxOutputTokens: 512, timeoutMs: 20_000 } }],
     policy: { defaultProfileId: 'synthetic-journey', userChoice: { enabled: true, profileIds: ['synthetic-journey'] }, fallbacks: [], maxAttempts: 2, totalTimeoutMs: 45_000 } };
+    const modelPrices = [{ provider: 'custom', baseURL: endpoint, modelId: 'hasi-synthetic-fixture',
+      inputMicroUsdPerMillion: 800_000, outputMicroUsdPerMillion: 4_000_000, basis: 'operator_estimate' }];
+    if (optimizedMode) {
+      stage = 'web-build';
+      await runStartupCommand(['--filter', '@hasi/web', 'build'], journeyWebBuildEnvironment(), 'pnpm', 10 * 60 * 1000);
+      stage = 'budget-initializer';
+      await runStartupCommand(['--conditions=react-server', '--import', 'tsx', join(ROOT, 'apps/web/scripts/initialize-model-budget.ts'), '--initialize'],
+        journeyBudgetInitializerEnvironment(connectionString, modelPrices), process.execPath, 30 * 1000);
+    }
     stage = 'web-process';
-    const web = child(['dev', join(ROOT, 'apps/web'), '--hostname', '127.0.0.1', '--port', '3001'], {
-      NODE_ENV: 'development', NEXT_TELEMETRY_DISABLED: '1', HASI_LOCAL_TEST_IDP: '1', HASI_LOCAL_TEST_IDP_SCOPE: scope,
-      HASI_CHAT_SIGNING_SECRET: randomBytes(32).toString('base64url'), HASI_WEB_ORIGIN: WEB_ORIGIN, HASI_API_ORIGIN: 'http://127.0.0.1:4100', DATABASE_URL: connectionString,
+    const web = child([optimizedMode ? 'start' : 'dev', join(ROOT, 'apps/web'), '--hostname', '127.0.0.1', '--port', '3001'], {
+      NODE_ENV: optimizedMode ? 'production' : 'development', NEXT_TELEMETRY_DISABLED: '1', HASI_LOCAL_TEST_IDP: '1', HASI_LOCAL_TEST_IDP_SCOPE: scope,
+      HASI_CHAT_SIGNING_SECRET: randomBytes(32).toString('base64url'), HASI_WEB_ORIGIN: WEB_ORIGIN, HASI_API_ORIGIN: WEB_API_ORIGIN, DATABASE_URL: connectionString,
       NODE_EXTRA_CA_CERTS: tlsCertPath, CUSTOM_API_KEY: modelToken, HASI_LLM_CONFIG: JSON.stringify(config),
-      HASI_MODEL_PRICES: JSON.stringify([{ provider: 'custom', baseURL: endpoint, modelId: 'hasi-synthetic-fixture',
-        inputMicroUsdPerMillion: 800_000, outputMicroUsdPerMillion: 4_000_000, basis: 'operator_estimate' }]),
+      HASI_MODEL_PRICES: JSON.stringify(modelPrices),
     }, ROOT, false, join(ROOT, 'apps/web/node_modules/.bin/next'));
     await ready(`${WEB_ORIGIN}/api/session`, web);
     await ready(`${WEB_ORIGIN}/`, web);
@@ -574,13 +657,13 @@ async function serve(managedMode = false): Promise<void> {
     const fixtureCommands = managedMode
       ? ['expire-anny', 'expire-reference', 'revoke-reference', 'stats', 'quit']
       : ['expire-anny', 'expire-reference', 'revoke-reference', 'reference-lose-ack', 'reference-source-unavailable', 'reference-source-available', 'reference-drop-reply', 'restart-reference', 'reference-v2', 'reference-v1', 'stats', 'quit'];
-    const writeEvidence = async () => writeFile(join(directory, 'evidence.json'), JSON.stringify({ scope, webOrigin: WEB_ORIGIN, apiReplicas: 2, hostPid: process.pid,
+    const writeEvidence = async () => writeFile(join(directory, 'evidence.json'), JSON.stringify({ scope, webOrigin: WEB_ORIGIN, apiReplicas: 2, optimized: optimizedMode, hostPid: process.pid,
       apiPids: apis.map(process_ => process_.pid), ...(reference ? { referencePid: reference.pid, referenceVersion: activeRelease.evidence.pluginVersion } : {}),
       managed: managedRuntime ? await managedRuntime.snapshot() : undefined,
       persistentReferenceState: true, referenceStateMode: managedMode ? 'host-managed-mcp' : 'private-sqlite', referenceProxy: referenceProxy?.stats(),
       releases: packaged.releases.map(release => ({ sourceSha: release.sourceSha, ...release.evidence })) }, null, 2), { mode: 0o600 });
     await writeEvidence();
-    console.info(JSON.stringify({ event: 'plugin-journey-ready', webOrigin: WEB_ORIGIN, evidence: join(directory, 'evidence.json'), apiReplicas: 2,
+    console.info(JSON.stringify({ event: 'plugin-journey-ready', webOrigin: WEB_ORIGIN, evidence: join(directory, 'evidence.json'), apiReplicas: 2, optimized: optimizedMode,
       ...(reference ? { independentReferencePid: reference.pid } : {}), managed: managedMode, syntheticOnly: true, commands: fixtureCommands }));
     stage = 'ready';
     input = createInterface({ input: process.stdin, terminal: false });
@@ -653,17 +736,18 @@ async function serve(managedMode = false): Promise<void> {
 }
 
 /** Docker mode is an explicit operator CLI choice, never a browser/plugin input. */
-export function journeyOperation(args: readonly string[]): { kind: 'serve'; managed: boolean } | { kind: 'api'; path: string } {
-  if (args.length === 0) return { kind: 'serve', managed: false };
-  if (args.length === 1 && args[0] === '--managed') return { kind: 'serve', managed: true };
-  if (args.length === 2 && args[0] === '--api' && args[1]) return { kind: 'api', path: args[1] };
-  throw new Error('Invalid synthetic journey operation.');
+export function journeyOperation(args: readonly string[]): { kind: 'serve'; managed: boolean; optimized: boolean } | { kind: 'api'; path: string } {
+  if (args.length === 0) return { kind: 'serve', managed: false, optimized: false };
+  if (args[0] === '--api' && args.length === 2 && args[1] && !args[1].startsWith('--')) return { kind: 'api', path: args[1] };
+  if (args.some(argument => argument === '--api') || args.some(argument => !['--managed', '--optimized'].includes(argument))
+    || new Set(args).size !== args.length) throw new Error('Invalid synthetic journey operation.');
+  return { kind: 'serve', managed: args.includes('--managed'), optimized: args.includes('--optimized') };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
     const operation = journeyOperation(process.argv.slice(2));
-    await (operation.kind === 'api' ? apiChild(operation.path) : serve(operation.managed));
+    await (operation.kind === 'api' ? apiChild(operation.path) : serve(operation.managed, operation.optimized));
   } catch (error) {
     console.error(JSON.stringify({ event: 'synthetic-plugin-journey-failed', stage, operatorCredentialsUsed: false, productionStateUsed: false,
       ...(error instanceof ReferencePackagingCommandError ? { diagnostic: error.message } : {}) }));

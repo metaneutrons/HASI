@@ -36,6 +36,24 @@ it('handles a failed spawn and still stops an earlier owned process', async () =
   }
 });
 
+it('escalates bounded child cleanup when an owned process ignores SIGTERM', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'hasi-journey-kill-'));
+  const children: ChildProcess[] = [];
+  try {
+    const child = spawnJourneyChild({ executable: process.execPath, arguments: ['-e', `
+      process.on('SIGTERM', () => {});
+      process.send({ event: 'ready' });
+      setInterval(() => {}, 1000);
+    `], cwd: directory, environment: {}, ipc: true, children, onUnexpectedExit: () => undefined });
+    await once(child, 'message');
+    await stopJourneyChild(child);
+    expect(child.signalCode).toBe('SIGKILL');
+  } finally {
+    await Promise.all(children.map(stopJourneyChild));
+    await rm(directory, { recursive: true, force: true });
+  }
+}, 15_000);
+
 
 it('accepts only the matching owned IPC acknowledgement and rejects a lost process', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'hasi-journey-ipc-'));

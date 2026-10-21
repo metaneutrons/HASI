@@ -1,0 +1,128 @@
+{
+  "candidate": "d92e3e06b0fe82e0e704e34edf397d0a9800bad6",
+  "base": "8ffb072e64f87cb2e0efbb2b6523e45428425596",
+  "frozenFiles": {
+    "apps/web/src/components/assistant-page.tsx": "0b79094fe6802115bb44795a92f623a3d07993b1f2eb888191958d517b92f88b",
+    "scripts/serve-plugin-journey.ts": "208630ee3234c56b6326533297be95ec40e0a8d0c8f1d12655a034ff755778d5",
+    "tests/plugin-journey-config.test.ts": "921d07542dbc085a3eb18036be01f5e9e5c38ec898a82795a2e36bdbc51e908b",
+    "tests/plugin-journey-process.test.ts": "0c277a68f2a28f54939d6e80c891f5d9d5c962ef2c8de644b68102978beca2de"
+  },
+  "runtime": {
+    "optimized": true,
+    "managed": true,
+    "apiReplicas": 2,
+    "identity": "local TestIdP synthetic administration",
+    "referenceStateMode": "host-managed-mcp",
+    "releases": [
+      {
+        "sourceSha": "daa5840f748efd2315e622648689fd68d6885372",
+        "pluginId": "hasi.reference",
+        "pluginVersion": "1.0.0",
+        "manifestDigest": "9d5e5c904a1295ab08015e79c2d61ea8269e377ea8d6d1c8148aa295992ae66a",
+        "manifestFileSha256": "39e1a8df440022d677032735fb38ff6395ec1178072e2981d15cc66e698d0396",
+        "artifactSha256": "b508468023c3defb763bcb42d53c68db6bb4576d17506ebd4477ef704c44e818",
+        "artifactManifestSha256": "3802e78a8cc24e99a13440d9d5594a6b8e749722479a03f5fbd0a7d3e0913677",
+        "payloadFileCount": 8311,
+        "runtimePackageCount": 72
+      },
+      {
+        "sourceSha": "1dbbccd504b9e2a32f67f4025483c0caee7b92fd",
+        "pluginId": "hasi.reference",
+        "pluginVersion": "1.0.1",
+        "manifestDigest": "a6ebee08dcef094ba7fc689b4470e6c9df7958580a12d6209fde0936b2aac6d7",
+        "manifestFileSha256": "74454a1f7527458b045aacd7b382c6963f83dbf5d5cbe29a1d918eeddcdfdfbc",
+        "artifactSha256": "a0bd765e1815035f45cb6a532d170c0f3e649d3dd2ae39b1de922ad4e649d8d8",
+        "artifactManifestSha256": "48496fc8d3cae8509fcd25119688eeb48a85023653fab11edef546fc25c33fa0",
+        "payloadFileCount": 8311,
+        "runtimePackageCount": 72
+      }
+    ]
+  },
+  "browser": {
+    "engine": "in-app Chromium browser",
+    "version": "not re-read in this bounded run",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "physicalDevice": false
+  },
+  "positive": {
+    "documentWidth": 390,
+    "focusedCard": true,
+    "frame": {
+      "bottom": 604,
+      "top": 106
+    },
+    "label": {
+      "bottom": 151.890625,
+      "text": "Aktion best\u00e4tigt",
+      "top": 136.890625
+    },
+    "scrollTop": 465.5,
+    "width": 390
+  },
+  "composerCountercase": {
+    "confirmedLabels": [
+      "Aktion best\u00e4tigt",
+      "Aktion best\u00e4tigt"
+    ],
+    "focused": true,
+    "value": "Dieser Entwurf bleibt bei mir."
+  },
+  "inactiveConversationCountercase": {
+    "focused": true,
+    "oldStatusControls": [
+      {
+        "checking": false,
+        "message": "Die Aktion wurde best\u00e4tigt."
+      },
+      {
+        "checking": false,
+        "message": null
+      }
+    ],
+    "value": "Entwurf im anderen Chat.",
+    "visibleProposals": 0
+  },
+  "sourceEvidence": {
+    "marks": 2,
+    "confirmedJournalRows": 2,
+    "statusReadAddedEffects": 0
+  },
+  "model": {
+    "syntheticCalls": 2,
+    "realProviderCalls": 0
+  },
+  "cleanup": {
+    "ownedProcessesStopped": true,
+    "workerStopped": true,
+    "routeWithdrawn": true,
+    "containersRemoved": 2,
+    "networksRemoved": 3,
+    "imagesRemoved": 2,
+    "databaseNamespaceRetained": true,
+    "callerOwnedDatabaseRetained": true,
+    "recoveryMaterialRemoved": true,
+    "isolatedHomeRemoved": true,
+    "tabClosed": true,
+    "networkSimulationReset": true,
+    "viewportReset": true
+  },
+  "publicSourceReadback": {
+    "revision": 3,
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "readerBodyTop": 507.09375,
+    "returnedOriginFocused": true,
+    "newModelCalls": 0
+  },
+  "limits": [
+    "Not full M2/M6/M7 acceptance",
+    "No native Anny confirmation browser run in this slice",
+    "No unknown-outcome/error/expired-card browser matrix in this slice",
+    "No physical-device or native assistive-technology qualification",
+    "No local-200ms, server or model latency qualification",
+    "No real-model grounding or cache measurement"
+  ]
+}
