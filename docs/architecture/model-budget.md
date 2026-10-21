@@ -55,6 +55,15 @@ Unknown usage or a lost response retains the full reservation. Explicit raw
 provider counts may reconcile it downward. Missing, malformed or out-of-bound
 successful usage stops further attempts and requires investigation.
 
+If the router proves that cancellation or a source-rights change happened
+before provider dispatch, its internal zero/zero sentinel releases only that
+reserved record through the admission adapter. The ledger still rejects zero/zero
+as provider usage. A released record is retained and release is idempotent;
+unknown or already settled records cannot be released. This does not refund an
+unknown actual call. The [integrated route regression](../verification/2026-10-21/knowledge-route-budget.md)
+reproduces the previous stuck-reservation/503 defect and verifies the corrected
+source-change 409 without provider dispatch or additional charged usage.
+
 The v1 ledger retains at most 512 unresolved prior-window reservation IDs for
 late reconciliation. On rollover, older unresolved reservations are removed
 from the ID list and added to the cumulative `archivedUnknown` snapshot totals

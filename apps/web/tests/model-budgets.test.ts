@@ -53,6 +53,35 @@ describe("shared model budget admission", () => {
     await expect(admission.reserve({ profileId: "groq-oss-20b", inputTokens: 100_000, outputTokens: 1 })).resolves.toBeDefined();
   });
 
+  it("releases a known pre-dispatch reservation without treating zero as provider usage", async () => {
+    const prices = loadModelPrices({});
+    const ledger = createModelBudget(new MemoryJsonStore("pre-dispatch-release"), prices, true);
+    await ledger.initialize();
+    const admission = createModelBudgetAdmission(ledger, loadModelConfiguration({}), prices);
+    const reservation = await admission.reserve({ profileId: "groq-oss-120b", inputTokens: 1000, outputTokens: 100 });
+    expect((await ledger.snapshot()).microUsdUsed).toBeGreaterThan(0);
+    await reservation.settle({ inputTokens: 0, outputTokens: 0 });
+    const released = await ledger.snapshot();
+    expect(released).toMatchObject({ inputTokensUsed: 0, outputTokensUsed: 0, microUsdUsed: 0,
+      reservationsInWindow: 1, unresolvedReservations: 0, unknownUsageReservations: 0 });
+    await reservation.settle({ inputTokens: 0, outputTokens: 0 });
+    expect(await ledger.snapshot()).toEqual(released);
+    await expect(reservation.settle({ inputTokens: 1, outputTokens: 1 })).rejects.toMatchObject({ code: "conflict" });
+    expect(await ledger.snapshot()).toEqual(released);
+  });
+
+  it.each(["unknown", "settled"])("does not release a %s reservation through the pre-dispatch sentinel", async status => {
+    const prices = loadModelPrices({});
+    const ledger = createModelBudget(new MemoryJsonStore(`retain-${status}`), prices, true);
+    await ledger.initialize();
+    const admission = createModelBudgetAdmission(ledger, loadModelConfiguration({}), prices);
+    const reservation = await admission.reserve({ profileId: "groq-oss-120b", inputTokens: 1000, outputTokens: 100 });
+    await reservation.settle(status === "unknown" ? undefined : { inputTokens: 30, outputTokens: 4 });
+    const before = await ledger.snapshot();
+    await expect(reservation.settle({ inputTokens: 0, outputTokens: 0 })).rejects.toMatchObject({ code: "conflict" });
+    expect(await ledger.snapshot()).toEqual(before);
+  });
+
   it("rejects changed model identity and malformed pricing instead of silently using another tariff", async () => {
     const configuration = loadModelConfiguration({});
     const profile = configuration.profiles.find(item => item.id === "groq-oss-120b");
