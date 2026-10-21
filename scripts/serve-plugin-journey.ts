@@ -28,6 +28,7 @@ import { PluginRouteController } from '../apps/api/src/plugin-route-controller.j
 import { PluginDeploymentBinding } from '../apps/api/src/plugin-deployment-binding.js';
 import { createManagedPluginContractClient, createManagedPluginRpcClient } from '../apps/api/src/managed-plugin-rpc.js';
 import { startManagedJourneyRuntime } from './managed-plugin-journey-runtime.js';
+import { createManagedReferenceManifest } from './reference-managed-state-profile.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = fileURLToPath(import.meta.url);
@@ -267,12 +268,18 @@ function localCommand(command: string, arguments_: string[], cwd: string): strin
     stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8', timeout: 60_000, maxBuffer: 4 * 1024 * 1024 }).trim();
 }
 
-async function artifacts(directory: string): Promise<{ manifest: PluginManifestV2; releases: { directory: string; sourceSha: string; evidence: ReferencePluginArtifactEvidence }[] }> {
+export async function artifacts(directory: string, managedMode = false): Promise<{ manifest: PluginManifestV2; releases: { directory: string; sourceSha: string; evidence: ReferencePluginArtifactEvidence }[] }> {
   const source = join(directory, 'independent-source');
   await mkdir(join(source, 'src'), { recursive: true, mode: 0o700 });
   for (const path of ['package.json', 'README.md', 'src/server.js', 'src/state.js', 'src/manifest.json']) await cp(join(REFERENCE_SOURCE, path), join(source, path));
   localCommand('git', ['init', '--quiet'], source);
-  const manifest = manifestSchema.parse(JSON.parse(await readFile(join(source, 'src/manifest.json'), 'utf8'))) as PluginManifestV2;
+  const sourceManifest = JSON.parse(await readFile(join(source, 'src/manifest.json'), 'utf8')) as unknown;
+  const manifest = managedMode
+    ? createManagedReferenceManifest(sourceManifest)
+    : manifestSchema.parse(sourceManifest) as PluginManifestV2;
+  if (managedMode) {
+    await writeFile(join(source, 'src/manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+  }
   const releases: { directory: string; sourceSha: string; evidence: ReferencePluginArtifactEvidence }[] = [];
   for (const version of ['1.0.0', '1.0.1']) {
     const metadata = JSON.parse(await readFile(join(source, 'package.json'), 'utf8')) as Record<string, unknown>;
@@ -474,7 +481,7 @@ async function serve(managedMode = false): Promise<void> {
     const inherited = cleanEnvironment();
     for (const name of Object.keys(process.env)) if (!(name in inherited) && !['TEST_DATABASE_URL', 'HASI_PLUGIN_JOURNEY', 'DOCKER_HOST'].includes(name)) Reflect.deleteProperty(process.env, name);
     stage = 'independent-artifacts';
-    const packaged = await artifacts(directory);
+    const packaged = await artifacts(directory, managedMode);
     const first = packaged.releases[0];
     if (!first || packaged.releases.length !== 2) throw new Error('Independent release pair missing.');
     const keys = generateKeyPairSync('ed25519');
@@ -570,7 +577,7 @@ async function serve(managedMode = false): Promise<void> {
     const writeEvidence = async () => writeFile(join(directory, 'evidence.json'), JSON.stringify({ scope, webOrigin: WEB_ORIGIN, apiReplicas: 2, hostPid: process.pid,
       apiPids: apis.map(process_ => process_.pid), ...(reference ? { referencePid: reference.pid, referenceVersion: activeRelease.evidence.pluginVersion } : {}),
       managed: managedRuntime ? await managedRuntime.snapshot() : undefined,
-      persistentReferenceState: !managedMode, referenceProxy: referenceProxy?.stats(),
+      persistentReferenceState: true, referenceStateMode: managedMode ? 'host-managed-mcp' : 'private-sqlite', referenceProxy: referenceProxy?.stats(),
       releases: packaged.releases.map(release => ({ sourceSha: release.sourceSha, ...release.evidence })) }, null, 2), { mode: 0o600 });
     await writeEvidence();
     console.info(JSON.stringify({ event: 'plugin-journey-ready', webOrigin: WEB_ORIGIN, evidence: join(directory, 'evidence.json'), apiReplicas: 2,
