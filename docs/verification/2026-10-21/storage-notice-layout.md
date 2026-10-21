@@ -52,8 +52,9 @@ The VisualViewport fixture overrides geometry and dispatches resize events to
 the real `useChatViewport` hook; an explicitly labelled overlay represents the
 occluded area. It is a geometry simulation, not a native keyboard, physical
 phone, participant or assistive-technology acceptance result. Those remain M8.
-The interrupted first-build reload was prevented by the unsaved-work guard;
-a fresh test tab was used for the final build rather than discarding that draft.
+An attempted first-build reload retained the old page and unsaved draft. A
+fresh test tab was used for the final build; no browser root cause is assigned
+to that retained page.
 
 The focused workspace-refresh/store/viewport suite passed 27 tests. The web
 TypeScript and targeted lint checks passed before the final CSS-only correction;
