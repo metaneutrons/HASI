@@ -65,7 +65,13 @@ export function createModelBudgetAdmission(ledger: ModelBudgetLedger, configurat
       if (!modelPrice(input.profileId, configuration, prices)) throw new ModelRouterError("budget_unpriced", "The selected model has no approved price.");
       const id = randomUUID();
       await ledger.reserve({ id, inputTokens: input.inputTokens, outputTokens: input.outputTokens });
-      return { settle: usage => ledger.settle(id, usage) };
+      return { settle: usage => {
+        // Only trusted router code supplies this sentinel after proving that no
+        // provider request was dispatched. Provider-reported zero usage remains
+        // invalid; unknown or already settled reservations cannot be released.
+        return usage?.inputTokens === 0 && usage.outputTokens === 0
+          ? ledger.release(id) : ledger.settle(id, usage);
+      } };
     },
   };
 }

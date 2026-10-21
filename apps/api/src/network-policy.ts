@@ -383,7 +383,11 @@ export function createPluginFetch(options: PluginFetchOptions): PluginFetch {
         redirect: 'error',
         dispatcher,
       });
-      return withResponseLimit(response, maxResponseBytes);
+      // Undici exposes the fetch response operations consumed by the limiter.
+      // Its iterator declarations differ from the web DOM lib's Symbol.dispose
+      // requirement; bridge that type boundary without rebuilding headers/body.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- Web builds include DOM iterator disposal types absent from Undici.
+      return withResponseLimit(response as unknown as Response, maxResponseBytes);
     } catch (error) {
       if (error instanceof PluginNetworkError) throw error;
       if (containsPolicyError(error)) throw new PluginNetworkError('Plugin destination is not permitted.');
