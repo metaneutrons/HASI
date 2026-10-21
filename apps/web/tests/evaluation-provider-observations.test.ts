@@ -59,6 +59,49 @@ describe("server-owned provider observation meter", () => {
     });
   });
 
+  it("reports a zero/zero reservation settlement as an undispatched release", async () => {
+    const settlements: ({ inputTokens: number; outputTokens: number } | undefined)[] = [];
+    const observed = meter(successfulAdmission({ onSettle: usage => settlements.push(usage) }));
+    const reservation = await reserve(observed);
+    await reservation.settle({ inputTokens: 0, outputTokens: 0 });
+
+    expect(settlements).toEqual([{ inputTokens: 0, outputTokens: 0 }]);
+    expect(observed.snapshot({ latencyMs: 5, providerRequestCount: 0 })).toMatchObject({
+      usageStatus: "not_dispatched",
+      providerRequestCount: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      estimatedCostUsd: 0,
+      reservations: [{
+        inputTokens: null,
+        outputTokens: null,
+        estimatedCostUsd: null,
+        settlement: "released",
+      }],
+    });
+  });
+
+  it("aggregates only reported usage when a completed call has released holds", async () => {
+    const observed = meter();
+    const completed = await reserve(observed);
+    const released = await reserve(observed);
+    await completed.settle({ inputTokens: 20, outputTokens: 0 });
+    await released.settle({ inputTokens: 0, outputTokens: 0 });
+
+    const snapshot = observed.snapshot({ latencyMs: 25, providerRequestCount: 1 });
+    expect(snapshot).toMatchObject({
+      usageStatus: "complete",
+      inputTokens: 20,
+      outputTokens: 0,
+      reservations: [
+        { settlement: "reported", inputTokens: 20, outputTokens: 0 },
+        { settlement: "released", inputTokens: null, outputTokens: null, estimatedCostUsd: null },
+      ],
+    });
+    expect(snapshot.estimatedCostUsd).toBe(snapshot.reservations[0]?.estimatedCostUsd);
+    expect(() => observed.snapshot({ latencyMs: 25, providerRequestCount: 2 })).toThrow();
+  });
+
   it("rejects a provider request without an admitted reservation", () => {
     expect(() => meter().snapshot({ latencyMs: 10, providerRequestCount: 1 })).toThrow(/budget reservation/u);
     expect(() => meter().snapshot({ latencyMs: 120_001, providerRequestCount: 0 })).toThrow();
@@ -120,6 +163,54 @@ describe("server-owned provider observation meter", () => {
       outputTokens: null,
       estimatedCostUsd: null,
       reservations: [{ inputBound: 1_000, outputBound: 500, inputTokens: null, outputTokens: null, settlement: "unknown" }],
+    });
+  });
+
+  it("keeps released reservations separate from unknown usage", async () => {
+    const observed = meter();
+    const released = await reserve(observed);
+    const unknown = await reserve(observed);
+    await released.settle({ inputTokens: 0, outputTokens: 0 });
+    await unknown.settle(undefined);
+
+    expect(observed.snapshot({ latencyMs: 12, providerRequestCount: 1 })).toMatchObject({
+      usageStatus: "unknown",
+      inputTokens: null,
+      outputTokens: null,
+      estimatedCostUsd: null,
+      reservations: [{ settlement: "released" }, { settlement: "unknown" }],
+    });
+  });
+
+  it.each(["unknown", "reported"] as const)("does not label a rejected release of a %s reservation as undispatched", async (priorSettlement) => {
+    let state: "reserved" | "unknown" | "reported" | "released" = "reserved";
+    const delegate: ModelBudgetAdmission = {
+      reserve() {
+        return Promise.resolve({
+          settle(usage) {
+            if (usage?.inputTokens === 0 && usage.outputTokens === 0) {
+              if (state !== "reserved") return Promise.reject(new Error("Cannot release an unknown or settled reservation."));
+              state = "released";
+              return Promise.resolve();
+            }
+            state = usage === undefined ? "unknown" : "reported";
+            return Promise.resolve();
+          },
+        });
+      },
+    };
+    const observed = meter(delegate);
+    const reservation = await reserve(observed);
+    if (priorSettlement === "unknown") await reservation.settle(undefined);
+    else await reservation.settle({ inputTokens: 20, outputTokens: 5 });
+
+    await expect(reservation.settle({ inputTokens: 0, outputTokens: 0 })).rejects.toThrow(/settled reservation/u);
+    expect(observed.snapshot({ latencyMs: 15, providerRequestCount: 1 })).toMatchObject({
+      usageStatus: "unknown",
+      inputTokens: null,
+      outputTokens: null,
+      estimatedCostUsd: null,
+      reservations: [{ settlement: "unconfirmed", inputTokens: null, outputTokens: null, estimatedCostUsd: null }],
     });
   });
 
@@ -272,6 +363,7 @@ describe("server-owned provider observation meter", () => {
     if (!reservation) throw new Error("Expected one reported reservation.");
     expect(providerMeasurementsSchema.safeParse(valid).success).toBe(true);
     expect(providerMeasurementsSchema.safeParse({ ...valid, providerRequestCount: 2 }).success).toBe(false);
+    expect(providerMeasurementsSchema.safeParse({ ...valid, providerRequestCount: 0 }).success).toBe(false);
     expect(providerMeasurementsSchema.safeParse({ ...valid, inputTokens: 11 }).success).toBe(false);
     expect(providerMeasurementsSchema.safeParse({ ...valid, outputTokens: 2 }).success).toBe(false);
     expect(providerMeasurementsSchema.safeParse({ ...valid, estimatedCostUsd: 0.000003 }).success).toBe(false);
@@ -279,6 +371,51 @@ describe("server-owned provider observation meter", () => {
       ...valid,
       inputTokens: 11,
       reservations: [{ ...reservation, inputTokens: 11 }],
+    }).success).toBe(false);
+
+    const releasedReservation: ProviderMeasurements["reservations"][number] = {
+      ...reservation,
+      inputTokens: null,
+      outputTokens: null,
+      estimatedCostUsd: null,
+      settlement: "released",
+    };
+    const completedWithRelease: ProviderMeasurements = {
+      ...valid,
+      reservations: [reservation, releasedReservation],
+    };
+    expect(providerMeasurementsSchema.safeParse(completedWithRelease).success).toBe(true);
+    expect(providerMeasurementsSchema.safeParse({
+      ...completedWithRelease,
+      inputTokens: 11,
+    }).success).toBe(false);
+    expect(providerMeasurementsSchema.safeParse({
+      ...completedWithRelease,
+      providerRequestCount: 2,
+    }).success).toBe(false);
+    expect(providerMeasurementsSchema.safeParse({
+      ...completedWithRelease,
+      reservations: [{ ...reservation, estimatedCostUsd: 0.000003 }, releasedReservation],
+    }).success).toBe(false);
+
+    const onlyReleased: ProviderMeasurements = {
+      ...valid,
+      providerRequestCount: 0,
+      usageStatus: "not_dispatched",
+      inputTokens: 0,
+      outputTokens: 0,
+      estimatedCostUsd: 0,
+      reservations: [releasedReservation],
+    };
+    expect(providerMeasurementsSchema.safeParse(onlyReleased).success).toBe(true);
+    expect(providerMeasurementsSchema.safeParse({ ...onlyReleased, usageStatus: "complete" }).success).toBe(false);
+    expect(providerMeasurementsSchema.safeParse({ ...onlyReleased, providerRequestCount: 1 }).success).toBe(false);
+    expect(providerMeasurementsSchema.safeParse({
+      ...onlyReleased,
+      usageStatus: "unknown",
+      inputTokens: null,
+      outputTokens: null,
+      estimatedCostUsd: null,
     }).success).toBe(false);
   });
 });

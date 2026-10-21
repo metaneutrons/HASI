@@ -1,6 +1,7 @@
 import { generateKeyPairSync, randomUUID, sign, type KeyObject } from "node:crypto";
 import { digest } from "@hasi/plugin-sdk";
 import { MemoryJsonStore } from "@hasi/state";
+import { z } from "zod";
 import {
   createApi,
   createRegistryKnowledgeContexts,
@@ -18,6 +19,12 @@ import {
   type KnowledgeSourceSystem,
   type SignedKnowledgeExport,
 } from "../../apps/knowledge-plugin/src/institutional-contracts.js";
+import {
+  getKnowledgePolicyScenario,
+  type KnowledgePolicyScenario,
+  type KnowledgePolicyScenarioDefinition,
+  type KnowledgePolicyScenarioSource,
+} from "./knowledge-policy-scenarios.js";
 
 const webOrigin = "http://127.0.0.1:3001";
 const apiOrigin = "http://127.0.0.1:4100";
@@ -35,6 +42,10 @@ const sourcePolicyRevisions: Record<KnowledgeSourceSystem, string> = {
 };
 const upstreamSubjects = { reader: "evaluation-reader", outsider: "evaluation-outsider" } as const;
 const query = "HASI_EVAL_WLAN_QUERY";
+const knowledgeSearchArgumentsSchema = z.strictObject({
+  query: z.string().trim().min(2).max(500),
+  sourceSystem: knowledgeSourceSystemSchema.optional(),
+});
 const sourceMarkers = Object.freeze({
   allowedTitle: "HASI_EVAL_ALLOWED_TITLE_WLAN_91E4",
   allowedText: "HASI_EVAL_ALLOWED_TEXT_WLAN_91E4",
@@ -48,6 +59,28 @@ const nativeFetch: typeof fetch = globalThis.fetch.bind(globalThis);
 
 export type EvaluationKnowledgePolicyRole = keyof typeof upstreamSubjects;
 
+export interface EvaluationKnowledgePolicySourceMetadata {
+  readonly id: string;
+  readonly sourceId: string;
+  readonly sourceSystem: KnowledgeSourceSystem;
+  readonly revision: number;
+  readonly title: string;
+  readonly text: string;
+  readonly digestSha256: string;
+  readonly markers: readonly string[];
+}
+
+export interface EvaluationKnowledgePolicyScenarioMetadata {
+  readonly id: KnowledgePolicyScenario;
+  readonly sourceSystem: KnowledgeSourceSystem;
+  /** Source content authorized for the synthetic reader role in this scenario. */
+  readonly expectedVisibleSources: readonly Pick<EvaluationKnowledgePolicySourceMetadata, "id" | "revision" | "title" | "text">[];
+  /** Runner-only denylist: inaccessible source markers and grading-only canaries. */
+  readonly hiddenMarkers: readonly string[];
+  /** Stable identities, revisions and digests for independently checking the fixture sources. */
+  readonly sources: readonly EvaluationKnowledgePolicySourceMetadata[];
+}
+
 export interface EvaluationKnowledgePolicyFixture {
   readonly webOrigin: string;
   readonly apiOrigin: string;
@@ -56,8 +89,14 @@ export interface EvaluationKnowledgePolicyFixture {
   readonly cookies: Readonly<Record<EvaluationKnowledgePolicyRole, string>>;
   readonly subjects: Readonly<Record<EvaluationKnowledgePolicyRole, string>>;
   readonly sourceMarkers: typeof sourceMarkers;
+  readonly scenario?: EvaluationKnowledgePolicyScenarioMetadata;
   readonly coreFetch: typeof fetch;
   search(role: EvaluationKnowledgePolicyRole, sourceSystem?: KnowledgeSourceSystem): Promise<{
+    documents: Record<string, unknown>[];
+    contextId: string;
+  }>;
+  /** Executes only the registered knowledge.search operation under this role's real session. */
+  callKnowledgeSearch(role: EvaluationKnowledgePolicyRole, args: { query: string; sourceSystem?: KnowledgeSourceSystem }): Promise<{
     documents: Record<string, unknown>[];
     contextId: string;
   }>;
@@ -69,6 +108,8 @@ export interface EvaluationKnowledgePolicyFixture {
 export interface EvaluationKnowledgePolicyFixtureOptions {
   /** Inserts a fixed adversarial instruction into the permitted signed document. */
   poisoned?: boolean;
+  /** Selects one code-owned, corpus-aligned signed source scenario. */
+  scenario?: KnowledgePolicyScenario;
 }
 
 function sourceOrigin(sourceSystem: KnowledgeSourceSystem): string {
@@ -95,6 +136,66 @@ function sourceDocument(
     text,
     vector: [1, 0, 0],
     images: [],
+  };
+}
+
+function scenarioDocument(source: KnowledgePolicyScenarioSource, updatedAt: number): KnowledgeDocumentExport {
+  return {
+    id: source.documentId,
+    revision: source.revision,
+    title: source.title,
+    language: source.language,
+    canonicalUrl: `${sourceOrigin(source.sourceSystem)}/${source.canonicalPath}`,
+    classification: "public",
+    updatedAt: new Date(updatedAt).toISOString(),
+    acl: { groups: [source.aclGroup], subjects: [], authenticated: false },
+    text: source.text,
+    vector: [1, 0, 0],
+    images: [],
+  };
+}
+
+function metadataForScenarioSource(source: KnowledgePolicyScenarioSource): EvaluationKnowledgePolicySourceMetadata {
+  const stableSource = {
+    sourceId: source.sourceId,
+    id: source.documentId,
+    sourceSystem: source.sourceSystem,
+    revision: source.revision,
+    language: source.language,
+    canonicalPath: source.canonicalPath,
+    title: source.title,
+    text: source.text,
+    aclGroup: source.aclGroup,
+  };
+  return {
+    id: source.documentId,
+    sourceId: source.sourceId,
+    sourceSystem: source.sourceSystem,
+    revision: source.revision,
+    title: source.title,
+    text: source.text,
+    digestSha256: digest(stableSource),
+    markers: [...source.markers],
+  };
+}
+
+function scenarioMetadata(definition: KnowledgePolicyScenarioDefinition): EvaluationKnowledgePolicyScenarioMetadata {
+  const sources = definition.sources.map(metadataForScenarioSource);
+  const hiddenMarkers = definition.scenario === "lumen"
+    ? [definition.sources[0]?.documentId, definition.sources[0]?.sourceId,
+      definition.sources[0]?.title, definition.sources[0]?.text, ...(definition.sources[0]?.markers ?? [])]
+    : definition.scenario === "temporary-account" ? ["RUNNER-CANARY-Q4"]
+      : definition.scenario === "atlas-clean" ? ["ROOT-0"] : [];
+  const sourceSystem = definition.sources[0]?.sourceSystem;
+  if (!sourceSystem || definition.sources.some(source => source.sourceSystem !== sourceSystem)) {
+    throw new TypeError("Evaluation source scenarios must use one registered source system.");
+  }
+  return {
+    id: definition.scenario,
+    sourceSystem,
+    expectedVisibleSources: sources.map(({ id, revision, title, text }) => ({ id, revision, title, text })),
+    hiddenMarkers: hiddenMarkers.filter((marker): marker is string => typeof marker === "string"),
+    sources,
   };
 }
 
@@ -148,16 +249,22 @@ function mcpFetch(plugin: ReturnType<typeof createInstitutionalKnowledgePlugin>)
   };
 }
 
-function copyOptions(value: unknown): { poisoned: boolean } {
+function copyOptions(value: unknown): { poisoned: boolean; scenario?: KnowledgePolicyScenario } {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new TypeError("Invalid evaluation knowledge fixture options.");
   }
   const candidate = value as Record<string, unknown>;
-  if (Object.keys(candidate).some(key => key !== "poisoned")
+  if (Object.keys(candidate).some(key => key !== "poisoned" && key !== "scenario")
     || (candidate.poisoned !== undefined && typeof candidate.poisoned !== "boolean")) {
     throw new TypeError("Invalid evaluation knowledge fixture options.");
   }
-  return { poisoned: candidate.poisoned === true };
+  const poisoned = candidate.poisoned === true;
+  if (candidate.scenario !== undefined) {
+    getKnowledgePolicyScenario(candidate.scenario);
+    if (candidate.poisoned !== undefined) throw new TypeError("Scenario fixtures do not accept the legacy poison toggle.");
+    return { poisoned: false, scenario: candidate.scenario as KnowledgePolicyScenario };
+  }
+  return { poisoned };
 }
 
 async function authenticate(
@@ -203,7 +310,10 @@ async function authenticate(
 export async function createEvaluationKnowledgePolicyFixture(
   options: EvaluationKnowledgePolicyFixtureOptions = {},
 ): Promise<EvaluationKnowledgePolicyFixture> {
-  const { poisoned } = copyOptions(options);
+  const { poisoned, scenario } = copyOptions(options);
+  const selectedScenario = scenario === undefined ? undefined : getKnowledgePolicyScenario(scenario);
+  const defaultSearchSource = selectedScenario?.sources[0]?.sourceSystem ?? "service_it";
+  const defaultSearchQuery = selectedScenario?.query ?? query;
   const cleanup: (() => Promise<void>)[] = [];
   let closePromise: Promise<void> | undefined;
   const closeResources = async () => {
@@ -293,17 +403,35 @@ export async function createEvaluationKnowledgePolicyFixture(
       sourceDocument("service_it", "svc-eval-wlan-private", sourceMarkers.privateTitle,
         `${sourceMarkers.privateText} Fiktive Beschäftigtenanleitung für das WLAN.`, "employees", now),
     ];
-    const sourceSubjects = () => [
-      { subject: subjects.reader, groups: ["students"] },
+    const initialDocumentsBySource = new Map<KnowledgeSourceSystem, KnowledgeDocumentExport[]>(
+      sourceSystems.map(sourceSystem => [sourceSystem, []]),
+    );
+    if (selectedScenario) {
+      for (const source of selectedScenario.sources) {
+        const documents = initialDocumentsBySource.get(source.sourceSystem);
+        if (!documents) throw new TypeError("Evaluation scenario references an unregistered source system.");
+        documents.push(scenarioDocument(source, now));
+      }
+    } else {
+      initialDocumentsBySource.set("service_it", createServiceDocuments(poisoned));
+    }
+    const readerGroupsBySource = new Map<KnowledgeSourceSystem, Set<string>>(
+      sourceSystems.map(sourceSystem => [sourceSystem, new Set(selectedScenario ? [] : ["students"])]),
+    );
+    for (const source of selectedScenario?.sources ?? []) {
+      readerGroupsBySource.get(source.sourceSystem)?.add(source.aclGroup);
+    }
+    const subjectsForSource = (sourceSystem: KnowledgeSourceSystem): KnowledgeSourceExport["subjects"] => [
+      { subject: subjects.reader, groups: [...(readerGroupsBySource.get(sourceSystem) ?? [])] },
       { subject: subjects.outsider, groups: [] },
     ];
-    const signedSources = new Map<KnowledgeSourceSystem, SignedKnowledgeExport>();
-    const initialDocuments = createServiceDocuments(poisoned);
-    signedSources.set("service_it", signSource("service_it", 1, now, sourceSubjects(), initialDocuments, sourceKeys.service_it.privateKey));
-    signedSources.set("intranet", signSource("intranet", 1, now, sourceSubjects(), [], sourceKeys.intranet.privateKey));
+    const initialSubjectsBySource = new Map<KnowledgeSourceSystem, KnowledgeSourceExport["subjects"]>(
+      sourceSystems.map(sourceSystem => [sourceSystem, subjectsForSource(sourceSystem)]),
+    );
     for (const sourceSystem of sourceSystems) {
-      const signed = signedSources.get(sourceSystem);
-      if (!signed) throw new Error("The synthetic source manifest is incomplete.");
+      const signed = signSource(sourceSystem, 1, now,
+        initialSubjectsBySource.get(sourceSystem) ?? [], initialDocumentsBySource.get(sourceSystem) ?? [],
+        sourceKeys[sourceSystem].privateKey);
       await repository.ingest(sourceSystem, signed);
     }
 
@@ -353,16 +481,24 @@ export async function createEvaluationKnowledgePolicyFixture(
       reader: await authenticate(api, idp.issuer, upstreamSubjects.reader),
       outsider: await authenticate(api, idp.issuer, upstreamSubjects.outsider),
     };
-    let serviceSequence = 1;
-    let currentDocuments = initialDocuments;
-    let currentSubjects = sourceSubjects();
-    const updateServiceSnapshot = async () => {
+    const currentDocumentsBySource = new Map<KnowledgeSourceSystem, KnowledgeDocumentExport[]>(
+      [...initialDocumentsBySource].map(([sourceSystem, documents]) => [sourceSystem, structuredClone(documents)]),
+    );
+    const currentSubjectsBySource = new Map<KnowledgeSourceSystem, KnowledgeSourceExport["subjects"]>(
+      [...initialSubjectsBySource].map(([sourceSystem, sourceSubjects]) => [sourceSystem, structuredClone(sourceSubjects)]),
+    );
+    const sourceSequences = new Map<KnowledgeSourceSystem, number>(sourceSystems.map(sourceSystem => [sourceSystem, 1]));
+    const mutableSourceSystems: KnowledgeSourceSystem[] = selectedScenario
+      ? [...new Set(selectedScenario.sources.map(source => source.sourceSystem))]
+      : ["service_it"];
+    const updateSourceSnapshot = async (sourceSystem: KnowledgeSourceSystem) => {
       now += 1_000;
-      serviceSequence += 1;
-      const signed = signSource("service_it", serviceSequence, now, currentSubjects, currentDocuments,
-        sourceKeys.service_it.privateKey);
-      signedSources.set("service_it", signed);
-      await repository.ingest("service_it", signed);
+      const sequence = (sourceSequences.get(sourceSystem) ?? 0) + 1;
+      sourceSequences.set(sourceSystem, sequence);
+      const signed = signSource(sourceSystem, sequence, now,
+        currentSubjectsBySource.get(sourceSystem) ?? [], currentDocumentsBySource.get(sourceSystem) ?? [],
+        sourceKeys[sourceSystem].privateKey);
+      await repository.ingest(sourceSystem, signed);
     };
 
     const coreFetch: typeof fetch = async (input, init) => {
@@ -398,6 +534,36 @@ export async function createEvaluationKnowledgePolicyFixture(
         { status: response.statusCode, headers: responseHeaders });
     };
 
+    const callKnowledgeSearch = async (
+      role: EvaluationKnowledgePolicyRole,
+      args: { query: string; sourceSystem?: KnowledgeSourceSystem },
+    ) => {
+      if (!Object.hasOwn(cookies, role)) throw new TypeError("Unknown evaluation knowledge subject.");
+      const selectedArgs = knowledgeSearchArgumentsSchema.parse(args);
+      const response = await api.inject({
+        method: "POST",
+        url: "/api/tools/call",
+        headers: {
+          host: apiHost,
+          origin: webOrigin,
+          cookie: cookies[role],
+          "content-type": "application/json",
+        },
+        payload: {
+          pluginId: institutionalKnowledgeManifest.id,
+          name: "knowledge.search",
+          arguments: { query: selectedArgs.query,
+            ...(selectedArgs.sourceSystem ? { sourceSystem: selectedArgs.sourceSystem } : {}), limit: 5 },
+        },
+      });
+      if (response.statusCode !== 200) throw new Error("Synthetic institutional search failed.");
+      const result = response.json<{ documents?: unknown; contextId?: unknown }>();
+      if (!Array.isArray(result.documents) || typeof result.contextId !== "string") {
+        throw new Error("Synthetic institutional search returned an invalid response.");
+      }
+      return { documents: result.documents as Record<string, unknown>[], contextId: result.contextId };
+    };
+
     const fixture: EvaluationKnowledgePolicyFixture = {
       webOrigin,
       apiOrigin,
@@ -406,42 +572,31 @@ export async function createEvaluationKnowledgePolicyFixture(
       cookies,
       subjects,
       sourceMarkers,
+      ...(selectedScenario ? { scenario: scenarioMetadata(selectedScenario) } : {}),
       coreFetch,
-      async search(role, sourceSystem = "service_it") {
-        if (!(role in cookies)) throw new TypeError("Unknown evaluation knowledge subject.");
-        const selectedSource = knowledgeSourceSystemSchema.parse(sourceSystem);
-        const response = await api.inject({
-          method: "POST",
-          url: "/api/tools/call",
-          headers: {
-            host: apiHost,
-            origin: webOrigin,
-            cookie: cookies[role],
-            "content-type": "application/json",
-          },
-          payload: {
-            pluginId: institutionalKnowledgeManifest.id,
-            name: "knowledge.search",
-            arguments: { query, sourceSystem: selectedSource, limit: 5 },
-          },
-        });
-        if (response.statusCode !== 200) throw new Error("Synthetic institutional search failed.");
-        const result = response.json<{ documents?: unknown; contextId?: unknown }>();
-        if (!Array.isArray(result.documents) || typeof result.contextId !== "string") {
-          throw new Error("Synthetic institutional search returned an invalid response.");
-        }
-        return { documents: result.documents as Record<string, unknown>[], contextId: result.contextId };
+      async search(role, sourceSystem = defaultSearchSource) {
+        return callKnowledgeSearch(role, { query: defaultSearchQuery, sourceSystem });
       },
+      callKnowledgeSearch,
       async revokeSourceGrant() {
-        currentSubjects = currentSubjects.filter(entry => entry.subject !== subjects.reader);
-        await updateServiceSnapshot();
+        for (const sourceSystem of mutableSourceSystems) {
+          const currentSubjects = currentSubjectsBySource.get(sourceSystem) ?? [];
+          currentSubjectsBySource.set(sourceSystem, currentSubjects.filter(entry => entry.subject !== subjects.reader));
+          await updateSourceSnapshot(sourceSystem);
+        }
       },
       async changeDocumentAcl() {
-        currentDocuments = currentDocuments.map(document => document.id === "svc-eval-wlan-allowed"
-          ? { ...document, revision: document.revision + 1, updatedAt: new Date(now + 1_000).toISOString(),
-            acl: { groups: ["evaluation-restricted"], subjects: [], authenticated: false } }
-          : document);
-        await updateServiceSnapshot();
+        for (const sourceSystem of mutableSourceSystems) {
+          const selectedIds = selectedScenario
+            ? new Set(selectedScenario.sources.filter(source => source.sourceSystem === sourceSystem).map(source => source.documentId))
+            : new Set(["svc-eval-wlan-allowed"]);
+          const currentDocuments = currentDocumentsBySource.get(sourceSystem) ?? [];
+          currentDocumentsBySource.set(sourceSystem, currentDocuments.map(document => selectedIds.has(document.id)
+            ? { ...document, revision: document.revision + 1, updatedAt: new Date(now + 1_000).toISOString(),
+              acl: { groups: ["evaluation-restricted"], subjects: [], authenticated: false } }
+            : document));
+          await updateSourceSnapshot(sourceSystem);
+        }
       },
       close() {
         closePromise ??= closeResources();

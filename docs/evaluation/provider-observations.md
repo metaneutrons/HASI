@@ -1,5 +1,10 @@
 # Fixed-evidence and observed-workflow provider observations
 
+The separate [actual-route application-policy operator](application-policy-observations.md)
+uses authenticated synthetic source fixtures and the web handler's current-context
+path. It does not silently turn the fixed-evidence or unknown-outcome runners into
+application-policy acceptance.
+
 The operator command `pnpm evaluate:models` runs the existing HASI model router
 on the bundled synthetic development corpus. It is separate from the offline
 transport runner: provider usage and measured task latency are never labelled
