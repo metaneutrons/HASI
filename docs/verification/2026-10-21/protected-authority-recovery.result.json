@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-21",
+  "baseCommit": "0afa6270a096dec1b8cc5d9f5ad5c2324c43d2f1",
+  "fixture": {
+    "optimized": true,
+    "apiReplicas": 2,
+    "postgresql": true,
+    "managedExternalPlugin": false,
+    "realModelCalls": 0
+  },
+  "outage": {
+    "workspacePutStatus": 503,
+    "workspaceGetStatus": 503,
+    "baselineRows": 4,
+    "unchangedRows": 4,
+    "protectedSourcesHidden": true,
+    "draftRetained": true
+  },
+  "recovery": {
+    "workspaceGetStatus": 200,
+    "workspacePutStatus": 200,
+    "sameMessageAndThreeSourcesRestored": true,
+    "newDraftSurvivedReload": true,
+    "unrelatedRowsUnchanged": 3
+  },
+  "counterexample": {
+    "oldImplementationFailedNewCases": 3
+  },
+  "focusedTests": {
+    "passed": 52,
+    "postgresqlTestsExecuted": 1
+  },
+  "sourceHashes": {
+    "apps/web/src/lib/server/protected-workspaces.ts": "30920dc08a24e75ee7d63cc47463491237615ab08c5e41b5e97669ef81056519",
+    "apps/web/tests/protected-workspaces.test.ts": "f156b09fa9d984d5e68812594812c26ab9bc2e677b8ef4a6bb1a12e8b786d4b0",
+    "scripts/serve-plugin-journey.ts": "13d56149040e91d860ae1e983f020a5fa9a6e15dbc411f59af55c85ce6477d88",
+    "tests/plugin-journey-authority.test.ts": "bb7c357a49b3088b280eb69e8d3ed9a798e455237277ef24fed7b291185455ee"
+  },
+  "artifactHashes": {
+    "authority-recovery-observations.json": "86b47b2f569aada9bf025d955ee3b860f3fa40aa11e48f7eeaafa7efce4b214b",
+    "authority-outage-hidden.png": "721a9dc420cc1a1cd3ceb6b43d0599dac16eb07b4a724ad7814c241165687d48",
+    "authority-restored-reloaded.png": "d446b73ac655e3402069b3d9448dc0c42c2bcd0883014ca3727e7681b293f776",
+    "authority-journey-evidence.json": "891415e1504b5d72a8695d7631a11bee3b5c9bf2aee35ab97651e6a40c81d98f"
+  }
+}

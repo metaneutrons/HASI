@@ -56,6 +56,16 @@ fixture state; `quit` performs normal owned cleanup. Keep supplied directories
 and sidecars available until shutdown, then independently verify their hashes.
 Do not delete caller artifacts during journey cleanup.
 
+For protected-history recovery, `unavailable-history-authority` makes only the
+synthetic APIs' `GET /api/history/authority` return a generic 503.
+`available-history-authority` restores the normal route. Both commands wait
+for matching acknowledgements from both distinct API replicas before reporting
+completion. They neither revoke permissions nor change stored content. These
+controls exist only in the explicitly admitted local journey, not in the
+production API. Save an authorized chat first, retain its database revision and
+content fingerprint, then verify denial during the outage and recovery after
+restoration. A temporary outage must not be mistaken for a verified revocation.
+
 Evidence reports `artifactInputMode: external-prebuilt-pair`, the declared source
 identities, and `independentDistributionAcceptance: false`. Without the four
 variables the existing workspace packaging path remains available and is
