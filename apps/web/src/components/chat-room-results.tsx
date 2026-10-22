@@ -128,6 +128,7 @@ function RoomResult({
 export function ChatRoomResults({ rooms, disabled, onChooseRoom, onChooseSlot }: ChatRoomResultsProps) {
   const [expanded, setExpanded] = useState(false);
   const listId = `chat-room-results-${useId()}`;
+  const headingId = `${listId}-heading`;
   const toggleRef = useRef<HTMLButtonElement>(null);
   const restoreToggle = useRef(false);
 
@@ -144,7 +145,8 @@ export function ChatRoomResults({ rooms, disabled, onChooseRoom, onChooseSlot }:
   const remainingCount = Math.max(0, rooms.length - INITIAL_VISIBLE_ROOMS);
 
   return (
-    <section className="chat-room-results" aria-label="Gefundene Räume">
+    <div className="chat-room-results" role="group" aria-labelledby={headingId}>
+      <h2 className="sr-only" id={headingId}>Gefundene Räume</h2>
       <div className="chat-room-results__list" id={listId}>
         {visibleRooms.map((room, index) => (
           <RoomResult
@@ -172,6 +174,6 @@ export function ChatRoomResults({ rooms, disabled, onChooseRoom, onChooseSlot }:
           <ChevronDown className={expanded ? "is-expanded" : undefined} size={16} aria-hidden="true" />
         </button>
       )}
-    </section>
+    </div>
   );
 }
