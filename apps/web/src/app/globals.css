@@ -1412,11 +1412,11 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .chat-room-result__slot:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-ink); }
 .chat-room-result__no-slots { margin: 0; padding: 8px 9px; border-radius: 9px; background: var(--surface-soft); color: var(--muted); font-size: 0.75rem; line-height: 1.45; }
 .chat-room-results__toggle { display: inline-flex; width: fit-content; min-width: 44px; min-height: 44px; align-items: center; gap: 6px; padding: 7px 8px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--accent-deep); cursor: pointer; font-size: 0.8125rem; font-weight: 600; text-align: left; }
-.chat-room-results__toggle:hover { border-color: var(--line); background: var(--surface-soft); }
+.chat-room-results__toggle:hover:not(:disabled) { border-color: var(--line); background: var(--surface-soft); }
 .chat-room-results__toggle svg { flex: 0 0 auto; transition: transform 150ms ease; }
 .chat-room-results__toggle svg.is-expanded { transform: rotate(180deg); }
-.chat-room-results button:focus-visible, .chat-room-result__details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.chat-room-results button:disabled { cursor: not-allowed; opacity: .58; }
+.chat-room-results button:focus-visible, .chat-room-results__toggle:focus-visible, .chat-room-result__details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chat-room-results button:disabled, .chat-room-results__toggle:disabled { cursor: not-allowed; opacity: .58; }
 .page-content { min-width: 0; max-width: 960px; margin: 0 auto; padding: clamp(20px, 4vw, 48px); overflow-wrap: anywhere; }
 .page-content h1 { margin: 8px 0 16px; font-size: clamp(1.8rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -.04em; }
 .page-content p { line-height: 1.6; }
