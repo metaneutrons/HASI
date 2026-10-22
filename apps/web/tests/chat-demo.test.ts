@@ -76,6 +76,14 @@ describe("bounded German chat demo parser", () => {
     );
     expect(namedRequest.query).toBe('grace hopper');
     expect(matchingResources(hshDemoCatalog.resources, namedRequest).map(({ id }) => id)).toEqual(['190449']);
+
+    const quotedNamedRequest = mergeRoomRequest(
+      'Neue Raumsuche: Ich brauche morgen ein Einzelbüro, das "Flex-Büro Grace Hopper", im Gebäude 1J von 10 bis 16 Uhr.',
+      {},
+      now,
+    );
+    expect(quotedNamedRequest.query).toBe('flex buro grace hopper');
+    expect(matchingResources(hshDemoCatalog.resources, quotedNamedRequest).map(({ id }) => id)).toEqual(['190449']);
   });
   it('distinguishes one workplace in an office from rooms with person capacities', () => {
     const resources: Resource[] = [
@@ -117,6 +125,7 @@ describe("bounded German chat demo parser", () => {
 
     const single = mergeRoomRequest("Einzelbüro", previous);
     const shared = mergeRoomRequest("geteiltes Büro", previous);
+    const sharedAccepted = mergeRoomRequest("Ein geteiltes Büro ist okay.", { ...previous, query: "Grace Hopper" });
     const any = mergeRoomRequest("egal, keine Präferenz", previous);
     const bothAreFine = mergeRoomRequest("Beides ist passend.", { ...previous, query: "Grace Hopper" });
     const bothFit = mergeRoomRequest("Beides passt!", previous);
@@ -125,6 +134,7 @@ describe("bounded German chat demo parser", () => {
     expect(single.query).toBeUndefined();
     expect(shared).toMatchObject({ ...previous, kind: "workplace", officeType: "shared" });
     expect(shared.query).toBeUndefined();
+    expect(sharedAccepted).toMatchObject({ ...previous, query: "Grace Hopper", kind: "workplace", officeType: "shared" });
     expect(any).toMatchObject({ ...previous, kind: "workplace", officeType: "any" });
     expect(any.query).toBeUndefined();
     expect(bothAreFine).toMatchObject({ ...previous, query: "Grace Hopper", kind: "workplace", officeType: "any" });
@@ -141,6 +151,47 @@ describe("bounded German chat demo parser", () => {
     for (const text of ["1 Arbeitsplatz", "Ein Arbeitsplatz", "Kein Büro mit einem Arbeitsplatz"]) {
       expect(mergeRoomRequest(text, previous).officeType).toBeUndefined();
     }
+  });
+
+  it("preserves a negated office-preference phrase instead of cleaning it as acceptance", () => {
+    const now = new Date("2026-10-22T08:00:00.000Z");
+    const request = mergeRoomRequest(
+      "Ich suche morgen von 10 bis 16 Uhr einen Arbeitsplatz im Gebäude 1J. Kein Einzelbüro ist okay.",
+      {},
+      now,
+    );
+
+    expect(request).toMatchObject({ kind: "workplace", date: "2026-10-23", time: "10:00", durationMinutes: 360, location: "1J" });
+    expect(request.officeType).toBeUndefined();
+    expect(request.query).toBe("kein einzelburo ist okay");
+    expect(matchingResources(hshDemoCatalog.resources, request)).toEqual([]);
+  });
+
+  it("removes a positive office-preference tail from an otherwise complete workplace request", () => {
+    const now = new Date("2026-10-22T08:00:00.000Z");
+    const request = mergeRoomRequest(
+      "Ich suche morgen von 10 bis 16 Uhr einen Arbeitsplatz im Gebäude 1J. Ein geteiltes Büro ist okay.",
+      {},
+      now,
+    );
+
+    expect(request).toMatchObject({
+      kind: "workplace",
+      officeType: "shared",
+      date: "2026-10-23",
+      time: "10:00",
+      durationMinutes: 360,
+      location: "1J",
+    });
+    expect(request.query).toBeUndefined();
+    expect(matchingResources(hshDemoCatalog.resources, request)).toHaveLength(14);
+
+    const quotedAcceptance = mergeRoomRequest(
+      'Ich suche morgen von 10 bis 16 Uhr einen Arbeitsplatz im Gebäude 1J. "Ein geteiltes Büro ist okay".',
+      {},
+      now,
+    );
+    expect(quotedAcceptance.query).toBe("ein geteiltes buro ist okay");
   });
 
   it("filters only explicitly named single or shared offices and requests clarification for broad catalogs", () => {
