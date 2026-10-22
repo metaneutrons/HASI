@@ -247,6 +247,9 @@ export async function runRoomPlanningCase(dependencies: {
 }): Promise<RoomPlanningRun> {
   if (executionLease.active) throw new TypeError("Room-planning evaluation requires an isolated sequential process.");
   const definition = roomPlanningDefinition(dependencies.caseId);
+  if ("executionTrack" in definition) {
+    throw new TypeError("Controlled fixed-evidence cases require the dedicated direct-router runner.");
+  }
   if (typeof dependencies.budgetAdmission.reserve !== "function"
     || !Number.isInteger(dependencies.maxProviderRequests) || dependencies.maxProviderRequests < 1 || dependencies.maxProviderRequests > 16) {
     throw new TypeError("Explicit shared admission and a bounded provider HTTP attempt cap are required.");
