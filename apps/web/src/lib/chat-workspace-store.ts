@@ -311,9 +311,16 @@ export function createChatWorkspaceStore(
           // Immediately qualify the latest view inside this serial operation;
           // do not mark it saved or remount/abort an unrelated pending action.
           // A real revoked baseline is hidden now, never deferred to a retry.
-          if (!unchangedAuthority || attempt === 2) {
+          if (!unchangedAuthority) {
             redactProtectedContent("Die Quellenfreigabe konnte nicht mit deinem aktuellen Chat abgeglichen werden. Geschützte Antworten wurden ausgeblendet.");
             break;
+          }
+          if (attempt === 2) {
+            // A still-authorized baseline is not a revocation. Yield to the
+            // debounce after three overlapping edits, keeping persistence pending
+            // until a later acknowledgement covers the latest conversation.
+            clearTimeout(timer);
+            timer = setTimeout(flush, 180);
           }
         }
       } catch (error) {
