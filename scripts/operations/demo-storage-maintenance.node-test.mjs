@@ -95,6 +95,7 @@ test('collects only bounded container IDs and selected image references, includi
     commands.push(args);
     if (args[0] === 'container' && args[1] === 'ls') return { stdout: `${containerIds.join('\n')}\n` };
     assert.deepEqual(args.slice(0, 3), ['container', 'inspect', '--format']);
+    assert.equal(args[3], String.raw`{{printf "{\"Image\":%q,\"ImageID\":%q}" .Config.Image .Image}}`);
     assert.equal(args[3].includes('.Config.Image'), true);
     assert.equal(args[3].includes('.Image'), true);
     assert.equal(args[3].includes('Command'), false);
