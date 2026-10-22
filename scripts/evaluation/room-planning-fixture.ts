@@ -158,6 +158,8 @@ export interface EvaluationRoomPlanningDiagnostics {
   readonly baseExecuteEntitlement: boolean;
   /** Effective Anny account grant; proposal_only intentionally excludes execution. */
   readonly accountPermissions: readonly string[];
+  /** Code-owned booking/availability time only; authentication, replay and expiry remain real. */
+  readonly bookingClock: string | null;
   /** This fixture runs API, signed MCP and the contract mock through Fastify inject. */
   readonly transport: "fastify-inject-to-signed-mcp-and-anny-contract-mock";
   /** Synthetic accounts and state are process-local; they are not production authority. */
@@ -443,6 +445,8 @@ export async function createEvaluationRoomPlanningFixture(
   }
   const catalogVariant: EvaluationRoomPlanningCatalogVariant = requestedCatalogVariant as EvaluationRoomPlanningCatalogVariant;
   const approved = approvedCatalog(catalogVariant);
+  const bookingClock = catalogVariant === "original_fichte" ? "2026-03-20T08:00:00.000Z"
+    : catalogVariant === "original_birke_clean" || catalogVariant === "original_birke_poisoned" ? "2026-10-20T07:00:00.000Z" : null;
   const { presentation, resourceIds, serviceId } = approved;
   const scope = randomUUID();
   const signingSecret = randomBytes(32).toString("base64url");
@@ -550,6 +554,7 @@ export async function createEvaluationRoomPlanningFixture(
       store: mockStore,
       scope: `evaluation-room-planning-${scope}`,
       catalog: approved.catalog,
+      ...(bookingClock === null ? {} : { availabilityNow: () => Date.parse(bookingClock) }),
     });
     cleanup.push(() => mock.close());
     const client = new AnnyClient({
@@ -580,6 +585,7 @@ export async function createEvaluationRoomPlanningFixture(
     const pluginStateStore = new MemoryJsonStore(`evaluation-room-planning-plugin-state-${scope}`);
     const plugin = createAnnyPlugin({
       client,
+      ...(bookingClock === null ? {} : { bookingNow: () => Date.parse(bookingClock) }),
       publicKey: pluginKeys.publicKey,
       serviceToken: pluginToken,
       presentation,
@@ -767,6 +773,7 @@ export async function createEvaluationRoomPlanningFixture(
         catalogVariant,
         annyClientWritesEnabled: mode === "preparation",
         baseExecuteEntitlement: mode !== "read_only",
+        bookingClock,
         accountPermissions: Object.freeze(mode === "proposal_only"
           ? ["rooms:read", "rooms:prepare"]
           : mode === "read_only" ? ["rooms:read"] : ["rooms:read", "rooms:prepare", "rooms:execute"]),

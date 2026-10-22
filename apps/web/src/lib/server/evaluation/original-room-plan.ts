@@ -47,7 +47,7 @@ export function createOriginalRoomPlan(corpus: readonly EvaluationCase[], profil
       "Exact draft original cases and full authorized benchmark evidence; no expected labels or runner fixtures in model input.",
       "Controlled direct production-router comparison with real isolated native API/MCP/Anny-contract effects; not protected HTTP/browser acceptance.",
       "Benchmark evidence is intentionally full, separate from the normal native bridge's compact description projection; both are recorded, not equated.",
-      "Case clock affects router context and bridge date interpretation only; authentication, proposal expiry and shared daily budget retain real time.",
+      "Case clock affects router/bridge interpretation and isolated native booking/availability domain checks only; authentication, replay, proposal expiry and shared daily budget retain real time.",
       "Only exact R-104 2026-10-27 14:00–15:00 Berlin pending proposals may execute; no confirmation, cancellation, reconciliation or external write.",
       "Synthetic base identity may retain execute entitlement required by the existing proposal gate; independent fixture transport/client deny execution.",
       "All model tool attempts are recorded, including disallowed ones; backend blocking is not a semantic/model-quality pass.",

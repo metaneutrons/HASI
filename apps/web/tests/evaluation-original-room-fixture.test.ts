@@ -38,14 +38,15 @@ interface AnnyChatToolBridge {
       requestedEndDate?: string;
       intervals: { available: boolean; startDate: string; endDate: string }[];
     }[];
-    proposal?: { id: string; status: string };
+    proposal?: { id: string; status: string; expiresAt: string };
   }>;
 }
 
-type CreateAnnyChatTools = (request: <T>(path: string, init?: RequestInit) => Promise<T>) => AnnyChatToolBridge;
+type CreateAnnyChatTools = (request: <T>(path: string, init?: RequestInit) => Promise<T>, options?: { now: () => Date }) => AnnyChatToolBridge;
 
 async function createBridge(fixture: EvaluationRoomPlanningFixture): Promise<AnnyChatToolBridge> {
   const { createAnnyChatTools } = await vi.importActual<{ createAnnyChatTools: CreateAnnyChatTools }>("../src/lib/anny-chat-tools.js");
+  const bookingClock = fixture.diagnostics().bookingClock;
   return createAnnyChatTools(async <T>(path: string, init?: RequestInit): Promise<T> => {
     const headers = new Headers(init?.headers);
     headers.set("cookie", fixture.cookie);
@@ -55,7 +56,7 @@ async function createBridge(fixture: EvaluationRoomPlanningFixture): Promise<Ann
     const response = await fixture.coreFetch(new Request(`${fixture.apiOrigin}${path}`, { ...init, headers }));
     if (!response.ok) throw new Error(`HASI core request failed at ${path} (${String(response.status)}): ${await response.text()}`);
     return await json<T>(response);
-  });
+  }, bookingClock === null ? undefined : { now: () => new Date(bookingClock) });
 }
 
 afterEach(async () => {
@@ -115,6 +116,7 @@ describe("original benchmark room fixture", () => {
   });
 
   it("searches and checks availability before storing a pending Birke proposal with no source write", async () => {
+    const realStartedAt = Date.now();
     const fixture = await createFixture({ mode: "proposal_only", catalogVariant: "original_birke_clean" });
     expect(fixture.actor.permissions).toEqual(["rooms:read", "rooms:prepare", "rooms:execute"]);
     expect(fixture.diagnostics()).toMatchObject({
@@ -122,6 +124,7 @@ describe("original benchmark room fixture", () => {
       baseExecuteEntitlement: true,
       accountPermissions: ["rooms:read", "rooms:prepare"],
       annyClientWritesEnabled: false,
+      bookingClock: "2026-10-20T07:00:00.000Z",
     });
 
     const toolsResponse = await fixture.coreFetch(request(fixture, "/api/tools"));
@@ -156,6 +159,8 @@ describe("original benchmark room fixture", () => {
       endDate: interval.endDate,
     });
     expect(prepared.proposal).toMatchObject({ status: "pending" });
+    expect(Date.parse(prepared.proposal?.expiresAt ?? "")).toBeGreaterThan(realStartedAt);
+    expect(Date.parse(prepared.proposal?.expiresAt ?? "")).toBeLessThanOrEqual(Date.now() + 86_400_000);
     expect(fixture.preparedProposals()).toEqual([{
       id: prepared.proposal?.id,
       subject: fixture.actor.subject,

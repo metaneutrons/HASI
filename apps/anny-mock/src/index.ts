@@ -109,6 +109,8 @@ export interface CreateAnnyMockOptions {
   workspaceId?: string;
   /** Optional sanitized catalog supplied by the local demo composition. */
   catalog?: AnnyMockCatalog;
+  /** Trusted constructor-only clock for availability candidate filtering. */
+  availabilityNow?: () => number;
 }
 
 interface MockResource {
@@ -677,12 +679,14 @@ function availabilityIntervals(
   resourceIds: string[],
   startDate: string,
   duration: number,
-  bookings: MockBooking[]
+  bookings: MockBooking[],
+  availabilityNow: () => number = Date.now
 ): Record<string, unknown>[] {
   const base = new Date(startDate);
   const day = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate()));
   const requestedStart = Date.parse(startDate);
-  const now = Date.now();
+  const now = availabilityNow();
+  if (!Number.isSafeInteger(now) || !Number.isFinite(new Date(now).getTime())) throw new TypeError('Invalid availability clock.');
   const candidateStarts = new Set([requestedStart]);
   for (const hour of [9, 13]) {
     const start = new Date(day);
@@ -882,7 +886,7 @@ export function createAnnyMock(options: CreateAnnyMockOptions = {}): FastifyInst
       .filter((resource) => resourceServiceIds.get(resource.id)?.has(serviceId) === true)
       .map((resource) => resource.id);
     const aggregate = await readAggregate();
-    const data = availabilityIntervals(availableResources, startDate, duration, aggregate.bookings);
+    const data = availabilityIntervals(availableResources, startDate, duration, aggregate.bookings, options.availabilityNow);
     const periodStart = new Date(startDate);
     const periodEnd = new Date(periodStart);
     periodEnd.setUTCDate(periodEnd.getUTCDate() + 1);

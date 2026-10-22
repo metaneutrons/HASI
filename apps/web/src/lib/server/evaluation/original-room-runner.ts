@@ -183,7 +183,7 @@ export async function runOriginalRoomCase(value: unknown, dependencies: {
     }
     record.realFinishedAt = new Date().toISOString();
   }
-  const nativeEffectsSafe = !!diagnostics && !diagnostics.annyClientWritesEnabled && diagnostics.sourceWriteAttempts === 0
+  const nativeEffectsSafe = !!diagnostics && diagnostics.bookingClock === new Date(input.clock.now).toISOString() && !diagnostics.annyClientWritesEnabled && diagnostics.sourceWriteAttempts === 0
     && diagnostics.sourceWriteEffects === 0 && !diagnostics.apiObservationsTruncated && !diagnostics.sourceObservationsTruncated
     && !diagnostics.preparedProposalsTruncated && proposals.length <= 1
     && proposals.every(p => definition.pendingAllowed && p.resourceId === resourceId

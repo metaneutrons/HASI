@@ -65,9 +65,12 @@ action/confirmation/cancellation/reconciliation routes, and its Anny client and
 contract mock independently deny source writes. No confirmation is model-callable.
 Fixture cleanup and native effects are checked even when a model/provider fails.
 
-Case time affects only router calendar context and bridge interpretation. Its
+Case time affects router calendar context, bridge interpretation and the isolated
+plug-in/mock booking/availability domain checks. Trusted constructor callbacks
+keep frozen intervals reproducible after their historical date; no HTTP/body or
+environment clock override is accepted. Defaults remain real time. Its
 canonical UTC representation supplies the controlled message-time anchors.
-Authentication, proposal expiry and the existing shared USD 1/UTC-day budget use
+Authentication, replay, aggregate TTL, proposal expiry and the existing shared USD 1/UTC-day budget use
 real time. The existing durable admission is obtained before fixture creation;
 there is no alternate ledger, initialization, refund or budget reset.
 
