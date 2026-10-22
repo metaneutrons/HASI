@@ -472,6 +472,7 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .assistant-grid { display: grid; min-width: 0; gap: 23px; grid-template-columns: minmax(0, 1.08fr) minmax(306px, 0.92fr); align-items: start; }
 .resource-results, .booking-aside { min-width: 0; }
 .section-heading-row, .admin-section-heading, .bookings-toolbar { display: flex; min-width: 0; align-items: flex-end; justify-content: space-between; gap: 15px; margin-bottom: 16px; }
+.bookings-toolbar { flex-wrap: wrap; }
 .section-heading-row h2, .admin-section-heading h2, .bookings-toolbar h2 { margin: 4px 0 0; font-size: clamp(1.1875rem, 2vw, 1.5rem); font-weight: 610; line-height: 1.2; letter-spacing: -0.04em; overflow-wrap: anywhere; }
 .result-count { flex: 0 0 auto; padding-bottom: 3px; color: var(--muted); font-size: 0.75rem; }
 .resource-list { display: grid; gap: 11px; }

@@ -1,0 +1,4293 @@
+{
+  "sourceRevision": "af974beb60050f7338fc430df7398760f69aa1c9",
+  "sourceFiles": [
+    {
+      "path": "apps/web/src/app/.well-known/hasi-plugin.json/route.ts",
+      "sha256": "49fd4fde2857b14af78cbab474b92fa2fc30ed8b54eca942a979d7aeca2eb919"
+    },
+    {
+      "path": "apps/web/src/app/account/connections/consent/page.tsx",
+      "sha256": "bca30958834e038cf26fd01804f2691fa7d8b0022dce4855d3cb71a29435bf14"
+    },
+    {
+      "path": "apps/web/src/app/account/connections/page.tsx",
+      "sha256": "d0b36752c2f294fc9c64ca527d7967bdc6a9b11cadc7c9c108aeb9be3dd8180c"
+    },
+    {
+      "path": "apps/web/src/app/admin/page.tsx",
+      "sha256": "15089eca88a0e833cc0f62a23b31eb856684a94fa040bed6d6dccb865f5f9505"
+    },
+    {
+      "path": "apps/web/src/app/api/[...path]/route.ts",
+      "sha256": "484ba589a28d4808eb67d34cdf8a32fe068d0bdbe5ea0caf8798fe3858c09839"
+    },
+    {
+      "path": "apps/web/src/app/api/chat/dialogue/route.ts",
+      "sha256": "72d682fea7be2617a09c6ca92bb69b182fbd355d5f1e5201dcc54ef33f2d1d61"
+    },
+    {
+      "path": "apps/web/src/app/api/chat/plugin-read/route.ts",
+      "sha256": "213518243cd9aacee153b0bbcffb1e6cdf1e317d224618450dbcfaf391103b78"
+    },
+    {
+      "path": "apps/web/src/app/api/chat/route.ts",
+      "sha256": "dc9053e31e9882f7a1199aa7b604aa8d0498313e3e60ce95bfc48698a6e5363c"
+    },
+    {
+      "path": "apps/web/src/app/api/chat/timestamps/route.ts",
+      "sha256": "86fde04c20394ec54944e4191aac1332c9b008e49f2db9abbc7d6a7b4a7387b2"
+    },
+    {
+      "path": "apps/web/src/app/api/chat/workspace/route.ts",
+      "sha256": "7fa2222515ba302898f9867713679fb72d21307fa41e27adb3f329572e3897da"
+    },
+    {
+      "path": "apps/web/src/app/api/health/route.ts",
+      "sha256": "785a0b1e12572b3401207b43e4e1af7d60bb75bac7c05b0820e19cdfec4a0fe9"
+    },
+    {
+      "path": "apps/web/src/app/apple-icon.tsx",
+      "sha256": "e30bbdace35b25f393352c118d8c64922ec5c6707894308caac45096cd40c6fd"
+    },
+    {
+      "path": "apps/web/src/app/bookings/page.tsx",
+      "sha256": "9a39dc2ef9114b3504c1c678a871c2401217b89e4e4575da2e02d8813c0881ce"
+    },
+    {
+      "path": "apps/web/src/app/globals.css",
+      "sha256": "223e52d5f5f303ed7b349118cb5a6915c76973989a3ff59f91ce16eff53c43e5"
+    },
+    {
+      "path": "apps/web/src/app/hasi/actions/status/route.ts",
+      "sha256": "49982856041281324373a55917ee5e9a480ac131f21fd23d40dd956749e230a6"
+    },
+    {
+      "path": "apps/web/src/app/icon.svg",
+      "sha256": "a43ffefe91ce8d5fcd9af9f315c6810b790b9e0b30c260af2c19815fe0a7b6cb"
+    },
+    {
+      "path": "apps/web/src/app/layout.tsx",
+      "sha256": "a07367bd5f9e79ebaf0ed43c62e40a2cac00200d81d465b8661feac8062919af"
+    },
+    {
+      "path": "apps/web/src/app/mcp/route.ts",
+      "sha256": "7355a07b0b685f6136864cd627c2e3f0559a54fb5690a18bbcb7815e83fa8fdc"
+    },
+    {
+      "path": "apps/web/src/app/opengraph-image.tsx",
+      "sha256": "c5538ff3f38d5c586b1c4fc7b479a5f4ac256f7ff981b13c8db8eca2b2b5b678"
+    },
+    {
+      "path": "apps/web/src/app/page.tsx",
+      "sha256": "ff6acf43833245d4082e470e614ccd74ad7c6fcfa533b0d3e74001a397c910ca"
+    },
+    {
+      "path": "apps/web/src/app/plugins/knowledge/[...path]/route.ts",
+      "sha256": "042c06f03d483e09b224a185459fe69848e8128e1a9edfa9d2367ebacabae90e"
+    },
+    {
+      "path": "apps/web/src/app/robots.ts",
+      "sha256": "92dfc16d9b4ec7d43affd3bce7a0e5975458ba95115716f884b8d384fddd58e0"
+    },
+    {
+      "path": "apps/web/src/app/sources/[id]/page.tsx",
+      "sha256": "2bd5e8ef1464dda91b25bb7262e5036e885ce994c34c33a32783d69d627ddb16"
+    },
+    {
+      "path": "apps/web/src/components/action-status.tsx",
+      "sha256": "ce6675ff026e42a83544a08d572a7d5b099cb72a3f0f01a5fd1a496b7826f116"
+    },
+    {
+      "path": "apps/web/src/components/admin-page.tsx",
+      "sha256": "f00cdf1deafa41daa84acee31c835b3801020cdc66451120e3dab586476efa0a"
+    },
+    {
+      "path": "apps/web/src/components/app-shell.tsx",
+      "sha256": "1d12bff367891e9e2794a756284c6eb74ec0bff3c04a83325e4b08f8b6a3bc6b"
+    },
+    {
+      "path": "apps/web/src/components/assistant-page.tsx",
+      "sha256": "6ac379b9d119fc3890eb8a1eeb2ee6bbf5f2586301591d208ca5550a17b795c4"
+    },
+    {
+      "path": "apps/web/src/components/bookings-page.tsx",
+      "sha256": "12bbb0bcc303f3e614b84267954aa60c5582f80a65149e0463203a0eee8adaa9"
+    },
+    {
+      "path": "apps/web/src/components/chat-markdown.module.css",
+      "sha256": "ef5f7c5f04700819a6ca38905db561faf006fe32b952abc73cc2ac3faca65267"
+    },
+    {
+      "path": "apps/web/src/components/chat-markdown.tsx",
+      "sha256": "f28ffd3a0a7ae8a78858fdd0151d68e3aaf0d49a8eacfc8a8fc1b01d9b5cad55"
+    },
+    {
+      "path": "apps/web/src/components/chat-message-copy.module.css",
+      "sha256": "8e4ed7af10de509e6c68f489225d060ec281a164bb439a718ac65f3123d65df6"
+    },
+    {
+      "path": "apps/web/src/components/chat-message-copy.tsx",
+      "sha256": "b82d20dc70f28a4ec81fe96b626d4b765f13536d1a982f98876b93a538acaa24"
+    },
+    {
+      "path": "apps/web/src/components/chat-room-results.tsx",
+      "sha256": "0ad1bf5bcb3707b630a9ca6dd97177105a71d6dd1573b5f8c13316ea94fe3f27"
+    },
+    {
+      "path": "apps/web/src/components/chat-service-connection.tsx",
+      "sha256": "6ce5816e85ad8787ec6bfabaaaea3d77490d7d6d6091fb2527d93ecd58e7e141"
+    },
+    {
+      "path": "apps/web/src/components/chat-session-list.tsx",
+      "sha256": "aac7bd6992a97e3771546aecc4f189ea90703feedaf221fac3c36630b9d3adac"
+    },
+    {
+      "path": "apps/web/src/components/chat-sidebar-context.tsx",
+      "sha256": "c119446c6afac33485a42838afce66fb63790b4f6ac5817b7b7cbbea1cf51cce"
+    },
+    {
+      "path": "apps/web/src/components/hasi-icon.tsx",
+      "sha256": "b425a643b067b62ccacde7c6c249dd59f40f603916f6e4e9092163a5404fc538"
+    },
+    {
+      "path": "apps/web/src/components/knowledge-document.tsx",
+      "sha256": "3389b21b26ee7591062a2abf796c77b15c43405e84676c0bba7486467806b093"
+    },
+    {
+      "path": "apps/web/src/components/managed-plugin-panel.module.css",
+      "sha256": "3aef417d53bd8ce21ab643e6515700a67a2a2e47d4858738efca967d8e3c2553"
+    },
+    {
+      "path": "apps/web/src/components/managed-plugin-panel.tsx",
+      "sha256": "8b8891a2a6421d3a93b77def077ef7b1327c783338341fd643e71c595d332419"
+    },
+    {
+      "path": "apps/web/src/components/personal-connection-notice.tsx",
+      "sha256": "73cfdaee787055c05b49b9ec04d371e42563bafea0886a1b092a6146faf5f67f"
+    },
+    {
+      "path": "apps/web/src/components/plugin-account-consent.tsx",
+      "sha256": "f5d1d270390b23f2c94389a768b295885742079a45c241a5bddd379e820432fe"
+    },
+    {
+      "path": "apps/web/src/components/plugin-account-panel.tsx",
+      "sha256": "97c4d9ef4a744573f3bbdc2a7cb0fbd81799a7e82076de17b8c8d59bd950b0ce"
+    },
+    {
+      "path": "apps/web/src/components/plugin-app-view.tsx",
+      "sha256": "8115e043b444d5a7783d6f53b0fade7a791fa03b03144cea4f4b32ae731f8b4f"
+    },
+    {
+      "path": "apps/web/src/components/plugin-config-fields.tsx",
+      "sha256": "93e01ae80c4fcffa271d4e6ac57791dd90d8251a4e20a6fbe2313587b117f4e9"
+    },
+    {
+      "path": "apps/web/src/components/plugin-config-panel.tsx",
+      "sha256": "4a9a3f97125485fcc3f431467f2c066481373dbfca107042f1f4c34fca2d4d7f"
+    },
+    {
+      "path": "apps/web/src/components/plugin-release-review.module.css",
+      "sha256": "f98a1f7632ca9da910b5b745fa150654916d1d51da6ccf371e3e0e9f493afc3f"
+    },
+    {
+      "path": "apps/web/src/components/plugin-release-review.tsx",
+      "sha256": "7e5359668bafb6f8a98785ea97f54b34bca37cb4e2b7bf4554317c43a0576504"
+    },
+    {
+      "path": "apps/web/src/components/plugin-result-app.tsx",
+      "sha256": "0f7f1e2c72064ae4f557e6fac4c451e5b554efc8b20a306703725f56f7acdc5d"
+    },
+    {
+      "path": "apps/web/src/components/plugin-source-panel.tsx",
+      "sha256": "558bb1815c4deb29e650e9188b19f6b24aaa5a4b9fc3951d0aa5749e4f700833"
+    },
+    {
+      "path": "apps/web/src/components/providers.tsx",
+      "sha256": "3487808492857802a2e09f4f4e007c98cdbf370dda7ed0527fa1bee58fadad3d"
+    },
+    {
+      "path": "apps/web/src/components/public-demo-notice.tsx",
+      "sha256": "a521846e42da9a276033bff452ca0391ec39cff4391bea351f8a7d3e110775ba"
+    },
+    {
+      "path": "apps/web/src/components/session-provider.tsx",
+      "sha256": "cf1e15b902a132f18be21a1614574c23243fe4ee124d2032a02a325a82538925"
+    },
+    {
+      "path": "apps/web/src/components/theme-provider.tsx",
+      "sha256": "a0be30946df5253bb6a15457b6e692293f7dbaf8dcb6cfadce38a3492234d4da"
+    },
+    {
+      "path": "apps/web/src/components/use-chat-viewport.ts",
+      "sha256": "c8a2f101e15f5811f62fb24d8df4a08b155595618e856c2aa712907db07b1ef7"
+    },
+    {
+      "path": "apps/web/src/lib/action-preview.ts",
+      "sha256": "76827f9a218ad818ed8120f0cfb30840ae821063747b6a2f082b26d979263946"
+    },
+    {
+      "path": "apps/web/src/lib/anny-chat-tools.ts",
+      "sha256": "2c3982d3a3825eb1bc6ac7b8c5298d3482218413a0fefd9513b8ac800a435284"
+    },
+    {
+      "path": "apps/web/src/lib/api.ts",
+      "sha256": "4d2b746cb3adf22d86a4f80d9b437ae3a50af4c7861198a1ccf96dfeb7816d7f"
+    },
+    {
+      "path": "apps/web/src/lib/chat-action-guidance.ts",
+      "sha256": "179264cd840ac78f4318ff65fdd343971c2ca814f314efd3d3d539899453f9b1"
+    },
+    {
+      "path": "apps/web/src/lib/chat-contract.ts",
+      "sha256": "89c3268a69e30849ecff8c58e53c62b60f5b2b445937e6b1b27c970e81db1948"
+    },
+    {
+      "path": "apps/web/src/lib/chat-demo.ts",
+      "sha256": "bcb37e598eea17a02c94e011a3cce5bdc0fa06d97ae391a3ec8eb8aadaf8ef01"
+    },
+    {
+      "path": "apps/web/src/lib/chat-history.ts",
+      "sha256": "4bb498a1c350f2325831a84c3e96587f64327434eb99d42f2f0901052b089139"
+    },
+    {
+      "path": "apps/web/src/lib/chat-knowledge-citations.ts",
+      "sha256": "46f6c5424c1440975caa30b3b100343d45bc7b391a56b435d4d8078609ae73fe"
+    },
+    {
+      "path": "apps/web/src/lib/chat-message-clock.ts",
+      "sha256": "421ad0c7a2677089858ba136425b6960c47a597021246c04b7d38660fd3a38d5"
+    },
+    {
+      "path": "apps/web/src/lib/chat-message-copy.ts",
+      "sha256": "96960f4e9c3a954f4b1d7789c3e52fbf4fbaf352f86ad1acd4727974d39773e3"
+    },
+    {
+      "path": "apps/web/src/lib/chat-room-time.ts",
+      "sha256": "ec30942a9d0f4e7b078958961e0faaf9e385d5057900c9f76af1d058fccd881b"
+    },
+    {
+      "path": "apps/web/src/lib/chat-sessions.ts",
+      "sha256": "0c0fe84326c288a579b065f1ad0b672aa7ab8de2cd207df8a42c45b2bbad0008"
+    },
+    {
+      "path": "apps/web/src/lib/chat-tool-context.ts",
+      "sha256": "79fb113fb6e3963d6cc3b3f800f46e700a0dd3292ee62543852462ef4b75f1b2"
+    },
+    {
+      "path": "apps/web/src/lib/chat-tool-loop.ts",
+      "sha256": "93c01150c8080c87f4ca347797657b63c5f3b99d934957a157b1dbf1ec5a53de"
+    },
+    {
+      "path": "apps/web/src/lib/chat-viewport.ts",
+      "sha256": "3f2a0de81e7bb09678e0fe860aea761aedbbfa08e1893946cdcccec74128228e"
+    },
+    {
+      "path": "apps/web/src/lib/chat-workspace-store.ts",
+      "sha256": "21bafea6c27a9a8fabadc474c606d38aeaaeedef0a6cc01f8632023a3e14602e"
+    },
+    {
+      "path": "apps/web/src/lib/hasi-brand.ts",
+      "sha256": "b774fda2268ee7db22955a74499427e3cce9f198669dbe8adb3a44d29fbd933a"
+    },
+    {
+      "path": "apps/web/src/lib/host-dialogue-client.ts",
+      "sha256": "57b27c5822bdeeab299240a6d3ad86fd4a2ae2b3d8f09980dacf4acc715a50a9"
+    },
+    {
+      "path": "apps/web/src/lib/host-dialogue.ts",
+      "sha256": "353ca0fd2b66223bc0a2497514d2a5372637aecc1d21c6ba096f9adeeb926dd9"
+    },
+    {
+      "path": "apps/web/src/lib/initial-tool-plan.ts",
+      "sha256": "e9d51ecff5d8972b14f4f9180f8c023733d3220a5bf790ebd19a6e786250d764"
+    },
+    {
+      "path": "apps/web/src/lib/knowledge-citations.ts",
+      "sha256": "0c74a474018948847b2a08b6f832f04ceb1b70b9692bdf78f78065b51df83ad9"
+    },
+    {
+      "path": "apps/web/src/lib/knowledge-navigation.ts",
+      "sha256": "a356088d07db5c6ab67d4b6071b47c41f7d17f9c489027963c468b5ff7ce1e13"
+    },
+    {
+      "path": "apps/web/src/lib/knowledge.ts",
+      "sha256": "23abad81a23e4b101730fc58a1fa08e36b32a875c124c7cfdd4ef49adcd14a4d"
+    },
+    {
+      "path": "apps/web/src/lib/live-room-availability.ts",
+      "sha256": "12ccc681598f7be1d199490a238b7e8b335e0d3e206d1cadb71d17be780585de"
+    },
+    {
+      "path": "apps/web/src/lib/plugin-accounts.ts",
+      "sha256": "f9d13090b087c92e784955ea03dce8509c03bd6a2b6bddb33c9aa91779cc9fea"
+    },
+    {
+      "path": "apps/web/src/lib/plugin-app-policy.ts",
+      "sha256": "9c96caba3c657bef9d45e803fae0ee9f752692acb0fc52cd059ab0273a410b2c"
+    },
+    {
+      "path": "apps/web/src/lib/plugin-configuration.ts",
+      "sha256": "59c34ebff7a3c4097585666c76dafeecc774801f64eeac88f467e1332549700b"
+    },
+    {
+      "path": "apps/web/src/lib/plugin-release-review.ts",
+      "sha256": "df025f0e192a6e080de861418cc1cf3bfd5fa3492583070d181e1d6748789ef4"
+    },
+    {
+      "path": "apps/web/src/lib/plugin-tools.ts",
+      "sha256": "b3b710f358477c8f0fc82673634ccce728bd3f242539fee25c4d5fd0e70b21da"
+    },
+    {
+      "path": "apps/web/src/lib/proposal-failure.ts",
+      "sha256": "921ce5e9e1d6bafdca10635376ac3ca576ac0480983ea9a5e5ad46beb6cca4b5"
+    },
+    {
+      "path": "apps/web/src/lib/proposal-presentation.ts",
+      "sha256": "31dfb2e798db4b62d355b283cab0403ffa37546bc14e6df01b18aca2bd23b1c9"
+    },
+    {
+      "path": "apps/web/src/lib/protected-workspace-navigation.ts",
+      "sha256": "ed94a15a5f39b9a61189ffa7ebed24d989e7d7a6ebbf6a5edc7767406a4849fe"
+    },
+    {
+      "path": "apps/web/src/lib/protected-workspace-refresh.ts",
+      "sha256": "52ff51ebcc2431f74b9667341b7c431e68d1cc987e60571a6c5e89f1f782563d"
+    },
+    {
+      "path": "apps/web/src/lib/room-dialogue.ts",
+      "sha256": "7cff5a13a85d8f1b9b4c0c6562ac3a9b0f26f40d028c0c327115af8f538edc5c"
+    },
+    {
+      "path": "apps/web/src/lib/room-selection-messages.ts",
+      "sha256": "3556f7a8e87be4c5e2740e621bd6c7a82281a82246f2346f4ed9ed902297f974"
+    },
+    {
+      "path": "apps/web/src/lib/server/action-context.ts",
+      "sha256": "6d53d6a1fb80408d74ea9fd16805fe2287e3efa372e171e0c1a0491d231a3883"
+    },
+    {
+      "path": "apps/web/src/lib/server/action-history-references.ts",
+      "sha256": "705f09a7f26caa301a8e1886f77f8ae6bd3eab31aeb36fe9998c14049cced75b"
+    },
+    {
+      "path": "apps/web/src/lib/server/authorized-tools.ts",
+      "sha256": "1e7e078981b42f2ffa461f77fe2675e68810482ea08a75a2eeca76d5bceea13a"
+    },
+    {
+      "path": "apps/web/src/lib/server/chat-access.ts",
+      "sha256": "b3779046c24c909f5f32cbad3d99de6e65f94e7298b369ee2af903c6c8b3a509"
+    },
+    {
+      "path": "apps/web/src/lib/server/chat-admission.ts",
+      "sha256": "f3b747a2cd8984255dbd448129bdde2183c789cd73e7677bb65cb013433a148a"
+    },
+    {
+      "path": "apps/web/src/lib/server/chat-http.ts",
+      "sha256": "40f537f91d2196c5b945b9120ae5212f33fd7c9c6b13790ca98b306929b5b199"
+    },
+    {
+      "path": "apps/web/src/lib/server/chat-route.ts",
+      "sha256": "a99e56947dbda4878c8143b70edf79c92ca3ef29fc746aadb557eb45a00eced0"
+    },
+    {
+      "path": "apps/web/src/lib/server/core-api.ts",
+      "sha256": "04ba6aba7c460d62b9b0a70a3efa86ffc96b5cddf1dd4da2492cddb98d695bd5"
+    },
+    {
+      "path": "apps/web/src/lib/server/demo-integration-transport.ts",
+      "sha256": "6da77805dfb24c7ea81d45d8c9440a8a69dfb2c1445a94a2cd99c6a8a82fd0f6"
+    },
+    {
+      "path": "apps/web/src/lib/server/demo-runtime-namespace.ts",
+      "sha256": "c5c3ac3998de898850fb53aae5cf23d7292a263199d11d96a252399531207d72"
+    },
+    {
+      "path": "apps/web/src/lib/server/demo-runtime.ts",
+      "sha256": "da5dd68a74ca5fa64033ea6228ef4a66e7df3f95d8ace5617f6ec0148adabfc4"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/application-policy-plan.ts",
+      "sha256": "10cf08a11ff895fc48ff000a57247dcfe8c751e6577a10a992518de6b046ad6b"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/application-policy-runner.ts",
+      "sha256": "08430c4f9d9579a14f164be4b502c1ab3d0a0c28023342e5ae77320ecac7a078"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/case-schema.ts",
+      "sha256": "70b6207d5bdaf41b16d4482448cbce118720cd05037dd804a2765ad99320dd5c"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/input-projection.ts",
+      "sha256": "d8e2ba8f28cc86cca5cfe34c756424db5c1d60511a4d6ec2a2409569b3b7495e"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/oracles.ts",
+      "sha256": "ab84e15826559a2540b0bded4743aadeb8df2a94bdb141bbca8b63c5835daa8e"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/provider-observations.ts",
+      "sha256": "21b8f594fc3044842adc609f85a6468388336b0ad92924d0bef1cea8d9461010"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/provider-response-capture.ts",
+      "sha256": "f956acdf4e3fe3c4ba3c41aa4bfd6e7e01060566522571e17310dca3e2687ed6"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/provider-runner.ts",
+      "sha256": "917010e0d2112b59e1240c6faf3ce494d03c5d065cc06b74eb100fd947aad92d"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/provider-suite.ts",
+      "sha256": "853ee604ac9c8e5e02c730926aebab6223e9a35a24206ae1b0130f0380a3fc85"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/room-fixed-evidence-runner.ts",
+      "sha256": "04448a3c4dd97f098122fade6a1ab30cc630b619f1718d020744f390359718af"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/room-planning-plan.ts",
+      "sha256": "624fd565a73b0136c82b0ceb5184b580e9f9b1633e6c409534105ab256abdd5c"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/room-planning-runner.ts",
+      "sha256": "6b8ca87f7b1f9ca56ac467d26f50e65cccfc951f5cd42b6f16c396ab0a057179"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/runner.ts",
+      "sha256": "fd3a3225d27e20b005a019f15a7a6a711791f754550ea3413660f863020ea8a7"
+    },
+    {
+      "path": "apps/web/src/lib/server/evaluation/workflow-observations.ts",
+      "sha256": "657e04c1ed3c4db0dc287706ff50650db9df5f81fc6a97e610dd117770b81635"
+    },
+    {
+      "path": "apps/web/src/lib/server/groq-error-diagnostics.ts",
+      "sha256": "c87196ecacf6b498527a09c5d06945c64acb4291d5d0ca88381fc8c363a42442"
+    },
+    {
+      "path": "apps/web/src/lib/server/history-authority.ts",
+      "sha256": "0f1b05738815ba481831eee974356e3494a9c79251d7ffd6e310e2da21990514"
+    },
+    {
+      "path": "apps/web/src/lib/server/host-dialogue.ts",
+      "sha256": "c1bd2b58ed908007317d4ba95594c11262cf11d1990aab57dd01597e1b72b3b5"
+    },
+    {
+      "path": "apps/web/src/lib/server/knowledge-context.ts",
+      "sha256": "4c54412a18a543a0dca93bbe7f28bc39054be89573265391a7a4807a230c5435"
+    },
+    {
+      "path": "apps/web/src/lib/server/knowledge-evidence.ts",
+      "sha256": "252b2532d2a096dc668cb8e34efcc37242ba48f86d2384007d89c559128944c5"
+    },
+    {
+      "path": "apps/web/src/lib/server/message-timestamps.ts",
+      "sha256": "71dbdff2267004c4a67df8a4f064e00501c5e83bac341646707940a3bae261ca"
+    },
+    {
+      "path": "apps/web/src/lib/server/model-budgets.ts",
+      "sha256": "087423b1168b3bd680e2cd5e29d72bb585cc808173b4167ec2d40bd8c2d703dd"
+    },
+    {
+      "path": "apps/web/src/lib/server/model-cache-usage.ts",
+      "sha256": "1cc21000de80d7e4bc77296a32df99748be1e81c6f668c8cbf95082a23feef4b"
+    },
+    {
+      "path": "apps/web/src/lib/server/model-config.ts",
+      "sha256": "cd77823db62fc87ffacbcb84916e47295b674eb67c38d50e46b82087246b09a0"
+    },
+    {
+      "path": "apps/web/src/lib/server/model-router-error.ts",
+      "sha256": "df0e09fc59807d000df875cd8ae857aa384c3ba376e2f417069badca090e8ce6"
+    },
+    {
+      "path": "apps/web/src/lib/server/model-router.ts",
+      "sha256": "31d2acc8a754052bbf6bdded566c0dedef6d08352a0e90a903fe7ab43eb80e3d"
+    },
+    {
+      "path": "apps/web/src/lib/server/native-history.ts",
+      "sha256": "491b9efe35a85b73b7266885d42798b218fcc491730242de42eba434530c28d4"
+    },
+    {
+      "path": "apps/web/src/lib/server/plugin-result-context.ts",
+      "sha256": "c745ed42ddc4e1180eabb4f5ea6e18b962b6758ccd9421a667da33b49a676d6f"
+    },
+    {
+      "path": "apps/web/src/lib/server/plugin-result-read.ts",
+      "sha256": "e5900430875cce5ae23c15236704b8f5690af143627abbb3d396248be743258c"
+    },
+    {
+      "path": "apps/web/src/lib/server/protected-workspaces.ts",
+      "sha256": "408ea3a422045750be4da2b7109ce5c87971f86d44d8634efb4fb72f1fb64e41"
+    },
+    {
+      "path": "apps/web/src/lib/server/provider-rate-limits.ts",
+      "sha256": "cfd4688bd57f67de023209622c377464b7734784bb3d76d3a34863bf85400430"
+    },
+    {
+      "path": "apps/web/src/lib/server/routing-pins.ts",
+      "sha256": "1b210e7e2b215c6b00e2f9f1d03144fefbf379309f0ca73189eeb8c2a2c12ac2"
+    },
+    {
+      "path": "apps/web/src/lib/server/server-chat-storage.ts",
+      "sha256": "89aba917e2fe0d6bc19ee412b955cb45255434c37224368f6639438600984de6"
+    },
+    {
+      "path": "apps/web/src/lib/types.ts",
+      "sha256": "f2f4199ff2fcadc6c0dcf62dbbcf9c3bc3fad8108a7baed23fab76f817bc4db1"
+    },
+    {
+      "path": "apps/web/src/lib/use-action-focus-recovery.ts",
+      "sha256": "86ea9b23fd7158378caa61c83c6e4cf773d843d283a913514e931de5e2b1afcf"
+    }
+  ],
+  "compiledStaticFiles": [
+    {
+      "path": "static/chunks/0cfdxyf-0p-m_.js",
+      "sha256": "db4cdd99d18286ab1fa05d54832f3f9d322bda6683e727d1b2f9180b30354d81"
+    },
+    {
+      "path": "static/chunks/0cio0f5edad-_.js",
+      "sha256": "13481a8897045701f265d22fba4862385d924519bc0980eea5a07511bd3a80db"
+    },
+    {
+      "path": "static/chunks/0cz1d0mv5g_q7.js",
+      "sha256": "0973c1d64c88adc8e3c950410cb58b288f72118d5965b78049438deb8f2f9683"
+    },
+    {
+      "path": "static/chunks/0emhk8gange03.js",
+      "sha256": "bb18d66973e92604a52dd2099707be706a027203d68c386915af4f157f45a814"
+    },
+    {
+      "path": "static/chunks/0r8ah6uz1caij.js",
+      "sha256": "0d69708362a16b2b59add30dc665db693794d9d31ce5d51c29191ec37b1d26d1"
+    },
+    {
+      "path": "static/chunks/0z-wwj46n-xps.js",
+      "sha256": "b3f605bc64ca2d03633ee209773bb11bb6a8224a15b406cd07e80720d0e2ec2e"
+    },
+    {
+      "path": "static/chunks/1-5xa7-78wtfs.js",
+      "sha256": "51410addf9a565c8113efcf46621b00836c32344be2507ee867b871dcd6d9481"
+    },
+    {
+      "path": "static/chunks/1a1eo8l2y1dw3.css",
+      "sha256": "c555b8ab514218ace502208f074bcef5bc703f0d93b2f438ff2841164d64e94d"
+    },
+    {
+      "path": "static/chunks/28itoqgbjwz_c.js",
+      "sha256": "d5041ebff975f958d560a236ae4b04b06a0d7992c69918ccd7bf02bc8bb44480"
+    },
+    {
+      "path": "static/chunks/2bzsx-cxs-ieb.js",
+      "sha256": "d13d09ad806b7dc05ecdb77de8b2d0a60b56e28743638805bcbb220d9018dc05"
+    },
+    {
+      "path": "static/chunks/2llkpjxxr_fmy.css",
+      "sha256": "3ab933f7b8d64f2091ef7f1a918ffcfa681724376047b64504271f3040e16e64"
+    },
+    {
+      "path": "static/chunks/2vdqzxx6cex6w.css",
+      "sha256": "d96ee865e67f7767ffd893a1dff0c4f47afb75ae006d4a9798eb11edd118a87c"
+    },
+    {
+      "path": "static/chunks/36d41iolio4_1.js",
+      "sha256": "bc0979f49928189e825f8f9960217680d172d4a2d7d66db0b475667e9df3f1de"
+    },
+    {
+      "path": "static/chunks/37x1x3xwtnm3s.js",
+      "sha256": "1258370d17d4b3e4809752abd9c535991403467c72f5c2cf9f06145faa1b75e9"
+    },
+    {
+      "path": "static/chunks/3esi_yxpf_-re.js",
+      "sha256": "434275f141c7f7eda2bf06ecff5f9d0d1a3da9a4639776b2313161fa0a05dcef"
+    },
+    {
+      "path": "static/chunks/3fo73iud4_29w.js",
+      "sha256": "49fcbf8da5f807ff2ab49804520c5608acd66f4d4c2bcb18bc6e35eae1607a20"
+    },
+    {
+      "path": "static/chunks/3jg-6i_gk6b5g.js",
+      "sha256": "efe68e64f3c4dee1c502d0e743ff693f7a680b026ab95a71d52dc0a454e82ab2"
+    },
+    {
+      "path": "static/chunks/3pbs7uq9d1rw9.js",
+      "sha256": "3152781eaebfd1f1693e200a0398b74f7c555c610a06240c979f46b0f972b4fd"
+    },
+    {
+      "path": "static/chunks/3zv3bkin7qcuu.js",
+      "sha256": "f4ed93fc30802111e480944fbaf1b653b373a41aaf0f6292b343a3d2452643cf"
+    },
+    {
+      "path": "static/chunks/44nkjuyeh0ba2.js",
+      "sha256": "d1132be0111e083fed2c199132efa78690a1ec9311981c7854d947d6ea6c0e55"
+    },
+    {
+      "path": "static/chunks/turbopack-2c3mg3r-05n1w.js",
+      "sha256": "b5f9b5199b99ab6c141f4540f0b7d0fe803c4ecf6956849ecb6e59d3d439272e"
+    },
+    {
+      "path": "static/media/icon.2p1rd9d-sr3rp.svg",
+      "sha256": "a43ffefe91ce8d5fcd9af9f315c6810b790b9e0b30c260af2c19815fe0a7b6cb"
+    },
+    {
+      "path": "static/xOOXBfOXFoXEVj9L4mtmB/_buildManifest.js",
+      "sha256": "9ef64d0b2db47b87ee7accd93ccb0cd9d9454e8e13cb28c1b8624fbce23b895d"
+    },
+    {
+      "path": "static/xOOXBfOXFoXEVj9L4mtmB/_clientMiddlewareManifest.js",
+      "sha256": "5483e3295dc35dfe29ea932efc85341c916f10ff78ff5b0e965e003710893a4a"
+    },
+    {
+      "path": "static/xOOXBfOXFoXEVj9L4mtmB/_ssgManifest.js",
+      "sha256": "678f6ce2cb80b1fe72fc67e7412be6e2ab6ada083111b64f7c40d35e3cba5e00"
+    }
+  ],
+  "buildId": "xOOXBfOXFoXEVj9L4mtmB",
+  "fixtureEvidencePath": "/private/tmp/hasi-plugin-journey-O0e3Hl/evidence.json",
+  "axeBundleSha256": "20c09fe157a8a34a30e241aaa1fcdade657734f08ab379ecfbeb7d45cc46e878",
+  "matrixDriverSha256": "a3efbacd2dda735cb1b68af18911d7a43a24408ed2cfaeb0e5d31ba33d362a35",
+  "scans": [
+    {
+      "name": "admin-expanded-dark-1280-16",
+      "sha256": "d07c77e9c523b045bd1dd11e5edae19b582a42b97c8789611bc6aadf9da620a8",
+      "at": "2026-10-22T05:57:40.605Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 116
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-dark-1280-32",
+      "sha256": "586f21dbafcb364e29a272ab9b376378a85ae10e852ad9146f020e7c8db157e9",
+      "at": "2026-10-22T05:57:40.704Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 120
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-dark-320-16",
+      "sha256": "143e16c8e531e02b8c3bf0a49dd2acd033c1ff12508ece3c8379b8e989682627",
+      "at": "2026-10-22T05:57:39.956Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 5
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-dark-320-32",
+      "sha256": "921ca626f1fc3afe8a65e566199f07f9753872bc53227522e8bdfa51ae2d2268",
+      "at": "2026-10-22T05:57:40.031Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 4
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-dark-375-16",
+      "sha256": "7197516c0a30e781d1b2b0e712509ff401b0f819f24952c7a5de8e01516f81c9",
+      "at": "2026-10-22T05:57:40.105Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 2
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-dark-375-32",
+      "sha256": "50775621879e89ac6cc4d687956c7b50850b0b28cd12d2ebfad0c2e1db7b0295",
+      "at": "2026-10-22T05:57:40.174Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-dark-390-16",
+      "sha256": "b0b93d77d77b479e9c98c03de918ba4abdda1f7e05e04a35c4c4a8ec5d6c3f89",
+      "at": "2026-10-22T05:57:40.248Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 2
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-dark-390-32",
+      "sha256": "6416de3822abb6e8b57562ce6ac2c40d6f3d2328b7e5edb1346aacbb83960e4f",
+      "at": "2026-10-22T05:57:40.315Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-dark-768-16",
+      "sha256": "1717695ac02610810f4f41654c8fcea8a978bbed1220524779d5929e020b47f4",
+      "at": "2026-10-22T05:57:40.398Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 115
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-dark-768-32",
+      "sha256": "b1fcb43ebcd37242a3651241fd93f03ea943dcfbd9a459fb1304ff3fc9ad9615",
+      "at": "2026-10-22T05:57:40.492Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 118
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-light-1280-16",
+      "sha256": "69d4bb9e952bf6692f50f3fffaa90e680c695665f43e3a344bfdf597f94b41f6",
+      "at": "2026-10-22T05:57:42.171Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 117
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-light-1280-32",
+      "sha256": "22a9d17694bc59df086d54752fe7ede8799f9f6d34409791c87807edeb974692",
+      "at": "2026-10-22T05:57:42.333Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 120
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-light-320-16",
+      "sha256": "a0af72ad9c9f786892d2028d48b7227c8ebef9963b4f06d9aec28948a44019ac",
+      "at": "2026-10-22T05:57:41.553Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "admin-expanded-light-320-32",
+      "sha256": "b192146f7cbaea230bf6352425678d58bca517f8b5a52e68b22b24707c135e67",
+      "at": "2026-10-22T05:57:41.626Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 2
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-light-375-16",
+      "sha256": "6395f03f5c6c368e42c6fb12ac1377682028a3f44f3c303c0548bbb9fd293448",
+      "at": "2026-10-22T05:57:41.702Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-light-375-32",
+      "sha256": "9aef337f53f0ea46fd646d1538ea2e2bdbc9d906a66897b518fe8bee1d1ca052",
+      "at": "2026-10-22T05:57:41.765Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 4
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-light-390-16",
+      "sha256": "d86b9b132e526cfbce0468d06a79964ed884094c9993276b5d59c32584b4465c",
+      "at": "2026-10-22T05:57:41.835Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-light-390-32",
+      "sha256": "193c1b44673dd5a82d81f95eef5818e1789fc108f14aa52588278689b2f152b8",
+      "at": "2026-10-22T05:57:41.903Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 4
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-light-768-16",
+      "sha256": "414491b0bf67f7bf6ffc6cff59059480818a954b51b38b448b2fd1001d1c6d66",
+      "at": "2026-10-22T05:57:41.986Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 116
+        }
+      ]
+    },
+    {
+      "name": "admin-expanded-light-768-32",
+      "sha256": "6d923205e33fd8796ccdc1fd695276f22304a3a4eeb18d48037961154c481789",
+      "at": "2026-10-22T05:57:42.059Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Alles im\u00dcberblick."
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 119
+        }
+      ]
+    },
+    {
+      "name": "bookings-dark-1280-16",
+      "sha256": "df2308e3fffa0efada51b849981d9a052a48e278be9fe038848f633dd3382d55",
+      "at": "2026-10-22T05:56:01.651Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 30
+        }
+      ]
+    },
+    {
+      "name": "bookings-dark-1280-32",
+      "sha256": "192e9c5ca527fafac62b2b1606d6daf08e35a41d0227f7cd868fbd19a827120d",
+      "at": "2026-10-22T05:56:01.747Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 31
+        }
+      ]
+    },
+    {
+      "name": "bookings-dark-320-16",
+      "sha256": "727c612d083e5c9f63253f2ac059cdc5f684cb8b8556caee8b01e2f8d94460f4",
+      "at": "2026-10-22T05:56:01.230Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "bookings-dark-320-32",
+      "sha256": "0f9ceb9d4bec9f70ac3efc1c066b12d9861394778e4a0a6b20878f66a99b8bf6",
+      "at": "2026-10-22T05:56:01.262Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "name": "bookings-dark-375-16",
+      "sha256": "cb02e25b0dfe9a8520f381064951fbf787002072aeacf7eb0796ee8293aa3d16",
+      "at": "2026-10-22T05:56:01.302Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "bookings-dark-375-32",
+      "sha256": "291d45ba57ab41db90b46b595873dca77e50f1a82046a943cef555652cb40465",
+      "at": "2026-10-22T05:56:01.333Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "name": "bookings-dark-390-16",
+      "sha256": "2e4759c15883e5ef9596dcf21e1a6583dba3e28f1f7cb7b7f27ec7afb90ca45e",
+      "at": "2026-10-22T05:56:01.365Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "bookings-dark-390-32",
+      "sha256": "0ca67ec266ecd8c6d27821c7968d9292d2f8213d928d753726d587a64c93bb34",
+      "at": "2026-10-22T05:56:01.396Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "name": "bookings-dark-768-16",
+      "sha256": "62fe7de2e5b83c587e64f6be6ae814f7a611ed26afcbd70b99e3ce2f8244e743",
+      "at": "2026-10-22T05:56:01.439Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 30
+        }
+      ]
+    },
+    {
+      "name": "bookings-dark-768-32",
+      "sha256": "70b04af7897aff843e7a3c7acbe2e8d29ebfc84758b42ea9da769a1c06c5112e",
+      "at": "2026-10-22T05:56:01.521Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 31
+        }
+      ]
+    },
+    {
+      "name": "bookings-light-1280-16",
+      "sha256": "1fd5bf3488914407cd9b1f5aab0990253f67c0269d7e387802cbdb2d07d04a66",
+      "at": "2026-10-22T05:56:02.879Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 30
+        }
+      ]
+    },
+    {
+      "name": "bookings-light-1280-32",
+      "sha256": "edb9111ce6cd039607ec197f710508d79a46e9cbb218a85ac969e6ea3a152f36",
+      "at": "2026-10-22T05:56:02.974Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 31
+        }
+      ]
+    },
+    {
+      "name": "bookings-light-320-16",
+      "sha256": "c978b77f67a82f58c5f33f25bf22e812b5d927c9f0ddc81082e98b2ce24f409b",
+      "at": "2026-10-22T05:56:02.580Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "bookings-light-320-32",
+      "sha256": "f0bf7e71497a9b556109bc0e154693879a86081e71cc349b12dbe9fe4dc75917",
+      "at": "2026-10-22T05:56:02.611Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "name": "bookings-light-375-16",
+      "sha256": "b4d8bc29f775eb8b42b6549c90bb0e8fcad6300e9556488a2d380a80a1c043be",
+      "at": "2026-10-22T05:56:02.648Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "bookings-light-375-32",
+      "sha256": "738eb860ac9e580b555537603e5c84ca5daca9f8a976c59b8cca219e689f0f66",
+      "at": "2026-10-22T05:56:02.675Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "name": "bookings-light-390-16",
+      "sha256": "d76cece4ed8f4ea7fc78991c3b8a45a383852f77caa1d06bcf1245e358bfefb4",
+      "at": "2026-10-22T05:56:02.706Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "bookings-light-390-32",
+      "sha256": "5d307c47d19d37bbf0390aaef215c0e856eb43986ee3392927be63e05231fc71",
+      "at": "2026-10-22T05:56:02.739Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "name": "bookings-light-768-16",
+      "sha256": "99a49f0af814ec4137874f57ce170c6d1eaabc45abd8554080cfd3857b851600",
+      "at": "2026-10-22T05:56:02.779Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 30
+        }
+      ]
+    },
+    {
+      "name": "bookings-light-768-32",
+      "sha256": "b230ff3620b94946609c1fcc89d4a2abf1ec52d669affdc8377f8530d0b73bf5",
+      "at": "2026-10-22T05:56:02.809Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Meine Buchungen"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 2
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 31
+        }
+      ]
+    },
+    {
+      "name": "chat-dark-1280-16",
+      "sha256": "936d6dc635050b534d9598e9392d4b6fcce13a6ff85f74279ace5a9b8b4da523",
+      "at": "2026-10-22T05:54:04.324Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 360,
+            "y": 566.5,
+            "width": 798,
+            "height": 48,
+            "top": 566.5,
+            "right": 1158,
+            "bottom": 614.5,
+            "left": 360
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 28
+        }
+      ]
+    },
+    {
+      "name": "chat-dark-1280-32",
+      "sha256": "3d8710a24df5f66a3ccc7daab2e9d7518c283e35f71a4a603ce682c029eac059",
+      "at": "2026-10-22T05:54:04.411Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 360,
+            "y": 502,
+            "width": 798,
+            "height": 96,
+            "top": 502,
+            "right": 1158,
+            "bottom": 598,
+            "left": 360
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 24
+        }
+      ]
+    },
+    {
+      "name": "chat-dark-320-16",
+      "sha256": "e7cb89ef24062ec0b22b11a3303f55b992217f6f66b96f88e3482fd28356cc9d",
+      "at": "2026-10-22T05:54:03.470Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 615,
+            "width": 270,
+            "height": 48,
+            "top": 615,
+            "right": 295,
+            "bottom": 663,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "name": "chat-dark-320-32",
+      "sha256": "4a3d7b0ae9ef74fa44b2363df1cdfd462f82556a9b70293ccf81262b31255b85",
+      "at": "2026-10-22T05:54:03.594Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 397,
+            "width": 270,
+            "height": 96,
+            "top": 397,
+            "right": 295,
+            "bottom": 493,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "name": "chat-dark-375-16",
+      "sha256": "23c65db13d4e493eaf498328c5587e55c0d7632fbebfd6af6b49073356349b53",
+      "at": "2026-10-22T05:54:03.698Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 630,
+            "width": 325,
+            "height": 48,
+            "top": 630,
+            "right": 350,
+            "bottom": 678,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "name": "chat-dark-375-32",
+      "sha256": "3ce6ed754973770a164356adcd34dc66577545329c9b853c95ccc3c90309cec3",
+      "at": "2026-10-22T05:54:03.795Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 427,
+            "width": 325,
+            "height": 96,
+            "top": 427,
+            "right": 350,
+            "bottom": 523,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "name": "chat-dark-390-16",
+      "sha256": "718aa1aecd941908d5b2097e1fab36bfc1f808b1d5208af633c2b4bc2603b49b",
+      "at": "2026-10-22T05:54:03.902Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 630,
+            "width": 340,
+            "height": 48,
+            "top": 630,
+            "right": 365,
+            "bottom": 678,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "name": "chat-dark-390-32",
+      "sha256": "986b79bdc911ce0a2e5b378b781687fe5955a85def2788e554af1422f89879fd",
+      "at": "2026-10-22T05:54:03.972Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 427,
+            "width": 340,
+            "height": 96,
+            "top": 427,
+            "right": 365,
+            "bottom": 523,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "name": "chat-dark-768-16",
+      "sha256": "23a3b582b04136e08e6795b2d194f1b8e3f6f16b4fe1dc139afe3b9896c1f753",
+      "at": "2026-10-22T05:54:04.120Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 246,
+            "y": 870.5,
+            "width": 482,
+            "height": 48,
+            "top": 870.5,
+            "right": 728,
+            "bottom": 918.5,
+            "left": 246
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 10
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 34
+        }
+      ]
+    },
+    {
+      "name": "chat-dark-768-32",
+      "sha256": "c5ca2eb94741187e44cdd8eed01b872bfdd58ebdd19970971cbdc2164b9cacd2",
+      "at": "2026-10-22T05:54:04.207Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 246,
+            "y": 773,
+            "width": 482,
+            "height": 96,
+            "top": 773,
+            "right": 728,
+            "bottom": 869,
+            "left": 246
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 10
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 29
+        }
+      ]
+    },
+    {
+      "name": "chat-light-1280-16",
+      "sha256": "3df3f293df3f6e1d9485dad990e5c2c2f8059c8e3ab06264c479d37a053bbeba",
+      "at": "2026-10-22T05:54:06.070Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 360,
+            "y": 566.5,
+            "width": 798,
+            "height": 48,
+            "top": 566.5,
+            "right": 1158,
+            "bottom": 614.5,
+            "left": 360
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 28
+        }
+      ]
+    },
+    {
+      "name": "chat-light-1280-32",
+      "sha256": "86af78f0a8d622595b6e5b3b1fb34ad04036d5932d613206c52be42ca48734f9",
+      "at": "2026-10-22T05:54:06.159Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 360,
+            "y": 502,
+            "width": 798,
+            "height": 96,
+            "top": 502,
+            "right": 1158,
+            "bottom": 598,
+            "left": 360
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 24
+        }
+      ]
+    },
+    {
+      "name": "chat-light-320-16",
+      "sha256": "27a8270b5d99f8946d34ac0e141c89804fab97a27f8c6176f775d8daa9d4c667",
+      "at": "2026-10-22T05:54:05.279Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 615,
+            "width": 270,
+            "height": 48,
+            "top": 615,
+            "right": 295,
+            "bottom": 663,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "name": "chat-light-320-32",
+      "sha256": "eea9bc8def9fd98c72966022ca1ced61d8f103dd8d9b395e7a4525dec1c188b8",
+      "at": "2026-10-22T05:54:05.370Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 397,
+            "width": 270,
+            "height": 96,
+            "top": 397,
+            "right": 295,
+            "bottom": 493,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "name": "chat-light-375-16",
+      "sha256": "4aefbaee3b3fbab6d804657bd12e171465cfd457c3fddfe83ea38aa970025394",
+      "at": "2026-10-22T05:54:05.446Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 630,
+            "width": 325,
+            "height": 48,
+            "top": 630,
+            "right": 350,
+            "bottom": 678,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "name": "chat-light-375-32",
+      "sha256": "a8c29a52c645d3713d2cdedc28acba5573a06d070effa2edd9044d6f11b20e2d",
+      "at": "2026-10-22T05:54:05.542Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 427,
+            "width": 325,
+            "height": 96,
+            "top": 427,
+            "right": 350,
+            "bottom": 523,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "name": "chat-light-390-16",
+      "sha256": "82bbdfb8924dd7a78c0cb72946df5914daf5d5863dcce693bbdc58c192ea1a9f",
+      "at": "2026-10-22T05:54:05.649Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 630,
+            "width": 340,
+            "height": 48,
+            "top": 630,
+            "right": 365,
+            "bottom": 678,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "name": "chat-light-390-32",
+      "sha256": "f874cdf6ddb8b4e6bb8da231261800457dde5f4b06f6f940302321a73f2f5237",
+      "at": "2026-10-22T05:54:05.728Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 427,
+            "width": 340,
+            "height": 96,
+            "top": 427,
+            "right": 365,
+            "bottom": 523,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "name": "chat-light-768-16",
+      "sha256": "5e486e92d56a0f9d9b800a6bb3d6157bd1d8a1429832ec1da5836bfd82c641fd",
+      "at": "2026-10-22T05:54:05.799Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 246,
+            "y": 870.5,
+            "width": 482,
+            "height": 48,
+            "top": 870.5,
+            "right": 728,
+            "bottom": 918.5,
+            "left": 246
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 10
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 34
+        }
+      ]
+    },
+    {
+      "name": "chat-light-768-32",
+      "sha256": "7681d2dd9d74fceec6676963635e7c192fea08a528452075f42fc70b39666326",
+      "at": "2026-10-22T05:54:05.956Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 2,
+      "groupHeadingIds": [
+        "chat-room-results-_r_1q_-heading",
+        "chat-room-results-_r_23_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 246,
+            "y": 773,
+            "width": 482,
+            "height": 96,
+            "top": 773,
+            "right": 728,
+            "bottom": 869,
+            "left": 246
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 10
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 29
+        }
+      ]
+    },
+    {
+      "name": "chat-live-dark-1280-16",
+      "sha256": "a32088b563100ae2fac60d7ac109d68a1a5e28cd5eae25acaa6c35fa697a0036",
+      "at": "2026-10-22T05:54:16.873Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 360,
+            "y": 566.5,
+            "width": 798,
+            "height": 48,
+            "top": 566.5,
+            "right": 1158,
+            "bottom": 614.5,
+            "left": 360
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 28
+        }
+      ]
+    },
+    {
+      "name": "chat-live-dark-1280-32",
+      "sha256": "b42fe2b1c489a6d6d5c995f6b5ff69e3e871b254eaa3b1634c53f3d5a9826cb2",
+      "at": "2026-10-22T05:54:16.973Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 360,
+            "y": 502,
+            "width": 798,
+            "height": 96,
+            "top": 502,
+            "right": 1158,
+            "bottom": 598,
+            "left": 360
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 24
+        }
+      ]
+    },
+    {
+      "name": "chat-live-dark-320-16",
+      "sha256": "88694c058774e069e0121c3190fc920896c8f8076066346fd6123ded45904bf1",
+      "at": "2026-10-22T05:54:16.051Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_2k_-heading",
+        "chat-room-results-_r_2t_-heading",
+        "chat-room-results-_r_34_-heading"
+      ],
+      "slots": [
+        {
+          "role": "group",
+          "label": "Freie Zeiten f\u00fcr Amrum 1 (1J.2.34)"
+        },
+        {
+          "role": "group",
+          "label": "Freie Zeiten f\u00fcr Amrum 2 (1J.2.34)"
+        },
+        {
+          "role": "group",
+          "label": "Freie Zeiten f\u00fcr Arbeitsplatz 1"
+        },
+        {
+          "role": "group",
+          "label": "Freie Zeiten f\u00fcr Arbeitsplatz in 1J.1.02"
+        }
+      ],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 615,
+            "width": 270,
+            "height": 48,
+            "top": 615,
+            "right": 295,
+            "bottom": 663,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        }
+      ]
+    },
+    {
+      "name": "chat-live-dark-320-32",
+      "sha256": "4e83caecd2be7db2be47ceb615380d3eecc993b8ac2b29d50d03b42f9c5bd0b2",
+      "at": "2026-10-22T05:54:16.156Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_2k_-heading",
+        "chat-room-results-_r_2t_-heading",
+        "chat-room-results-_r_34_-heading"
+      ],
+      "slots": [
+        {
+          "role": "group",
+          "label": "Freie Zeiten f\u00fcr Amrum 1 (1J.2.34)"
+        },
+        {
+          "role": "group",
+          "label": "Freie Zeiten f\u00fcr Amrum 2 (1J.2.34)"
+        },
+        {
+          "role": "group",
+          "label": "Freie Zeiten f\u00fcr Arbeitsplatz 1"
+        },
+        {
+          "role": "group",
+          "label": "Freie Zeiten f\u00fcr Arbeitsplatz in 1J.1.02"
+        }
+      ],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 397,
+            "width": 270,
+            "height": 96,
+            "top": 397,
+            "right": 295,
+            "bottom": 493,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        }
+      ]
+    },
+    {
+      "name": "chat-live-dark-375-16",
+      "sha256": "e227e453a551b6a937af29d1991be408cab086b8729cbc65b64ff4d67c6ad29d",
+      "at": "2026-10-22T05:54:16.277Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 630,
+            "width": 325,
+            "height": 48,
+            "top": 630,
+            "right": 350,
+            "bottom": 678,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        }
+      ]
+    },
+    {
+      "name": "chat-live-dark-375-32",
+      "sha256": "de7188287543f376345521c352c5c2391a5c88f6526041b94f8858ea64e8bc60",
+      "at": "2026-10-22T05:54:16.367Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 427,
+            "width": 325,
+            "height": 96,
+            "top": 427,
+            "right": 350,
+            "bottom": 523,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        }
+      ]
+    },
+    {
+      "name": "chat-live-dark-390-16",
+      "sha256": "509f304564b354fd259488a9c06dfa9cf8721e9fada22d0189a934ec3983053b",
+      "at": "2026-10-22T05:54:16.468Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 630,
+            "width": 340,
+            "height": 48,
+            "top": 630,
+            "right": 365,
+            "bottom": 678,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        }
+      ]
+    },
+    {
+      "name": "chat-live-dark-390-32",
+      "sha256": "5da1a2ab0f4c05e1c6b4e1a76bb113a83edc43cc155ad53b34cb55bf3e04e8d1",
+      "at": "2026-10-22T05:54:16.566Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 427,
+            "width": 340,
+            "height": 96,
+            "top": 427,
+            "right": 365,
+            "bottom": 523,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        }
+      ]
+    },
+    {
+      "name": "chat-live-dark-768-16",
+      "sha256": "a7409877d447a77b4966a5ef241ec706e853f3a4e4549ddac17d2f48b8ad834a",
+      "at": "2026-10-22T05:54:16.651Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 246,
+            "y": 870.5,
+            "width": 482,
+            "height": 48,
+            "top": 870.5,
+            "right": 728,
+            "bottom": 918.5,
+            "left": 246
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 12
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 34
+        }
+      ]
+    },
+    {
+      "name": "chat-live-dark-768-32",
+      "sha256": "d8199be8e5307381f04eab467c6600c939712dabd2a1ff6752d5149fc6258ca9",
+      "at": "2026-10-22T05:54:16.773Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 246,
+            "y": 773,
+            "width": 482,
+            "height": 96,
+            "top": 773,
+            "right": 728,
+            "bottom": 869,
+            "left": 246
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 12
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 29
+        }
+      ]
+    },
+    {
+      "name": "chat-live-light-1280-16",
+      "sha256": "f1b5585b536436fecb0ba31afb20fe5f3afd9903fbc6505ac50d8f92200a774b",
+      "at": "2026-10-22T05:54:18.632Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 360,
+            "y": 566.5,
+            "width": 798,
+            "height": 48,
+            "top": 566.5,
+            "right": 1158,
+            "bottom": 614.5,
+            "left": 360
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 28
+        }
+      ]
+    },
+    {
+      "name": "chat-live-light-1280-32",
+      "sha256": "bd24ea7d013a9d91ddeeda29a016cd213e9a5ce51111626d89a67550475e8df6",
+      "at": "2026-10-22T05:54:18.706Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 360,
+            "y": 502,
+            "width": 798,
+            "height": 96,
+            "top": 502,
+            "right": 1158,
+            "bottom": 598,
+            "left": 360
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 24
+        }
+      ]
+    },
+    {
+      "name": "chat-live-light-320-16",
+      "sha256": "eb9a06e75394daff5ddd72ee1ab35b4631676071edaaea0e694c7eaabed9ecec",
+      "at": "2026-10-22T05:54:17.829Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 615,
+            "width": 270,
+            "height": 48,
+            "top": 615,
+            "right": 295,
+            "bottom": 663,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        }
+      ]
+    },
+    {
+      "name": "chat-live-light-320-32",
+      "sha256": "b46bfdbc37aef257b9d49f5909040a6b2a4145c6ef714033065a862cd38a1351",
+      "at": "2026-10-22T05:54:17.906Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 397,
+            "width": 270,
+            "height": 96,
+            "top": 397,
+            "right": 295,
+            "bottom": 493,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        }
+      ]
+    },
+    {
+      "name": "chat-live-light-375-16",
+      "sha256": "a6dc6e9ea00daae0338142f22f624ae71e56a48104ec2e1f2d143aa62b3bf051",
+      "at": "2026-10-22T05:54:17.990Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 630,
+            "width": 325,
+            "height": 48,
+            "top": 630,
+            "right": 350,
+            "bottom": 678,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        }
+      ]
+    },
+    {
+      "name": "chat-live-light-375-32",
+      "sha256": "8ed838fb4acc473b01a80e95d6f32dfa97c6bf6f9b7f19f483c69b2a1efe174e",
+      "at": "2026-10-22T05:54:18.109Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 427,
+            "width": 325,
+            "height": 96,
+            "top": 427,
+            "right": 350,
+            "bottom": 523,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        }
+      ]
+    },
+    {
+      "name": "chat-live-light-390-16",
+      "sha256": "b0728fc26d62c6ae069f64b43ce15f490cac5454c3288972cd54c636e2f91ddd",
+      "at": "2026-10-22T05:54:18.219Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 630,
+            "width": 340,
+            "height": 48,
+            "top": 630,
+            "right": 365,
+            "bottom": 678,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        }
+      ]
+    },
+    {
+      "name": "chat-live-light-390-32",
+      "sha256": "e73c3cd750790f79277f4f9aa632822c4c35e04ef51b375adc3857482265fb99",
+      "at": "2026-10-22T05:54:18.324Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 25,
+            "y": 427,
+            "width": 340,
+            "height": 96,
+            "top": 427,
+            "right": 365,
+            "bottom": 523,
+            "left": 25
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 11
+        }
+      ]
+    },
+    {
+      "name": "chat-live-light-768-16",
+      "sha256": "3379aa7c20888e8f02d8835c23a90f9dedfb816b2da1b0e6285bb0eb7d49c9b8",
+      "at": "2026-10-22T05:54:18.436Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 246,
+            "y": 870.5,
+            "width": 482,
+            "height": 48,
+            "top": 870.5,
+            "right": 728,
+            "bottom": 918.5,
+            "left": 246
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 12
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 34
+        }
+      ]
+    },
+    {
+      "name": "chat-live-light-768-32",
+      "sha256": "45c5d09a0f1a8f1a7420f233d1edfbd2efb5ef20e0be9c19739ddc22c10adf5b",
+      "at": "2026-10-22T05:54:18.530Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "Unterhaltung"
+      ],
+      "roomGroups": 3,
+      "groupHeadingIds": [
+        "chat-room-results-_r_3e_-heading",
+        "chat-room-results-_r_3n_-heading",
+        "chat-room-results-_r_3u_-heading"
+      ],
+      "slots": [],
+      "actionStates": [
+        "Buchungsvorschlag"
+      ],
+      "composer": [
+        {
+          "rect": {
+            "x": 246,
+            "y": 773,
+            "width": 482,
+            "height": 96,
+            "top": 773,
+            "right": 728,
+            "bottom": 869,
+            "left": 246
+          },
+          "visible": true
+        }
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 12
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 29
+        }
+      ]
+    },
+    {
+      "name": "source-dark-1280-16",
+      "sha256": "f70e01ea85f9a7fb0d0d83ca29f02e5a3ed606b06011390d983a294ff8780d02",
+      "at": "2026-10-22T05:54:51.958Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 1
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 24
+        }
+      ]
+    },
+    {
+      "name": "source-dark-1280-32",
+      "sha256": "447a3eaaa18d839996bde0ac45a0a8499d87253139a74a57df0fbc33093ff0e1",
+      "at": "2026-10-22T05:54:52.007Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 1
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 24
+        }
+      ]
+    },
+    {
+      "name": "source-dark-320-16",
+      "sha256": "002602313dbb6b02760af62c14f6cb7a51d0e35552673dac07980cc53c6953da",
+      "at": "2026-10-22T05:54:51.684Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "source-dark-320-32",
+      "sha256": "eb2c3c4e9bb2a859e14f293e4ca88b4ef4cf49ab92de9982b537c693d7972ba8",
+      "at": "2026-10-22T05:54:51.713Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "source-dark-375-16",
+      "sha256": "6a39f3b9bdfeeaa24264fe157e94f3a36c182363cd05d6e667ba1b8c3e901cfb",
+      "at": "2026-10-22T05:54:51.742Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "source-dark-375-32",
+      "sha256": "fbda70891df2ab3991340f0784f9e142c59819c2a1b9e19db9f0f2e4b8158ed0",
+      "at": "2026-10-22T05:54:51.774Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "source-dark-390-16",
+      "sha256": "083b7d8f9bb0f40dcfc309a418baf768c1c0a98825e097e089f01df3d4a7c553",
+      "at": "2026-10-22T05:54:51.810Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "source-dark-390-32",
+      "sha256": "4fc69c9649059e82c2d0a20a879917265d1be512e3815432c29faccadb0c858c",
+      "at": "2026-10-22T05:54:51.834Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "source-dark-768-16",
+      "sha256": "d5f76f54db76534be85dbe59a6fb86c459aae5e187ed7211c99af2083e1c6a30",
+      "at": "2026-10-22T05:54:51.867Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "16px",
+        "theme": "dark"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 1
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 24
+        }
+      ]
+    },
+    {
+      "name": "source-dark-768-32",
+      "sha256": "794ccac8a4943613e47f06cd26db715811d0df8862b1fa0f0fced0103eb42150",
+      "at": "2026-10-22T05:54:51.921Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 1
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 24
+        }
+      ]
+    },
+    {
+      "name": "source-light-1280-16",
+      "sha256": "f50d67b65f167cd1b68be8c7fb1583c5f9b8264419269f35904ae94685736b8c",
+      "at": "2026-10-22T05:54:53.227Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 1
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 24
+        }
+      ]
+    },
+    {
+      "name": "source-light-1280-32",
+      "sha256": "e85fd8159bf0cc28c992102df69b7464fd21fa9539d42903d7d52076e1fe4391",
+      "at": "2026-10-22T05:54:53.350Z",
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 1
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 24
+        }
+      ]
+    },
+    {
+      "name": "source-light-320-16",
+      "sha256": "d15577767f053df6e335bef7e1e1874f6ca1163b80a6a77ceb67ab2e92d5af83",
+      "at": "2026-10-22T05:54:52.894Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "source-light-320-32",
+      "sha256": "a3438363530bd51109bfbbd3c5019dd740f3f66339e33fd75f873a6de2e362e9",
+      "at": "2026-10-22T05:54:52.920Z",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 320,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "source-light-375-16",
+      "sha256": "df0b78f1d8914bbf4045d65810f099a525a95b6c12299c9e22d7faf3e0c3b854",
+      "at": "2026-10-22T05:54:52.952Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "source-light-375-32",
+      "sha256": "dfbd02e3d49fbe7fa1e1c3158658438c5605869cea0a1a407bdf01066269afaa",
+      "at": "2026-10-22T05:54:52.982Z",
+      "viewport": {
+        "width": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "source-light-390-16",
+      "sha256": "ad7ee629428c09b6432346b5d37f6cea6fa09389eb465ef51b431ddd821bb569",
+      "at": "2026-10-22T05:54:53.009Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "source-light-390-32",
+      "sha256": "2aaca3cb12c846cea41bc382373a77b721a172f23841bee501ed8d6910f999d0",
+      "at": "2026-10-22T05:54:53.034Z",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "source-light-768-16",
+      "sha256": "6421a6f7bcff89324a037d7b07309c0fc9a1fe788b86fc658fca8a3bf3a7e049",
+      "at": "2026-10-22T05:54:53.069Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "16px",
+        "theme": "light"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 1
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 24
+        }
+      ]
+    },
+    {
+      "name": "source-light-768-32",
+      "sha256": "1ff5417bba8b6442ea0aca302c636a96b9e6d5bb709585df4c7a2958259b74c5",
+      "at": "2026-10-22T05:54:53.184Z",
+      "viewport": {
+        "width": 768,
+        "height": 1024,
+        "scrollWidth": 768,
+        "root": "32px",
+        "theme": "light"
+      },
+      "h1": [
+        "FAQ: Warum funktioniert mein VPN nicht?"
+      ],
+      "roomGroups": 0,
+      "groupHeadingIds": [],
+      "slots": [],
+      "actionStates": [],
+      "composer": [],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-valid-attr-value",
+          "nodes": 1
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 24
+        }
+      ]
+    }
+  ],
+  "counterObservations": {
+    "originalHeadingAndLandmark": {
+      "revision": "a9bc2d389135b63e5012b1413fcb6cebc2c51951",
+      "sha256": "0bb29fbf960df7d1bd5c0e0bfa0a96a79b49366217d2de94c58997c6eb2883af",
+      "viewport": {
+        "width": 320,
+        "height": 740,
+        "scrollWidth": 320,
+        "root": "32px",
+        "theme": "dark"
+      },
+      "violations": [
+        {
+          "id": "heading-order",
+          "nodes": 1
+        },
+        {
+          "id": "landmark-unique",
+          "nodes": 1
+        }
+      ]
+    },
+    "bookingOverflow": {
+      "revision": "20458cd96fcb6a6a499fee25b9b0be03aedfa905",
+      "sha256": "8d4307c8fdba3c69082595ce84bc3b1f1e7842beebf7fa2418150198d91dc797",
+      "viewport": {
+        "width": 320,
+        "height": 844,
+        "scrollWidth": 351,
+        "root": "32px",
+        "theme": "light"
+      }
+    },
+    "slotNameReview": {
+      "revision": "20458cd96fcb6a6a499fee25b9b0be03aedfa905",
+      "sha256": "bc5f2b87eeff804182b786e77315e9755f3782bdce62be0208579d461729d6be",
+      "incomplete": {
+        "id": "aria-prohibited-attr",
+        "nodes": 4,
+        "reason": "aria-label on a generic div without a naming role"
+      }
+    }
+  },
+  "sourceReturn": {
+    "active": "chat-fc645009-e2da-4faf-b63d-c8e6799d099d-message-57670fb4-5650-431d-ac1c-5f8be9f1950f",
+    "draft": "Ungesendeter Entwurf: **Markdown** bleibt erhalten."
+  },
+  "cleanup": {
+    "ownedDatabaseStoppedAndRemoved": true,
+    "privateHomeRemoved": true,
+    "nextDeclarationRestored": true,
+    "sourceRevision": "af974beb60050f7338fc430df7398760f69aa1c9"
+  },
+  "limits": [
+    "Automated Chromium desktop engine with CSS viewport overrides; not a native iPhone or assistive-technology assessment.",
+    "16px/32px root-font stress; not browser text-only zoom or native Dynamic Type.",
+    "Only two scans retained live slot groups; periodic authorization refresh cleared temporary display availability in the other scans.",
+    "Closed-popup controls and gradient contrast remain incomplete scanner review items.",
+    "One rapid booking sequence interrupted; slower explicit retry succeeded. No complete dialogue, network recovery or M6/M7 acceptance follows.",
+    "No actual provider calls; one booking in each of two owned disposable contract fixtures, no live business write."
+  ]
+}
