@@ -87,9 +87,10 @@ The model clock/status are stable across isolated runs. Actual fixture action
 dates are private and dynamic, and preparation/observation are excluded from
 provider latency. These cases qualify unknown-outcome response/control behavior,
 not calendar interpretation, initial search/planning, the original static cases,
-all workflow families or semantic correctness. Blinded human scoring, access and
-injection fixtures, approved thresholds and measured live per-profile results
-remain separate M6 work. Local fake-provider tests are not live-provider evidence.
+all workflow families or semantic correctness. Access/injection fixtures and
+measured live per-profile results remain technical M6 work. Under V11, blinded
+human answer scoring belongs to final M8-A11/A12; proposed thresholds retain their
+existing approval status. Local fake-provider tests are not live-provider evidence.
 
 The [first ten-call unknown-outcome development run](../verification/2026-10-21/provider-unknown-outcome-run.md)
 now records actual observations across five approved synthetic profiles. Its
@@ -179,6 +180,7 @@ actual image identity and runtime environment binding before a live run. The
 ordinary app's database, sessions and budget must not be recreated for this
 operator container. Do not publish a GHCR release as part of this workflow.
 
-Remaining M6 work includes reviewed/adjudicated cases, observed workflow and
-adversarial comparisons, approved decision thresholds, actual bounded provider
-results and blinded human scoring. CACHE-A1 remains independently unresolved.
+Remaining technical M6 work includes observed workflow/adversarial comparisons
+and actual bounded provider results. Under V11, remaining human answer review and
+adjudication belong to final M8-A11/A12; the benchmark's proposed counts and
+thresholds remain unadopted. CACHE-A1 remains unresolved under M8-A10.

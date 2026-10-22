@@ -109,9 +109,10 @@ qualify the full evaluation lifecycle. The generic
 `applicationEvents` and `trustedApplicationContext` draft fixture fields have not
 been declared observations or silently treated as runtime evidence. The other
 workflow/access/injection cases require event types appropriate to their effects.
-Gold review/adjudication, agreed thresholds, the larger separated corpus and the
-instrumented budgeted per-profile comparison remain in M6 (#53). Institutional
-source/vendor semantics remain in M8 (#80).
+The instrumented budgeted per-profile comparison remains technical M6 (#53).
+Under V11, human answer review/adjudication belongs to final M8-A11/A12; proposed
+benchmark counts/thresholds retain their existing approval status and no draft
+case becomes gold. Institutional source/vendor semantics remain M8 (#80).
 
 Contract-only checkpoint on 2026-10-20 (`c7d0aa1`): 45 focused tests in the two existing harness
 suites and two new workflow suites passed, as did root/web typechecking and
@@ -141,4 +142,5 @@ contains the provider answer/citations/proposals, not synthetic measurements.
 Only independently obtained events can grade the trace. The runtime variant
 model input contains sanitized status through frozen evidence; there is no
 model tool executor or production action-context injection. This does not
-complete the remaining access/injection families or M6 human review.
+complete the remaining technical access/injection families or the human answer
+review now assigned to final M8-A11/A12 under V11.

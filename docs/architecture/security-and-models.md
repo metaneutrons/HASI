@@ -175,9 +175,10 @@ unknown; the conservative reservation must remain rather than inventing usage.
 
 This prevents the specific accepted text-only/no-lookup path. It does not prove
 that the model chose the right tool, query or sources, that a later answer is
-supported, or that prompt injection was defeated. Those remain independently
-observed and human-reviewed M6 requirements. Actual provider qualification is
-separate from native-adapter tests with synthetic transports.
+supported, or that prompt injection was defeated. Objective tool, source and
+injection behavior remains independently observed under the M6/M7 technical requirements. Human assessment of generated answer
+content belongs to final M8-A11/A12. Actual provider qualification is separate
+from native-adapter tests with synthetic transports.
 
 ## Flexible model selection
 

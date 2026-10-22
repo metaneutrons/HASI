@@ -173,8 +173,9 @@ separate opt-in fixed-evidence path through the existing router and shared
 budget. Its tariff-based estimates and literal citation assertions are not
 semantic scores, gold labels or completed provider comparison results. The
 [first bounded 35-answer development observations](../verification/2026-10-20/provider-development-run.md)
-record complete usage and concrete citation/grounding defects; formal workflow
-comparison and blinded human adjudication remain open.
+record complete usage and concrete citation/grounding defects. Objective workflow
+comparison remains technical M6 work; human answer adjudication belongs to final
+M8-A11/A12. Both remain open until their respective evidence exists.
 
 The [ten-answer observed unknown-outcome development run](../verification/2026-10-21/provider-unknown-outcome-run.md)
 adds actual per-profile responses to the two separately registered runtime variants.
@@ -249,8 +250,10 @@ league table and add cases where candidate performance is indistinguishable.
 These are initial discussion thresholds, not achieved results or proof of
 safety. Critical cases remain hard gates even if aggregate percentages pass.
 Grade factual claims and tool effects with source-backed rules/fixture oracles
-where possible. For answers, use blinded human scoring with an explicit rubric
-(essential facts, completeness, material errors, citations, helpfulness).
+where possible. Human scoring of answers belongs to final M8-A11/A12 under
+V11, using the unchanged blinded rubric (essential facts, completeness, material
+errors, citations, helpfulness). Technical model/function/security observations
+remain in M6/M7; preserving answers does not assign a grade.
 Optional model judges must be calibrated on human labels, receive no unnecessary
 private data, and not decide safety gates alone. Inspect all critical failures
 and adjudicate a stratified sample with two reviewers.
@@ -284,3 +287,15 @@ technical M6/M7. The answers stay ungraded and the rubric is unchanged. This
 specific transfer grants no quality pass, gold labels, model ranking or
 institutional processing approval; other technical comparison, adversarial,
 rendering/network and budget gates remain required.
+
+Sequencing update, 2026-10-22 (V11): Fabian also deferred all other remaining
+human model-answer assessments to [M8-A12](../plans/hasi-mvp.md#institutional-acceptance-m8),
+including unknown-outcome and room-planning answers. The VPN packet stays in
+M8-A11. Preserve exact inputs, authorized evidence, captured outputs, traces,
+usage and separate blinded identity mappings. Partial captures remain incomplete.
+Critical findings still need independent second review and adjudication. Actual
+provider calls, tool/function and fixture-effect checks, source/access and
+injection tests, rendering/network and latency/usage/cost/budget measurements
+remain technical M6/M7 requirements. The transfer changes neither proposed
+counts/thresholds nor their approval status and establishes no quality pass,
+ranking, gold label or institutional approval.
