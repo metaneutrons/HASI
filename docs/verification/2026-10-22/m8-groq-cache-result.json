@@ -1,0 +1,87 @@
+{
+  "runId": "e696d4c6-fbcc-4abb-8d5d-500573b07ebe",
+  "mode": "plain",
+  "operatorSource": "f0fe2602d85d5b808566ec23a43abe42b31c1f55",
+  "operatorImage": "sha256:9ce06ebb23d71dbe894540b68ef7ca9b5ac3e68e8fc8518b363ee43c25773c05",
+  "servingRevision": "b52598d705f938e52213c5bbd7691735bf7e3399",
+  "servingImage": "sha256:c25a5276cea50d8a399ad45f3f1ada2f82286352c8563571c058a2b1b63be98b",
+  "sourceHashes": {
+    "apps/web/scripts/probe-groq-cache.ts": "4e84df9e5bc6b71ca22c1e18923e0e8984e4e4278ce7fe1c09151d713bcaa681",
+    "apps/web/scripts/groq-cache-probe-transport.ts": "478136df120e53e4ac82dafe7003a8bbf8453cbf4c539b55359ddbf612a7ad97",
+    "apps/web/src/lib/server/model-budgets.ts": "087423b1168b3bd680e2cd5e29d72bb585cc808173b4167ec2d40bd8c2d703dd",
+    "apps/web/src/lib/server/model-config.ts": "cd77823db62fc87ffacbcb84916e47295b674eb67c38d50e46b82087246b09a0",
+    "packages/state/src/model-budget.ts": "c7ba925018100a2926f23013f21eb96910d8744293f0824fd9096f29b3ca7932",
+    "packages/state/src/assistant-budget.ts": "c5ee950e531c029be331ebb8eef2c0c271df07edcc67b49fd6eb5eb14ef4e641"
+  },
+  "packagedOfflineControl": {
+    "fakeCacheCounter": 1200,
+    "callCapCounterRejected": true,
+    "reservationsSettled": 2,
+    "realProviderCalls": 0
+  },
+  "exitCode": 0,
+  "events": [
+    {
+      "event": "raw_usage_observation",
+      "call": 1,
+      "status": 200,
+      "promptTokens": {
+        "state": "reported",
+        "value": 3315
+      },
+      "completionTokens": {
+        "state": "reported",
+        "value": 15
+      },
+      "documentedCacheTokens": {
+        "state": "missing"
+      },
+      "alternateCacheTokens": {
+        "state": "missing"
+      }
+    },
+    {
+      "event": "raw_usage_observation",
+      "call": 2,
+      "status": 200,
+      "promptTokens": {
+        "state": "reported",
+        "value": 3315
+      },
+      "completionTokens": {
+        "state": "reported",
+        "value": 18
+      },
+      "documentedCacheTokens": {
+        "state": "missing"
+      },
+      "alternateCacheTokens": {
+        "state": "missing"
+      }
+    },
+    {
+      "event": "request_comparison",
+      "calls": 2,
+      "identical": true,
+      "requestBytes": [
+        13474,
+        13474
+      ],
+      "syntheticRequestHashes": [
+        "65545153f10f8b59832b573a7bf468f55b5c7d48e416dcc8c5546d7377693cf1",
+        "65545153f10f8b59832b573a7bf468f55b5c7d48e416dcc8c5546d7377693cf1"
+      ],
+      "mode": "plain"
+    }
+  ],
+  "rawSha256": "4487729fddee06f2a60b5b2a9cb05d413c8511a809ef1a71e257bc5f72bbbbe2",
+  "budgetBeforeMicroUsd": 308040,
+  "budgetAfterMicroUsd": 313476,
+  "newReservations": 2,
+  "retainedUnknownHolds": 7,
+  "retainedNonBudgetRows": 570,
+  "nonBudgetStatePreserved": true,
+  "runtimeDatabaseBindingVerified": true,
+  "ownedContainerStopped": true,
+  "rawReportPath": "operator-held numeric-only raw-usage.ndjson"
+}

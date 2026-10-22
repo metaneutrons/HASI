@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "kind": "m8_a8_local_synthetic_encrypted_restore",
+  "date": "2026-10-22",
+  "repositoryRevision": "b52598d705f938e52213c5bbd7691735bf7e3399",
+  "status": "bounded_local_exercise_passed",
+  "productionOrInstitutionalAcceptance": false,
+  "proofScript": {
+    "path": "docs/verification/2026-10-22/m8-encrypted-restore-proof.ts.txt",
+    "sha256": "f0136d87e97059c35de75c2746b6ad40587fb45989bf1ef87323ae985d3b115d",
+    "schemaSourceHashes": {
+      "packages/state/src/postgres.ts": "1e8e852deb06a7ca4c894fb580a77b8bd6978767ef632d479f52318447d17922",
+      "packages/state/src/model-budget.ts": "c7ba925018100a2926f23013f21eb96910d8744293f0824fd9096f29b3ca7932",
+      "packages/state/src/assistant-budget.ts": "c5ee950e531c029be331ebb8eef2c0c271df07edcc67b49fd6eb5eb14ef4e641"
+    },
+    "repositoryBackupScriptHash": "78c83893265cbabaa562e4f6b54d543c99aef8b6023f65728cb3dd994ef51c57",
+    "backupServiceHash": "48144a7aedf8bef45428207494ab748dba9af6a661ea00e434b091955979c83b",
+    "backupTimerHash": "00429d95536449f95b800007de78748d887ca15c238ef9eadd14df8d76d63b76"
+  },
+  "toolchain": {
+    "postgresServer": "PostgreSQL 16.15 (Homebrew)",
+    "pgDump": "PostgreSQL 16.15 (Homebrew)",
+    "pgRestore": "PostgreSQL 16.15 (Homebrew)",
+    "age": "1.3.2"
+  },
+  "isolation": {
+    "freshTemporaryPostgresCluster": true,
+    "listenAddresses": "",
+    "connection": "private Unix socket",
+    "databaseNames": [
+      "hasi_m8_restore_source",
+      "hasi_m8_restore_target",
+      "hasi_m8_corrupt_target"
+    ],
+    "syntheticHasiDataOnly": true,
+    "applicationDatabaseUrlEnvironmentPassed": false,
+    "existingDatabaseOrProductionSystemTouched": false,
+    "ageIdentityMode": "0600",
+    "temporaryDirectoryMode": "0700"
+  },
+  "artifact": {
+    "format": "age-encrypted PostgreSQL custom-format dump",
+    "sha256": "7c95c503b057d934d4a96a908f7cd4d05b5e1c8728a97096aba06141625b5597",
+    "bytes": 3347,
+    "plaintextDumpWrittenToDisk": false,
+    "retainedAfterVerification": false
+  },
+  "sourceState": {
+    "table": "public.hasi_state_v1",
+    "totalRows": 5,
+    "pluginStateRows": 4,
+    "sharedBudgetRows": 1,
+    "expiryCounts": {
+      "null": 2,
+      "nonNull": 3,
+      "expiredNonNull": 1,
+      "futureNonNull": 2
+    },
+    "budgetReservationStatuses": {
+      "reserved": 1,
+      "unknown": 1,
+      "settled": 1,
+      "released": 1
+    },
+    "normalizedCompleteRowsSha256": "2fbbfc61e0accf78107f12e761122efecf6554184013a6e745e098f1af5d0593"
+  },
+  "restoredState": {
+    "totalRows": 5,
+    "pluginStateRows": 4,
+    "sharedBudgetRows": 1,
+    "expiryCounts": {
+      "null": 2,
+      "nonNull": 3,
+      "expiredNonNull": 1,
+      "futureNonNull": 2
+    },
+    "budgetReservationStatuses": {
+      "reserved": 1,
+      "unknown": 1,
+      "settled": 1,
+      "released": 1
+    },
+    "normalizedCompleteRowsSha256": "2fbbfc61e0accf78107f12e761122efecf6554184013a6e745e098f1af5d0593"
+  },
+  "positiveCounter": {
+    "pgDumpPipedToAge": true,
+    "AgeDecryptionPipedDirectlyToPgRestore": true,
+    "AllRowsComparedIncludingJsonRevisionAndExpiry": true,
+    "SourceAndRestoredNormalizedRowsIdentical": true
+  },
+  "corruptionCounter": {
+    "separateCopyAltered": true,
+    "alteredCopySha256": "5ee9d9e66048262ecbd843e55699450d744338aef49cc029790ec5978e11b9a2",
+    "ageExitCode": 1,
+    "ageSignal": null,
+    "diagnosticClassification": "authenticated_ciphertext_integrity_failure",
+    "sanitizedDiagnostic": "failed to decrypt and authenticate payload chunk, file may be corrupted or tampered with",
+    "ageAuthenticatedDecryptionRejected": true,
+    "pgRestoreInvoked": false,
+    "corruptDestinationRemainedEmpty": true
+  },
+  "cleanup": {
+    "temporaryClusterStopped": true,
+    "temporaryClusterRemoved": true,
+    "identityAndArtifactsRemoved": true,
+    "worktreeFileNamedDashAbsent": true
+  },
+  "priorEvidence": {
+    "localPostgresCutover": "PostgreSQL 18.6; 201-row contents restore was verified before encryption. Encrypted-artifact decryption and restore remained open.",
+    "backupRoutine": "Repository script describes encrypted host-local retention and a daily systemd timer; this proof did not invoke or inspect the deployed job."
+  },
+  "limits": [
+    "The exercise used PostgreSQL 16.15; the documented production database is PostgreSQL 18.6.",
+    "The deployed hardcoded Coolify backup script, configured recipient file, installed timer and production databases were not invoked or inspected.",
+    "No evidence was produced for recurring off-host replication or independent monitoring of missing or failed backups.",
+    "Age recipient/private-key custody and recovery, named institutional operators, and an institution-reviewed incident/recovery procedure remain unqualified.",
+    "The local synthetic restore is a bounded technical subcheck only; M8-A8 and institutional go/no-go remain open."
+  ],
+  "rejectedHarnessAttempt": {
+    "status": "not_evidence",
+    "reason": "An earlier harness passed '-' as a pg_dump filename; this created a local mode-0600 plaintext archive while age encrypted empty input.",
+    "action": "The exact generated PGDMP file was removed. The corrected script uses unnamed standard streams and reran successfully; no production database was involved."
+  },
+  "rejectedCorruptionClassifierAttempt": {
+    "status": "not_evidence",
+    "ageExitCode": 1,
+    "ageSignal": null,
+    "reason": "The initial strict checker did not recognize age 1.3.2’s actual authenticated-chunk diagnostic, so its assertion failed and the run was not counted.",
+    "sanitizedDiagnostic": "failed to decrypt and authenticate payload chunk, file may be corrupted or tampered with",
+    "action": "The matcher was bound to the observed authentication/integrity phrases, exact exit code 1 and null signal; the corrected isolated exercise was rerun successfully."
+  }
+}
