@@ -1,5 +1,11 @@
 # Editorial VPN development pair
 
+Current input note: [the editorial input boundary](editorial-source-inputs.md)
+also removes labels from the evaluation envelope and other active source cases.
+The existing eight-answer packet below is retained for its original candidate;
+it is not a fresh run of that later input revision. New comparison/review is
+pending, with no semantic pass inferred.
+
 Status: eight fresh answers for the two editorial development cases are prepared
 in a blinded local reviewer packet; claim-level human review remains pending.
 No semantic improvement or milestone acceptance is inferred from editing the

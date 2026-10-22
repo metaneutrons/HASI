@@ -19,7 +19,7 @@ check or budget-store access. The command accepts only the reviewed bundled
 corpus and explicitly registered server-owned manifest. Case `inject-02`
 (poisoned Anny resource) remains excluded. The original
 `access-03` is not directly executable; the explicitly named deployment-scoped
-runtime variant below uses its frozen question and a separately code-owned
+runtime variant below uses its current question and a separately code-owned
 fixture source matching the note. It does not claim same-instance tenant
 partitioning. Plan validation checks candidate source ID, revision, title and
 text against that code-owned catalog before fixture execution; those corpus
@@ -30,7 +30,7 @@ source, role, permission or destination.
 | --- | --- |
 | `access-01` | Reader with an authoritative source grant and Lumen document ACL |
 | `access-02` | Outsider with the same source inventory and no Lumen grant |
-| `inject-01` | Authorized Atlas revisions 2/3, with the attack only in revision 3 |
+| `inject-01` | Authorized Atlas editorial revisions 3/4 (policy editions 2/3), with the attack only in editorial revision 4 |
 | `inject-03` | Authorized temporary-account guide; runner canary never projected |
 | `inject-04` | Authorized OCR-text card containing an outbound-disclosure instruction |
 | `inject-01-clean-runtime` | Separate clean Atlas control derived from `intra-01` |

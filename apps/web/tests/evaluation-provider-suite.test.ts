@@ -15,7 +15,7 @@ import { loadModelConfiguration } from "../src/lib/server/model-config";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const selectedProfileId = "groq-oss-120b";
-const fixedCaseIds = ["sit-01", "sit-02", "intra-01", "intra-02", "sit-03", "sit-04", "intra-03", "sit-vpn-grounding-01", "sit-vpn-specificity-02", "sit-vpn-editorial-grounding-01", "sit-vpn-editorial-specificity-02"];
+const fixedCaseIds = ["sit-01", "sit-02", "intra-01", "intra-02", "sit-03", "sit-04", "intra-03", "sit-vpn-editorial-grounding-01", "sit-vpn-editorial-specificity-02"];
 
 function runEvaluationCli(args: readonly string[], environmentOverrides: Partial<NodeJS.ProcessEnv> = {}) {
   const controlledPath = [dirname(process.execPath), process.env.PATH].filter(Boolean).join(delimiter);
@@ -55,9 +55,18 @@ describe("operator-owned provider evaluation plan", () => {
     const plan = createProviderEvaluationPlan(changedCases, [selectedProfileId], {});
     const sit01 = plan.cases.find((item) => item.evaluationCase.id === "sit-01");
     expect(sit01?.serverAuthorizedEvidence).toEqual(new Set([
-      "fixture:src:serviceit:ticket-guide-v1@1",
+      "fixture:src:serviceit:ticket-guide-v1@2",
     ]));
     expect(sit01?.serverAuthorizedEvidence.has("fixture:src:attacker:policy@99")).toBe(false);
+  });
+
+  it("rejects an obsolete source revision instead of silently admitting earlier prose", () => {
+    const changed = structuredClone(parseEvaluationDataset(exampleCases));
+    const source = changed.find(item => item.id === "intra-01")?.modelEvidence?.[0];
+    if (!source) throw new Error("Expected current Atlas evidence.");
+    source.revision = 3;
+    expect(() => createProviderEvaluationPlan(changed, [selectedProfileId], {}))
+      .toThrow("An approved synthetic source revision is missing.");
   });
 
   it("rejects duplicate and unapproved profile selections and profiles without prices", () => {
@@ -85,17 +94,21 @@ describe("operator-owned provider evaluation plan", () => {
     })).toThrow(/no approved price/u);
   });
 
-  it("grades only the eleven fixed-evidence cases and explicitly excludes other layers", () => {
+  it("grades only the nine current fixed-evidence cases and explicitly excludes other layers", () => {
     const corpus = parseEvaluationDataset(exampleCases);
     const plan = createProviderEvaluationPlan(exampleCases, [selectedProfileId], {});
     const selectedIds = plan.cases.map((item) => item.evaluationCase.id);
     const nonFixedIds = corpus.filter((item) => item.testLayer !== "fixed_evidence").map((item) => item.id);
+    const historicalIds = ["sit-vpn-grounding-01", "sit-vpn-specificity-02"];
 
     expect(selectedIds).toEqual(fixedCaseIds);
     expect(plan.cases.every((item) => item.evaluationCase.testLayer === "fixed_evidence")).toBe(true);
-    expect(plan.excludedCases.map((item) => item.id).sort()).toEqual(nonFixedIds.sort());
+    expect(plan.excludedCases.map((item) => item.id).sort()).toEqual([...nonFixedIds, ...historicalIds].sort());
     expect(plan.excludedCases.map((item) => [item.id, item.reason]).sort())
-      .toEqual(nonFixedIds.map((id) => [id, "requires_separate_observed_executor"]).sort());
+      .toEqual([
+        ...nonFixedIds.map((id) => [id, "requires_separate_observed_executor"]),
+        ...historicalIds.map((id) => [id, "frozen_historical_input_replaced_by_editorial_case"]),
+      ].sort());
     expect(plan.excludedCases.some((item) => selectedIds.includes(item.id))).toBe(false);
   });
 
@@ -115,7 +128,7 @@ describe("operator-owned provider evaluation plan", () => {
 
   it("keeps the VPN pair source-bound while excluding grading labels and unapproved revisions", () => {
     const corpus = structuredClone(parseEvaluationDataset(exampleCases));
-    const vpn = corpus.find(item => item.id === "sit-vpn-grounding-01");
+    const vpn = corpus.find(item => item.id === "sit-vpn-editorial-grounding-01");
     if (!vpn?.modelEvidence?.[0]) throw new Error("Expected VPN evidence.");
     vpn.expected.behavior = "VPN-GRADING-ONLY-CANARY";
     vpn.authenticatedContext.entitlements.push("fixture:attacker.read");
@@ -125,15 +138,15 @@ describe("operator-owned provider evaluation plan", () => {
     if (!fixture) throw new Error("Expected an authorized VPN case.");
     const input = projectEvaluationModelInput(fixture.evaluationCase, fixture.serverAuthorizedEvidence);
     expect(input.evidence.map(item => [item.sourceId, item.revision])).toEqual([
-      ["svc-catalog-6c79c1e68f04", 2],
-      ["svc-catalog-9b30ce8b226d", 2],
-      ["svc-catalog-94f501ccd7be", 2],
+      ["svc-catalog-6c79c1e68f04", 4],
+      ["svc-catalog-9b30ce8b226d", 4],
+      ["svc-catalog-94f501ccd7be", 4],
     ]);
     expect(JSON.stringify(input)).not.toMatch(/VPN-GRADING-ONLY|UNAPPROVED-VPN-REVISION/u);
-    const counter = plan.cases.find(item => item.evaluationCase.id === "sit-vpn-specificity-02");
+    const counter = plan.cases.find(item => item.evaluationCase.id === "sit-vpn-editorial-specificity-02");
     if (!counter) throw new Error("Expected the specificity countercase.");
     expect(projectEvaluationModelInput(counter.evaluationCase, counter.serverAuthorizedEvidence).evidence[0]?.text)
-      .toContain("Cisco AnyConnect in Version 4.10");
+      .toContain("Cisco AnyConnect version 4.10");
   });
 });
 
@@ -183,15 +196,15 @@ describe("provider evaluation CLI boundary", () => {
   });
 
   it("narrows an approved case selection in manifest order without increasing the default attempt cap", () => {
-    const result = runEvaluationCli(["--profiles", selectedProfileId, "--cases", "sit-vpn-specificity-02,sit-vpn-grounding-01"]);
+    const result = runEvaluationCli(["--profiles", selectedProfileId, "--cases", "sit-vpn-editorial-specificity-02,sit-vpn-editorial-grounding-01"]);
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({
       mode: "plan_only", providerCalls: 0, budgetAccess: false, actualHttpAttemptCap: 8, plannedRuns: 2,
-      caseIds: ["sit-vpn-grounding-01", "sit-vpn-specificity-02"],
+      caseIds: ["sit-vpn-editorial-grounding-01", "sit-vpn-editorial-specificity-02"],
     });
   });
 
-  it.each(["attacker-case", "anny-01"])("rejects case %s before creating a live report", async caseId => {
+  it.each(["attacker-case", "anny-01", "sit-vpn-grounding-01", "sit-vpn-specificity-02"])("rejects case %s before creating a live report", async caseId => {
     const directory = await mkdtemp(join(tmpdir(), "hasi-provider-suite-"));
     try {
       const output = join(directory, "new.ndjson");

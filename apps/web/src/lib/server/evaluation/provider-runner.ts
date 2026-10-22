@@ -67,12 +67,12 @@ function evidenceMessages(input: EvaluationModelInput): WireMessage[] {
     // invented authorized tool history. The independent observer owns effects.
     const toolCallId = "evaluation-fixed-evidence";
     messages.push({ role: "assistant", content: "", toolCalls: [
-      { id: toolCallId, name: "knowledge_search", arguments: { query: "Feste synthetische Evaluationsquellen" } },
+      { id: toolCallId, name: "knowledge_search", arguments: { query: "Bereitgestellte Quellen" } },
     ] });
     messages.push({ role: "tool", name: "knowledge_search", toolCallId, content: JSON.stringify({
       documents: input.evidence.map(evidence => ({
         id: evidence.sourceId, title: evidence.title, text: evidence.text,
-        revision: evidence.revision, synthetic: true,
+        revision: evidence.revision,
         citationId: `knowledge:${evidence.sourceId}:${String(evidence.revision)}`,
       })),
     }) });

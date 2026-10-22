@@ -20,23 +20,30 @@ pnpm evaluate:models --profiles groq-oss-120b,gwdg-qwen3-30b,deepinfra-deepseek-
 ```
 
 This emits a plan without resolving credentials, opening a database or calling
-a provider. It selects eleven fixed-evidence development cases and lists the
-remaining workflow/application-policy cases as requiring separate observers.
+a provider. It selects nine current fixed-evidence development cases. The two frozen historical VPN
+cases are excluded as `frozen_historical_input_replaced_by_editorial_case`;
+workflow/application-policy cases require separate observers.
 Only the explicitly pinned bundled corpus can be used; the command accepts no
 arbitrary input file. Source authorization is an operator-owned manifest of
 exact source/revision identities. Case roles, entitlements and expected labels
-never establish grants. Grading labels are excluded from model input.
+never establish grants. Grading labels are excluded from model input. Current source prose, titles and
+ordinary user questions contain no editorial demo/fictional disclaimers. The
+read-only evidence envelope adds no `synthetic` marker or labelled search query;
+`synthetic_demo` remains the unchanged server-side eligibility classification.
+Changed source content has new editorial revisions; policy edition labels remain
+part of the source facts. Historical reports retain their exact original inputs.
+See [the editorial input boundary](editorial-source-inputs.md).
 
-The [VPN grounding pair](vpn-grounding-review.md) can be planned separately:
+The [current VPN grounding pair](editorial-vpn-review.md) can be planned separately:
 
 ```sh
-pnpm evaluate:models --profiles groq-oss-120b,gwdg-qwen3-30b --cases sit-vpn-grounding-01,sit-vpn-specificity-02 --max-calls 4
+pnpm evaluate:models --profiles groq-oss-120b,gwdg-qwen3-30b --cases sit-vpn-editorial-grounding-01,sit-vpn-editorial-specificity-02 --max-calls 4
 ```
 
 `--cases` only narrows the reviewed fixed-evidence manifest, preserving manifest
 order and source authorization. Unknown, duplicate or non-fixed case IDs fail
 before database access, report creation or dispatch. The default HTTP attempt
-cap remains eight; selecting all eleven cases with that cap can yield an
+cap remains eight; selecting all nine current cases with that cap can yield an
 explicitly incomplete report. A repair attempt also consumes the cap.
 
 Profiles must already be selectable under server policy, eligible for
