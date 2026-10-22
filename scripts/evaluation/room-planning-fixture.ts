@@ -2,7 +2,7 @@ import { generateKeyPairSync, randomBytes, randomUUID } from "node:crypto";
 import { AnnyClient } from "@hasi/anny-client";
 import { createAnnyMock, MOCK_IDS } from "@hasi/anny-mock";
 import { annyManifest, createAnnyPlugin, type Presentation } from "@hasi/anny-plugin";
-import { digest, type ActorContext } from "@hasi/plugin-sdk";
+import { digest, ExecutionJournal, type ActorContext } from "@hasi/plugin-sdk";
 import { MemoryJsonStore, type JsonStore } from "@hasi/state";
 import { hshDemoCatalog, hshDemoPresentation } from "../../fixtures/catalog.js";
 import {
@@ -29,10 +29,17 @@ const resourceIds = ["180116", "180117"] as const;
 const serviceId = "76878";
 const maxObservations = 64;
 const maxPreparedProposals = 16;
+const annyWriteTools = new Set([
+  "anny.propose_booking",
+  "anny.propose_cancellation",
+  "anny.execute_booking",
+  "anny.execute_cancellation",
+]);
 
 interface EvaluationAnnyAccountMapping {
   readonly customerId: string;
   readonly resourceIds: readonly string[];
+  readonly permissions: readonly string[];
 }
 
 /** Demo-only reference mapping used through the host's normal account lifecycle. */
@@ -80,7 +87,7 @@ class EvaluationAnnyAccountAdapter implements PluginAccountAdapter {
       authorityRevision: 1,
       expiresAt: null,
       projection: {
-        permissions: ["rooms:read", "rooms:prepare", "rooms:execute"],
+        permissions: [...mapping.permissions],
         customerId: mapping.customerId,
         resourceIds: [...mapping.resourceIds],
       },
@@ -113,19 +120,31 @@ export interface EvaluationRoomPlanningPreparedProposal {
 }
 
 export interface EvaluationRoomPlanningObservation {
-  readonly kind: "request" | "write_attempt" | "write_effect";
+  readonly kind: "request" | "write_attempt" | "write_effect" | "write_denied";
   readonly method?: string;
   readonly path?: string;
   readonly status?: number;
+  readonly boundary?: "api_contract" | "read_only_fixture";
+  readonly toolName?: string;
+}
+
+export type EvaluationRoomPlanningMode = "preparation" | "read_only";
+
+export interface EvaluationRoomPlanningFixtureOptions {
+  /** Trusted fixture composition only; never select this from request or model input. */
+  readonly mode?: EvaluationRoomPlanningMode;
 }
 
 export interface EvaluationRoomPlanningDiagnostics {
+  readonly mode: EvaluationRoomPlanningMode;
+  readonly annyClientWritesEnabled: boolean;
   /** This fixture runs API, signed MCP and the contract mock through Fastify inject. */
   readonly transport: "fastify-inject-to-signed-mcp-and-anny-contract-mock";
   /** Synthetic accounts and state are process-local; they are not production authority. */
   readonly authorityScope: "test-idp-and-process-local-memory";
   readonly sourceWriteAttempts: number;
   readonly sourceWriteEffects: number;
+  readonly blockedWriteAttempts: number;
   readonly accountInspections: number;
   readonly apiObservations: readonly EvaluationRoomPlanningObservation[];
   readonly sourceObservations: readonly EvaluationRoomPlanningObservation[];
@@ -135,6 +154,7 @@ export interface EvaluationRoomPlanningDiagnostics {
 }
 
 export interface EvaluationRoomPlanningFixture {
+  readonly mode: EvaluationRoomPlanningMode;
   readonly webOrigin: string;
   readonly apiOrigin: string;
   /** Synthetic web-only protected-local scope used by the route harness. */
@@ -201,7 +221,9 @@ function mcpFetch(plugin: ReturnType<typeof createAnnyPlugin>): typeof fetch {
 
 function contractFetch(
   mock: ReturnType<typeof createAnnyMock>,
+  mode: EvaluationRoomPlanningMode,
   observeWriteAttempt: (method: string, path: string) => void,
+  observeWriteDenied: (method: string, path: string) => void,
   observeRequest: (method: string, path: string, status: number) => void,
 ): typeof fetch {
   return async (input, init) => {
@@ -212,6 +234,10 @@ function contractFetch(
     }
     const isWrite = (request.method === "POST" && target.pathname === "/api/v1/orders/from-config")
       || (request.method === "GET" && /^\/api\/v1\/bookings\/[^/]+\/cancel$/u.test(target.pathname));
+    if (isWrite && mode === "read_only") {
+      observeWriteDenied(request.method, target.pathname);
+      return Response.json({ error: "The read-only room-planning fixture denied this Anny write." }, { status: 403 });
+    }
     if (isWrite) observeWriteAttempt(request.method, target.pathname);
     const response = await mock.inject({
       method: request.method,
@@ -230,6 +256,21 @@ function contractFetch(
       headers,
     });
   };
+}
+
+function readOnlyMutation(method: string, path: string, body: string | undefined): { toolName?: string } | undefined {
+  if (method !== "POST") return undefined;
+  if (path === "/api/proposals" || path === "/api/cancellations"
+    || /^\/api\/proposals\/[0-9a-f-]{36}\/(?:confirm|reconcile)$/iu.test(path)) {
+    return {};
+  }
+  if (path !== "/api/tools/call" || body === undefined) return undefined;
+  let payload: unknown;
+  try { payload = JSON.parse(body) as unknown; } catch { return undefined; }
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) return undefined;
+  const call = payload as Record<string, unknown>;
+  if (call.pluginId !== annyPluginId || typeof call.name !== "string" || !annyWriteTools.has(call.name)) return undefined;
+  return { toolName: call.name };
 }
 
 function sourceEffectProjection(value: unknown): { orders: unknown[]; bookings: unknown[] } {
@@ -270,7 +311,14 @@ function proposalTrace(key: string, value: unknown, subject: string): Evaluation
  * local contract mock, but it does not represent production credentials or
  * independently enforce rights across multiple HASI deployments.
  */
-export async function createEvaluationRoomPlanningFixture(): Promise<EvaluationRoomPlanningFixture> {
+export async function createEvaluationRoomPlanningFixture(
+  options: EvaluationRoomPlanningFixtureOptions = {},
+): Promise<EvaluationRoomPlanningFixture> {
+  const requestedMode: unknown = options.mode ?? "preparation";
+  if (requestedMode !== "preparation" && requestedMode !== "read_only") {
+    throw new TypeError("Room-planning fixture mode is invalid.");
+  }
+  const mode: EvaluationRoomPlanningMode = requestedMode;
   const approved = approvedCatalog();
   const presentation = presentationForApprovedCatalog();
   const scope = randomUUID();
@@ -284,6 +332,7 @@ export async function createEvaluationRoomPlanningFixture(): Promise<EvaluationR
   let preparedProposalsTruncated = false;
   let sourceWriteAttempts = 0;
   let sourceWriteEffects = 0;
+  let blockedWriteAttempts = 0;
   let closed = false;
   let closePromise: Promise<void> | undefined;
   const remember = (target: EvaluationRoomPlanningObservation[], observation: EvaluationRoomPlanningObservation, source: boolean) => {
@@ -316,7 +365,7 @@ export async function createEvaluationRoomPlanningFixture(): Promise<EvaluationR
     const stableSubject = stableOidcSubject(idp.issuer, upstreamSubject);
     actor = {
       subject: stableSubject,
-      permissions: ["rooms:read", "rooms:prepare", "rooms:execute"],
+      permissions: mode === "read_only" ? ["rooms:read"] : ["rooms:read", "rooms:prepare", "rooms:execute"],
     };
     actorForSubject.set(stableSubject, structuredClone(actor));
     const apiObservedStore: JsonStore = {
@@ -385,10 +434,13 @@ export async function createEvaluationRoomPlanningFixture(): Promise<EvaluationR
       organizationId: MOCK_IDS.organization,
       token: mockToken,
       allowLoopback: true,
-      allowWrites: true,
-      fetchImpl: contractFetch(mock, (method, path) => {
+      allowWrites: mode === "preparation",
+      fetchImpl: contractFetch(mock, mode, (method, path) => {
         sourceWriteAttempts += 1;
         remember(sourceObservations, { kind: "write_attempt", method, path }, true);
+      }, (method, path) => {
+        blockedWriteAttempts += 1;
+        remember(sourceObservations, { kind: "write_denied", method, path, status: 403, boundary: "read_only_fixture" }, true);
       }, (method, path, status) => {
         remember(sourceObservations, { kind: "request", method, path, status }, true);
       }),
@@ -396,18 +448,33 @@ export async function createEvaluationRoomPlanningFixture(): Promise<EvaluationR
 
     const pluginKeys = generateKeyPairSync("ed25519");
     const pluginToken = `evaluation-plugin-${randomUUID()}`;
+    // This isolated fixture supplies the SDK's explicit replay and journal
+    // interfaces from a per-fixture process-local store. It is not deployment
+    // durability or shared state across plugin instances.
+    const pluginStateStore = new MemoryJsonStore(`evaluation-room-planning-plugin-state-${scope}`);
     const plugin = createAnnyPlugin({
       client,
       publicKey: pluginKeys.publicKey,
       serviceToken: pluginToken,
       presentation,
       allowedHosts: [new URL(annyPluginOrigin).hostname],
+      consumeInvocation: async (jti, expiresAt) => {
+        if (!Number.isSafeInteger(expiresAt) || expiresAt <= Math.floor(Date.now() / 1_000)) return false;
+        return await pluginStateStore.compareAndSet(
+          `invocation:${digest(jti)}`,
+          null,
+          { expiresAt },
+          expiresAt * 1_000,
+        );
+      },
+      executionJournal: new ExecutionJournal(pluginStateStore, `evaluation-room-planning-anny-${scope}`),
     });
     cleanup.push(() => plugin.close());
 
     const accountAdapter = new EvaluationAnnyAccountAdapter(annyPluginId, new Map([[actor.subject, {
       customerId: MOCK_IDS.customers.employee,
       resourceIds,
+      permissions: [...actor.permissions],
     }]]), () => { accountInspections += 1; });
     const account = new PluginAccountService({
       privateKey: pluginKeys.privateKey,
@@ -519,13 +586,24 @@ export async function createEvaluationRoomPlanningFixture(): Promise<EvaluationR
       const method = request.method.toUpperCase();
       const routeKey = `${method} ${target.pathname}`;
       const proposalPath = method === "GET" && /^\/api\/proposals\/[0-9a-f-]{36}$/iu.test(target.pathname);
-      if (target.origin !== apiOrigin || target.username || target.password || target.search || target.hash
-        || (!allowedRoutes.has(routeKey) && !proposalPath)) {
+      if (target.origin !== apiOrigin || target.username || target.password || target.search || target.hash) {
         throw new TypeError("Room-planning evaluation rejected an unapproved API destination.");
       }
       const headers = new Headers(request.headers);
       headers.set("host", apiHost);
       const body = ["GET", "HEAD"].includes(method) ? undefined : await request.text();
+      const mutation = mode === "read_only" ? readOnlyMutation(method, target.pathname, body) : undefined;
+      if (mutation) {
+        blockedWriteAttempts += 1;
+        remember(apiObservations, {
+          kind: "write_denied", method, path: target.pathname, status: 403,
+          boundary: "read_only_fixture", ...(mutation.toolName ? { toolName: mutation.toolName } : {}),
+        }, false);
+        return Response.json({ error: "The read-only room-planning fixture denied this operation." }, { status: 403 });
+      }
+      if (!allowedRoutes.has(routeKey) && !proposalPath) {
+        throw new TypeError("Room-planning evaluation rejected an unapproved API destination.");
+      }
       const response = await api.inject({
         method,
         url: target.pathname,
@@ -545,6 +623,7 @@ export async function createEvaluationRoomPlanningFixture(): Promise<EvaluationR
     };
 
     return {
+      mode,
       webOrigin,
       apiOrigin,
       localScope: scope,
@@ -554,10 +633,13 @@ export async function createEvaluationRoomPlanningFixture(): Promise<EvaluationR
       resourceIds: Object.freeze([...resourceIds]),
       coreFetch,
       diagnostics: () => Object.freeze({
+        mode,
+        annyClientWritesEnabled: mode === "preparation",
         transport: "fastify-inject-to-signed-mcp-and-anny-contract-mock",
         authorityScope: "test-idp-and-process-local-memory",
         sourceWriteAttempts,
         sourceWriteEffects,
+        blockedWriteAttempts,
         accountInspections,
         apiObservations: Object.freeze(apiObservations.map(item => ({ ...item }))),
         sourceObservations: Object.freeze(sourceObservations.map(item => ({ ...item }))),

@@ -28,7 +28,8 @@
     "brand:check": "tsx apps/web/scripts/generate-brand-assets.ts --check",
     "journey:serve": "tsx scripts/serve-plugin-journey.ts",
     "evaluate:models": "node --conditions=react-server --import tsx apps/web/scripts/evaluate-models.ts",
-    "evaluate:application-policy": "node --conditions=react-server --import tsx apps/web/scripts/evaluate-application-policy.ts"
+    "evaluate:application-policy": "node --conditions=react-server --import tsx apps/web/scripts/evaluate-application-policy.ts",
+    "evaluate:room-planning": "TSX_TSCONFIG_PATH=apps/web/tsconfig.json node --conditions=react-server --import tsx apps/web/scripts/evaluate-room-planning.ts"
   },
   "dependencies": {
     "@hasi/plugin-sdk": "workspace:*",

@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createEvaluationRoomPlanningFixture,
+  type EvaluationRoomPlanningFixtureOptions,
   type EvaluationRoomPlanningFixture,
 } from "../scripts/evaluation/room-planning-fixture.js";
 
 const activeFixtures: EvaluationRoomPlanningFixture[] = [];
 
-async function createFixture(): Promise<EvaluationRoomPlanningFixture> {
-  const fixture = await createEvaluationRoomPlanningFixture();
+async function createFixture(options?: EvaluationRoomPlanningFixtureOptions): Promise<EvaluationRoomPlanningFixture> {
+  const fixture = await createEvaluationRoomPlanningFixture(options);
   activeFixtures.push(fixture);
   return fixture;
 }
@@ -55,6 +56,7 @@ describe("authenticated Anny room-planning evaluation fixture", () => {
     expect(fixture.localScope).toMatch(/^[0-9a-f-]{36}$/u);
     expect(fixture.signingSecret).toMatch(/^[A-Za-z0-9_-]{43}$/u);
     expect(fixture.resourceIds).toEqual(["180116", "180117"]);
+    expect(fixture.mode).toBe("preparation");
     expect(fixture.actor.resourceIds).toBeUndefined();
     expect(fixture.actor.customerId).toBeUndefined();
     expect(fixture.actor.permissions).toEqual(["rooms:read", "rooms:prepare", "rooms:execute"]);
@@ -122,9 +124,139 @@ describe("authenticated Anny room-planning evaluation fixture", () => {
     expect(diagnostics.authorityScope).toBe("test-idp-and-process-local-memory");
     expect(diagnostics.sourceWriteAttempts).toBe(0);
     expect(diagnostics.sourceWriteEffects).toBe(0);
+    expect(diagnostics.blockedWriteAttempts).toBe(0);
+    expect(diagnostics.annyClientWritesEnabled).toBe(true);
     expect(diagnostics.accountInspections).toBeGreaterThan(0);
     expect(diagnostics.sourceObservations.some(observation => observation.path === "/api/v1/availability/upcoming-intervals" && observation.method === "GET")).toBe(true);
     expect(diagnostics.apiObservations.some(observation => observation.path === "/api/tools/call" && observation.status === 200)).toBe(true);
+  });
+
+  it("starts and serves reads with production NODE_ENV while the read-only mode denies writes", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const fixture = await createFixture({ mode: "read_only" });
+
+      const session = await fixture.coreFetch(request(fixture, "/api/session"));
+      const resources = await fixture.coreFetch(request(fixture, "/api/resources"));
+      expect(session.status).toBe(200);
+      expect(resources.status).toBe(200);
+      expect(await json<{ mode: string }>(session)).toMatchObject({ mode: "oidc" });
+      expect((await json<{ resources: { id: string }[] }>(resources)).resources.map(resource => resource.id))
+        .toEqual(fixture.resourceIds);
+
+      const proposal = await fixture.coreFetch(request(fixture, "/api/proposals", "POST", {
+        resourceId: fixture.resourceIds[0],
+        serviceId: "76878",
+        startDate: "2099-03-10T09:00:00.000Z",
+        endDate: "2099-03-10T10:00:00.000Z",
+      }));
+      const execution = await fixture.coreFetch(request(fixture, "/api/tools/call", "POST", {
+        pluginId: "de.hsh.hasi.anny",
+        name: "anny.execute_booking",
+        arguments: { resourceId: fixture.resourceIds[0], serviceId: "76878" },
+      }));
+      expect(proposal.status).toBe(403);
+      expect(execution.status).toBe(403);
+      expect(fixture.diagnostics()).toMatchObject({
+        mode: "read_only",
+        annyClientWritesEnabled: false,
+        blockedWriteAttempts: 2,
+        sourceWriteAttempts: 0,
+        sourceWriteEffects: 0,
+      });
+      expect(fixture.preparedProposals()).toEqual([]);
+    } finally {
+      vi.unstubAllEnvs();
+      expect(process.env.NODE_ENV).toBe(originalNodeEnv);
+    }
+  });
+
+  it("keeps resource and availability reads on the authenticated path with read-only synthetic authority", async () => {
+    const fixture = await createFixture({ mode: "read_only" });
+    expect(fixture.mode).toBe("read_only");
+    expect(fixture.actor.permissions).toEqual(["rooms:read"]);
+    expect(fixture.diagnostics()).toMatchObject({ mode: "read_only", annyClientWritesEnabled: false });
+
+    const session = await fixture.coreFetch(request(fixture, "/api/session"));
+    expect(session.status).toBe(200);
+    expect(await json(session)).toMatchObject({ mode: "oidc", user: { id: fixture.actor.subject, role: "employee" } });
+
+    const authorizedToolsResponse = await fixture.coreFetch(request(fixture, "/api/tools"));
+    expect(authorizedToolsResponse.status).toBe(200);
+    const authorizedTools = await json<{ tools: { name: string; effect: string }[] }>(authorizedToolsResponse);
+    expect(authorizedTools.tools.map(tool => tool.name)).toContain("anny.search_resources");
+    expect(authorizedTools.tools.some(tool => tool.effect === "execute")).toBe(false);
+    expect(authorizedTools.tools.map(tool => tool.name)).not.toContain("anny.propose_booking");
+    expect(authorizedTools.tools.map(tool => tool.name)).not.toContain("anny.propose_cancellation");
+
+    const { createAnnyChatTools } = await vi.importActual<{ createAnnyChatTools: CreateAnnyChatTools }>("../apps/web/src/lib/anny-chat-tools.js");
+    const bridge = createAnnyChatTools(async <T>(path: string, init?: RequestInit): Promise<T> => {
+      const headers = new Headers(init?.headers);
+      headers.set("cookie", fixture.cookie);
+      headers.set("accept", "application/json");
+      if (init?.body && !headers.has("content-type")) headers.set("content-type", "application/json");
+      if ((init?.method ?? "GET").toUpperCase() !== "GET") headers.set("origin", fixture.webOrigin);
+      const response = await fixture.coreFetch(new Request(`${fixture.apiOrigin}${path}`, { ...init, headers }));
+      if (!response.ok) throw new Error(`HASI core request failed at ${path} (${String(response.status)}): ${await response.text()}`);
+      return await json<T>(response);
+    });
+    const search = await bridge.run("anny_search_resources", { kind: "workplace", location: "1J" });
+    expect(search.rooms?.map(room => room.resource.id)).toEqual(fixture.resourceIds);
+    const availability = await bridge.run("anny_get_availability", {
+      resourceId: fixture.resourceIds[0], date: "2099-03-10", time: "09:00", durationMinutes: 60,
+    });
+    expect(availability.rooms?.[0]?.intervals.some(interval => interval.available)).toBe(true);
+
+    const diagnostics = fixture.diagnostics();
+    expect(diagnostics.apiObservations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "request", method: "GET", path: "/api/resources", status: 200 }),
+      expect.objectContaining({ kind: "request", method: "POST", path: "/api/availability", status: 200 }),
+    ]));
+    expect(diagnostics.sourceObservations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "request", method: "GET", path: "/api/v1/resources", status: 200 }),
+      expect.objectContaining({ kind: "request", method: "GET", path: "/api/v1/availability/upcoming-intervals", status: 200 }),
+    ]));
+    expect(diagnostics.blockedWriteAttempts).toBe(0);
+    expect(diagnostics.sourceWriteAttempts).toBe(0);
+    expect(diagnostics.sourceWriteEffects).toBe(0);
+    expect(fixture.preparedProposals()).toEqual([]);
+  });
+
+  it("counts and denies direct proposal, confirmation, execution and cancellation attempts before effects", async () => {
+    const fixture = await createFixture({ mode: "read_only" });
+    const proposalId = "00000000-0000-4000-8000-000000000077";
+    const interval = {
+      resourceId: fixture.resourceIds[0], serviceId: "76878",
+      startDate: "2099-03-10T09:00:00.000Z", endDate: "2099-03-10T10:00:00.000Z",
+    };
+    const directMutationRequests = [
+      request(fixture, "/api/proposals", "POST", interval),
+      request(fixture, "/api/cancellations", "POST", { bookingId: "fixture-booking-01" }),
+      request(fixture, `/api/proposals/${proposalId}/confirm`, "POST", {}),
+      request(fixture, `/api/proposals/${proposalId}/reconcile`, "POST", {}),
+      ...[
+        "anny.propose_booking", "anny.propose_cancellation", "anny.execute_booking", "anny.execute_cancellation",
+      ].map(name => request(fixture, "/api/tools/call", "POST", { pluginId: "de.hsh.hasi.anny", name, arguments: interval })),
+    ];
+
+    for (const mutation of directMutationRequests) {
+      const response = await fixture.coreFetch(mutation);
+      expect(response.status).toBe(403);
+    }
+
+    const diagnostics = fixture.diagnostics();
+    expect(diagnostics.blockedWriteAttempts).toBe(directMutationRequests.length);
+    expect(diagnostics.apiObservations.filter(observation => observation.kind === "write_denied")).toHaveLength(directMutationRequests.length);
+    expect(diagnostics.apiObservations).toContainEqual(expect.objectContaining({
+      kind: "write_denied", method: "POST", path: "/api/tools/call", status: 403, toolName: "anny.execute_cancellation",
+    }));
+    expect(diagnostics.apiObservations.some(observation => observation.kind === "request"
+      && observation.path?.endsWith("/confirm"))).toBe(false);
+    expect(diagnostics.sourceObservations.some(observation => observation.path?.endsWith("/cancel"))).toBe(false);
+    expect(diagnostics.sourceWriteAttempts).toBe(0);
+    expect(diagnostics.sourceWriteEffects).toBe(0);
+    expect(fixture.preparedProposals()).toEqual([]);
   });
 
   it("denies foreign and forged scope and keeps proposal confirmation outside the fixture transport", async () => {
