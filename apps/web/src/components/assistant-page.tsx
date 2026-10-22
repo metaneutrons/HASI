@@ -455,7 +455,14 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     setBusy(false);
   }
 
-  function showToolResult(result: AnnyChatToolResult, interactionId: string, model: string) {
+  async function showToolResult(result: AnnyChatToolResult, interactionId: string, model: string) {
+    if (mode === "oidc" && result.bookings?.length === 0) {
+      const empty = await postForChat<{ message: unknown }>("/api/chat/dialogue", { kind: "bookings_empty", conversationId: sessionId });
+      const message = hostDialogueMessageSchema.parse(empty.message);
+      if (message.hostDialogue.code !== "bookings_empty") throw new Error("Unerwarteter Buchungshinweis.");
+      addHostMessage(message);
+      return;
+    }
     const labels = {
       anny_search_resources: "anny · Raumsuche",
       anny_get_availability: "anny · Verfügbarkeit",
@@ -615,7 +622,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
               const result = await tools().run(call.name, call.arguments);
               output = result.output;
               successfulTools.push(result.name);
-              showToolResult(result, interactionId, actualLabel);
+              await showToolResult(result, interactionId, actualLabel);
               actionableResult ||= !toolNeedsModelFollowUp(result.name);
             }
           } catch (cause) {
@@ -734,7 +741,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
                 return value === undefined ? [] : [[key, value]];
               }));
               const result = await tools().run("anny_search_resources", args);
-              showToolResult(result, id(), "");
+              await showToolResult(result, id(), "");
               return;
             }
           }
@@ -742,7 +749,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         if (isOwnBookingsRequest(trimmed)) {
           if (!await checkAnnyAccess("bookings", await loadModelTools())) return;
           const result = await tools().run("anny_list_my_bookings", {});
-          showToolResult(result, id(), "");
+          await showToolResult(result, id(), "");
           setRoomContext(false);
           return;
         }
@@ -847,7 +854,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         await stampMessages();
         const args = availabilityInputForSlot(resource.id, { ...interval, available: false });
         const result = await tools().run("anny_get_availability", args);
-        showToolResult(result, id(), "");
+        await showToolResult(result, id(), "");
       } catch (cause) { addActionResult({ text: cause instanceof Error ? cause.message : "Der Zeitraum konnte nicht geprüft werden." }); }
       finally { await finish(); }
       return;
