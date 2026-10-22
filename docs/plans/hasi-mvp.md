@@ -1,10 +1,10 @@
 # hasi pilot plan
 
-Created: 2026-10-09. Updated: 2026-10-21. Scope, mobile usability, TypeScript,
+Created: 2026-10-09. Updated: 2026-10-22. Scope, mobile usability, TypeScript,
 mock identity for the prototype and independently updateable plugins are agreed
 requirements. The deployed synthetic-data prototype is an initial slice of the MVP.
 
-Tracking under V9 deferred Groq-cache proof, V7 deferred API acceptance, V6 UI targets, V5 demo scope and adopted V4 qualification sequencing: [unified delivery index #47](https://github.com/metaneutrons/HASI/issues/47),
+Tracking under V10 deferred manual VPN review, V9 deferred Groq-cache proof, V7 deferred API acceptance, V6 UI targets, V5 demo scope and adopted V4 qualification sequencing: [unified delivery index #47](https://github.com/metaneutrons/HASI/issues/47),
 [M2 with P1–P6 #49](https://github.com/metaneutrons/HASI/issues/49),
 [post-MVP roadmap #55](https://github.com/metaneutrons/HASI/issues/55),
 [D3 #17](https://github.com/metaneutrons/HASI/issues/17),
@@ -27,7 +27,11 @@ to M8-A9; it no longer blocks M2/M7. The target, measurement method and failed
 results remain intact. Local UI feedback ≤ 200 ms remains in M2/M7. V9 records
 Fabian's 2026-10-21 decision to defer only Groq prompt-cache proof (CACHE-A1)
 to M8-A10. Its measurement contract remains intact; missing counters stay unknown.
-Ordinary model quality/security, usage/cost and budgets are not deferred. The earlier
+V10 records Fabian's 2026-10-22 request to defer his manual corrected-input
+VPN-answer review until final acceptance, as M8-A11. That review remains
+ungraded and cannot establish quality approval or a model ranking. Its rubric
+and required critical second review/adjudication are preserved. Other model
+comparison/security, usage/cost and budgets are not deferred. The earlier
 V3 preserved
 all criteria, evidence and status. It consolidates #14 into #47, #69–#74 into
 P1–P6 groups under #49, and #56–#63 into the source-specific entries under #55.
@@ -165,9 +169,9 @@ comparison; do not reopen accepted [#32–#34](https://github.com/metaneutrons/H
 | M3. Permission-aware knowledge qualification | Ingest/retrieve signed Intranet fixtures and reviewed synthetic HTML/web content; test language handling, source references, permission-aware context/caches and fixture incident freshness. No real source acquisition is required. | Curated German/English synthetic cases; two-user allow/deny and mocked rights revocation; no unauthorized fixture metadata/snippets reach models or users; citations, freshness fields and instructional-image extraction tested. | [#50](https://github.com/metaneutrons/HASI/issues/50) |
 | M4. anny read contracts and behavior | Qualify account-link/read behavior against TestIdP and mock/reference anny contracts. | Different mock users see only permitted resources/bookings; conflicting, missing and duplicate mappings fail closed. No real customer rights are inferred. | [#51](https://github.com/metaneutrons/HASI/issues/51) |
 | M5. anny write/cancel/reconcile behavior | Qualify server-bound proposals and action state against mock/reference contracts; do not issue live writes. | Customer eligibility rules represented in fixtures; stale/tampered confirmations rejected; retries are idempotent; cancellation and unknown-outcome reconciliation tested. | [#52](https://github.com/metaneutrons/HASI/issues/52) |
-| M6. Synthetic model and adversarial evaluation | Formal offline evaluation with synthetic fixed evidence/workflows, injected sources/tool output, rendering, network and model-switch tests. | Security cases pass per profile; quality, citations, tool arguments, latency and measured cost compared; no protected context or production writes. Complete before M7; qualify BUD-A1 before paid runs. | [#53](https://github.com/metaneutrons/HASI/issues/53) |
+| M6. Synthetic model and adversarial evaluation | Formal offline evaluation with synthetic fixed evidence/workflows, injected sources/tool output, rendering, network and model-switch tests. | Security cases pass per profile; quality, citations, tool arguments, latency and measured cost compared; no protected context or production writes. Complete before M7, except the specified manual VPN review retained as M8-A11; qualify BUD-A1 before paid runs. | [#53](https://github.com/metaneutrons/HASI/issues/53) |
 | M7. Technical pilot and operations | Deliver all three technical mock integrations, qualify automated/browser/simulator journeys and agreed technical thresholds, and exercise operations. Institutional data approval is not a prerequisite. | Key flows in automated browsers and device simulation; connection-loss recovery, automated accessibility checks, independent service-health monitoring, incident procedures and rollback exercised; [local UI feedback target](../architecture/technical-basis.md#demo-performance-targets) ≤ 200 ms qualified; API p95 ≤ 1,000 ms acceptance deferred to M8-A9. The disposable demo requires no backup/restore acceptance; production continuity is M8-A8. Real-device and participant acceptance is M8-A7. | [#54](https://github.com/metaneutrons/HASI/issues/54) |
-| M8. Final institutional acceptance | Qualify real institutional identity, source permissions, Anny behavior, protected-data processing and accountable ownership after M1–M7 technical work. | All M8-A1–M8-A10 evidence below and a recorded institutional go/no-go. No real writes or protected context before scoped authorization. | [#80](https://github.com/metaneutrons/HASI/issues/80) |
+| M8. Final institutional acceptance | Qualify real institutional identity, source permissions, Anny behavior, protected-data processing and accountable ownership after M1–M7 technical work. | All M8-A1–M8-A11 evidence below and a recorded institutional go/no-go. No real writes or protected context before scoped authorization. | [#80](https://github.com/metaneutrons/HASI/issues/80) |
 
 M1 contract design and offline M6 dataset/harness work can proceed in parallel.
 Technical M3 and M4 require M1/M2 technical boundaries and may use #79's
@@ -181,7 +185,7 @@ qualification are retained in M8-A8; the disposable demo has no such backup gate
 real-device and participant acceptance tests are transferred intact to M8-A7.
 V7 additionally transfers the 1-second API acceptance to M8-A9; the local UI
 target stays in M2/M7. V9 transfers only CACHE-A1 to M8-A10; it no longer
-blocks M6/M7. M8 is the final institutional barrier; it does not
+blocks M6/M7. V10 separately transfers the specified manual VPN review intact to M8-A11; it is not a technical M6/M7 blocker or a quality pass. M8 is the final institutional barrier; it does not
 retroactively block technical milestones.
 
 ### Institutional acceptance (M8)
@@ -206,7 +210,7 @@ the final recorded acceptance follows the evidence. The exact criteria are:
 - **M8-A6 — Final authorization:** Evidence maps to the institutional contracts;
   denial, revocation and incident tests pass, including M8-A7 real-device
   acceptance, M8-A8 production continuity, M8-A9 API performance and M8-A10
-  Groq-cache qualification; accountable
+  Groq-cache qualification and M8-A11 manual VPN-answer review; accountable
   owners record the
   institutional go/no-go. Scope-specific operator and institutional
   authorization must precede each real write or protected-context test; final
@@ -254,6 +258,17 @@ the final recorded acceptance follows the evidence. The exact criteria are:
   decision. It no longer blocks M6/M7; ordinary model comparison and security
   evaluation remain in M6.
 
+- **M8-A11 — Deferred manual VPN-answer review:** Fabian performs the first
+  blinded, claim-level review of the corrected-input ten-answer VPN packet
+  prepared on 2026-10-22. Preserve the exact questions, full authorized source
+  texts, unchanged answers, input/report identities and the existing rubric.
+  Critical findings require an independent second review and adjudication.
+  Do not replace human grades with model judgments, promote these development
+  cases to gold, claim factual-quality approval or rank profiles before this
+  evidence exists. This is the specific review deferred from M6 by Fabian on
+  2026-10-22 under V10; it no longer blocks technical M6/M7. Other technical
+  security/comparison, rendering/network and budget gates stay in M6/M2.
+
 #### Transfer of the original M1–M7 institutional requirements
 
 This transfer preserves the original acceptance scope. TestIdP, mocks and
@@ -267,7 +282,7 @@ institutional qualification.
 | M3: approved real-source ingestion, source-user authorization, content/ACL freshness, owner review and real incident updates | M3 signed synthetic exports, reviewed HTML fixtures, retrieval/citations, mock allow/deny/revocation/freshness cases | M8-A2 real Intranet and Service-IT access/rights/freshness; M8-A5 source-reviewed real cases; M8-A6 denial/revocation/incident evidence |
 | M4: real verified HsH-to-Anny account mapping and permitted customer reads | M4 TestIdP identities, mock mappings, permitted-resource and own-booking behaviors | M8-A1 real identity mapping; M8-A3 actual tenant delegation, eligibility and reads |
 | M5: authorized real tenant writes, cancellation, idempotency and reconciliation | M5 proposal binding, confirmation, mock create/cancel/idempotency/unknown-outcome tests | M8-A3 actual create/cancel and vendor reconciliation in the authorized tenant; M8-A6 incident/denial evidence |
-| M6: institutionally approved profiles/data classes and source-approved real evaluation cases | M6 formal synthetic/offline adversarial evaluation and measured provider comparison | M8-A4 protected-data/provider/embedding/retention approval; M8-A5 real reviewed cases; M8-A6 evidence-to-contract mapping |
+| M6: institutionally approved profiles/data classes and source-approved real evaluation cases | M6 formal synthetic/offline adversarial evaluation and measured provider comparison | M8-A4 protected-data/provider/embedding/retention approval; M8-A5 real reviewed cases; M8-A6 evidence-to-contract mapping; M8-A11 specified manual VPN-answer review |
 | M7: all three integrations delivered; agreed acceptance thresholds met; controlled institutional participants, real integration owners and operational acceptance | M7 technical integrations against mocks, automated/browser/simulator UX, independent service-health monitoring and incident/rollback exercises; demo backup/restore omitted under V5; ≤ 200 ms local UI qualification retained | M8-A1–A4 real integration and data approvals; M8-A5 named owners and real cases; M8-A6 recorded institutional go/no-go; M8-A7 complete real-device/participant acceptance; M8-A8 production backup/restore and off-host replication/failure monitoring; M8-A9 deferred 1-second API acceptance |
 
 V4 sequencing decision (2026-10-19): real-device and participant portions of
