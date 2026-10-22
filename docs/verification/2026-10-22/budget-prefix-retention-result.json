@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "kind": "read_only_budget_prefix_reconstruction",
+  "auditorSourceSha256": "97f1d093f709cc8400f9fe7f4d0f8a1a5f181f24b5d6e4fb3c8139da5561921e",
+  "readOnlySql": true,
+  "controls": {
+    "currentPostgresDigestMatches": "current_PostgreSQL_jsonb_digest_matches",
+    "oneMicroUsdCounterRejected": "one_microUsd_change_rejected",
+    "currentChargesConserve": true
+  },
+  "current": {
+    "reservations": 92,
+    "microUsdUsed": 168440
+  },
+  "snapshots": [
+    {
+      "label": "before218",
+      "capturedAtEpochMs": 1792660491126,
+      "budgetValueMd5": "4f0f1d8676670ae4afa51a08e20f0292",
+      "matches": [
+        {
+          "kind": "exact_prefix",
+          "reservationCount": 70,
+          "windowStart": 1792627200000,
+          "inputTokensUsed": 134128,
+          "outputTokensUsed": 5722,
+          "microUsdUsed": 130219,
+          "statusCounts": {
+            "reserved": 0,
+            "unknown": 4,
+            "settled": 66,
+            "released": 0
+          }
+        }
+      ]
+    },
+    {
+      "label": "before219",
+      "capturedAtEpochMs": 1792662695994,
+      "budgetValueMd5": "c42a6cde6cefc326fef2ecc42db37539",
+      "matches": [
+        {
+          "kind": "exact_prefix",
+          "reservationCount": 72,
+          "windowStart": 1792627200000,
+          "inputTokensUsed": 139885,
+          "outputTokensUsed": 5841,
+          "microUsdUsed": 135302,
+          "statusCounts": {
+            "reserved": 0,
+            "unknown": 4,
+            "settled": 68,
+            "released": 0
+          }
+        }
+      ]
+    }
+  ],
+  "additionalSettlements": {
+    "reservationRange": "indices70and71",
+    "charges": [
+      {
+        "inputTokens": 2564,
+        "outputTokens": 73,
+        "microUsd": 2344
+      },
+      {
+        "inputTokens": 3193,
+        "outputTokens": 46,
+        "microUsd": 2739
+      }
+    ],
+    "inputTokens": 5757,
+    "outputTokens": 119,
+    "microUsd": 5083,
+    "perRequestCeilingAtSharedPolicyMatches": true,
+    "callerAndIndividualTimestamps": "not_recorded_in_ledger"
+  },
+  "limits": [
+    "Matching is bounded to retained reservation prefixes and the enumerated last-entry status alternatives.",
+    "The exact post-218 intermediate value/digest was not preserved; no claim assigns the two settlements to before 09:28 UTC.",
+    "The ledger records no caller identity or per-reservation timestamp.",
+    "This reconstructs retained state, not every intermediate event or a provider invoice; it cannot prove that no temporary reset/refund ever occurred.",
+    "No model call, budget reservation/settlement/release/reset/refund or production business write was issued by this audit."
+  ],
+  "policySourceRevision": "c77ca53869cd68ce003afbb3dc8223b67b8f9ead"
+}
