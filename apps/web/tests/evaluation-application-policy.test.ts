@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryJsonStore } from "@hasi/state";
 import corpus from "../../../docs/evaluation/example-cases.json";
@@ -9,6 +9,10 @@ import { applicationPolicyStopReason, runApplicationPolicyCase } from "../src/li
 import type { EvaluationCase } from "../src/lib/server/evaluation/case-schema";
 
 vi.mock("server-only", () => ({}));
+
+const providerMessageMemberNameHashDomain = "hasi.provider-message-member-name.v1\0";
+const providerMessageMemberNameHash = (name: string) => createHash("sha256")
+  .update(providerMessageMemberNameHashDomain, "utf8").update(name, "utf8").digest("hex");
 
 function caseById(id: string) {
   const value = corpus.find(item => item.id === id);
@@ -64,6 +68,8 @@ describe("actual-route application-policy development observations", () => {
       maxProviderRequests: 4, fetch: wire.fetch });
     expect(result.outcome).toBe("completed");
     expect(result.fixtureCleanup).toBe("completed");
+    expect(result.providerResponses.every(response => response.captureStatus === "captured"
+      && !("unexpectedMessageMembers" in response))).toBe(true);
     expect(result.controls).toEqual({ sourceProbe: "passed", outboundEvidence: "passed", revokedContext: "not_observed" });
     expect(result.executedReads).toEqual([{ tool: "knowledge_search", sourceIds: ["int-lumen-restricted"] }]);
     expect(result.sourceRevisions[0]?.logicalSourceId).toBe("fixture:src:intranet:lumen-restricted");
@@ -312,14 +318,54 @@ describe("actual-route application-policy development observations", () => {
     { label: "unsupported output part", body: { output: [{ type: "future_output_part", privateValue: "synthetic-unretained-output" }] },
       issues: ["output_part_type_unsupported"] },
     { label: "text limit", body: { choices: [{ message: { role: "assistant", content: "x".repeat(30_001) } }] }, issues: ["text_limit_exceeded"] },
-  ])("records bounded $label diagnostics without provider values", async ({ body, issues }) => {
+  ])("records bounded $label diagnostics without provider values", async ({ label, body, issues }) => {
     const state = await admission();
     const fetch: typeof globalThis.fetch = () => Promise.resolve(Response.json(body));
     const result = await runApplicationPolicyCase(caseById("access-02"), { caseId: "access-02", profileId: "groq-oss-120b", ...state,
       maxProviderRequests: 1, fetch });
     expect(result.providerResponses[0]).toMatchObject({ captureStatus: "partial", captureIssues: issues });
     expect(result.providerResponses[0]).not.toHaveProperty("proposals");
+    if (label === "message member") {
+      expect(result.providerResponses[0]).toMatchObject({ unexpectedMessageMembers: {
+        count: 1,
+        nameSha256: ["7900ee87ab2dfe87d7f014415e75b5e2ebca87539bf09004572936defdd8b083"],
+        truncated: false,
+      } });
+      expect(JSON.stringify(result)).not.toContain("unsupported_provider_extension");
+      expect(JSON.stringify(result)).not.toContain("synthetic-unretained-extension-value");
+    } else {
+      expect(result.providerResponses[0]).not.toHaveProperty("unexpectedMessageMembers");
+    }
     expect(JSON.stringify(result)).not.toMatch(/synthetic-unretained|future_content_part|future_output_content|future_output_part/u);
+  });
+
+  it("records exactly bounded, sorted member-name digests independent of member order", async () => {
+    const names = ["extension_alpha", "extension_beta", "extension_gamma", "extension_delta", "extension_epsilon",
+      "extension_zeta", "extension_eta", "extension_theta", "extension_iota", "extension_kappa"];
+    const run = async (orderedNames: string[]) => {
+      const state = await admission();
+      const message = Object.fromEntries(orderedNames.map(name => [name, "synthetic-secret-shaped-value-not-retained"]));
+      const fetch: typeof globalThis.fetch = () => Promise.resolve(Response.json({ choices: [{ message: {
+        role: "assistant", content: "Synthetic text.", ...message,
+      } }] }));
+      return runApplicationPolicyCase(caseById("access-02"), { caseId: "access-02", profileId: "groq-oss-120b", ...state,
+        maxProviderRequests: 1, fetch });
+    };
+    const first = await run(names);
+    const second = await run([...names].reverse());
+    const diagnostic = first.providerResponses[0]?.unexpectedMessageMembers;
+    expect(diagnostic).toEqual({ count: names.length,
+      nameSha256: names.map(providerMessageMemberNameHash).sort().slice(0, 8), truncated: true });
+    expect(second.providerResponses[0]?.unexpectedMessageMembers).toEqual(diagnostic);
+    for (const result of [first, second]) {
+      expect(result.providerResponses[0]).toMatchObject({ captureStatus: "partial", captureIssues: ["unexpected_message_member"] });
+      expect(result.providerResponses[0]).not.toHaveProperty("proposals");
+      expect(result.outcome).toBe("observation_incomplete");
+      expect(result.executedReads).toEqual([]);
+      expect(applicationPolicyStopReason(result)).toBe("provider_observation_unavailable");
+      expect(JSON.stringify(result)).not.toContain("synthetic-secret-shaped-value-not-retained");
+      for (const name of names) expect(JSON.stringify(result)).not.toContain(name);
+    }
   });
 
   it("stops after a partial but route-usable proposal before executing it or making a second provider request", async () => {
@@ -339,7 +385,9 @@ describe("actual-route application-policy development observations", () => {
     expect(result.outcome).toBe("observation_incomplete");
     expect(result.routeResponses).toEqual([{ status: 200 }]);
     expect(result.providerResponses).toHaveLength(1);
-    expect(result.providerResponses[0]).toMatchObject({ captureStatus: "partial", captureIssues: ["unexpected_message_member"] });
+    expect(result.providerResponses[0]).toMatchObject({ captureStatus: "partial", captureIssues: ["unexpected_message_member"],
+      unexpectedMessageMembers: { count: 1,
+        nameSha256: ["7900ee87ab2dfe87d7f014415e75b5e2ebca87539bf09004572936defdd8b083"], truncated: false } });
     expect(result.providerResponses[0]).not.toHaveProperty("proposals");
     expect(result.providerRequests).toHaveLength(1);
     expect(wire.remaining()).toBe(1);
