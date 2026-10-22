@@ -49,9 +49,8 @@ disabled, and also blocks/counts recognized proposal, confirmation, execution,
 and cancellation attempts. The fixture explicitly supplies replay and execution-
 journal interfaces from an isolated per-fixture memory store, including when the
 operator image uses `NODE_ENV=production`. This does not establish durable
-production execution state. Its HTTPS Anny contract origin is handled exclusively
-by the injected local mock transport; it makes no DNS or external TLS request.
-Availability checks, proposals, confirmation, cancellation, and booking execution
+production execution state. The original loopback Anny contract origin remains
+handled exclusively by the injected local mock transport. Availability checks, proposals, confirmation, cancellation, and booking execution
 are outside this scenario.
 
 Each read receipt is tied to the typed tool arguments and returned tool result
