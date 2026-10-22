@@ -58,6 +58,17 @@ change provider endpoints, alter system instructions or grant new permissions.
 Reviewed plugin code and versioned tool definitions are application code, not
 definitions fetched from the knowledge corpus.
 
+Room-card actions keep source-controlled room, parent-office and booking labels
+in the visible chat event. The corresponding generated model user event contains
+only host-owned task wording, a schema-validated opaque resource/booking ID,
+an enumerated resource kind where relevant, and normalized interval fields.
+The two events have distinct IDs and content-bound timestamp receipts and are
+persisted separately. This avoids promoting a source label to a user instruction;
+it does not make tool output trusted or authorize the selected ID. Native tools
+still recheck resources, ownership and permissions, and writes still require
+the separate current proposal confirmation. Existing historical messages are
+not retroactively rewritten or newly qualified by this change.
+
 ## Required controls
 
 1. **Authorize knowledge before exposure.** Intranet and Service-IT need source
