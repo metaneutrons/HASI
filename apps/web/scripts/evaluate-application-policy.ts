@@ -8,7 +8,7 @@ import { parseEvaluationDataset } from "../src/lib/server/evaluation/case-schema
 
 // The same reviewed synthetic corpus as evaluate-models.ts. A change requires
 // reviewing both operator pins; arbitrary input files are never accepted.
-const CORPUS_SHA256 = "82ff06922cccad9a2a741ce0894cdb548ab40a540e485c689308933488b59ef0";
+const CORPUS_SHA256 = "ff3efb055983aff35968495bffc409c9f8e1d13240eddcec390ad3ee03f1a078";
 const USAGE = "Usage: pnpm evaluate:application-policy --profiles <id,id> [--cases id,id] [--max-calls 1..64] [--repetitions 1..3] [--run --output <new.ndjson>]";
 
 function options(argv: readonly string[]) {

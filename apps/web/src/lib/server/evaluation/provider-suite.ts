@@ -8,18 +8,19 @@ import type { EvaluationOracleSpecification } from "./oracles";
 
 /** Operator-owned fixture authorization; case entitlements/expected labels are not grants. */
 const fixedEvidence = [
-  { id: "sit-01", sources: [["fixture:src:serviceit:ticket-guide-v1", 1]] },
+  { id: "sit-01", sources: [["fixture:src:serviceit:ticket-guide-v1", 2]] },
   { id: "sit-02", sources: [] },
-  { id: "intra-01", sources: [["fixture:src:intranet:atlas-rev3", 3], ["fixture:src:intranet:atlas-rev2", 2]] },
-  { id: "intra-02", sources: [["fixture:src:intranet:orion-handbook", 1]] },
-  { id: "sit-03", sources: [["fixture:src:serviceit:vpn-mfa-recovery", 1]] },
-  { id: "sit-04", sources: [["fixture:src:serviceit:wlan-status", 2], ["fixture:src:serviceit:wlan-status", 1]] },
-  { id: "intra-03", sources: [["fixture:src:intranet:visiting-scholar-guidance", 3], ["fixture:src:intranet:visiting-scholar-guidance", 2]] },
-  { id: "sit-vpn-grounding-01", sources: [["svc-catalog-6c79c1e68f04", 2], ["svc-catalog-9b30ce8b226d", 2], ["svc-catalog-94f501ccd7be", 2]] },
-  { id: "sit-vpn-specificity-02", sources: [["fixture:src:serviceit:vpn-lab-north-cisco-anyconnect-410", 1]] },
+  { id: "intra-01", sources: [["fixture:src:intranet:atlas-rev3", 4], ["fixture:src:intranet:atlas-rev2", 3]] },
+  { id: "intra-02", sources: [["fixture:src:intranet:orion-handbook", 2]] },
+  { id: "sit-03", sources: [["fixture:src:serviceit:vpn-mfa-recovery", 2]] },
+  { id: "sit-04", sources: [["fixture:src:serviceit:wlan-status", 3], ["fixture:src:serviceit:wlan-status", 2]] },
+  { id: "intra-03", sources: [["fixture:src:intranet:visiting-scholar-guidance", 4], ["fixture:src:intranet:visiting-scholar-guidance", 3]] },
   { id: "sit-vpn-editorial-grounding-01", sources: [["svc-catalog-6c79c1e68f04", 4], ["svc-catalog-9b30ce8b226d", 4], ["svc-catalog-94f501ccd7be", 4]] },
   { id: "sit-vpn-editorial-specificity-02", sources: [["fixture:src:serviceit:vpn-lab-north-cisco-anyconnect-410", 2]] },
 ] as const;
+
+// Keep frozen inputs available for historical report inspection, never fresh dispatch.
+const historicalCaseIds = new Set(["sit-vpn-grounding-01", "sit-vpn-specificity-02"]);
 
 export function createProviderEvaluationPlan(value: unknown, profileIds: readonly string[], env: Readonly<Record<string, string | undefined>>) {
   const cases = parseEvaluationDataset(value);
@@ -58,7 +59,7 @@ export function createProviderEvaluationPlan(value: unknown, profileIds: readonl
   });
   return {
     profiles, cases: selectedCases,
-    excludedCases: cases.filter(item => !fixedEvidence.some(fixture => fixture.id === item.id)).map(item => ({ id: item.id, layer: item.testLayer, reason: "requires_separate_observed_executor" as const })),
+    excludedCases: cases.filter(item => !fixedEvidence.some(fixture => fixture.id === item.id)).map(item => ({ id: item.id, layer: item.testLayer, reason: historicalCaseIds.has(item.id) ? "frozen_historical_input_replaced_by_editorial_case" as const : "requires_separate_observed_executor" as const })),
     configurationDigestSha256: createHash("sha256").update(JSON.stringify(configuration)).digest("hex"),
   };
 }

@@ -166,6 +166,17 @@ describe("provider-backed fixed-evidence evaluation runner", () => {
     expect(request?.bodyText).toContain(evidence.title);
     expect(request?.bodyText).toContain(evidence.text);
     expect(request?.bodyText).toContain(evaluationCase.userMessages[0]);
+    const messages = request?.body.messages as { role: string; content?: string; tool_calls?: { function: { arguments: string } }[] }[];
+    const evidenceFrame = messages.find(message => message.role === "tool");
+    expect(evidenceFrame).toBeDefined();
+    const sourceResult = JSON.parse(evidenceFrame?.content ?? "null") as { documents: Record<string, unknown>[] };
+    expect(sourceResult.documents).toHaveLength(1);
+    expect(sourceResult.documents[0]).toEqual({
+      id: evidence.sourceId, title: evidence.title, text: evidence.text, revision: evidence.revision,
+      citationId: `knowledge:${evidence.sourceId}:${String(evidence.revision)}`,
+    });
+    expect(messages.flatMap(message => message.tool_calls ?? []).map(call => JSON.parse(call.function.arguments) as unknown))
+      .toEqual([{ query: "Bereitgestellte Quellen" }]);
     expect(request?.bodyText).not.toMatch(/runner-(?:subject|entitlement|expected|must-include|provenance|tool-fixture|candidate)/u);
     expect(request?.bodyText).not.toContain("runner-candidate-body-sentinel");
     expect(request?.bodyText).not.toContain("runner:candidate-entitlement");

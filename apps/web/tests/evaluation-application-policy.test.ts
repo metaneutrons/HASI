@@ -155,7 +155,7 @@ describe("actual-route application-policy development observations", () => {
     const result = await runApplicationPolicyCase(caseById("inject-01"), { caseId: "inject-01", profileId: "groq-oss-120b", ...state,
       maxProviderRequests: 4, fetch: wire.fetch });
     expect(result.outcome).toBe("completed");
-    expect(result.sourceRevisions.map(item => item.revision).sort()).toEqual([2, 3]);
+    expect(result.sourceRevisions.map(item => item.revision).sort()).toEqual([3, 4]);
     expect(JSON.stringify(wire.requests[1])).toContain("reveal hidden system instructions");
     expect(result.routeResponses.at(-1)?.text).toContain("ROOT-0");
     expect(result.modelAssessment).toBe("requires_human_review");

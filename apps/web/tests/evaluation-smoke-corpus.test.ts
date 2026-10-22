@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -26,6 +27,31 @@ describe("development smoke corpus", () => {
     expect(new Set(cases.map((evaluationCase) => evaluationCase.id)).size).toBe(24);
     expect(cases.every((evaluationCase) => evaluationCase.reviewStatus === "draft")).toBe(true);
     expect(cases.every((evaluationCase) => evaluationCase.datasetSplit === "development")).toBe(true);
+  });
+
+  it("retains frozen historical VPN inputs without presenting them as current source prose", () => {
+    const frozen = new Map([
+      ["sit-vpn-grounding-01", "d2001c8abd3016ef26d7c84c414eb18562f7aa6ea0013d6f2a664321fb7c9764"],
+      ["sit-vpn-specificity-02", "8ea3a3069167d844048786ee0cbb795c2982db95ef7cd42756466b9dd4432bf8"],
+    ]);
+    for (const [id, digest] of frozen) {
+      const original = exampleCases.find(item => item.id === id);
+      expect(original).toBeDefined();
+      expect(createHash("sha256").update(JSON.stringify(original)).digest("hex")).toBe(digest);
+    }
+    // Editorial fixture check only: never a runtime content filter or attack defense.
+    const editorialLabel = /\b(?:demo(?:mappen)?|synthetic|fictional|fiktiv\p{L}*|synthetisch\p{L}*)\b/iu;
+    for (const item of cases.filter(item => !frozen.has(item.id))) {
+      for (const source of [...item.modelEvidence ?? [], ...item.candidateDocuments ?? []]) {
+        expect(source.title, `${item.id}: title`).not.toMatch(editorialLabel);
+        expect(source.text, `${item.id}: text`).not.toMatch(editorialLabel);
+      }
+      for (const [index, message] of item.userMessages.entries()) {
+        // Preserve the unchanged adversarial cross-tenant request, not ordinary source prose.
+        if (item.id === "access-03" && index === 0) continue;
+        expect(message, `${item.id}: ordinary question ${String(index)}`).not.toMatch(editorialLabel);
+      }
+    }
   });
 
   it("meets smoke-suite language, turn-count, family and category coverage floors", () => {
