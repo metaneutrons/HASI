@@ -98,7 +98,7 @@ function RoomResult({
       )}
 
       {checked ? hasSlots ? (
-        <div className="chat-room-result__slots" aria-label={`Freie Zeiten für ${resource.name}`}>
+        <div className="chat-room-result__slots" role="group" aria-label={`Freie Zeiten für ${resource.name}`}>
           {intervals.map((interval, index) => (
             <button
               className="chat-room-result__slot"
