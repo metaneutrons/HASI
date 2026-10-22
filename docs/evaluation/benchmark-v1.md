@@ -275,3 +275,12 @@ Earlier cases, runs and the first local human-review packet remain historical;
 they cannot serve as review of the new inputs. Fabian will review newly generated
 answers. Critical findings still need an independent second review and
 adjudication; this editorial decision does not accept M6 or lower those gates.
+
+Sequencing update, 2026-10-22: Fabian deferred his first manual review of the
+corrected-input ten-answer VPN packet until final acceptance. The review and
+its critical second-review/adjudication requirement now belong to
+[M8-A11](../plans/hasi-mvp.md#institutional-acceptance-m8), rather than blocking
+technical M6/M7. The answers stay ungraded and the rubric is unchanged. This
+specific transfer grants no quality pass, gold labels, model ranking or
+institutional processing approval; other technical comparison, adversarial,
+rendering/network and budget gates remain required.

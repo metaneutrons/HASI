@@ -52,3 +52,15 @@ repeating the global disclosure is not a required claim. Critical findings
 still need an independent second review and disagreement resolution. Source
 support, appropriate abstention, no credential requests and no invented
 institutional policy remain required.
+
+## Deferred manual review — 2026-10-22
+
+Fabian asked to postpone his manual review of the later corrected-input
+**ten-answer** packet and complete the technical work first. That specified
+review, unchanged rubric, critical independent second review and adjudication
+now belong to [M8-A11](../plans/hasi-mvp.md#institutional-acceptance-m8).
+The eight-answer packet documented above remains historical for its original
+candidate. The new packet's questions, sources and answers must be preserved
+for the deferred blinded review. No answers are graded by this sequencing
+change, no quality improvement/ranking is accepted, and other M6 technical
+security/comparison and rendering/network requirements remain in place.
