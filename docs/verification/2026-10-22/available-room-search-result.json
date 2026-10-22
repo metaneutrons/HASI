@@ -1,0 +1,28 @@
+{
+  "sourceRevision": "61d1f721923eba9f12a241d6fa3f287b8affc794",
+  "optimized": true,
+  "apiReplicas": 2,
+  "scope": "isolated TestIdP, native Anny mock reads and protected PostgreSQL workspaces",
+  "initialBoundedVacancies": 8,
+  "afterMockBookingVacancies": 7,
+  "occupiedAmrum1AbsentFromSecondSearch": true,
+  "reloadedSearchHasNoVacancyCards": true,
+  "groupRecheckRestoresExactVacancies": true,
+  "nativeModelModeOfficePreferenceChecksAvailability": true,
+  "missingTimeNoCardsBeforeAndAfterReload": true,
+  "setupMockBookingsConfirmed": 1,
+  "realBusinessWrites": 0,
+  "realProvidersConfigured": false,
+  "mobileDomDimensions": {
+    "width": 390,
+    "height": 844,
+    "documentScrollWidth": 390
+  },
+  "mobileScreenshotAccepted": false,
+  "limitations": [
+    "No original user query/time recovered; duplicated-error origin is not established.",
+    "Model-mode preference shortcut was exercised; no actual LLM-generated tool call was used.",
+    "Mobile CDP screenshot was clipped/scaled inconsistently; it is not visual acceptance.",
+    "No real users, institutional rights, native iPhone or M6/M7 global acceptance."
+  ]
+}
