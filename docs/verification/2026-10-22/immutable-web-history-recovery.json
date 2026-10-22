@@ -1,0 +1,307 @@
+{
+  "schemaVersion": 1,
+  "kind": "synthetic_protected_history_immutable_web_images",
+  "date": "2026-10-22",
+  "sourceRevision": "2b5f9e13479594b0a6131b899d0b1de5db66eeb8",
+  "operator": {
+    "imageId": "sha256:bd22d4f8bfc9b761942a8e92d7b149a5ce6fb03b9b25939f93ebaa6d20cb96e9",
+    "runtime": {
+      "imageId": "sha256:bd22d4f8bfc9b761942a8e92d7b149a5ce6fb03b9b25939f93ebaa6d20cb96e9",
+      "node": "v24.22.0",
+      "platform": "linux",
+      "arch": "x64",
+      "uid": 1000,
+      "byob": true,
+      "bytes": 2,
+      "license": true,
+      "reference": true,
+      "git": true,
+      "openssl": true,
+      "actualProviderCalls": 0
+    },
+    "sourceFileSha256": {
+      "scripts/serve-plugin-journey.ts": "4dd2b62296a2ab5d2f7b3cfc8af93f6d4ceedbc8dc86d6d8be8c9690dd46f43d",
+      "scripts/plugin-journey-web-images.ts": "f007b59d6bd4757920e72e25e97f1af8ba9dafceb7154bd02f8b81c489f68476",
+      "scripts/plugin-journey-model.ts": "0d4d0c7ea4f8b6add6c976049d942d89398ad9f497b26d0811862f2675d63019",
+      "scripts/plugin-journey-proxy.ts": "af491b01d7d443ba3cd482478fad405020539713df6e7152d127c4ff3c85f017",
+      "scripts/package-reference-plugin.ts": "2e1a170fa706a608af58ef0d6234c768bafe65a1a1fd013e7b07d8b21fb76579",
+      "pnpm-lock.yaml": "d17165ca9989d72401f3eaa9718d1ffa43bc1adb486113602760f30db13317ba",
+      "examples/reference-plugin/src/server.js": "6c15efc729f0e9f960e2fc4647aee762be48e91dfc0da725aaa22991d3ea1f85",
+      "examples/reference-plugin/src/state.js": "0940467a804b6b4efbd8104f55dfe7dfcbde36b01d717ba305b287506380a9d6",
+      "examples/reference-plugin/src/manifest.json": "9fbdd03fb66e2e5fbc32a97072a33e218a7e708b230ff5567ecf82a4eabb115e",
+      "LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    "sourceEquality": true,
+    "hostNetwork": true,
+    "sameAbsoluteHostTmpdir": true,
+    "realProviderCredentialsSupplied": false
+  },
+  "webImages": {
+    "previous": {
+      "imageId": "sha256:e822e9132ef8fe6eab8e3093645b38e5321079d1c4f2f0d88a23a81ac29c7785",
+      "source": "https://github.com/metaneutrons/HASI",
+      "revision": "d2bcff0856ad3cd1d00dba0b3e33eb330c824282",
+      "os": "linux",
+      "architecture": "amd64"
+    },
+    "current": {
+      "imageId": "sha256:b09126e55e0ef943d47210c3367ebf0247b8ec38967988ed0831a5ea59120603",
+      "source": "https://github.com/metaneutrons/HASI",
+      "revision": "ea79670ed42fe6f206068e9e74bc3c397f7a2f01",
+      "os": "linux",
+      "architecture": "amd64"
+    }
+  },
+  "healthyStarts": [
+    {
+      "sequence": 1,
+      "from": null,
+      "to": "current",
+      "imageId": "sha256:b09126e55e0ef943d47210c3367ebf0247b8ec38967988ed0831a5ea59120603",
+      "revision": "ea79670ed42fe6f206068e9e74bc3c397f7a2f01",
+      "containerId": "ae345dd0df37034bdf462058a680ce7a9a049da5439ecd66d0f1b643b47df70a",
+      "completedAt": "2026-10-22T00:18:50.633Z"
+    },
+    {
+      "sequence": 2,
+      "from": "current",
+      "to": "previous",
+      "imageId": "sha256:e822e9132ef8fe6eab8e3093645b38e5321079d1c4f2f0d88a23a81ac29c7785",
+      "revision": "d2bcff0856ad3cd1d00dba0b3e33eb330c824282",
+      "containerId": "362ad7e47ef527364db9a73e856029c71a2391f76684215d9636788d8a1a57d5",
+      "completedAt": "2026-10-22T00:23:17.140Z"
+    },
+    {
+      "sequence": 3,
+      "from": "previous",
+      "to": "current",
+      "imageId": "sha256:b09126e55e0ef943d47210c3367ebf0247b8ec38967988ed0831a5ea59120603",
+      "revision": "ea79670ed42fe6f206068e9e74bc3c397f7a2f01",
+      "containerId": "965dcbb7d081b20c412e83db1f9d6aa039e233058ddb9a0ad05a0330be6776ad",
+      "completedAt": "2026-10-22T00:24:37.954Z"
+    },
+    {
+      "sequence": 4,
+      "from": "current",
+      "to": "previous",
+      "imageId": "sha256:e822e9132ef8fe6eab8e3093645b38e5321079d1c4f2f0d88a23a81ac29c7785",
+      "revision": "d2bcff0856ad3cd1d00dba0b3e33eb330c824282",
+      "containerId": "83d1ca129eadb63b3b3eab9353e99577358341c0d333b0482818628682711318",
+      "completedAt": "2026-10-22T00:26:51.613Z"
+    },
+    {
+      "sequence": 5,
+      "from": "previous",
+      "to": "current",
+      "imageId": "sha256:b09126e55e0ef943d47210c3367ebf0247b8ec38967988ed0831a5ea59120603",
+      "revision": "ea79670ed42fe6f206068e9e74bc3c397f7a2f01",
+      "containerId": "fa4212516e0f9cebd598e7cb3b0c106d10be075750caad77bd6cfc4c91b99384",
+      "completedAt": "2026-10-22T00:28:09.528Z"
+    }
+  ],
+  "imageReplacements": 4,
+  "topology": {
+    "testIdp": true,
+    "apiReplicas": 2,
+    "persistentReferenceState": true,
+    "artifactInputMode": "workspace-reference-fixture",
+    "independentDistributionAcceptance": false,
+    "sourceIdentityAssurance": "workspace-local-git-fixture-not-external-publisher-proof",
+    "referenceArtifact": {
+      "sourceSha": "5e266bc2a6a305c43dfa29c3e7740bed67ca0ae6",
+      "pluginId": "hasi.reference",
+      "pluginVersion": "1.0.0",
+      "manifestDigest": "01038ec93bce8c02af0b3918911735348839ffe5a72b01de317c27d388851611",
+      "manifestFileSha256": "3d59541a8d72207fc3214afa1db978bb6723ec68c943575b20f0bf7471ac4709",
+      "artifactSha256": "f686993b2df99a21cdd397b66d53006fcdb6c743a9705c6ace7b83b099747b9a",
+      "artifactManifestSha256": "ac306a04e4f69e18ad06a50a2e84257326efb2b2817de9a3f93eedf14749cf75",
+      "payloadFileCount": 4268,
+      "runtimePackageCount": 72,
+      "licensePackageCount": 73,
+      "licenseInventorySha256": "2a62f47a4eb7f4b44e490a72da97104dcc83a721007706dff0d499b367fefcb2"
+    }
+  },
+  "retentionComparisons": [
+    {
+      "before": "current-before-rollback",
+      "after": "previous-before-browser",
+      "unchangedRows": 15,
+      "entriesSha256Before": "3592663ad7770214d4ef8c0c60c1f45c330dc98744b8281c74268ad5e25dbd74",
+      "entriesSha256After": "3592663ad7770214d4ef8c0c60c1f45c330dc98744b8281c74268ad5e25dbd74",
+      "budgetEntriesSha256": "309716b79bd4660fb454d957dee3fc444bb2ab38ccbb0886e3f31234813735de",
+      "samePhysicalDatabaseAndVolume": true
+    },
+    {
+      "before": "previous-before-forward",
+      "after": "current-forward-before-browser",
+      "unchangedRows": 16,
+      "entriesSha256Before": "3705f6ac13f8cf134b07a7a190a92974acedc1f435364b794dd4d232a661c1fe",
+      "entriesSha256After": "3705f6ac13f8cf134b07a7a190a92974acedc1f435364b794dd4d232a661c1fe",
+      "budgetEntriesSha256": "c5b2368c02f7e1d49acb109238b7696d26dcd19e0868da0b00693246ca73ff54",
+      "samePhysicalDatabaseAndVolume": true
+    },
+    {
+      "before": "revoked-current-before-rollback",
+      "after": "revoked-previous-before-browser",
+      "unchangedRows": 17,
+      "entriesSha256Before": "293d59cdb19f6ac8a9280ed8599f93887efb876101c61943f59c997ab48fef20",
+      "entriesSha256After": "293d59cdb19f6ac8a9280ed8599f93887efb876101c61943f59c997ab48fef20",
+      "budgetEntriesSha256": "6fdf7c928735adbc270f7dec4689532752281674fe9e7feebd6e09c1cf5281f9",
+      "samePhysicalDatabaseAndVolume": true
+    },
+    {
+      "before": "revoked-previous-before-forward",
+      "after": "revoked-current-forward-before-browser",
+      "unchangedRows": 17,
+      "entriesSha256Before": "af9bfca5f8ba7c435da497afa5f0881c58adbea26d9e6c40ada8e8c08634563b",
+      "entriesSha256After": "af9bfca5f8ba7c435da497afa5f0881c58adbea26d9e6c40ada8e8c08634563b",
+      "budgetEntriesSha256": "92e3a669e93ffbec228ea0d6a003fb602923f026d348505e0420954278e66a71",
+      "samePhysicalDatabaseAndVolume": true
+    }
+  ],
+  "browserObservations": {
+    "method": "actual desktop in-app browser, visible AX assertions and native screenshot",
+    "sameAuthenticatedTestIdentityAcrossImages": true,
+    "sameConversationAcrossImages": true,
+    "observations": [
+      {
+        "phase": "current-reload",
+        "resultCards": 1,
+        "priorSourceBodyVisible": true,
+        "priorDerivedAnswerVisible": true
+      },
+      {
+        "phase": "previous-reload",
+        "resultCards": 1,
+        "priorSourceBodyVisible": true,
+        "priorDerivedAnswerVisible": true
+      },
+      {
+        "phase": "previous-next-turn",
+        "resultCards": 2,
+        "priorSourceBodyVisible": true,
+        "priorDerivedAnswerVisible": true
+      },
+      {
+        "phase": "current-forward-reload",
+        "resultCards": 2,
+        "priorSourceBodyVisible": true,
+        "priorDerivedAnswerVisible": true
+      },
+      {
+        "phase": "current-next-turn",
+        "resultCards": 3,
+        "priorSourceBodyVisible": true,
+        "priorDerivedAnswerVisible": true
+      },
+      {
+        "phase": "current-revoked-reload",
+        "resultCards": 0,
+        "priorSourceBodyVisible": false,
+        "priorDerivedAnswerVisible": false
+      },
+      {
+        "phase": "previous-revoked-reload",
+        "resultCards": 0,
+        "priorSourceBodyVisible": false,
+        "priorDerivedAnswerVisible": false
+      },
+      {
+        "phase": "previous-revoked-next-turn",
+        "resultCards": 0,
+        "priorSourceBodyVisible": false,
+        "priorDerivedAnswerVisible": false,
+        "connectionRecoveryAnswerVisible": true,
+        "responseEvidence": "operator observation; no retained raw AX artifact"
+      },
+      {
+        "phase": "current-revoked-forward-reload",
+        "resultCards": 0,
+        "priorSourceBodyVisible": false,
+        "priorDerivedAnswerVisible": false,
+        "connectionRecoveryAnswerVisible": true,
+        "responseEvidence": "operator observation; no retained raw AX artifact"
+      }
+    ],
+    "rawAxArtifactRetained": false
+  },
+  "modelFixture": {
+    "calls": 7,
+    "actualProviderCalls": 0,
+    "resultObservations": {
+      "referenceReadResults": 3,
+      "omittedResults": 0,
+      "priorReferenceReadResults": 5,
+      "priorReferenceAnswers": 6,
+      "requestsWithPriorReferenceContext": 4
+    },
+    "revokedRequestDelta": {
+      "calls": 1,
+      "referenceReadResults": 0,
+      "priorReferenceReadResults": 0,
+      "priorReferenceAnswers": 0,
+      "requestsWithPriorReferenceContext": 0
+    },
+    "sourceStats": {
+      "marks": 0,
+      "journalRows": 0,
+      "sourceRows": 0,
+      "invocationRows": 1
+    },
+    "proxyStats": {
+      "armed": false,
+      "droppedReplies": 0,
+      "observedExecutions": 0
+    },
+    "realCostOrCacheClaim": false
+  },
+  "revocation": {
+    "providerControl": {
+      "event": "reference-provider-revocation-applied",
+      "installationId": "hasi.reference",
+      "persona": "admin",
+      "replicasAcknowledged": 2
+    },
+    "storedResultContextsRetained": 3,
+    "budgetUnchangedDuringRightsWithdrawal": true,
+    "workspaceSanitized": true
+  },
+  "cleanup": {
+    "webContainersConfirmedAbsent": 5,
+    "operatorExit": 0,
+    "fixtureDirectoryRemoved": true,
+    "fixturePortsListening": {
+      "3001": false,
+      "3002": false,
+      "4100": false,
+      "4101": false,
+      "4102": false,
+      "4103": false,
+      "40699": false
+    },
+    "callerDatabaseRowsRetained": 17
+  },
+  "postQuitRetainedRows": 17,
+  "productionIsolation": {
+    "revision": "16ad5020a002b451de77ee58d17a84dc2a3890a9",
+    "healthy": true,
+    "retention": {
+      "mode": "verify",
+      "at": 1792629035769,
+      "baseline_rows_still_active": 553,
+      "missing_rows": 0,
+      "changed_rows": 0,
+      "budget_rows": 1,
+      "budget_fingerprint": "72b2cc600f7c5c50ede3fb163cff6434957ed9465b21196f3b8d6fb61ad50f81",
+      "same_database_and_volumes": true,
+      "baseline_expired_rows": 1
+    }
+  },
+  "limits": [
+    "Post-format images only; no legacy proof verifier or pre-format compatibility.",
+    "The public demo and Coolify controller were not reconfigured or rolled back in this exercise.",
+    "Synthetic source/account authorities and fixture completions; no actual-model quality, full network matrix or institutional-data approval.",
+    "M6 and M7 acceptance remain separate; real-device and institutional acceptance remain M8.",
+    "Groq cache proof remains deferred to M8-A10."
+  ]
+}
