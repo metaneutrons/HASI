@@ -19,9 +19,10 @@ import { knowledgeModelDocuments, knowledgeSourceMessage, knowledgeSourceSummary
 import { chatKnowledgeCitations } from "@/lib/chat-knowledge-citations";
 import { knowledgeCitationHref } from "@/lib/knowledge-citations";
 import { knowledgeChatReturnHref, knowledgeOrigin, knowledgeReturnLocation } from "@/lib/knowledge-navigation";
-import { chatProfileIdSchema, chatToolSchemas, isChatToolName, modelProfilesResponseSchema, modelReplySchema, type ChatToolCallName, type ChatToolName, type MessageTimestamp, type ModelProfile, type ModelProfileId, type WireMessage } from "@/lib/chat-contract";
+import { chatProfileIdSchema, chatToolSchemas, isChatToolName, modelProfilesResponseSchema, modelReplySchema, type ChatToolName, type MessageTimestamp, type ModelProfile, type ModelProfileId, type WireMessage } from "@/lib/chat-contract";
 import { createChatMessageClock } from "@/lib/chat-message-clock";
 import { appendChatText, trimChatHistory } from "@/lib/chat-history";
+import { omittedToolHistoryContent } from "@/lib/tool-history";
 import type { AnnyChatProposal, ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
 import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError, RoomTimeUnresolvedError } from "@/lib/chat-room-time";
 import { canStartNewChat } from "@/lib/chat-workspace-store";
@@ -454,12 +455,6 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     setBusy(false);
   }
 
-  function recordTool(name: ChatToolCallName, arguments_: Record<string, unknown>, output: Record<string, unknown>) {
-    const callId = id();
-    history.current.push(remember({ role: "assistant", content: "", toolCalls: [{ id: callId, name, arguments: arguments_ }] }));
-    history.current.push(remember({ role: "tool", content: JSON.stringify(output), toolCallId: callId, name }));
-  }
-
   function showToolResult(result: AnnyChatToolResult, interactionId: string, model: string) {
     const labels = {
       anny_search_resources: "anny · Raumsuche",
@@ -502,7 +497,8 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   }
 
   async function runModel() {
-    // Keep complete exchanges, including direct tool actions with no inference.
+    // Preserve signed model exchanges. Host-initiated tool activity is represented
+    // by its user intent and server-revalidated UI cards, not fabricated model calls.
     if (!trimChatHistory(history.current)) throw new Error("Dieser einzelne Gesprächsschritt ist für den Modellkontext zu umfangreich. Beginne bitte einen neuen Chat mit einer kürzeren Anfrage; deine vorhandenen Karten bleiben erhalten.");
     const interactionId = id();
     const controller = pendingRequest.current;
@@ -628,7 +624,10 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
             const failedLabel = pluginDescriptor ? `Plugin · ${pluginDescriptor.title} · Anfrage fehlgeschlagen` : call.name === "knowledge_search" ? "Wissensdienst · Anfrage fehlgeschlagen" : "anny · Anfrage fehlgeschlagen";
             add({ role: "assistant", text: String(output.error), tool: failedLabel });
           }
-          history.current.push(remember({ role: "tool", toolCallId: call.id, name: call.name, content: JSON.stringify(output), ...(toolContextId ? { toolContextId } : {}) }));
+          // Match the protected history projection from the start. Visible cards
+          // retain their own current native data; unsigned result bodies do not.
+          const content = call.name === "knowledge_search" || toolContextId ? JSON.stringify(output) : omittedToolHistoryContent();
+          history.current.push(remember({ role: "tool", toolCallId: call.id, name: call.name, content, ...(toolContextId ? { toolContextId } : {}) }));
         }
         // Host-rendered cards already provide the answer and next action.
         // Stop after every successful Anny result, including empty/unchecked searches.
@@ -637,7 +636,6 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       add({ role: "assistant", text: "Die maximale Zahl an Modellschritten für diese Nachricht ist erreicht. Du kannst die angezeigten Karten nutzen oder eine weitere Nachricht schreiben." });
     } catch (cause) {
       if (stopped) return;
-      appendHistory("assistant", "Die Verarbeitung der letzten Nachricht wurde durch einen technischen Fehler unterbrochen. Offene Schritte wurden nicht automatisch fortgesetzt; berücksichtige die bereits vorliegenden Tool-Ergebnisse.");
       throw cause;
     }
   }
@@ -736,7 +734,6 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
                 return value === undefined ? [] : [[key, value]];
               }));
               const result = await tools().run("anny_search_resources", args);
-              recordTool("anny_search_resources", args, result.output);
               showToolResult(result, id(), "");
               return;
             }
@@ -745,7 +742,6 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         if (isOwnBookingsRequest(trimmed)) {
           if (!await checkAnnyAccess("bookings", await loadModelTools())) return;
           const result = await tools().run("anny_list_my_bookings", {});
-          recordTool("anny_list_my_bookings", {}, result.output);
           showToolResult(result, id(), "");
           setRoomContext(false);
           return;
@@ -851,7 +847,6 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         await stampMessages();
         const args = availabilityInputForSlot(resource.id, { ...interval, available: false });
         const result = await tools().run("anny_get_availability", args);
-        recordTool("anny_get_availability", args, result.output);
         showToolResult(result, id(), "");
       } catch (cause) { addActionResult({ text: cause instanceof Error ? cause.message : "Der Zeitraum konnte nicht geprüft werden." }); }
       finally { await finish(); }
@@ -897,14 +892,12 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       const args = { resourceId: resource.id, startDate: interval.startDate, endDate: interval.endDate };
       if (!offline) {
         const check = availabilityInputForSlot(resource.id, interval);
-        const checked = await tools().run("anny_get_availability", check);
-        recordTool("anny_get_availability", check, checked.output);
+        await tools().run("anny_get_availability", check);
       }
       const result = offline
         ? await postForChat<{ proposal: Proposal }>("/api/proposals", { ...args, serviceId: resource.serviceId })
         : await tools().run("anny_propose_booking", args);
       if (!result.proposal) throw new Error("Es wurde kein Buchungsvorschlag zurückgegeben.");
-      if (!offline && "output" in result) recordTool("anny_propose_booking", args, result.output);
       const proposal = readProposalSnapshot(result, result.proposal);
       if (proposal?.action !== "book" || proposal.status !== "pending") throw new Error("Es wurde kein offener Buchungsvorschlag zurückgegeben.");
       addActionResult({ text: "Der Buchungsvorschlag ist vorbereitet. Bitte prüfe die Angaben und bestätige die Buchung ausdrücklich.", tool: "anny · Buchungsvorschlag", proposal });
@@ -933,7 +926,6 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       const args = { bookingId: booking.id };
       const result = await tools().run("anny_propose_cancellation", args);
       if (result.proposal?.action !== "cancel_booking") throw new Error("Es wurde kein Stornierungsvorschlag zurückgegeben.");
-      if (!offline) recordTool("anny_propose_cancellation", args, result.output);
       addActionResult({
         text: "Der Stornierungsvorschlag ist vorbereitet. Prüfe die angezeigte Buchung und bestätige die Stornierung ausdrücklich.",
         tool: "anny · Stornierungsvorschlag",

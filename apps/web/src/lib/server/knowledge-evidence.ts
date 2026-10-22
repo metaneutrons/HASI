@@ -6,6 +6,7 @@ import { z } from "zod";
 import { knowledgeEvidenceSchema, type ChatRequest, type KnowledgeEvidence, type WireMessage } from "../chat-contract";
 import { knowledgeModelDocuments } from "../knowledge";
 import { MODEL_PLUGIN_TOOL_NAME } from "../plugin-tools";
+import { omittedToolHistoryContent } from "../tool-history";
 import { ModelRouterError } from "./model-router-error";
 import type { PluginResultResolution } from "./plugin-result-context";
 
@@ -157,11 +158,7 @@ export async function rebuildKnowledgeContext(input: ChatRequest, signer: Return
       changed = true;
       messages.push({
         ...message,
-        content: JSON.stringify({
-          historyDetailsOmitted: true,
-          requiresFreshRead: true,
-          notice: "Frühere Tool-Daten sind nicht verifiziert. Verwende aktuelle Werkzeugabfragen; die Oberfläche zeigt separate Ergebniskarten.",
-        }),
+        content: omittedToolHistoryContent(),
       });
       continue;
     }

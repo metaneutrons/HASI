@@ -1,0 +1,217 @@
+{
+  "beforeRevision": "3837d1e93425a63fb133fd85992296a230a22abb",
+  "producerOnlyRevision": "d8c67f60f94fa91dc3f4b59a6e2973676674706f",
+  "correctedRevision": "a881fe4f9ad263c1da596281f9e891f6b480890c",
+  "actualOptimizedNext": true,
+  "testIdp": true,
+  "apiReplicas": 2,
+  "disposableLocalPostgres": true,
+  "corrected": {
+    "source": "a881fe4f9ad263c1da596281f9e891f6b480890c",
+    "firstWorkspaceHoldSequence": 507,
+    "timestampHoldSequence": 517,
+    "secondWorkspaceHoldSequence": 524,
+    "order": [
+      "hold preference-result workspace response",
+      "append actual generated workplace selection",
+      "hold actual timestamp response",
+      "release earlier workspace response",
+      "retain generated selection",
+      "release timestamp while second workspace response stays held",
+      "observe current availability",
+      "release second workspace response and immediately request proposal",
+      "settle latest protected workspace",
+      "reload pending proposal"
+    ],
+    "workspacePuts": 8,
+    "noMismatch": true,
+    "noInterruption": true,
+    "noUnknownTimestamp": true,
+    "reloadedProposal": true,
+    "reloadedNoInterruption": true,
+    "modelRequests": 0,
+    "confirmationRequests": 0,
+    "proposals": [
+      {
+        "id": "6ca4dc69-62bb-43d4-8962-b71bb713572b",
+        "action": "book",
+        "status": "pending",
+        "startDate": "2026-10-23T08:00:00.000Z",
+        "endDate": "2026-10-23T14:00:00.000Z",
+        "resourceName": "Arbeitsplatz \u00b7 Amrum 1 (1J.2.34) \u00b7 S1 2er Flexb\u00fcro Amrum (1J.2.34)"
+      }
+    ],
+    "historyRoles": [
+      "user",
+      "user",
+      "user",
+      "user"
+    ],
+    "allVisibleMessagesHaveTimestamp": true,
+    "allHistoryMessagesHaveTimestamp": true,
+    "firstAttemptExpiredBeforeNextInteraction": true,
+    "firstAttemptNotFastFlowPass": true,
+    "originalUncontrolledRunOrderingNotProven": true,
+    "proposalRequest": {
+      "resourceId": "180116",
+      "startDate": "2026-10-23T08:00:00.000Z",
+      "endDate": "2026-10-23T14:00:00.000Z"
+    }
+  },
+  "focusedTests": {
+    "files": 6,
+    "passed": 68
+  },
+  "oldRetryRegressionCounter": {
+    "selectedTest": "yields after three overlapping authorized edits",
+    "oldImplementationFailsExpectedSavingReceivedUnsaved": true,
+    "earlierMismatchedSelectorNotEvidence": true
+  },
+  "realProviderCalls": 0,
+  "syntheticModelCalls": 0,
+  "referenceEffects": 0,
+  "archive": {
+    "path": "native-chat-save-artifacts.zip",
+    "sha256": "96e42309afc836d26d436b3161a0df76f73da2fdd52e4cc62b914998d8805017",
+    "bytes": 210593,
+    "entries": 30,
+    "files": [
+      {
+        "path": "before/build-identity.json",
+        "sha256": "07b5b138eb6bac9571b99c82ded5c4f1dc32fa8bed7ccbf209652e143dd1b589"
+      },
+      {
+        "path": "before/held-save-shape.json",
+        "sha256": "04d65404b959829c944618a9e152765dedac891f84d321c37f8a79e15be345dc"
+      },
+      {
+        "path": "before/authority-shape.json",
+        "sha256": "2578ac1577ec738525174cbe5bb4fbc4cfb72740bcd1eee2e041d46e11259462"
+      },
+      {
+        "path": "before/network-summary.json",
+        "sha256": "915d4da5bff2107af81e2af67ea8d5f7217ad7b77b0ec1c582c839ef0f6585f6"
+      },
+      {
+        "path": "before/interleaving.json",
+        "sha256": "cec63df49e4bc4618338d7ff0a0d0a878d6d10e7b12abd337615d31ad892c9f6"
+      },
+      {
+        "path": "before/interrupted-ax.txt",
+        "sha256": "f331ce2e6b32cff6e9cba0b8e17fba9e0e656215c527788dab4cec1bf2527b17"
+      },
+      {
+        "path": "before/interrupted.png",
+        "sha256": "38a732713fbb1e2b6aa05a04532e144c7421e5a0c0fa7d0d38df831a1a61ae35"
+      },
+      {
+        "path": "before/cleanup.json",
+        "sha256": "f35e375b00445209d83c94024b380952d313b570bcd4611017bc553bd7979613"
+      },
+      {
+        "path": "producer-only/build-identity.json",
+        "sha256": "7e194150c1168c9ae49c6ca24df2f7e1a695f780f80fb5515e6daa8b9bf9b787"
+      },
+      {
+        "path": "producer-only/held-save-shape.json",
+        "sha256": "56862dfa30dcf07729bbffac5c73941f38967cbc1ff1bebf08c2960d5d39f5fe"
+      },
+      {
+        "path": "producer-only/second-held-save-shape.json",
+        "sha256": "7574026667e40b788136c6a2a636d02e1c2f18adc808dc292213ca8eb24fbf92"
+      },
+      {
+        "path": "producer-only/third-save-shape.json",
+        "sha256": "91277975f48ea59b7485925c59d0f8c1bf121ee877f86f61cb7fadc580b44738"
+      },
+      {
+        "path": "producer-only/network-summary.json",
+        "sha256": "07d6a8f5e4376a81ad1625098d1179cdd37a5572ff10c9b935e33d4879ef8f0c"
+      },
+      {
+        "path": "producer-only/interleaving.json",
+        "sha256": "d04129b6575a6e4bf49cf7d11f3846e843e807954995cfaf94b941a962bbdc8a"
+      },
+      {
+        "path": "producer-only/after-old-ack-before-timestamp-ax.txt",
+        "sha256": "8cb1e049f1b1dec50802d3964bd49cb26a06732a7b32ee8f8f2f97a4539f51de"
+      },
+      {
+        "path": "producer-only/after-second-ack-interrupted-ax.txt",
+        "sha256": "a5c4ed6ef85ce3d4243b0bac08d815df04d7413cf1ff2008f87444f442f8edbf"
+      },
+      {
+        "path": "producer-only/interrupted.png",
+        "sha256": "7de519635e43798157819fbfea647a255fb334414f2e3b354675617d54367953"
+      },
+      {
+        "path": "producer-only/cleanup.json",
+        "sha256": "be6a0c71f74285a0b6d4242c852b7cc30bc16ebb1d9c54cd3b82cf490d255d47"
+      },
+      {
+        "path": "corrected/build-identity.json",
+        "sha256": "6790ffcb04722644cec2c1d9d307e242564fad1520d1f6b73901763925d52a0b"
+      },
+      {
+        "path": "corrected/held-save-shape.json",
+        "sha256": "9034cc55d9f880875365f545e7800fb562309b9e94a1f18d8b51eb47c80cfdcd"
+      },
+      {
+        "path": "corrected/second-held-save-shape.json",
+        "sha256": "62f3d54f3a445698b674f73ec75602aedce8c82448ce3361cf9ed37e8b6e8326"
+      },
+      {
+        "path": "corrected/settled-workspace-shape.json",
+        "sha256": "3beedf17a6e93c35ea8276d6622a8b4f8427c643ce0386c3cf4cdb19415e27c8"
+      },
+      {
+        "path": "corrected/network-summary.json",
+        "sha256": "add5c515567eff0cd3db4a68bcc350a4b36247b02934f37559706f43d97f5b0a"
+      },
+      {
+        "path": "corrected/interleaving.json",
+        "sha256": "2423a58b50172d87c5838ecb89c4aa6a27841184d66d2c88052644c0c7772fc5"
+      },
+      {
+        "path": "corrected/completed-fast-ax.txt",
+        "sha256": "71c6935dbc2a9ebc089c8e9d663faa3c256b0a6d681d5a5600bafb8a43f6a939"
+      },
+      {
+        "path": "corrected/reloaded-pending-proposal-ax.txt",
+        "sha256": "af6d72046515c9cc5499ff8b670a90b2d538901e94386b871c92359c137ca938"
+      },
+      {
+        "path": "corrected/expired-first-attempt-ax.txt",
+        "sha256": "962db637746dc61a4273ce9bab5c56d1ddf773c3cc95f4b03a315bb20ab3d81a"
+      },
+      {
+        "path": "corrected/pending-proposal.png",
+        "sha256": "2bcaf3a70518d73dd2bc3542f0832440eb3b9d46c70bc7fa64e34e5bcf649b88"
+      },
+      {
+        "path": "corrected/cleanup.json",
+        "sha256": "f1cc7ee39c3fa636ee486687194123cc4f8b3fb30369e730c9eacd25a9b2121c"
+      }
+    ]
+  },
+  "cleanup": {
+    "before": {
+      "ownedDatabaseStoppedAndRemoved": true,
+      "privateHomeRemoved": true,
+      "nextDeclarationRestored": true,
+      "sourceRevision": "3837d1e93425a63fb133fd85992296a230a22abb"
+    },
+    "producer-only": {
+      "ownedDatabaseStoppedAndRemoved": true,
+      "privateHomeRemoved": true,
+      "nextDeclarationRestored": true,
+      "sourceRevision": "d8c67f60f94fa91dc3f4b59a6e2973676674706f"
+    },
+    "corrected": {
+      "ownedDatabaseStoppedAndRemoved": true,
+      "privateHomeRemoved": true,
+      "nextDeclarationRestored": true,
+      "sourceRevision": "a881fe4f9ad263c1da596281f9e891f6b480890c"
+    }
+  }
+}

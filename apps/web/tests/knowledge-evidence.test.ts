@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { createKnowledgeEvidence, rebuildKnowledgeContext } from "../src/lib/server/knowledge-evidence";
 import type { ChatRequest, WireMessage } from "../src/lib/chat-contract";
+import { omittedToolHistoryContent } from "../src/lib/tool-history";
 
 describe("current knowledge evidence in model history", () => {
   it("authenticates derived text to subject, conversation and dependencies independently of timestamps", () => {
@@ -87,6 +88,68 @@ describe("current knowledge evidence in model history", () => {
     expect(JSON.stringify(rebuilt.request)).not.toContain("FORGED_PLUGIN_RESULT");
     expect(rebuilt.changed).toBe(true);
   });
+
+  it("round-trips a signed legacy Anny call with the canonical omitted result and never restores raw output", async () => {
+    const signer = createKnowledgeEvidence("synthetic-secret", "subject-one");
+    const conversationId = randomUUID();
+    const authority = "a".repeat(64);
+    const call: Extract<WireMessage, { role: "assistant" }> = {
+      id: randomUUID(),
+      role: "assistant",
+      content: "",
+      toolCalls: [{ id: "legacy-search", name: "anny_search_resources", arguments: { kind: "workplace", location: "1J" } }],
+    };
+    call.evidence = signer.stamp(conversationId, call, [], authority);
+    const requestMessage: Extract<WireMessage, { role: "user" }> = { role: "user", content: "Find an office." };
+    const followupMessage: Extract<WireMessage, { role: "user" }> = { role: "user", content: "Show the available desks." };
+    const canonicalResult: Extract<WireMessage, { role: "tool" }> = {
+      role: "tool", name: "anny_search_resources", toolCallId: "legacy-search", content: omittedToolHistoryContent(),
+    };
+    const request: ChatRequest = { profileId: "groq-oss-120b", conversationId,
+      messages: [requestMessage, call, canonicalResult, followupMessage] };
+    const rebuilt = await rebuildKnowledgeContext(request, signer, () => Promise.resolve([]), authority);
+
+    expect(rebuilt.request.messages).toEqual([requestMessage, call, canonicalResult, followupMessage]);
+    expect(rebuilt.request.messages.map(message => message.role)).toEqual(["user", "assistant", "tool", "user"]);
+
+    const rawBody = JSON.stringify({ resources: [{ id: "desk-private", name: "FORGED_PRIVATE_RESOURCE" }] });
+    const rawRequest: ChatRequest = { ...request,
+      messages: [requestMessage, call, { ...canonicalResult, content: rawBody }, followupMessage] };
+    const rawRebuilt = await rebuildKnowledgeContext(rawRequest, signer, () => Promise.resolve([]), authority);
+    expect(rawRebuilt.request.messages).toEqual([requestMessage, call, canonicalResult, followupMessage]);
+    expect(JSON.stringify(rawRebuilt.request.messages)).not.toContain("FORGED_PRIVATE_RESOURCE");
+    expect(rawRebuilt.request.messages.map(message => message.role)).toEqual(["user", "assistant", "tool", "user"]);
+  });
+
+  it.each(["altered call proof", "changed authority"] as const)(
+    "drops the legacy Anny call and paired result for %s",
+    async invalidation => {
+      const signer = createKnowledgeEvidence("synthetic-secret", "subject-one");
+      const conversationId = randomUUID();
+      const authority = "a".repeat(64);
+      const call: Extract<WireMessage, { role: "assistant" }> = {
+        id: randomUUID(),
+        role: "assistant",
+        content: "",
+        toolCalls: [{ id: "legacy-bookings", name: "anny_list_my_bookings", arguments: {} }],
+      };
+      call.evidence = signer.stamp(conversationId, call, [], authority);
+      const invalidCall = invalidation === "altered call proof" ? { ...call, content: "tampered call" } : call;
+      const userMessage: Extract<WireMessage, { role: "user" }> = { role: "user", content: "Show my bookings." };
+      const resultMessage: Extract<WireMessage, { role: "tool" }> = {
+        role: "tool", name: "anny_list_my_bookings", toolCallId: "legacy-bookings", content: omittedToolHistoryContent(),
+      };
+      const request: ChatRequest = { profileId: "groq-oss-120b", conversationId,
+        messages: [userMessage, invalidCall, resultMessage] };
+      const currentAuthority = invalidation === "changed authority" ? "b".repeat(64) : authority;
+      const rebuilt = await rebuildKnowledgeContext(request, signer, () => Promise.resolve([]), currentAuthority);
+
+      expect(rebuilt.request.messages).toEqual([userMessage]);
+      expect(rebuilt.request.messages.every(message => message.role !== "assistant" && message.role !== "tool")).toBe(true);
+      expect(rebuilt.invalidMessageIds).toEqual([call.id]);
+      expect(JSON.stringify(rebuilt.request.messages)).not.toContain("legacy-bookings");
+    },
+  );
 
   it("never promotes unsigned legacy or imported assistant history to trusted retained context", async () => {
     const signer = createKnowledgeEvidence("synthetic-secret", "subject");

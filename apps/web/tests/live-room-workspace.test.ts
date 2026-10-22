@@ -58,6 +58,19 @@ async function fixture() {
     delay(value: Promise<void>) { delay = value; }, fail(value: "offline" | "conflict") { fail = value; } };
 }
 
+function seedNativeRoomSearch(f: Awaited<ReturnType<typeof fixture>>) {
+  const request = { id: randomUUID(), role: "user" as const, text: "Ich brauche einen Raum." };
+  const refinement = { id: randomUUID(), role: "user" as const, text: "Einzelbüro in Gebäude 1J." };
+  const interactionId = randomUUID();
+  const card = { id: randomUUID(), role: "assistant" as const, text: "Ergebnisse aus den anny-Testdaten.",
+    tool: "anny · Raumsuche", model: "", interactionId,
+    rooms: [{ resource, checked: false, intervals: [] }] };
+  f.store.updateConversation(f.id, { ...f.snapshot(), activeResult: interactionId, chosenRoom: null,
+    history: [{ role: "user", content: request.text }, { role: "user", content: refinement.text }],
+    messages: [request, refinement, card] }, false);
+  return { request, refinement, interactionId, card };
+}
+
 describe("live room availability with the real protected server projection", () => {
   it("keeps own fresh availability after autosave, but persists and reloads unchecked history", async () => {
     const f = await fixture();
@@ -200,6 +213,78 @@ describe("live room availability with the real protected server projection", () 
     await vi.advanceTimersByTimeAsync(200);
   });
 
+  it("keeps a newer user-only room-selection turn across an own native-card projection", async () => {
+    const f = await fixture();
+    const seeded = seedNativeRoomSearch(f);
+    let release = () => { /* assigned by the deferred promise */ };
+    f.delay(new Promise<void>(resolve => { release = resolve; }));
+    await vi.advanceTimersByTimeAsync(180);
+    expect(f.save).toHaveBeenCalledTimes(1);
+
+    const epoch = f.store.getSnapshot().sessionEpochs[f.id] ?? 0;
+    const current = f.snapshot();
+    const selection = { id: randomUUID(), role: "user" as const,
+      text: "Ich möchte den Arbeitsplatz Authorized desk A buchen." };
+    f.store.updateConversation(f.id, { ...current, interrupted: true, chosenRoom: resource, activeResult: null,
+      history: [...current.history, { role: "user", content: selection.text }],
+      messages: [...current.messages, selection] }, true);
+
+    release();
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(200);
+
+    const view = f.store.getSnapshot();
+    const snapshot = f.snapshot();
+    expect(view.sessionEpochs[f.id] ?? 0).toBe(epoch);
+    expect(view.busy[f.id]).toBe(true);
+    expect(snapshot.messages.at(-1)).toMatchObject({ id: selection.id, role: "user", text: selection.text });
+    expect(snapshot.history).toEqual([
+      { role: "user", content: seeded.request.text },
+      { role: "user", content: seeded.refinement.text },
+      { role: "user", content: selection.text },
+    ]);
+    expect(snapshot.messages.find(message => message.id === seeded.card.id)).toMatchObject({
+      role: "assistant",
+      rooms: [{ resource, checked: false, intervals: [] }],
+    });
+    expect(snapshot.chosenRoom).toEqual(resource);
+    expect(view.protectedPersistence?.state).toBe("saved");
+    expect(f.store.hasPendingWrites()).toBe(false);
+  });
+
+  it("redacts and remounts a busy room-selection turn when the held save loses native access", async () => {
+    const f = await fixture();
+    const seeded = seedNativeRoomSearch(f);
+    let release = () => { /* assigned by the deferred promise */ };
+    f.delay(new Promise<void>(resolve => { release = resolve; }));
+    await vi.advanceTimersByTimeAsync(180);
+    expect(f.save).toHaveBeenCalledTimes(1);
+
+    const epoch = f.store.getSnapshot().sessionEpochs[f.id] ?? 0;
+    const selection = { id: randomUUID(), role: "user" as const,
+      text: "Ich möchte den Arbeitsplatz Authorized desk A buchen." };
+    const current = f.snapshot();
+    f.store.updateConversation(f.id, { ...current, interrupted: true, chosenRoom: resource, activeResult: null,
+      history: [...current.history, { role: "user", content: selection.text }],
+      messages: [...current.messages, selection] }, true);
+    f.deny();
+
+    release();
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(200);
+
+    const view = f.store.getSnapshot();
+    const snapshot = f.snapshot();
+    expect(view.sessionEpochs[f.id] ?? 0).toBeGreaterThan(epoch);
+    expect(snapshot.messages.at(-1)).toMatchObject({ id: selection.id, role: "user", text: selection.text });
+    const unavailableCard = snapshot.messages.find(message => message.id === seeded.card.id);
+    expect(unavailableCard?.rooms).toBeUndefined();
+    expect(unavailableCard?.text).toMatch(/nicht mehr verfügbar/u);
+    expect(snapshot.chosenRoom).toBeNull();
+    expect(snapshot.history).toEqual([]);
+    expect(view.protectedPersistence?.state).toBe("unsaved");
+  });
+
   it("does not preserve a concurrently changed chat over a revoked protected baseline", async () => {
     const f = await fixture();
     f.search();
@@ -239,20 +324,100 @@ describe("live room availability with the real protected server projection", () 
     await vi.advanceTimersByTimeAsync(200);
   });
 
-  it("bounds repeated concurrent changes and fails closed rather than retrying forever", async () => {
+  it("yields after three overlapping authorized edits and settles on a later debounce batch", async () => {
     const f = await fixture();
+    const seeded = seedNativeRoomSearch(f);
+    const concurrentTurns: { id: string; role: "user"; text: string }[] = [];
     f.save.mockImplementation(async (workspace, revision) => {
       const result = await f.service.save(revision, workspace);
-      f.store.updateConversation(f.id, { ...f.snapshot(), messages: [...f.snapshot().messages,
-        { id: randomUUID(), role: "user", text: "Synthetic concurrent change" }] }, false);
+      if (concurrentTurns.length < 3) {
+        const current = f.snapshot();
+        const message = { id: randomUUID(), role: "user" as const, text: `Concurrent request ${String(concurrentTurns.length + 1)}` };
+        concurrentTurns.push(message);
+        f.store.updateConversation(f.id, { ...current, interrupted: true, chosenRoom: resource, activeResult: null,
+          messages: [...current.messages, message], history: [...current.history, { role: "user", content: message.text }] }, true);
+      }
       return result;
     });
-    f.store.updateDraft(f.id, "Start the bounded serial operation");
-    await vi.advanceTimersByTimeAsync(200);
+    const epoch = f.store.getSnapshot().sessionEpochs[f.id] ?? 0;
+
+    await vi.advanceTimersByTimeAsync(180);
     expect(f.save).toHaveBeenCalledTimes(3);
-    expect(f.store.getSnapshot().protectedPersistence?.state).toBe("unsaved");
-    await vi.advanceTimersByTimeAsync(1_000);
+    let view = f.store.getSnapshot();
+    let snapshot = f.snapshot();
+    expect(view.protectedPersistence?.state).toBe("saving");
+    expect(f.store.hasPendingWrites()).toBe(true);
+    expect(f.store.needsNavigationConfirmation()).toBe(true);
+    expect(view.sessionEpochs[f.id] ?? 0).toBe(epoch);
+    expect(view.busy[f.id]).toBe(true);
+    expect(snapshot.messages.slice(-3)).toEqual(concurrentTurns);
+    expect(snapshot.history).toEqual([
+      { role: "user", content: seeded.request.text },
+      { role: "user", content: seeded.refinement.text },
+      ...concurrentTurns.map(message => ({ role: "user" as const, content: message.text })),
+    ]);
+    expect(snapshot.messages.find(message => message.id === seeded.card.id)?.rooms).toEqual([
+      { resource, checked: false, intervals: [] },
+    ]);
+
+    await vi.advanceTimersByTimeAsync(180);
+
+    view = f.store.getSnapshot();
+    snapshot = f.snapshot();
+    expect(f.save).toHaveBeenCalledTimes(4);
+    expect(view.protectedPersistence?.state).toBe("saved");
+    expect(f.store.hasPendingWrites()).toBe(false);
+    expect(f.store.needsNavigationConfirmation()).toBe(false);
+    expect(view.sessionEpochs[f.id] ?? 0).toBe(epoch);
+    expect(snapshot.messages.slice(-3)).toEqual(concurrentTurns);
+    expect(snapshot.messages.find(message => message.id === seeded.card.id)?.rooms).toEqual([
+      { resource, checked: false, intervals: [] },
+    ]);
+    expect(snapshot.chosenRoom).toEqual(resource);
+  });
+
+  it("redacts on a later batch when native room access is revoked between batches", async () => {
+    const f = await fixture();
+    const seeded = seedNativeRoomSearch(f);
+    const concurrentTurns: { id: string; role: "user"; text: string }[] = [];
+    f.save.mockImplementation(async (workspace, revision) => {
+      const result = await f.service.save(revision, workspace);
+      if (concurrentTurns.length < 3) {
+        const current = f.snapshot();
+        const message = { id: randomUUID(), role: "user" as const, text: `Concurrent request ${String(concurrentTurns.length + 1)}` };
+        concurrentTurns.push(message);
+        f.store.updateConversation(f.id, { ...current, interrupted: true, chosenRoom: resource, activeResult: null,
+          messages: [...current.messages, message], history: [...current.history, { role: "user", content: message.text }] }, true);
+      }
+      return result;
+    });
+    const epoch = f.store.getSnapshot().sessionEpochs[f.id] ?? 0;
+
+    await vi.advanceTimersByTimeAsync(180);
     expect(f.save).toHaveBeenCalledTimes(3);
+    expect(f.store.getSnapshot().protectedPersistence?.state).toBe("saving");
+    expect(f.store.getSnapshot().sessionEpochs[f.id] ?? 0).toBe(epoch);
+    f.deny();
+
+    await vi.advanceTimersByTimeAsync(180);
+
+    const view = f.store.getSnapshot();
+    const snapshot = f.snapshot();
+    expect(f.save).toHaveBeenCalledTimes(4);
+    expect(view.sessionEpochs[f.id] ?? 0).toBeGreaterThan(epoch);
+    expect(view.busy[f.id]).toBe(true);
+    expect(snapshot.messages.slice(-3)).toEqual(concurrentTurns);
+    expect(snapshot.messages.find(message => message.id === seeded.card.id)?.rooms).toBeUndefined();
+    expect(snapshot.messages.find(message => message.id === seeded.card.id)?.text).toMatch(/nicht mehr verfügbar/u);
+    expect(snapshot.chosenRoom).toBeNull();
+    expect(snapshot.history).toEqual([
+      { role: "user", content: seeded.request.text },
+      { role: "user", content: seeded.refinement.text },
+      ...concurrentTurns.map(message => ({ role: "user" as const, content: message.text })),
+    ]);
+    expect(JSON.stringify(snapshot)).not.toContain(resource.name);
+    expect(view.protectedPersistence?.state).toBe("saved");
+    expect(f.store.hasPendingWrites()).toBe(false);
   });
 
   it("ignores an in-flight acknowledgement after authority was explicitly redacted", async () => {
