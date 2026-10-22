@@ -404,7 +404,7 @@ describe("bounded Anny chat tools", () => {
     ]);
   });
 
-  it("shows the exact requested available interval or at most three alternatives", () => {
+  it("shows only the exact requested available interval, never unsolicited alternatives", () => {
     const intervals: TimeInterval[] = [
       { startDate: "2030-01-03T07:00:00.000Z", endDate: "2030-01-03T08:00:00.000Z", available: false },
       { startDate: "2030-01-03T08:00:00.000Z", endDate: "2030-01-03T09:00:00.000Z", available: true },
@@ -413,9 +413,9 @@ describe("bounded Anny chat tools", () => {
       { startDate: "2030-01-03T11:00:00.000Z", endDate: "2030-01-03T12:00:00.000Z", available: true },
     ];
 
-    expect(visibleAvailabilityIntervals(intervals, "2030-01-03T07:00:00.000Z")).toEqual(intervals.slice(1, 4));
+    expect(visibleAvailabilityIntervals(intervals, "2030-01-03T07:00:00.000Z")).toEqual([]);
     expect(visibleAvailabilityIntervals(intervals, "2030-01-03T08:00:00.000Z")).toEqual([intervals[1]]);
-    expect(visibleAvailabilityIntervals(intervals, "2030-01-03T06:00:00.000Z")).toEqual(intervals.slice(1, 4));
+    expect(visibleAvailabilityIntervals(intervals, "2030-01-03T06:00:00.000Z")).toEqual([]);
   });
 
   it("bounds result counts and metadata size", async () => {

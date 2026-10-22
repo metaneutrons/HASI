@@ -118,11 +118,11 @@ export function planRoomDialogue(
     const selected = selectedResourceId === undefined ? undefined : matches[0];
     const selectionText = selected
       ? `Wir planen mit ${selected.name}.`
-      : `${String(matches.length)} passende ${request.kind === "workplace" ? "Arbeitsplätze" : "Ressourcen"} gefunden.${matches.length > resources.length ? " Ich zeige die ersten acht; nenne einen Büronamen oder Standort zum Eingrenzen." : ""}`;
+      : `${String(matches.length)} passende ${request.kind === "workplace" ? "Arbeitsplätze" : "Ressourcen"} im Katalog gefunden.`;
     return {
       code: "room_details",
       text: `${selectionText} Für die weitere Prüfung fehlen noch: ${missingText}.`,
-      resources,
+      resources: [],
       total: matches.length,
       needsAvailability: false,
       catalogDependent: true,

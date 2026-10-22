@@ -7,7 +7,8 @@ import Link from "next/link";
 import { HasiIcon } from "@/components/hasi-icon";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject, type SyntheticEvent } from "react";
 import { apiRequest, formatDateTime, formatTime } from "@/lib/api";
-import { classifyIntent, mergeRoomRequest, requestStartDate, roomRequestSummary, type RoomRequest } from "@/lib/chat-demo";
+import { classifyIntent, mergeRoomRequest, missingRoomDetails, requestStartDate, roomRequestSummary, type RoomRequest } from "@/lib/chat-demo";
+import { availableRoomOptions, availableRoomSearchText, checkAvailableRooms } from "@/lib/available-room-search";
 import { hostDialogueMessageSchema, staticHostDialogue, type HostDialogueMessage, type StaticHostDialogueCode } from "@/lib/host-dialogue";
 import { planRoomDialogue } from "@/lib/room-dialogue";
 import { parseRoomDialogueResponse } from "@/lib/host-dialogue-client";
@@ -23,7 +24,7 @@ import { chatProfileIdSchema, chatToolSchemas, isChatToolName, modelProfilesResp
 import { createChatMessageClock } from "@/lib/chat-message-clock";
 import { appendChatText, trimChatHistory } from "@/lib/chat-history";
 import { omittedToolHistoryContent } from "@/lib/tool-history";
-import type { AnnyChatProposal, ChatMessage as Message, ChatProposal as Proposal, ChatSnapshot } from "@/lib/chat-sessions";
+import type { AnnyChatProposal, ChatMessage as Message, ChatProposal as Proposal, ChatRoomOption, ChatSnapshot } from "@/lib/chat-sessions";
 import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError, RoomTimeUnresolvedError } from "@/lib/chat-room-time";
 import { canStartNewChat } from "@/lib/chat-workspace-store";
 import { ChatSessionList } from "@/components/chat-session-list";
@@ -456,6 +457,27 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   }
 
   async function showToolResult(result: AnnyChatToolResult, interactionId: string, model: string) {
+    if (result.name === "anny_search_resources" && result.rooms?.length) {
+      const interval = requestedRoomInterval(roomIntent.current);
+      if (!interval) {
+        result = { ...result, rooms: [], output: { ...result.output, returned: 0, truncated: 0,
+          notice: `Für die Verfügbarkeitsprüfung fehlen noch: ${missingRoomDetails(roomIntent.current).join(", ")}.` } };
+      } else {
+        setActivity("anny · Freie Plätze im gewünschten Zeitraum suchen");
+        const candidates = result.rooms;
+        const rooms = await checkAvailableRooms(candidates.map(room => room.resource), interval, async resource => {
+          const checked = await tools().run("anny_get_availability", availabilityInputForSlot(resource.id, { ...interval, available: false }));
+          return checked.rooms?.[0]?.intervals ?? [];
+        });
+        result = { ...result, rooms, output: { ...result.output, availabilityChecked: true, returned: rooms.length, truncated: 0,
+          notice: availableRoomSearchText(rooms.length, Number(result.output.truncated) > 0, candidates.length) } };
+      }
+    }
+    if (result.name === "anny_get_availability" && result.rooms) {
+      const rooms = result.rooms.filter(room => room.intervals.some(slot => slot.available));
+      result = { ...result, rooms, output: { ...result.output,
+        notice: availableRoomSearchText(rooms.length) } };
+    }
     if (mode === "oidc" && result.bookings?.length === 0) {
       const empty = await postForChat<{ message: unknown }>("/api/chat/dialogue", { kind: "bookings_empty", conversationId: sessionId });
       const message = hostDialogueMessageSchema.parse(empty.message);
@@ -571,7 +593,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         }, reply.message.id);
         if (!reply.message.toolCalls?.length) return;
         let actionableResult = false;
-        let bookingsReadFailed = false;
+        let nativeReadFailed = false;
         const successfulTools: ChatToolName[] = [];
         for (const call of reply.message.toolCalls) {
           const pluginDescriptor = isChatToolName(call.name) ? undefined : pluginToolsByModelName.get(call.name);
@@ -627,9 +649,9 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
               actionableResult ||= !toolNeedsModelFollowUp(result.name);
             }
           } catch (cause) {
-            // A failed personal read or empty-result verification needs a user
+            // A failed native read or empty-result verification needs a user
             // retry, not another generation guessing from an omitted result.
-            if (call.name === "anny_list_my_bookings") bookingsReadFailed = true;
+            if (call.name === "anny_list_my_bookings" || call.name === "anny_search_resources" || call.name === "anny_get_availability") nativeReadFailed = true;
             if (cause instanceof RoomTimeUnresolvedError) actionableResult = true;
             output = { error: cause instanceof Error ? cause.message : "Das Tool konnte die Anfrage nicht abschließen.", ...(cause instanceof RoomTimeMismatchError ? { requestedInterval: cause.expectedInterval } : {}) };
             const failedLabel = pluginDescriptor ? `Plugin · ${pluginDescriptor.title} · Anfrage fehlgeschlagen` : call.name === "knowledge_search" ? "Wissensdienst · Anfrage fehlgeschlagen" : "anny · Anfrage fehlgeschlagen";
@@ -640,7 +662,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
           const content = call.name === "knowledge_search" || toolContextId ? JSON.stringify(output) : omittedToolHistoryContent();
           history.current.push(remember({ role: "tool", toolCallId: call.id, name: call.name, content, ...(toolContextId ? { toolContextId } : {}) }));
         }
-        if (bookingsReadFailed) return;
+        if (nativeReadFailed) return;
         // Host-rendered cards already provide the answer and next action.
         // Stop after every successful Anny result, including empty/unchecked searches.
         if (actionableResult && !mixedRequest && !toolBatchNeedsModelFollowUp(successfulTools)) return;
@@ -668,23 +690,21 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     const { plan, message } = response;
     const resources = plan.resources;
     if (!plan.needsAvailability) {
-      const resultId = message ? addHostMessage(message, resources) : add({ role: "assistant", text: plan.text,
-        tool: "HASI · Dialoghinweis", ...(resources.length ? { rooms: resources.map(resource => ({ resource, intervals: [], checked: false })) } : {}) });
-      setActiveResult(resources.length ? resultId : null);
+      if (message) addHostMessage(message);
+      else add({ role: "assistant", text: plan.text,
+        tool: "HASI · Dialoghinweis" });
+      setActiveResult(null);
       return;
     }
     const startDate = requestStartDate(next);
     if (!startDate || !next.durationMinutes) throw new Error("Bitte präzisiere Datum, Uhrzeit und Dauer.");
     setActivity("anny · Verfügbarkeit prüfen");
     const requestedEndDate = new Date(Date.parse(startDate) + next.durationMinutes * 60_000).toISOString();
-    const options = await Promise.all(resources.map(async (resource) => {
+    const options = await checkAvailableRooms(resources, { startDate, endDate: requestedEndDate }, async resource => {
       const availability = await postForChat<{ intervals: TimeInterval[] }>("/api/availability", { resourceId: resource.id, serviceId: resource.serviceId, startDate, durationMinutes: next.durationMinutes });
-      const freeIntervals = availability.intervals.filter((interval) => interval.available);
-      const exactInterval = freeIntervals.find((interval) => Date.parse(interval.startDate) === Date.parse(startDate));
-      return { resource, requestedStartDate: startDate, requestedEndDate, intervals: exactInterval ? [exactInterval] : freeIntervals.slice(0, 3), checked: true };
-    }));
-    const count = options.filter((option) => option.intervals.length).length;
-    const resultId = add({ role: "assistant", tool: "anny · Raumsuche und Verfügbarkeit", text: `${roomRequestSummary(next)}\n${count ? "Verfügbarkeit geprüft. Die Karten kennzeichnen Treffer im gewünschten Zeitraum und alternative freie Zeiten. Wähle eine Zeit, dann bereite ich den Buchungsvorschlag vor." : "Zu diesen Anforderungen sind keine Zeiten frei. Nenne mir einen anderen Zeitraum."}`, rooms: options });
+      return availability.intervals;
+    });
+    const resultId = add({ role: "assistant", tool: "anny · Raumsuche und Verfügbarkeit", text: `${roomRequestSummary(next)}\n${availableRoomSearchText(options.length, plan.total > resources.length, resources.length)}`, rooms: options });
     setActiveResult(resultId);
   }
 
@@ -809,13 +829,16 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   }
 
   async function chooseRoom(resource: Resource) {
+    if (lock.current) return;
     const label = `${resource.kind === 'workplace' ? 'einen einzelnen Arbeitsplatz: ' : ''}${resource.name}${resource.parentName ? ` im Büro ${resource.parentName}` : ''}`;
     if (!offline) {
       let interval: ReturnType<typeof requestedRoomInterval>;
       try { interval = requestedRoomInterval(roomIntent.current); }
       catch (cause) {
+        if (!start("anny · Zeitraum prüfen")) return;
+        setActiveResult(null);
         addActionResult({ text: cause instanceof Error ? cause.message : "Bitte präzisiere den gewünschten Zeitraum." });
-        try { await stampMessages(); } catch { /* Preserve unknown time when the clock is unavailable. */ }
+        await finish();
         return;
       }
       let generated: GeneratedUserMessages;
@@ -883,6 +906,30 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     try { await stampMessages(); await searchRooms(next, resource); }
     catch (cause) { add({ role: "assistant", text: cause instanceof Error ? cause.message : "Der Raum konnte nicht geprüft werden." }); }
     finally { await finish(); if (active) composer.current?.focus(); }
+  }
+
+  async function recheckRooms(previous: ChatRoomOption[]) {
+    if (!start("anny · Frühere Suche erneut prüfen")) return;
+    setActiveResult(null);
+    try {
+      const first = previous[0];
+      const interval = first?.requestedStartDate && first.requestedEndDate
+        ? { startDate: first.requestedStartDate, endDate: first.requestedEndDate }
+        : null;
+      if (!interval) throw new Error("Für diese frühere Suche fehlt der gespeicherte Zeitraum. Starte bitte eine neue Suche mit Datum, Uhrzeit und Dauer.");
+      // Validate the historical window before doing I/O; native reads recheck
+      // current resource access. A history card is never booking authority.
+      const resources = previous.filter(room => room.requestedStartDate === first?.requestedStartDate
+        && room.requestedEndDate === first?.requestedEndDate).map(room => room.resource);
+      const rooms = await checkAvailableRooms(resources, interval, async resource => {
+        const checked = await tools().run("anny_get_availability", availabilityInputForSlot(resource.id, { ...interval, available: false }));
+        return checked.rooms?.[0]?.intervals ?? [];
+      });
+      const resultId = add({ role: "assistant", tool: "anny · Verfügbarkeit", text: availableRoomSearchText(rooms.length), rooms });
+      setActiveResult(resultId);
+    } catch (cause) {
+      addActionResult({ text: cause instanceof Error ? cause.message : "Die Verfügbarkeit konnte nicht erneut geprüft werden." });
+    } finally { await finish(); }
   }
 
   async function prepare(resource: Resource, interval: TimeInterval) {
@@ -1186,12 +1233,13 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
                     disabled={busy || (activeResult !== message.id && activeResult !== message.interactionId)}
                     onChooseRoom={(resource) => void chooseRoom(resource)}
                     onChooseSlot={(resource, interval) => void prepare(resource, interval)}
+                    onRecheck={() => void recheckRooms(message.rooms ?? [])}
                   />}
-                  {pluginAppsEnabled && message.rooms && <PluginResultApp
+                  {pluginAppsEnabled && message.rooms && availableRoomOptions(message.rooms).length > 0 && <PluginResultApp
                     pluginId="de.hsh.hasi.anny"
                     presentationId="resources"
                     initialResult={{
-                      resources: message.rooms.map(room => room.resource),
+                      resources: availableRoomOptions(message.rooms).map(room => room.resource),
                       ...(message.rooms[0]?.requestedStartDate ? { requestedStartDate: message.rooms[0].requestedStartDate } : {}),
                       ...(message.rooms[0]?.requestedEndDate ? { requestedEndDate: message.rooms[0].requestedEndDate } : {}),
                       availabilityChecked: message.rooms.every(room => room.checked),

@@ -269,6 +269,11 @@ function sanitizeDisplayMessages(
       const base = { id: message.id, role: "assistant" as const,
         ...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }) };
       if (message.rooms !== undefined) {
+        // An empty native result carries no resource or availability authority.
+        // Retain only a fixed historical instruction, never the browser's claim
+        // that a particular location or interval has no vacancies.
+        if (message.rooms.length === 0) return { ...base, rooms: [], tool: "anny · Frühere Suchergebnisse",
+          text: "Für diese frühere Suche sind keine aktuellen Verfügbarkeiten gespeichert. Starte eine neue Suche mit Datum und Zeitraum." };
         const resources = new Map(native.resources.map(resource => [resource.id, resource]));
         const rooms = message.rooms.flatMap(room => {
           const resource = resources.get(room.resource.id);

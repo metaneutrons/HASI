@@ -14,7 +14,7 @@ const ANNY_TOOL_NAMES = [
 type AnnyChatToolName = (typeof ANNY_TOOL_NAMES)[number];
 type AnnyRequest = <T>(path: string, init?: RequestInit) => Promise<T>;
 interface AnnyChatToolOptions { now?: () => Date }
-interface RoomCard { requestedStartDate?: string; resource: Resource; intervals: TimeInterval[]; checked: boolean }
+interface RoomCard { requestedStartDate?: string; requestedEndDate?: string; resource: Resource; intervals: TimeInterval[]; checked: boolean }
 
 export interface ChatProposal {
   preview?: ActionPreview | undefined;
@@ -216,9 +216,7 @@ function parseProposal(value: unknown): ChatProposal {
 }
 
 export function visibleAvailabilityIntervals(intervals: TimeInterval[], requestedStartDate: string): TimeInterval[] {
-  const available = intervals.filter(interval => interval.available);
-  const exact = available.find(interval => Date.parse(interval.startDate) === Date.parse(requestedStartDate));
-  return exact ? [exact] : available.slice(0, 3);
+  return intervals.filter(interval => interval.available && Date.parse(interval.startDate) === Date.parse(requestedStartDate)).slice(0, 1);
 }
 
 export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolOptions = {}) {
@@ -366,7 +364,9 @@ export function createAnnyChatTools(request: AnnyRequest, options: AnnyChatToolO
     return {
       name: "anny_get_availability",
       output,
-      rooms: [{ resource: toRoomCardResource(resource), requestedStartDate: startDate, intervals: visibleAvailabilityIntervals(intervals, startDate), checked: true }],
+      rooms: [{ resource: toRoomCardResource(resource), requestedStartDate: startDate,
+        requestedEndDate: new Date(Date.parse(startDate) + durationMinutes * 60_000).toISOString(),
+        intervals: visibleAvailabilityIntervals(intervals, startDate), checked: true }],
     };
   }
 
