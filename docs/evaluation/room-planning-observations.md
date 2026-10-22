@@ -46,8 +46,13 @@ authority. Only a single schema-valid `anny_search_resources` call for
 `kind: workplace` and `location: 1J` can reach `createAnnyChatTools`. The
 read-only fixture grants only `rooms:read`, exposes `AnnyClient` with writes
 disabled, and also blocks/counts recognized proposal, confirmation, execution,
-and cancellation attempts. Availability checks, proposals, confirmation,
-cancellation, and booking execution are outside this scenario.
+and cancellation attempts. The fixture explicitly supplies replay and execution-
+journal interfaces from an isolated per-fixture memory store, including when the
+operator image uses `NODE_ENV=production`. This does not establish durable
+production execution state. Its HTTPS Anny contract origin is handled exclusively
+by the injected local mock transport; it makes no DNS or external TLS request.
+Availability checks, proposals, confirmation, cancellation, and booking execution
+are outside this scenario.
 
 Each read receipt is tied to the typed tool arguments and returned tool result
 by SHA-256 digests, and includes the corresponding actual API and Anny source

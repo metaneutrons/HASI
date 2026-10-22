@@ -2,7 +2,7 @@ import { generateKeyPairSync, randomBytes, randomUUID } from "node:crypto";
 import { AnnyClient } from "@hasi/anny-client";
 import { createAnnyMock, MOCK_IDS } from "@hasi/anny-mock";
 import { annyManifest, createAnnyPlugin, type Presentation } from "@hasi/anny-plugin";
-import { digest, type ActorContext } from "@hasi/plugin-sdk";
+import { digest, ExecutionJournal, type ActorContext } from "@hasi/plugin-sdk";
 import { MemoryJsonStore, type JsonStore } from "@hasi/state";
 import { hshDemoCatalog, hshDemoPresentation } from "../../fixtures/catalog.js";
 import {
@@ -20,7 +20,7 @@ const webOrigin = "http://127.0.0.1:3001";
 const apiOrigin = "http://127.0.0.1:4100";
 const apiHost = new URL(apiOrigin).host;
 const apiAllowedHost = new URL(apiOrigin).hostname;
-const annyContractOrigin = "http://127.0.0.1:4102";
+const annyContractOrigin = "https://anny-contract.evaluation.example.edu";
 const annyPluginOrigin = "https://room-planning-anny.evaluation.example.edu";
 const annyPluginId = "de.hsh.hasi.anny";
 const oidcClientId = "hasi-evaluation-room-planning";
@@ -448,12 +448,26 @@ export async function createEvaluationRoomPlanningFixture(
 
     const pluginKeys = generateKeyPairSync("ed25519");
     const pluginToken = `evaluation-plugin-${randomUUID()}`;
+    // This isolated fixture supplies the SDK's explicit replay and journal
+    // interfaces from a per-fixture process-local store. It is not deployment
+    // durability or shared state across plugin instances.
+    const pluginStateStore = new MemoryJsonStore(`evaluation-room-planning-plugin-state-${scope}`);
     const plugin = createAnnyPlugin({
       client,
       publicKey: pluginKeys.publicKey,
       serviceToken: pluginToken,
       presentation,
       allowedHosts: [new URL(annyPluginOrigin).hostname],
+      consumeInvocation: async (jti, expiresAt) => {
+        if (!Number.isSafeInteger(expiresAt) || expiresAt <= Math.floor(Date.now() / 1_000)) return false;
+        return await pluginStateStore.compareAndSet(
+          `invocation:${digest(jti)}`,
+          null,
+          { expiresAt },
+          expiresAt * 1_000,
+        );
+      },
+      executionJournal: new ExecutionJournal(pluginStateStore, `evaluation-room-planning-anny-${scope}`),
     });
     cleanup.push(() => plugin.close());
 

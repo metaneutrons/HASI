@@ -131,6 +131,47 @@ describe("authenticated Anny room-planning evaluation fixture", () => {
     expect(diagnostics.apiObservations.some(observation => observation.path === "/api/tools/call" && observation.status === 200)).toBe(true);
   });
 
+  it("starts and serves reads with production NODE_ENV while the read-only mode denies writes", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const fixture = await createFixture({ mode: "read_only" });
+
+      const session = await fixture.coreFetch(request(fixture, "/api/session"));
+      const resources = await fixture.coreFetch(request(fixture, "/api/resources"));
+      expect(session.status).toBe(200);
+      expect(resources.status).toBe(200);
+      expect(await json<{ mode: string }>(session)).toMatchObject({ mode: "oidc" });
+      expect((await json<{ resources: { id: string }[] }>(resources)).resources.map(resource => resource.id))
+        .toEqual(fixture.resourceIds);
+
+      const proposal = await fixture.coreFetch(request(fixture, "/api/proposals", "POST", {
+        resourceId: fixture.resourceIds[0],
+        serviceId: "76878",
+        startDate: "2099-03-10T09:00:00.000Z",
+        endDate: "2099-03-10T10:00:00.000Z",
+      }));
+      const execution = await fixture.coreFetch(request(fixture, "/api/tools/call", "POST", {
+        pluginId: "de.hsh.hasi.anny",
+        name: "anny.execute_booking",
+        arguments: { resourceId: fixture.resourceIds[0], serviceId: "76878" },
+      }));
+      expect(proposal.status).toBe(403);
+      expect(execution.status).toBe(403);
+      expect(fixture.diagnostics()).toMatchObject({
+        mode: "read_only",
+        annyClientWritesEnabled: false,
+        blockedWriteAttempts: 2,
+        sourceWriteAttempts: 0,
+        sourceWriteEffects: 0,
+      });
+      expect(fixture.preparedProposals()).toEqual([]);
+    } finally {
+      vi.unstubAllEnvs();
+      expect(process.env.NODE_ENV).toBe(originalNodeEnv);
+    }
+  });
+
   it("keeps resource and availability reads on the authenticated path with read-only synthetic authority", async () => {
     const fixture = await createFixture({ mode: "read_only" });
     expect(fixture.mode).toBe("read_only");
