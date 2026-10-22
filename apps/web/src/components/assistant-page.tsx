@@ -39,6 +39,7 @@ import { bookingStatusLabel } from "@/lib/chat-message-copy";
 import { ChatRoomResults } from "@/components/chat-room-results";
 import { PluginResultApp } from "@/components/plugin-result-app";
 import { pluginResultReadResponseSchema, boundedPluginToolResult, compactPluginToolResult, parsePluginProposal, parsePluginProposalSnapshot, parsePluginTools, pluginToolProposalPresentation, samePluginProposalSnapshot, type PluginToolDescriptor, type PluginToolProposal } from "@/lib/plugin-tools";
+import { availabilityCheckMessages, bookingPreparationMessages, cancellationPreparationMessages, roomSelectionMessages, type GeneratedUserMessages } from "@/lib/room-selection-messages";
 
 interface ModelConfiguration { profiles: ModelProfile[]; userChoiceEnabled: boolean; defaultProfileId: ModelProfileId; loading: boolean; error: string | null }
 interface ComposerSelection { start: number; end: number; direction: HTMLTextAreaElement["selectionDirection"] }
@@ -167,6 +168,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   const lock = useRef(false);
   const alive = useRef(true);
   const history = useRef<WireMessage[]>(structuredClone(initial.history));
+  const [latestUserRequestId, setLatestUserRequestId] = useState(() => initial.history.findLast(message => message.role === "user")?.id);
   const routingToken = useRef<string | undefined>(undefined);
   const resolvedProfile = useRef<ModelProfile["provider"] | null>(null);
   const [fallbackLabel, setFallbackLabel] = useState<string | null>(null);
@@ -364,6 +366,13 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     const historyId = role === "assistant" && previous?.role === "assistant" && !previous.toolCalls?.length ? id() : eventId;
     const message = appendChatText(history.current, role, text, historyId);
     if (message) remember(message);
+    if (message?.role === "user") setLatestUserRequestId(message.id);
+  }
+
+  function addGeneratedUserTurn(messages: GeneratedUserMessages) {
+    add({ role: "user", text: messages.display.content }, messages.display.id, false);
+    appendHistory("user", messages.canonical.content, messages.canonical.id);
+    return messages.canonical.id;
   }
 
   async function stampMessages() {
@@ -801,14 +810,43 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         try { await stampMessages(); } catch { /* Preserve unknown time when the clock is unavailable. */ }
         return;
       }
-      if (!interval) { await send(`Ich möchte ${label} buchen (resourceId: ${resource.id}). Verwende genau diese Ressource und frage nach noch fehlenden Angaben.`); return; }
+      let generated: GeneratedUserMessages;
+      try {
+        const selection = interval
+          ? `Bitte prüfe ${label} am ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} Uhr.`
+          : `Ich möchte ${label} buchen.`;
+        generated = interval
+          ? availabilityCheckMessages(selection, resource.kind, resource.id, interval)
+          : roomSelectionMessages(selection, resource.kind, resource.id);
+      } catch {
+        addActionResult({ text: "Die ausgewählte Ressource konnte nicht sicher verarbeitet werden." });
+        try { await stampMessages(); } catch { /* Preserve unknown time when the clock is unavailable. */ }
+        return;
+      }
+      if (!interval) {
+        if (!canSend || !start("anny · Ressource auswählen")) return;
+        routingToken.current = undefined;
+        resolvedProfile.current = null;
+        setFallbackLabel(null);
+        updateInput("");
+        setChosenRoom(resource);
+        // A card selection is structured state, not another free-text search.
+        // Parsing its opaque ID or generated wording can corrupt kind/query.
+        updateRequest({ ...roomIntent.current, kind: resource.kind ?? "room" });
+        setRoomContext(true);
+        setActiveResult(null);
+        setActiveProposal(null);
+        addGeneratedUserTurn(generated);
+        try { await stampMessages(); await runModel(); }
+        catch (cause) { addActionResult({ text: cause instanceof Error ? cause.message : "Die Ressource konnte nicht ausgewählt werden." }); }
+        finally { await finish(); }
+        return;
+      }
       if (!start("anny · Gewünschten Zeitraum prüfen")) return;
       setChosenRoom(resource);
       setActiveResult(null);
       setActiveProposal(null);
-      const selection = `Bitte prüfe ${label} am ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} Uhr.`;
-      const eventId = add({ role: "user", text: selection });
-      appendHistory("user", selection, eventId);
+      addGeneratedUserTurn(generated);
       try {
         await stampMessages();
         const args = availabilityInputForSlot(resource.id, { ...interval, available: false });
@@ -819,6 +857,14 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
       finally { await finish(); }
       return;
     }
+    let generated: GeneratedUserMessages;
+    try {
+      generated = roomSelectionMessages(`Ich möchte ${label} buchen.`, resource.kind, resource.id);
+    } catch {
+      addActionResult({ text: "Die ausgewählte Ressource konnte nicht sicher verarbeitet werden." });
+      try { await stampMessages(); } catch { /* Preserve unknown time when the clock is unavailable. */ }
+      return;
+    }
     if (!start("Raum auswählen")) return;
     setChosenRoom(resource);
     const next = { ...request, kind: resource.kind ?? 'room' as const };
@@ -826,19 +872,26 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
     setRoomContext(true);
     setActiveResult(null);
     setActiveProposal(null);
-    add({ role: "user", text: `Ich möchte ${label} buchen.` });
+    addGeneratedUserTurn(generated);
     try { await stampMessages(); await searchRooms(next, resource); }
     catch (cause) { add({ role: "assistant", text: cause instanceof Error ? cause.message : "Der Raum konnte nicht geprüft werden." }); }
     finally { await finish(); if (active) composer.current?.focus(); }
   }
 
   async function prepare(resource: Resource, interval: TimeInterval) {
+    let generated: GeneratedUserMessages;
+    try {
+      const selection = `${resource.kind === 'workplace' ? 'Einzelner Arbeitsplatz: ' : ''}${resource.name}${resource.parentName ? ` · ${resource.parentName}` : ''}, ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} Uhr. Bitte vorbereiten.`;
+      generated = bookingPreparationMessages(selection, resource.kind, resource.id, interval);
+    } catch {
+      addActionResult({ text: "Die ausgewählte Ressource oder der Zeitraum konnte nicht sicher verarbeitet werden." });
+      try { await stampMessages(); } catch { /* Preserve unknown time when the clock is unavailable. */ }
+      return;
+    }
     if (!start("anny · Buchung vorbereiten")) return;
     setActiveResult(null);
     setActiveProposal(null);
-    const selection = `${resource.kind === 'workplace' ? 'Einzelner Arbeitsplatz: ' : ''}${resource.name}${resource.parentName ? ` · ${resource.parentName}` : ''}, ${formatDateTime(interval.startDate)} bis ${formatTime(interval.endDate)} Uhr. Bitte vorbereiten.`;
-    const eventId = add({ role: "user", text: selection });
-    if (!offline) appendHistory("user", selection, eventId);
+    addGeneratedUserTurn(generated);
     try {
       await stampMessages();
       const args = { resourceId: resource.id, startDate: interval.startDate, endDate: interval.endDate };
@@ -861,12 +914,20 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
   }
 
   async function prepareCancellation(booking: Booking) {
-    if (!canRequestCancellation(booking) || !start("anny · Stornierung beginnen")) return;
+    if (!canRequestCancellation(booking)) return;
+    let generated: GeneratedUserMessages;
+    try {
+      const selection = `Stornierung beginnen: ${booking.resourceName}, ${formatDateTime(booking.startDate)} bis ${formatTime(booking.endDate)} Uhr.`;
+      generated = cancellationPreparationMessages(selection, booking.id, booking);
+    } catch {
+      addActionResult({ text: "Die ausgewählte Buchung oder der Zeitraum konnte nicht sicher verarbeitet werden." });
+      try { await stampMessages(); } catch { /* Preserve unknown time when the clock is unavailable. */ }
+      return;
+    }
+    if (!start("anny · Stornierung beginnen")) return;
     setActiveResult(null);
     setActiveProposal(null);
-    const selection = `Stornierung beginnen: ${booking.resourceName}, ${formatDateTime(booking.startDate)} bis ${formatTime(booking.endDate)} Uhr.`;
-    const eventId = add({ role: "user", text: selection });
-    if (!offline) appendHistory("user", selection, eventId);
+    addGeneratedUserTurn(generated);
     try {
       await stampMessages();
       const args = { bookingId: booking.id };
@@ -1113,7 +1174,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
                     key={`${serviceConnection.installationId}:${serviceConnection.requestId}`}
                     installationId={serviceConnection.installationId}
                     label={serviceConnection.label}
-                    disabled={busy || messages.findLast(item => item.role === "user")?.id !== serviceConnection.requestId || messages.at(-1)?.id !== message.id}
+                    disabled={busy || latestUserRequestId !== serviceConnection.requestId || messages.at(-1)?.id !== message.id}
                     onReady={() => resumeConnectedRequest(serviceConnection.requestId)}
                   />}
                   {message.rooms && <ChatRoomResults
