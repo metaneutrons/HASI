@@ -1,0 +1,359 @@
+#!/usr/bin/env node
+import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import { chmod, copyFile, mkdir, mkdtemp, open, readFile, rm, stat } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { createServer } from "node:net";
+import { join } from "node:path";
+import { pipeline } from "node:stream/promises";
+import {
+  ASSISTANT_BUDGET_NAMESPACE,
+  ASSISTANT_BUDGET_POLICY,
+  ModelBudgetLedger,
+  PostgresJsonStore,
+} from "../../../packages/state/src/index.ts";
+
+type ChildResult = { readonly code: number | null; readonly signal: NodeJS.Signals | null; readonly stderr: string };
+type CorruptionDiagnostic = {
+  readonly classification: "authenticated_ciphertext_integrity_failure" | "unrecognized_age_error";
+  readonly sanitizedDiagnostic: string;
+};
+
+const MAX_STDERR_BYTES = 512;
+
+const pgBin = "/opt/homebrew/bin";
+const toolEnv: NodeJS.ProcessEnv = {
+  PATH: `${pgBin}:/usr/bin:/bin:/usr/sbin:/sbin`,
+  LC_ALL: "C",
+  LANG: "C",
+  PGCLIENTENCODING: "UTF8",
+  PGTZ: "UTC",
+  PGPASSFILE: "/dev/null",
+  PGSERVICEFILE: "/dev/null",
+};
+
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
+
+function childResult(child: ReturnType<typeof spawn>): Promise<ChildResult> {
+  const stderrChunks: Buffer[] = [];
+  let stderrBytes = 0;
+  child.stderr?.on("data", (chunk: Buffer) => {
+    if (stderrBytes >= MAX_STDERR_BYTES) return;
+    const bounded = chunk.subarray(0, MAX_STDERR_BYTES - stderrBytes);
+    stderrChunks.push(bounded);
+    stderrBytes += bounded.byteLength;
+  });
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      if (child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");
+      reject(new Error("Local proof subprocess exceeded the 30 second limit"));
+    }, 30_000);
+    timeout.unref();
+    child.once("error", error => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.once("close", (code, signal) => {
+      clearTimeout(timeout);
+      resolve({ code, signal, stderr: Buffer.concat(stderrChunks).toString("utf8") });
+    });
+  });
+}
+
+function classifyAgeCorruption(stderr: string, redactions: readonly string[]): CorruptionDiagnostic {
+  const diagnostic = stderr
+    .replace(/\u001b\[[0-9;]*m/gu, "")
+    .replace(/[\r\n\t ]+/gu, " ")
+    .trim();
+  const failure = diagnostic.match(/failed to decrypt and authenticate payload chunk/iu)?.[0];
+  const integrityFailure = diagnostic.match(/file may be corrupted or tampered with/iu)?.[0];
+  const sanitizedDiagnostic = redactions.reduce(
+    (value, secretOrPath) => secretOrPath ? value.split(secretOrPath).join("[redacted]") : value,
+    diagnostic,
+  ).replace(/AGE-SECRET-KEY(?:-PQ)?-[A-Z0-9]+/gu, "[redacted identity]");
+  if (failure && integrityFailure) {
+    return {
+      classification: "authenticated_ciphertext_integrity_failure",
+      sanitizedDiagnostic: `${failure}, ${integrityFailure}`,
+    };
+  }
+  return {
+    classification: "unrecognized_age_error",
+    sanitizedDiagnostic: sanitizedDiagnostic.slice(0, MAX_STDERR_BYTES) || "[empty stderr]",
+  };
+}
+
+async function runTool(command: string, args: readonly string[], env: NodeJS.ProcessEnv = toolEnv): Promise<string> {
+  const child = spawn(command, [...args], { env, stdio: ["ignore", "pipe", "pipe"] });
+  let stdout = "";
+  child.stdout?.on("data", (chunk: Buffer) => { stdout += chunk.toString("utf8"); });
+  const result = await childResult(child);
+  if (result.code !== 0) throw new Error(`${command} failed with exit ${String(result.code)}${result.signal ? ` (${result.signal})` : ""}`);
+  return stdout;
+}
+
+async function listenPort(): Promise<number> {
+  const server = createServer();
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+  const address = server.address();
+  assert(address && typeof address === "object", "Could not reserve a local PostgreSQL port");
+  const port = address.port;
+  await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+  return port;
+}
+
+function pgEnv(socketDir: string, port: number, database: string): NodeJS.ProcessEnv {
+  return { ...toolEnv, PGHOST: socketDir, PGPORT: String(port), PGUSER: "postgres", PGDATABASE: database, PGAPPNAME: "hasi-m8-encrypted-restore-proof" };
+}
+
+async function streamDumpIntoAge(sourceEnv: NodeJS.ProcessEnv, recipient: string, artifactPath: string): Promise<void> {
+  const dump = spawn("pg_dump", ["--format=custom", "--no-owner", "--no-acl"], { env: sourceEnv, stdio: ["ignore", "pipe", "pipe"] });
+  const encrypt = spawn("age", ["--recipient", recipient, "--output", artifactPath], { env: toolEnv, stdio: ["pipe", "ignore", "pipe"] });
+  const dumpDone = childResult(dump);
+  const encryptDone = childResult(encrypt);
+  await pipeline(dump.stdout, encrypt.stdin);
+  const [dumpResult, encryptResult] = await Promise.all([dumpDone, encryptDone]);
+  assert(dumpResult.code === 0, `pg_dump failed with exit ${String(dumpResult.code)}`);
+  assert(encryptResult.code === 0, `age encryption failed with exit ${String(encryptResult.code)}`);
+}
+
+async function streamAgeIntoRestore(identityPath: string, artifactPath: string, targetEnv: NodeJS.ProcessEnv): Promise<void> {
+  const decrypt = spawn("age", ["--decrypt", "--identity", identityPath, artifactPath], { env: toolEnv, stdio: ["ignore", "pipe", "pipe"] });
+  const restore = spawn("pg_restore", ["--dbname=hasi_m8_restore_target", "--format=custom", "--no-owner", "--no-acl", "--exit-on-error", "--single-transaction"], { env: targetEnv, stdio: ["pipe", "ignore", "pipe"] });
+  const decryptDone = childResult(decrypt);
+  const restoreDone = childResult(restore);
+  await pipeline(decrypt.stdout, restore.stdin);
+  const [decryptResult, restoreResult] = await Promise.all([decryptDone, restoreDone]);
+  assert(decryptResult.code === 0, `age decryption failed with exit ${String(decryptResult.code)}`);
+  assert(restoreResult.code === 0, `pg_restore failed with exit ${String(restoreResult.code)}`);
+}
+
+async function createSyntheticHasiRows(socketDir: string, port: number): Promise<void> {
+  const connection = { host: socketDir, port, user: "postgres", database: "hasi_m8_restore_source", max: 2, connectionTimeoutMillis: 5_000, idleTimeoutMillis: 5_000 };
+  const state = new PostgresJsonStore("plugin:m8-synthetic:operator-fixture", { poolConfig: connection });
+  const budgetState = new PostgresJsonStore(ASSISTANT_BUDGET_NAMESPACE, { poolConfig: connection });
+  try {
+    await state.initialize();
+    const now = Date.now();
+    const entries: readonly { key: string; value: Record<string, unknown>; expiresAt?: number }[] = [
+      { key: "profile", value: { kind: "synthetic-profile", displayName: "Fixture User", preferences: { language: "de", density: "compact" } } },
+      { key: "session", value: { kind: "synthetic-session", subject: "fixture-subject-001", flags: ["test", "restore"] }, expiresAt: now + 7 * 86_400_000 },
+      { key: "temporary-note", value: { kind: "synthetic-note", text: "non-expiring fixture marker" }, expiresAt: now + 60_000 },
+      { key: "expired-retained", value: { kind: "synthetic-expired-record", marker: 17 }, expiresAt: now - 60_000 },
+    ];
+    for (const entry of entries) {
+      const inserted = await state.compareAndSet(entry.key, null, entry.value, entry.expiresAt);
+      assert(inserted, `Could not insert synthetic state entry ${entry.key}`);
+    }
+
+    await budgetState.initialize();
+    const windowStart = Math.floor(now / ASSISTANT_BUDGET_POLICY.windowMs) * ASSISTANT_BUDGET_POLICY.windowMs;
+    const ledger = new ModelBudgetLedger(budgetState, { ...ASSISTANT_BUDGET_POLICY, now: () => windowStart + 1_000 });
+    await ledger.initialize();
+    await ledger.reserve({ id: "m8-synthetic-reserved", inputTokens: 1_000, outputTokens: 100 });
+    await ledger.reserve({ id: "m8-synthetic-unknown", inputTokens: 500, outputTokens: 50 });
+    await ledger.settle("m8-synthetic-unknown");
+    await ledger.reserve({ id: "m8-synthetic-settled", inputTokens: 400, outputTokens: 40 });
+    await ledger.settle("m8-synthetic-settled", { inputTokens: 300, outputTokens: 20 });
+    await ledger.reserve({ id: "m8-synthetic-released", inputTokens: 250, outputTokens: 25 });
+    await ledger.release("m8-synthetic-released");
+    const snapshot = await ledger.snapshot();
+    assert(snapshot.inputTokensUsed === 1_800 && snapshot.outputTokensUsed === 170 && snapshot.microUsdUsed === 2_120, "Synthetic budget totals did not match their fixture reservations");
+  } finally {
+    await state.close();
+    await budgetState.close();
+  }
+}
+
+const rowsQuery = `SELECT COALESCE(jsonb_agg(jsonb_build_object(
+  'namespace', namespace,
+  'key', key,
+  'value', value,
+  'revision', revision::text,
+  'expiresAt', CASE WHEN expires_at IS NULL THEN NULL ELSE to_char(expires_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') END
+) ORDER BY namespace COLLATE "C", key COLLATE "C"), '[]'::jsonb)::text FROM public.hasi_state_v1;`;
+
+async function snapshotRows(socketDir: string, port: number, database: string): Promise<{ text: string; rows: Record<string, unknown>[] }> {
+  const text = (await runTool("psql", ["--no-psqlrc", "--no-password", "--quiet", "--tuples-only", "--no-align", "--set=ON_ERROR_STOP=1", "--command", rowsQuery], pgEnv(socketDir, port, database))).trim();
+  const rows = JSON.parse(text) as Record<string, unknown>[];
+  assert(Array.isArray(rows), "Database row snapshot was not an array");
+  return { text, rows };
+}
+
+async function tablePresence(socketDir: string, port: number, database: string): Promise<boolean> {
+  const value = (await runTool("psql", ["--no-psqlrc", "--no-password", "--quiet", "--tuples-only", "--no-align", "--set=ON_ERROR_STOP=1", "--command", "SELECT to_regclass('public.hasi_state_v1') IS NOT NULL"], pgEnv(socketDir, port, database))).trim();
+  return value === "t";
+}
+
+function summarizeRows(rows: readonly Record<string, unknown>[]) {
+  const counts = { nullExpiry: 0, nonNullExpiry: 0, expiredNonNullExpiry: 0, futureNonNullExpiry: 0 };
+  let stateRows = 0;
+  let budgetValue: Record<string, unknown> | undefined;
+  for (const row of rows) {
+    if (row.namespace === ASSISTANT_BUDGET_NAMESPACE) budgetValue = row.value as Record<string, unknown>;
+    else stateRows += 1;
+    if (row.expiresAt === null) counts.nullExpiry += 1;
+    else {
+      counts.nonNullExpiry += 1;
+      if (Date.parse(String(row.expiresAt)) <= Date.now()) counts.expiredNonNullExpiry += 1;
+      else counts.futureNonNullExpiry += 1;
+    }
+  }
+  assert(budgetValue, "Shared budget row is missing");
+  const reservations = budgetValue.reservations as Record<string, unknown>[];
+  const statusCounts: Record<string, number> = { reserved: 0, unknown: 0, settled: 0, released: 0 };
+  for (const reservation of reservations) {
+    const status = String(reservation.status);
+    assert(Object.hasOwn(statusCounts, status), `Unexpected synthetic reservation status ${status}`);
+    statusCounts[status] += 1;
+  }
+  assert(Object.values(statusCounts).every(count => count === 1), "Fixture must contain one reservation in each ledger status");
+  return { totalRows: rows.length, pluginStateRows: stateRows, budgetRows: 1, expiryCounts: counts, reservationStatuses: statusCounts };
+}
+
+function sha256(value: Buffer | string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+async function main(): Promise<void> {
+  assert(process.argv.includes("--execute"), "Pass --execute to run this local-only synthetic restore proof");
+  assert(!Object.keys(process.env).some(key => key === "DATABASE_URL" || key === "TEST_DATABASE_URL"), "Unset inherited application database URL variables before running this proof");
+  assert(!existsSync(join(process.cwd(), "-")), "Refusing to run while a file named '-' exists in the worktree");
+  process.umask(0o077);
+
+  const privateRoot = await mkdtemp("/private/tmp/hasi-m8-encrypted-restore-");
+  const dataDir = join(privateRoot, "postgres-data");
+  const socketDir = join(privateRoot, "socket");
+  const identityPath = join(privateRoot, "age-identity.txt");
+  const artifactPath = join(privateRoot, "synthetic-postgres.dump.age");
+  const corruptedArtifactPath = join(privateRoot, "synthetic-postgres-corrupt.dump.age");
+  let clusterMayBeRunning = false;
+  let completed: Record<string, unknown> | undefined;
+
+  try {
+    await chmod(privateRoot, 0o700);
+    const port = await listenPort();
+    await mkdir(socketDir, { mode: 0o700 });
+    await runTool("initdb", ["--auth=trust", "--no-instructions", "--username=postgres", `--pgdata=${dataDir}`]);
+    clusterMayBeRunning = true;
+    await runTool("pg_ctl", ["start", "--pgdata", dataDir, "--log=/dev/null", "--options", `-k ${socketDir} -p ${port} -c listen_addresses='' -c timezone=UTC -c log_statement=none`, "--wait"]);
+    await runTool("createdb", ["--no-password", "--host", socketDir, "--port", String(port), "--username", "postgres", "hasi_m8_restore_source"]);
+    await runTool("createdb", ["--no-password", "--host", socketDir, "--port", String(port), "--username", "postgres", "hasi_m8_restore_target"]);
+    await runTool("createdb", ["--no-password", "--host", socketDir, "--port", String(port), "--username", "postgres", "hasi_m8_corrupt_target"]);
+
+    await createSyntheticHasiRows(socketDir, port);
+    const sourceSnapshot = await snapshotRows(socketDir, port, "hasi_m8_restore_source");
+    const sourceSummary = summarizeRows(sourceSnapshot.rows);
+    assert(sourceSummary.totalRows === 5 && sourceSummary.pluginStateRows === 4, "Synthetic source did not contain the expected complete fixture");
+    assert(sourceSummary.expiryCounts.nullExpiry > 0 && sourceSummary.expiryCounts.expiredNonNullExpiry > 0 && sourceSummary.expiryCounts.futureNonNullExpiry > 0, "Synthetic source did not cover NULL, expired and future expiries");
+
+    await runTool("age-keygen", ["--output", identityPath]);
+    await chmod(identityPath, 0o600);
+    const identityMode = (await stat(identityPath)).mode & 0o777;
+    assert(identityMode === 0o600, "Ephemeral age identity is not mode 0600");
+    const recipient = (await runTool("age-keygen", ["-y", identityPath])).trim();
+    assert(/^age1[0-9a-z]+$/u.test(recipient), "Could not derive an age recipient from the ephemeral identity");
+
+    await streamDumpIntoAge(pgEnv(socketDir, port, "hasi_m8_restore_source"), recipient, artifactPath);
+    await chmod(artifactPath, 0o600);
+    const artifactBytes = await readFile(artifactPath);
+    assert(artifactBytes.byteLength > 512, "Encrypted artifact is unexpectedly small for the populated database dump");
+    const artifactHash = sha256(artifactBytes);
+    const artifactSize = artifactBytes.byteLength;
+
+    await copyFile(artifactPath, corruptedArtifactPath);
+    await chmod(corruptedArtifactPath, 0o600);
+    const corruptHandle = await open(corruptedArtifactPath, "r+");
+    try {
+      const lastByte = Buffer.alloc(1);
+      await corruptHandle.read(lastByte, 0, 1, artifactSize - 1);
+      lastByte[0] ^= 1;
+      await corruptHandle.write(lastByte, 0, 1, artifactSize - 1);
+    } finally {
+      await corruptHandle.close();
+    }
+    const corruptedHash = sha256(await readFile(corruptedArtifactPath));
+    assert(corruptedHash !== artifactHash, "Corruption counter did not alter the separate artifact copy");
+
+    const corruptDecrypt = spawn("age", ["--decrypt", "--identity", identityPath, corruptedArtifactPath], { env: toolEnv, stdio: ["ignore", "ignore", "pipe"] });
+    const corruptDecryptResult = await childResult(corruptDecrypt);
+    const corruptDiagnostic = classifyAgeCorruption(corruptDecryptResult.stderr, [identityPath, corruptedArtifactPath, privateRoot]);
+    assert(
+      corruptDecryptResult.code === 1
+        && corruptDecryptResult.signal === null
+        && corruptDiagnostic.classification === "authenticated_ciphertext_integrity_failure",
+      `Age corruption counter mismatch: exit=${String(corruptDecryptResult.code)}, signal=${String(corruptDecryptResult.signal)}, classification=${corruptDiagnostic.classification}, diagnostic=${corruptDiagnostic.sanitizedDiagnostic}`,
+    );
+    const corruptTargetUntouched = !(await tablePresence(socketDir, port, "hasi_m8_corrupt_target"));
+    assert(corruptTargetUntouched, "Corrupt counter created or changed a restore target before authenticated decryption rejected it");
+
+    await streamAgeIntoRestore(identityPath, artifactPath, pgEnv(socketDir, port, "hasi_m8_restore_target"));
+    const restoredSnapshot = await snapshotRows(socketDir, port, "hasi_m8_restore_target");
+    const restoredSummary = summarizeRows(restoredSnapshot.rows);
+    const sourceDigest = sha256(sourceSnapshot.text);
+    const restoredDigest = sha256(restoredSnapshot.text);
+    assert(sourceSnapshot.text === restoredSnapshot.text, "Complete normalized state rows differ after encrypted restore");
+    assert(sourceDigest === restoredDigest, "Normalized full-state digests differ after encrypted restore");
+    assert(JSON.stringify(sourceSummary) === JSON.stringify(restoredSummary), "State, expiry or budget reservation summaries differ after restore");
+    assert(sha256(await readFile(artifactPath)) === artifactHash, "Positive encrypted artifact changed during restore");
+    assert(!existsSync(join(process.cwd(), "-")), "A CLI created an unexpected file named '-' in the worktree");
+
+    completed = {
+      kind: "isolated_synthetic_encrypted_postgres_restore",
+      sourceRevision: "b52598d705f938e52213c5bbd7691735bf7e3399",
+      localOnly: true,
+      productionOrInstitutionalData: false,
+      databaseToolchain: {
+        server: (await runTool("postgres", ["--version"])).trim(),
+        pgDump: (await runTool("pg_dump", ["--version"])).trim(),
+        pgRestore: (await runTool("pg_restore", ["--version"])).trim(),
+        age: (await runTool("age", ["--version"])).trim(),
+      },
+      encryptedArtifact: { format: "age-encrypted PostgreSQL custom-format dump", sha256: artifactHash, bytes: artifactSize, privateArtifactRetained: false },
+      source: { normalizedRowsSha256: sourceDigest, ...sourceSummary },
+      restored: { normalizedRowsSha256: restoredDigest, ...restoredSummary },
+      positiveRestore: { decryptedToStdoutDirectlyIntoPgRestore: true, completeNormalizedRowsEqual: true, revisionsAndExpiriesIncluded: true, sharedBudgetLedgerIncluded: true },
+      corruptionCounter: {
+        alteredCopySha256: corruptedHash,
+        ageExitCode: corruptDecryptResult.code,
+        ageSignal: corruptDecryptResult.signal,
+        diagnosticClassification: corruptDiagnostic.classification,
+        sanitizedDiagnostic: corruptDiagnostic.sanitizedDiagnostic,
+        authenticatedDecryptionRejected: true,
+        pgRestoreInvoked: false,
+        restoreTargetUnchanged: corruptTargetUntouched,
+      },
+      ephemeralIdentity: { privateKeyMode: "0600", locatedInsideMode0700TemporaryDirectory: true, removedDuringCleanup: true },
+      cleanup: { exactTemporaryClusterStoppedAndRemoved: false },
+    };
+  } finally {
+    if (clusterMayBeRunning) {
+      const status = spawn("pg_ctl", ["status", "--pgdata", dataDir], { env: toolEnv, stdio: "ignore" });
+      const statusResult = await childResult(status);
+      if (statusResult.code === 0) {
+        try {
+          await runTool("pg_ctl", ["stop", "--pgdata", dataDir, "--mode", "fast", "--wait"]);
+        } catch {
+          await runTool("pg_ctl", ["stop", "--pgdata", dataDir, "--mode", "immediate", "--wait"]);
+        }
+      }
+    }
+    assert(privateRoot.startsWith("/private/tmp/hasi-m8-encrypted-restore-"), "Refusing cleanup outside the exact M8 proof temporary directory");
+    await rm(privateRoot, { recursive: true, force: false });
+  }
+
+  assert(completed, "Proof result is missing");
+  (completed.cleanup as Record<string, unknown>).exactTemporaryClusterStoppedAndRemoved = true;
+  process.stdout.write(`${JSON.stringify(completed, null, 2)}\n`);
+}
+
+main().catch(error => {
+  const message = error instanceof Error ? error.message : "unknown failure";
+  process.stderr.write(`M8 encrypted restore proof failed: ${message}\n`);
+  process.exitCode = 1;
+});

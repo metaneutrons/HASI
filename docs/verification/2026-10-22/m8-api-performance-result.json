@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-22",
+  "status": "passed_local_embedded_demo_scope_only",
+  "acceptance": {
+    "criterion": "M8-A9 non-model API p95 <= 1000 ms",
+    "users": 5,
+    "syntheticRole": "employee",
+    "batchesPerRoute": 2,
+    "queriesPerUserPerRoutePerBatch": 20,
+    "samplesPerBatch": 100,
+    "p95Method": "nearest-rank ceil(0.95 * n)",
+    "errorsOrTimeoutsFailBatch": true,
+    "coldStartReportedSeparately": true,
+    "modelLatencyIncluded": false
+  },
+  "source": {
+    "branch": "fix/m8-self-service-qualification",
+    "commit": "b52598d705f938e52213c5bbd7691735bf7e3399",
+    "qualifierFile": "scripts/qualify-demo-performance.ts",
+    "qualifierSha256AtMeasurement": "48e475738e638ef8aa4bc03599a1427a6ae8f3a1a37757ea666d007fd0c4d1ac",
+    "qualifierSha256CurrentPostReview": "757096790804f472ed24e1567107c6335df6606a10539b9b0923b4fdf198372a",
+    "collectorFile": "scripts/demo-performance-qualification.ts",
+    "collectorSha256": "b8d4afaff9319ce88436cf685ca889c786fc31156d9dab3e4e36b0dc3ffdb28e",
+    "qualifierChangeAtMeasurement": "Derive svc-001 revision and citation from committed synthetic fixture metadata; validate fixture identity, source, synthetic marker, positive revision, and citation format.",
+    "postMeasurementChange": "Require exactly one svc-001 fixture match before applying the existing schema and citation checks. This preflight-only selection guard is outside the timed route; no measurement rerun was made."
+  },
+  "build": {
+    "command": "env -i PATH=/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin HOME=/Users/fabian TMPDIR=/private/tmp LANG=en_US.UTF-8 NEXT_TELEMETRY_DISABLED=1 HASI_STANDALONE_BUILD=1 NEXT_PUBLIC_HASI_PUBLIC_DEMO=1 /opt/homebrew/bin/pnpm --filter @hasi/web build",
+    "nodeVersion": "v26.11.1",
+    "pnpmVersion": "12.11.2",
+    "nextVersion": "16.4.2",
+    "buildId": "mUVk-pauinNmaJzJu59HD",
+    "standaloneBuildId": "mUVk-pauinNmaJzJu59HD",
+    "buildIdSha256": "6630ec39d41e01491de4cc754f0491ded145ad66bf4f476ac8af0ea44ad9a595",
+    "routesManifestSha256": "d2a8993e93ed910933a09465ce9c9fcacf9edcf7f6f1ff47c4475337e497307b",
+    "standaloneServerSha256": "f9ee56c567cfa715f81e5fb7cec785a451bd4fdec80bb8d7ab8913da8a6dc857",
+    "observedBuildFileMtimeLocal": "2026-10-22 23:34",
+    "earlierWorkNoteBuildId": "CUbriMY5PFXtnBLly25km",
+    "buildIdNote": "A prior work note recorded another generated build ID. No separate build log for that ID was retained. The final run is tied to the matching mUVk... BUILD_ID copies and standalone files observed after the run."
+  },
+  "inputSha256": {
+    "apps/web/next.config.ts": "f6403b4af6ba9626d9507dec79283c8e10c8578d2fdb917dd4ba04455438d8ef",
+    "apps/api/src/index.ts": "a4f4daaeff583c46ec060b208abc88940f6648625c180be8937e1a3980a593ac",
+    "packages/demo-runtime/src/index.ts": "e5dfa3c8b84decf80e58244dc1f69b5fb7463fb7881a7173292821e331bcb7f2",
+    "apps/web/src/lib/server/demo-runtime.ts": "da5dd68a74ca5fa64033ea6228ef4a66e7df3f95d8ace5617f6ec0148adabfc4",
+    "fixtures/catalog.ts": "9e67dbd49cea942c923b91b42f8084e5c2de8f79493fb5fe8ba511e6f651a7bd",
+    "fixtures/knowledge-catalog.ts": "dc8a758b73535138e16c8e37fa4df7f4ffb0e5325fc4adbe0db8bb1975d99661",
+    "fixtures/knowledge-demo-v1.json": "288af45761e75db242772a0ac456fdcd0baccca45bce496e6db2bd625387e61a",
+    "fixtures/service-it-synthetic-v1.json": "96d333e421f2dd6d53036ac79224370f5fd7a498712d43c7d2f557b728f4f9d1",
+    "pnpm-lock.yaml": "d17165ca9989d72401f3eaa9718d1ffa43bc1adb486113602760f30db13317ba"
+  },
+  "verification": {
+    "targetedLintCommand": "env -i PATH=/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin HOME=/Users/fabian TMPDIR=/private/tmp LANG=en_US.UTF-8 /opt/homebrew/bin/pnpm exec eslint scripts/qualify-demo-performance.ts --max-warnings=0",
+    "targetedLintResult": "passed",
+    "targetedLintAppliedToSha256": "757096790804f472ed24e1567107c6335df6606a10539b9b0923b4fdf198372a",
+    "fixtureGuardCheck": {
+      "method": "A separate credential-scrubbed Node/tsx check of the committed fixture inventory; no API server or performance batch was run.",
+      "matchedCount": 1,
+      "id": "svc-001",
+      "revision": 2,
+      "citationId": "knowledge:service_it:svc-001:2"
+    },
+    "qualifierCommand": "env -i PATH=/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin HOME=/Users/fabian TMPDIR=/private/tmp LANG=en_US.UTF-8 HASI_DEMO_PERFORMANCE_QUALIFY=1 TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:32791/hasi_topology_test /opt/homebrew/bin/node --import tsx scripts/qualify-demo-performance.ts",
+    "noTestSuiteRun": true,
+    "noSecretOrProviderEnvironmentPassed": true
+  },
+  "topology": {
+    "application": "optimized Next.js standalone embedded demo runtime and API",
+    "transport": "HTTP loopback through owned proxy",
+    "apiMode": "test",
+    "databaseName": "hasi_topology_test",
+    "postgresLaunchOperatorRecord": {
+      "dockerContext": "colima",
+      "command": "docker run --pull=never -d --name hasi-m8-a9-pg-b525-7dd2 -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=hasi_topology_test -p 127.0.0.1::5432 --tmpfs /var/lib/postgresql:rw,nosuid,nodev,size=512m postgres:18-bookworm",
+      "containerId": "e4fe3becec1b19553128cc61355c90cb44361b51193e818f89df4c765adc7171",
+      "imageAsRecorded": "postgres:18-bookworm",
+      "hostBindingAsRecorded": "127.0.0.1:32791 -> 5432/tcp",
+      "tmpfsAsRecorded": "/var/lib/postgresql:rw,nosuid,nodev,size=512m",
+      "readinessOutputAsRecorded": "pg_isready passed",
+      "provenanceLimit": "Launch command, ID, port, and readiness were recorded in operator notes; Docker inspect output was not retained."
+    },
+    "publicHttpsPerformanceQualified": false,
+    "fixture": {
+      "id": "svc-001",
+      "sourceSystem": "service_it",
+      "revision": 2,
+      "citationId": "knowledge:service_it:svc-001:2",
+      "synthetic": true
+    }
+  },
+  "rawHarnessResult": {
+    "phase": "complete",
+    "namespace": "demo-performance-2e7b24cf-2d44-420b-bd8c-ac627480d384",
+    "cleanupFailure": null,
+    "topology": "local-standalone-next-demo-api-loopback-postgres",
+    "transport": "http-loopback",
+    "apiMode": "test",
+    "publicHttpsPerformanceQualified": false,
+    "users": 5,
+    "role": "employee",
+    "batchesPerRoute": 2,
+    "samplesPerUserPerBatch": 20,
+    "samplesPerBatch": 100,
+    "p95LimitMs": 1000,
+    "coldSessionMs": 211.27,
+    "routes": [
+      {
+        "route": "anny.resources",
+        "batches": [
+          { "batch": 1, "sampleCount": 100, "errorCount": 0, "p95Ms": 96.82, "passed": true },
+          { "batch": 2, "sampleCount": 100, "errorCount": 0, "p95Ms": 91.9, "passed": true }
+        ]
+      },
+      {
+        "route": "anny.availability",
+        "batches": [
+          { "batch": 1, "sampleCount": 100, "errorCount": 0, "p95Ms": 180.59, "passed": true },
+          { "batch": 2, "sampleCount": 100, "errorCount": 0, "p95Ms": 194.6, "passed": true }
+        ]
+      },
+      {
+        "route": "knowledge.search",
+        "batches": [
+          { "batch": 1, "sampleCount": 100, "errorCount": 0, "p95Ms": 323.28, "passed": true },
+          { "batch": 2, "sampleCount": 100, "errorCount": 0, "p95Ms": 310.84, "passed": true }
+        ]
+      },
+      {
+        "route": "knowledge.document",
+        "batches": [
+          { "batch": 1, "sampleCount": 100, "errorCount": 0, "p95Ms": 62.12, "passed": true },
+          { "batch": 2, "sampleCount": 100, "errorCount": 0, "p95Ms": 67.54, "passed": true }
+        ]
+      },
+      {
+        "route": "plugin-accounts.status",
+        "batches": [
+          { "batch": 1, "sampleCount": 100, "errorCount": 0, "p95Ms": 50.78, "passed": true },
+          { "batch": 2, "sampleCount": 100, "errorCount": 0, "p95Ms": 51.14, "passed": true }
+        ]
+      }
+    ],
+    "delayControl": {
+      "route": "anny.resources",
+      "delayMs": 1200,
+      "sampleCount": 100,
+      "errorCount": 0,
+      "p95Ms": 1347.32,
+      "passed": false,
+      "rejectedBySameGate": true
+    },
+    "cleanupVerified": true,
+    "knowledgeFixture": {
+      "id": "svc-001",
+      "revision": 2,
+      "citationId": "knowledge:service_it:svc-001:2"
+    },
+    "status": "passed"
+  },
+  "cleanup": {
+    "namespaceCleanupVerifiedByHarness": true,
+    "containerLifecycleOperatorRecord": "docker stop printed the exact name; an exact-name ps listing showed Dead; docker rm -f completed; the following exact-name ps listing returned no rows.",
+    "containerLifecycleEvidenceLimit": "Operator-observed command output, not harness verification. A bounded Docker events query returned no matching lifecycle events; no inspect output was retained. Root may independently verify exact-name absence.",
+    "dockerEventsQuery": "docker --context colima events --since 2026-10-22T21:30:00Z --until 2026-10-22T21:51:00Z --filter container=hasi-m8-a9-pg-b525-7dd2",
+    "dockerEventsQueryResult": "No matching events returned."
+  },
+  "scopeLimitations": [
+    "No public HTTPS, TLS, external network, or Hetzner performance measurement.",
+    "No institutional TestIdP or separate production API topology.",
+    "No model/provider invocation, model latency, or budget measurement.",
+    "No UI input-to-visible-feedback measurement.",
+    "No booking, cancellation, live Anny, or production database operations.",
+    "The bounded route set does not cover all availability fan-out or production load.",
+    "This result does not close M8 or establish institutional acceptance."
+  ],
+  "privateEvidence": {
+    "correctedScratchRunnerPath": "/private/tmp/hasi-m8-a9-final/qualify-demo-performance.ts",
+    "correctedScratchRunnerSha256": "1818f6b43aa0c5bdc3b55655acfb99de5d88c9a1aad321224211eeb0e6844209",
+    "correctedScratchRawResultPath": "/private/tmp/hasi-m8-a9-final/result.json",
+    "correctedScratchRawResultSha256": "637bb494ff4fc2943428f94faeec4376eed69594aea66d093c3e3c483f8614c3",
+    "trackedScriptRunRawResultPath": "/private/tmp/hasi-m8-a9-final/tracked-run-result.json",
+    "trackedScriptRunRawResultSha256": "e1870db9502c63518f7e7d5ede54dcc64aa4ad35938f803aab7875e48ae75bca"
+  },
+  "openStatus": "M8-A9 remains open; root owns final architecture and acceptance decision."
+}

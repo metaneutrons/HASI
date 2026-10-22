@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PostgresJsonStore } from '@hasi/state';
 import { hshDemoCatalog } from '../fixtures/catalog.js';
+import { knowledgeDocuments } from '../fixtures/knowledge-catalog.js';
 import { knowledgeDocumentV2Schema } from '@hasi/knowledge-plugin/contracts';
 import { parsePluginAccountBegin, parsePluginAccountList } from '../apps/web/src/lib/plugin-accounts.js';
 import {
@@ -58,6 +59,19 @@ function safeError(error: unknown): string {
   if (error instanceof ZodError) return 'demo_api_schema_mismatch';
   const message = error instanceof Error ? error.message : '';
   return /^[a-z0-9_]+$/u.test(message) ? message : 'demo_performance_qualification_failed';
+}
+
+function requiredKnowledgeFixture() {
+  const matches = knowledgeDocuments.filter(document => document.id === 'svc-001');
+  assert(matches.length === 1, 'demo_knowledge_fixture_invalid');
+  const parsed = z.object({
+    id: z.literal('svc-001'), sourceSystem: z.literal('service_it'), synthetic: z.literal(true),
+    revision: z.number().int().positive(), citationId: z.string().min(1),
+  }).safeParse(matches[0]);
+  assert(parsed.success, 'demo_knowledge_fixture_invalid');
+  const fixture = parsed.data;
+  assert(fixture.citationId === `knowledge:${fixture.sourceSystem}:${fixture.id}:${String(fixture.revision)}`, 'demo_knowledge_fixture_invalid');
+  return fixture;
 }
 
 async function existingStandaloneServer(): Promise<string> {
@@ -216,15 +230,15 @@ async function bootstrapUser(origin: string, jar: DemoSession): Promise<{ id: st
   return { id: login.user.id, workspaceId: workspace };
 }
 
-async function assertReadPayloads(origin: string, jar: DemoSession, expectedResourceIds: ReadonlySet<string>): Promise<void> {
+async function assertReadPayloads(origin: string, jar: DemoSession, expectedResourceIds: ReadonlySet<string>, knowledgeFixture: ReturnType<typeof requiredKnowledgeFixture>): Promise<void> {
   const resources = resourcesSchema.parse(await jsonRequest(origin, jar, '/api/resources')).resources;
   assert(resources.length === expectedResourceIds.size && new Set(resources.map(resource => resource.id)).size === expectedResourceIds.size && resources.every(resource => expectedResourceIds.has(resource.id)), 'demo_resources_payload_mismatch');
   const search = searchSchema.parse(await jsonRequest(origin, jar, '/api/tools/call', {
     pluginId: 'de.hsh.hasi.knowledge', name: 'knowledge.search', arguments: { query: 'Morgenstern-Lab', sourceSystem: 'service_it', limit: 3 },
   }));
-  assert(search.documents.some(document => document.id === 'svc-001' && document.synthetic && document.dataClass === 'synthetic_demo'), 'demo_knowledge_search_payload_mismatch');
-  const lookup = lookupSchema.parse(await jsonRequest(origin, jar, '/api/knowledge/documents/svc-001?revision=1'));
-  assert(lookup.document.citationId === 'knowledge:service_it:svc-001:1' && lookup.document.synthetic, 'demo_knowledge_lookup_payload_mismatch');
+  assert(search.documents.some(document => document.id === knowledgeFixture.id && document.synthetic && document.dataClass === 'synthetic_demo'), 'demo_knowledge_search_payload_mismatch');
+  const lookup = lookupSchema.parse(await jsonRequest(origin, jar, `/api/knowledge/documents/${encodeURIComponent(knowledgeFixture.id)}?revision=${String(knowledgeFixture.revision)}`));
+  assert(lookup.document.citationId === knowledgeFixture.citationId && lookup.document.synthetic, 'demo_knowledge_lookup_payload_mismatch');
   const accounts = parsePluginAccountList(await jsonRequest(origin, jar, '/api/plugin-accounts'));
   assert(accounts.length === 1 && accounts[0]?.status === 'linked' && accounts[0].adapterTrust === 'demo-only', 'demo_plugin_account_payload_mismatch');
 }
@@ -286,6 +300,7 @@ async function cleanupNamespace(database: object, namespace: string, ownerNonce:
 
 async function main(): Promise<void> {
   currentPhase = 'environment_validation';
+  const knowledgeFixture = requiredKnowledgeFixture();
   const { databaseUrl, database } = validateDemoPerformanceEnvironment(process.env);
   currentPhase = 'standalone_build';
   const standaloneServer = await existingStandaloneServer();
@@ -299,6 +314,7 @@ async function main(): Promise<void> {
     publicHttpsPerformanceQualified: false, users: 5, role: 'employee', batchesPerRoute: 2,
     samplesPerUserPerBatch: 20, samplesPerBatch: DEMO_PERFORMANCE_SAMPLES_PER_BATCH, p95LimitMs: DEMO_PERFORMANCE_LIMIT_MS,
     coldSessionMs: null, routes: [], delayControl: null, cleanupVerified: false,
+    knowledgeFixture: { id: knowledgeFixture.id, revision: knowledgeFixture.revision, citationId: knowledgeFixture.citationId },
   };
   let store: PostgresJsonStore | undefined;
   let proxy: Server | undefined;
@@ -340,7 +356,7 @@ async function main(): Promise<void> {
     assert(new Set(identities.map(user => user.id)).size === 5 && new Set(identities.map(user => user.workspaceId)).size === 5, 'demo_employee_subjects_not_distinct');
     const expectedResourceIds = new Set(hshDemoCatalog.resources.map(resource => resource.id));
     currentPhase = 'read_preflight';
-    await Promise.all(jars.map(jar => assertReadPayloads(origin, jar, expectedResourceIds)));
+    await Promise.all(jars.map(jar => assertReadPayloads(origin, jar, expectedResourceIds, knowledgeFixture)));
     await assertWorkspaceIsolation(origin, jars);
 
     const availabilityResource = hshDemoCatalog.resources.find(resource => resource.kind === 'workplace');
@@ -352,8 +368,8 @@ async function main(): Promise<void> {
       { id: 'anny.availability', run: async (jar: DemoSession) => {
         const parsed = availabilitySchema.parse(await jsonRequest(origin, jar, '/api/availability', { resourceId: availabilityResource.id, serviceId: availabilityResource.serviceId, startDate: intervalStart, durationMinutes: 60 })); const interval = parsed.intervals.find(item => item.startDate === intervalStart);
         assert(interval?.available === true && interval.endDate === intervalEnd, 'demo_availability_payload_mismatch'); } },
-      { id: 'knowledge.search', run: async (jar: DemoSession) => { const parsed = searchSchema.parse(await jsonRequest(origin, jar, '/api/tools/call', { pluginId: 'de.hsh.hasi.knowledge', name: 'knowledge.search', arguments: { query: 'Morgenstern-Lab', sourceSystem: 'service_it', limit: 3 } })); assert(parsed.documents.some(document => document.id === 'svc-001' && document.synthetic && document.dataClass === 'synthetic_demo'), 'demo_knowledge_search_payload_mismatch'); } },
-      { id: 'knowledge.document', run: async (jar: DemoSession) => { const parsed = lookupSchema.parse(await jsonRequest(origin, jar, '/api/knowledge/documents/svc-001?revision=1')); assert(parsed.document.citationId === 'knowledge:service_it:svc-001:1' && parsed.document.synthetic, 'demo_knowledge_lookup_payload_mismatch'); } },
+      { id: 'knowledge.search', run: async (jar: DemoSession) => { const parsed = searchSchema.parse(await jsonRequest(origin, jar, '/api/tools/call', { pluginId: 'de.hsh.hasi.knowledge', name: 'knowledge.search', arguments: { query: 'Morgenstern-Lab', sourceSystem: 'service_it', limit: 3 } })); assert(parsed.documents.some(document => document.id === knowledgeFixture.id && document.synthetic && document.dataClass === 'synthetic_demo'), 'demo_knowledge_search_payload_mismatch'); } },
+      { id: 'knowledge.document', run: async (jar: DemoSession) => { const parsed = lookupSchema.parse(await jsonRequest(origin, jar, `/api/knowledge/documents/${encodeURIComponent(knowledgeFixture.id)}?revision=${String(knowledgeFixture.revision)}`)); assert(parsed.document.citationId === knowledgeFixture.citationId && parsed.document.synthetic, 'demo_knowledge_lookup_payload_mismatch'); } },
       { id: 'plugin-accounts.status', run: async (jar: DemoSession) => { const accounts = parsePluginAccountList(await jsonRequest(origin, jar, '/api/plugin-accounts')); assert(accounts.length === 1 && accounts[0]?.status === 'linked' && accounts[0].adapterTrust === 'demo-only', 'demo_plugin_account_payload_mismatch'); } },
     ];
     currentPhase = 'route_measurement';
