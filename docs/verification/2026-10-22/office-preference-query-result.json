@@ -1,0 +1,670 @@
+{
+  "sourceRevision": "fe0cdce7109f0ea5e32623eb12db90cfbe07a2aa",
+  "fullRequestSharedOffice": {
+    "visibleAmrumAndFoehr": true,
+    "date": "2026-10-23",
+    "from": "10:00",
+    "to": "16:00",
+    "stableProposalVisible": true,
+    "persistenceSettled": true,
+    "networkAvailabilityCalls": 8,
+    "networkProposals": 1,
+    "confirmations": 0,
+    "networkComplete": true
+  },
+  "quotedName": {
+    "visibleWorkplace": "Arbeitsplatz 1",
+    "office": "Grace Hopper",
+    "otherSharedOfficeAbsent": true,
+    "persistenceSettled": true
+  },
+  "realProviders": 0,
+  "syntheticModelCalls": 0,
+  "accountSignedOut": true,
+  "ownedTabClosed": true,
+  "limitations": [
+    "Dialog-Demo; no actual model interpretation",
+    "No booking confirmation or business write",
+    "Not a qualification of the earlier intermittent rapid interruption"
+  ],
+  "build": {
+    "buildId": "t86DJkNxAMJZVTmfQDchQ",
+    "webSourceFilesMatchedCommit": 135,
+    "sourceInputs": [
+      {
+        "path": "apps/web/src/components/assistant-page.tsx",
+        "sha256": "6ac379b9d119fc3890eb8a1eeb2ee6bbf5f2586301591d208ca5550a17b795c4"
+      },
+      {
+        "path": "apps/web/src/lib/anny-chat-tools.ts",
+        "sha256": "2c3982d3a3825eb1bc6ac7b8c5298d3482218413a0fefd9513b8ac800a435284"
+      },
+      {
+        "path": "apps/web/src/lib/chat-demo.ts",
+        "sha256": "2676b934dd84fa931fdc46e147a4798d82346899dd795de683198085c8beb158"
+      }
+    ],
+    "compiledAssets": [
+      {
+        "path": "apps/web/.next/static/chunks/0cfdxyf-0p-m_.js",
+        "sha256": "db4cdd99d18286ab1fa05d54832f3f9d322bda6683e727d1b2f9180b30354d81"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/0cio0f5edad-_.js",
+        "sha256": "13481a8897045701f265d22fba4862385d924519bc0980eea5a07511bd3a80db"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/0cz1d0mv5g_q7.js",
+        "sha256": "0973c1d64c88adc8e3c950410cb58b288f72118d5965b78049438deb8f2f9683"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/0emhk8gange03.js",
+        "sha256": "bb18d66973e92604a52dd2099707be706a027203d68c386915af4f157f45a814"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/0r8ah6uz1caij.js",
+        "sha256": "0d69708362a16b2b59add30dc665db693794d9d31ce5d51c29191ec37b1d26d1"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/0z-wwj46n-xps.js",
+        "sha256": "b3f605bc64ca2d03633ee209773bb11bb6a8224a15b406cd07e80720d0e2ec2e"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/1-5xa7-78wtfs.js",
+        "sha256": "51410addf9a565c8113efcf46621b00836c32344be2507ee867b871dcd6d9481"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/15i2aus2s_c6-.js",
+        "sha256": "013ce2bfbab5e12834bf3e72adebb7ac3b441ae00db7b5ea8e20f7f13a98f2da"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/1a1eo8l2y1dw3.css",
+        "sha256": "c555b8ab514218ace502208f074bcef5bc703f0d93b2f438ff2841164d64e94d"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/28itoqgbjwz_c.js",
+        "sha256": "d5041ebff975f958d560a236ae4b04b06a0d7992c69918ccd7bf02bc8bb44480"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/2bzsx-cxs-ieb.js",
+        "sha256": "d13d09ad806b7dc05ecdb77de8b2d0a60b56e28743638805bcbb220d9018dc05"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/2llkpjxxr_fmy.css",
+        "sha256": "3ab933f7b8d64f2091ef7f1a918ffcfa681724376047b64504271f3040e16e64"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/2vdqzxx6cex6w.css",
+        "sha256": "d96ee865e67f7767ffd893a1dff0c4f47afb75ae006d4a9798eb11edd118a87c"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/36d41iolio4_1.js",
+        "sha256": "bc0979f49928189e825f8f9960217680d172d4a2d7d66db0b475667e9df3f1de"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/37x1x3xwtnm3s.js",
+        "sha256": "1258370d17d4b3e4809752abd9c535991403467c72f5c2cf9f06145faa1b75e9"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/3esi_yxpf_-re.js",
+        "sha256": "434275f141c7f7eda2bf06ecff5f9d0d1a3da9a4639776b2313161fa0a05dcef"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/3fo73iud4_29w.js",
+        "sha256": "49fcbf8da5f807ff2ab49804520c5608acd66f4d4c2bcb18bc6e35eae1607a20"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/3jg-6i_gk6b5g.js",
+        "sha256": "efe68e64f3c4dee1c502d0e743ff693f7a680b026ab95a71d52dc0a454e82ab2"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/3pbs7uq9d1rw9.js",
+        "sha256": "3152781eaebfd1f1693e200a0398b74f7c555c610a06240c979f46b0f972b4fd"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/3zv3bkin7qcuu.js",
+        "sha256": "f4ed93fc30802111e480944fbaf1b653b373a41aaf0f6292b343a3d2452643cf"
+      },
+      {
+        "path": "apps/web/.next/static/chunks/turbopack-2c3mg3r-05n1w.js",
+        "sha256": "b5f9b5199b99ab6c141f4540f0b7d0fe803c4ecf6956849ecb6e59d3d439272e"
+      },
+      {
+        "path": "apps/web/.next/static/media/icon.2p1rd9d-sr3rp.svg",
+        "sha256": "a43ffefe91ce8d5fcd9af9f315c6810b790b9e0b30c260af2c19815fe0a7b6cb"
+      },
+      {
+        "path": "apps/web/.next/static/t86DJkNxAMJZVTmfQDchQ/_buildManifest.js",
+        "sha256": "9ef64d0b2db47b87ee7accd93ccb0cd9d9454e8e13cb28c1b8624fbce23b895d"
+      },
+      {
+        "path": "apps/web/.next/static/t86DJkNxAMJZVTmfQDchQ/_clientMiddlewareManifest.js",
+        "sha256": "5483e3295dc35dfe29ea932efc85341c916f10ff78ff5b0e965e003710893a4a"
+      },
+      {
+        "path": "apps/web/.next/static/t86DJkNxAMJZVTmfQDchQ/_ssgManifest.js",
+        "sha256": "678f6ce2cb80b1fe72fc67e7412be6e2ab6ada083111b64f7c40d35e3cba5e00"
+      }
+    ],
+    "privateFullIdentitySha256": "481b64bcf34fd13966dad2736cb2f3a9c36e57e2d4336409c2c78a4d202b9de1"
+  },
+  "network": {
+    "cursorStart": 150,
+    "cursorEnd": 352,
+    "truncated": false,
+    "hasMore": false,
+    "events": [
+      {
+        "sequence": 155,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444395.130822
+      },
+      {
+        "sequence": 156,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444395.141793
+      },
+      {
+        "sequence": 159,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/chat/timestamps",
+        "verb": "POST",
+        "timestamp": 1444395.142291
+      },
+      {
+        "sequence": 162,
+        "method": "Network.responseReceived",
+        "path": "/api/chat/timestamps",
+        "status": 200,
+        "timestamp": 1444395.15003
+      },
+      {
+        "sequence": 165,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444395.156868
+      },
+      {
+        "sequence": 168,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444395.161623
+      },
+      {
+        "sequence": 171,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/chat/dialogue",
+        "verb": "POST",
+        "timestamp": 1444395.161921
+      },
+      {
+        "sequence": 174,
+        "method": "Network.responseReceived",
+        "path": "/api/chat/dialogue",
+        "status": 200,
+        "timestamp": 1444395.262497
+      },
+      {
+        "sequence": 177,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444395.264221
+      },
+      {
+        "sequence": 178,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444395.264282
+      },
+      {
+        "sequence": 179,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444395.264316
+      },
+      {
+        "sequence": 180,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444395.264343
+      },
+      {
+        "sequence": 181,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444395.264368
+      },
+      {
+        "sequence": 182,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444395.26439
+      },
+      {
+        "sequence": 183,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444395.264412
+      },
+      {
+        "sequence": 184,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444395.264437
+      },
+      {
+        "sequence": 195,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444395.269744
+      },
+      {
+        "sequence": 199,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/availability",
+        "verb": "POST",
+        "timestamp": 1444395.270099,
+        "arguments": {
+          "resourceId": "180116",
+          "startDate": "2026-10-23T10:00:00+02:00"
+        }
+      },
+      {
+        "sequence": 200,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444395.270243
+      },
+      {
+        "sequence": 203,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/availability",
+        "verb": "POST",
+        "timestamp": 1444395.27036,
+        "arguments": {
+          "resourceId": "180117",
+          "startDate": "2026-10-23T10:00:00+02:00"
+        }
+      },
+      {
+        "sequence": 208,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444395.272076
+      },
+      {
+        "sequence": 209,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444395.272304
+      },
+      {
+        "sequence": 211,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444395.272367
+      },
+      {
+        "sequence": 219,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/availability",
+        "verb": "POST",
+        "timestamp": 1444395.272571,
+        "arguments": {
+          "resourceId": "173424",
+          "startDate": "2026-10-23T10:00:00+02:00"
+        }
+      },
+      {
+        "sequence": 220,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/availability",
+        "verb": "POST",
+        "timestamp": 1444395.272666,
+        "arguments": {
+          "resourceId": "180118",
+          "startDate": "2026-10-23T10:00:00+02:00"
+        }
+      },
+      {
+        "sequence": 221,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/availability",
+        "verb": "POST",
+        "timestamp": 1444395.272724,
+        "arguments": {
+          "resourceId": "180120",
+          "startDate": "2026-10-23T10:00:00+02:00"
+        }
+      },
+      {
+        "sequence": 222,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444395.272775
+      },
+      {
+        "sequence": 229,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444395.27399
+      },
+      {
+        "sequence": 230,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/availability",
+        "verb": "POST",
+        "timestamp": 1444395.274064,
+        "arguments": {
+          "resourceId": "173425",
+          "startDate": "2026-10-23T10:00:00+02:00"
+        }
+      },
+      {
+        "sequence": 233,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/availability",
+        "verb": "POST",
+        "timestamp": 1444395.274162,
+        "arguments": {
+          "resourceId": "180121",
+          "startDate": "2026-10-23T10:00:00+02:00"
+        }
+      },
+      {
+        "sequence": 236,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444395.275149
+      },
+      {
+        "sequence": 240,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/availability",
+        "verb": "POST",
+        "timestamp": 1444395.275319,
+        "arguments": {
+          "resourceId": "180119",
+          "startDate": "2026-10-23T10:00:00+02:00"
+        }
+      },
+      {
+        "sequence": 243,
+        "method": "Network.responseReceived",
+        "path": "/api/availability",
+        "status": 200,
+        "timestamp": 1444395.313067
+      },
+      {
+        "sequence": 248,
+        "method": "Network.responseReceived",
+        "path": "/api/availability",
+        "status": 200,
+        "timestamp": 1444395.315245
+      },
+      {
+        "sequence": 252,
+        "method": "Network.responseReceived",
+        "path": "/api/availability",
+        "status": 200,
+        "timestamp": 1444395.318652
+      },
+      {
+        "sequence": 256,
+        "method": "Network.responseReceived",
+        "path": "/api/availability",
+        "status": 200,
+        "timestamp": 1444395.332371
+      },
+      {
+        "sequence": 260,
+        "method": "Network.responseReceived",
+        "path": "/api/availability",
+        "status": 200,
+        "timestamp": 1444395.335233
+      },
+      {
+        "sequence": 264,
+        "method": "Network.responseReceived",
+        "path": "/api/availability",
+        "status": 200,
+        "timestamp": 1444395.336529
+      },
+      {
+        "sequence": 268,
+        "method": "Network.responseReceived",
+        "path": "/api/availability",
+        "status": 200,
+        "timestamp": 1444395.338929
+      },
+      {
+        "sequence": 271,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/chat/workspace",
+        "verb": "PUT",
+        "timestamp": 1444395.340692
+      },
+      {
+        "sequence": 274,
+        "method": "Network.responseReceived",
+        "path": "/api/availability",
+        "status": 200,
+        "timestamp": 1444395.355478
+      },
+      {
+        "sequence": 277,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444395.355927
+      },
+      {
+        "sequence": 280,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444395.359403
+      },
+      {
+        "sequence": 283,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/chat/timestamps",
+        "verb": "POST",
+        "timestamp": 1444395.367305
+      },
+      {
+        "sequence": 286,
+        "method": "Network.responseReceived",
+        "path": "/api/chat/timestamps",
+        "status": 200,
+        "timestamp": 1444395.372282
+      },
+      {
+        "sequence": 290,
+        "method": "Network.responseReceived",
+        "path": "/api/chat/workspace",
+        "status": 200,
+        "timestamp": 1444395.388271
+      },
+      {
+        "sequence": 293,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/chat/workspace",
+        "verb": "PUT",
+        "timestamp": 1444395.388851
+      },
+      {
+        "sequence": 296,
+        "method": "Network.responseReceived",
+        "path": "/api/chat/workspace",
+        "status": 200,
+        "timestamp": 1444395.459651
+      },
+      {
+        "sequence": 299,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/chat/workspace",
+        "verb": "PUT",
+        "timestamp": 1444395.556701
+      },
+      {
+        "sequence": 302,
+        "method": "Network.responseReceived",
+        "path": "/api/chat/workspace",
+        "status": 200,
+        "timestamp": 1444395.635665
+      },
+      {
+        "sequence": 306,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444407.377164
+      },
+      {
+        "sequence": 308,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444407.402589
+      },
+      {
+        "sequence": 311,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/chat/timestamps",
+        "verb": "POST",
+        "timestamp": 1444407.402987
+      },
+      {
+        "sequence": 314,
+        "method": "Network.responseReceived",
+        "path": "/api/chat/timestamps",
+        "status": 200,
+        "timestamp": 1444407.446841
+      },
+      {
+        "sequence": 317,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444407.447242
+      },
+      {
+        "sequence": 320,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444407.451822
+      },
+      {
+        "sequence": 323,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/proposals",
+        "verb": "POST",
+        "timestamp": 1444407.452103,
+        "arguments": {
+          "resourceId": "180116",
+          "startDate": "2026-10-23T08:00:00.000Z",
+          "endDate": "2026-10-23T14:00:00.000Z"
+        }
+      },
+      {
+        "sequence": 326,
+        "method": "Network.responseReceived",
+        "path": "/api/proposals",
+        "status": 200,
+        "timestamp": 1444407.496836
+      },
+      {
+        "sequence": 329,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/session",
+        "verb": "GET",
+        "timestamp": 1444407.497869
+      },
+      {
+        "sequence": 332,
+        "method": "Network.responseReceived",
+        "path": "/api/session",
+        "status": 200,
+        "timestamp": 1444407.500372
+      },
+      {
+        "sequence": 335,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/chat/timestamps",
+        "verb": "POST",
+        "timestamp": 1444407.5061
+      },
+      {
+        "sequence": 338,
+        "method": "Network.responseReceived",
+        "path": "/api/chat/timestamps",
+        "status": 200,
+        "timestamp": 1444407.509872
+      },
+      {
+        "sequence": 341,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/chat/workspace",
+        "verb": "PUT",
+        "timestamp": 1444407.696061
+      },
+      {
+        "sequence": 344,
+        "method": "Network.responseReceived",
+        "path": "/api/chat/workspace",
+        "status": 200,
+        "timestamp": 1444407.800261
+      },
+      {
+        "sequence": 347,
+        "method": "Network.requestWillBeSent",
+        "path": "/api/chat/workspace",
+        "verb": "GET",
+        "timestamp": 1444417.792083
+      },
+      {
+        "sequence": 350,
+        "method": "Network.responseReceived",
+        "path": "/api/chat/workspace",
+        "status": 200,
+        "timestamp": 1444417.860803
+      }
+    ]
+  },
+  "fixtureCleanup": {
+    "ownedDatabaseStoppedAndRemoved": true,
+    "privateHomeRemoved": true,
+    "nextDeclarationRestored": true,
+    "sourceRevision": "fe0cdce7109f0ea5e32623eb12db90cfbe07a2aa"
+  },
+  "regressions": {
+    "files": 2,
+    "passed": 54,
+    "webTypecheck": "passed after correcting indexed character type",
+    "independentReview": "bounded positive/negated query cleanup review; earlier negation finding corrected"
+  }
+}
