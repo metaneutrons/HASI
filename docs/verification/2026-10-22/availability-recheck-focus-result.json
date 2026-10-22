@@ -1,0 +1,888 @@
+{
+  "sourceRevision": "66a25f0656863d9f409d20b04e4b1f5c45cd9ece",
+  "baselineRevision": "9bec43ae67c48088f4996fab68736de8c357c1c6",
+  "baselineKeyboardObservation": {
+    "focused": true,
+    "focusVisible": true,
+    "outlineStyle": "none",
+    "width": 217.0859375,
+    "height": 44
+  },
+  "optimized": true,
+  "apiReplicas": 2,
+  "scope": "restored native Anny search in isolated TestIdP/PostgreSQL fixture",
+  "observations": [
+    {
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": [
+              [
+                ".chat-history-toggle"
+              ],
+              [
+                "button[aria-controls=\"_r_3_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ]
+            ]
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      },
+      "button": {
+        "disabled": false,
+        "focusVisible": true,
+        "focused": true,
+        "offset": "2px",
+        "outline": "rgb(207, 107, 67) solid 2px",
+        "rect": {
+          "h": 94,
+          "w": 288,
+          "x": 16,
+          "y": 251.78125
+        },
+        "text": " Verf\u00fcgbarkeit erneut pr\u00fcfen"
+      },
+      "cards": 0,
+      "font": "32px",
+      "theme": "light",
+      "viewport": {
+        "h": 844,
+        "scrollWidth": 320,
+        "w": 320
+      }
+    },
+    {
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": [
+              [
+                ".chat-history-toggle"
+              ],
+              [
+                "button[aria-controls=\"_r_3_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ]
+            ]
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      },
+      "button": {
+        "disabled": false,
+        "focusVisible": true,
+        "focused": true,
+        "offset": "2px",
+        "outline": "rgb(207, 107, 67) solid 2px",
+        "rect": {
+          "h": 44,
+          "w": 217.0859375,
+          "x": 16,
+          "y": 519.8671875
+        },
+        "text": " Verf\u00fcgbarkeit erneut pr\u00fcfen"
+      },
+      "cards": 0,
+      "font": "16px",
+      "theme": "light",
+      "viewport": {
+        "h": 844,
+        "scrollWidth": 320,
+        "w": 320
+      }
+    },
+    {
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": [
+              [
+                ".chat-history-toggle"
+              ],
+              [
+                "button[aria-controls=\"_r_3_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ]
+            ]
+          }
+        ],
+        "passes": 39,
+        "violations": []
+      },
+      "button": {
+        "disabled": false,
+        "focusVisible": true,
+        "focused": true,
+        "offset": "2px",
+        "outline": "rgb(207, 107, 67) solid 2px",
+        "rect": {
+          "h": 44,
+          "w": 217.0859375,
+          "x": 16,
+          "y": 480.4765625
+        },
+        "text": " Verf\u00fcgbarkeit erneut pr\u00fcfen"
+      },
+      "cards": 0,
+      "font": "16px",
+      "theme": "light",
+      "viewport": {
+        "h": 844,
+        "scrollWidth": 390,
+        "w": 390
+      }
+    },
+    {
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": [
+              [
+                ".chat-history-toggle"
+              ],
+              [
+                "button[aria-controls=\"_r_3_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ]
+            ]
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      },
+      "button": {
+        "disabled": false,
+        "focusVisible": true,
+        "focused": true,
+        "offset": "2px",
+        "outline": "rgb(207, 107, 67) solid 2px",
+        "rect": {
+          "h": 94,
+          "w": 358,
+          "x": 16,
+          "y": 282.0859375
+        },
+        "text": " Verf\u00fcgbarkeit erneut pr\u00fcfen"
+      },
+      "cards": 0,
+      "font": "32px",
+      "theme": "light",
+      "viewport": {
+        "h": 844,
+        "scrollWidth": 390,
+        "w": 390
+      }
+    },
+    {
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": [
+              [
+                "button[aria-controls=\"_r_0_-actions\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_3_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "nodes": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-session-list--embedded > .chat-list-create[aria-label=\"Neuer Chat\"][type=\"button\"] > span"
+              ],
+              [
+                ".chat-session-list--embedded > .chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"admin\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                "select"
+              ],
+              [
+                ".chat-new > span"
+              ],
+              [
+                "#chat-ab7b026e-bbc5-4d41-b319-c23277f881bb-message-256df52a-f5ff-4912-9192-f9554488b92f > .chat-speaker"
+              ],
+              [
+                "time[datetime=\"2026-10-22T10:28:57.142Z\"]"
+              ],
+              [
+                "#chat-ab7b026e-bbc5-4d41-b319-c23277f881bb-message-80a901bd-4180-45ee-94bd-6df7a5279794 > .chat-speaker"
+              ],
+              [
+                "time[datetime=\"2026-10-22T10:28:58.095Z\"]"
+              ],
+              [
+                ".chat-tool-label"
+              ],
+              [
+                "#chat-ab7b026e-bbc5-4d41-b319-c23277f881bb-message-80a901bd-4180-45ee-94bd-6df7a5279794 > .chat-message-body > .y9CY2W_markdown > p"
+              ],
+              [
+                ".chat-room-results__toggle"
+              ],
+              [
+                ".chat-footnote"
+              ]
+            ]
+          }
+        ],
+        "passes": 41,
+        "violations": []
+      },
+      "button": {
+        "disabled": false,
+        "focusVisible": true,
+        "focused": true,
+        "offset": "2px",
+        "outline": "rgb(207, 107, 67) solid 2px",
+        "rect": {
+          "h": 44,
+          "w": 217.0859375,
+          "x": 364,
+          "y": 429.0859375
+        },
+        "text": " Verf\u00fcgbarkeit erneut pr\u00fcfen"
+      },
+      "cards": 0,
+      "font": "16px",
+      "theme": "light",
+      "viewport": {
+        "h": 720,
+        "scrollWidth": 1280,
+        "w": 1280
+      }
+    },
+    {
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": [
+              [
+                "button[aria-controls=\"_r_0_-actions\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_3_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "nodes": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-session-list--embedded > .chat-list-create[aria-label=\"Neuer Chat\"][type=\"button\"] > span"
+              ],
+              [
+                ".chat-session-list--embedded > .chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"admin\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                "select"
+              ],
+              [
+                ".chat-new > span"
+              ],
+              [
+                "#chat-ab7b026e-bbc5-4d41-b319-c23277f881bb-message-80a901bd-4180-45ee-94bd-6df7a5279794 > .chat-speaker"
+              ],
+              [
+                "time[datetime=\"2026-10-22T10:28:58.095Z\"]"
+              ],
+              [
+                ".chat-tool-label"
+              ],
+              [
+                "#chat-ab7b026e-bbc5-4d41-b319-c23277f881bb-message-80a901bd-4180-45ee-94bd-6df7a5279794 > .chat-message-body > .y9CY2W_markdown > p"
+              ],
+              [
+                ".chat-room-results__toggle"
+              ],
+              [
+                ".chat-footnote"
+              ]
+            ]
+          }
+        ],
+        "passes": 42,
+        "violations": []
+      },
+      "button": {
+        "disabled": false,
+        "focusVisible": true,
+        "focused": true,
+        "offset": "2px",
+        "outline": "rgb(207, 107, 67) solid 2px",
+        "rect": {
+          "h": 55,
+          "w": 366.4296875,
+          "x": 364,
+          "y": 392.9921875
+        },
+        "text": " Verf\u00fcgbarkeit erneut pr\u00fcfen"
+      },
+      "cards": 0,
+      "font": "32px",
+      "theme": "light",
+      "viewport": {
+        "h": 720,
+        "scrollWidth": 1280,
+        "w": 1280
+      }
+    },
+    {
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": [
+              [
+                ".chat-history-toggle"
+              ],
+              [
+                "button[aria-controls=\"_r_3_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ]
+            ]
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      },
+      "button": {
+        "disabled": false,
+        "focusVisible": true,
+        "focused": true,
+        "offset": "2px",
+        "outline": "rgb(209, 122, 83) solid 2px",
+        "rect": {
+          "h": 44,
+          "w": 217.0859375,
+          "x": 16,
+          "y": 519.8671875
+        },
+        "text": " Verf\u00fcgbarkeit erneut pr\u00fcfen"
+      },
+      "cards": 0,
+      "font": "16px",
+      "theme": "dark",
+      "viewport": {
+        "h": 844,
+        "scrollWidth": 320,
+        "w": 320
+      }
+    },
+    {
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": [
+              [
+                ".chat-history-toggle"
+              ],
+              [
+                "button[aria-controls=\"_r_3_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ]
+            ]
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      },
+      "button": {
+        "disabled": false,
+        "focusVisible": true,
+        "focused": true,
+        "offset": "2px",
+        "outline": "rgb(209, 122, 83) solid 2px",
+        "rect": {
+          "h": 94,
+          "w": 288,
+          "x": 16,
+          "y": 251.78125
+        },
+        "text": " Verf\u00fcgbarkeit erneut pr\u00fcfen"
+      },
+      "cards": 0,
+      "font": "32px",
+      "theme": "dark",
+      "viewport": {
+        "h": 844,
+        "scrollWidth": 320,
+        "w": 320
+      }
+    },
+    {
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": [
+              [
+                ".chat-history-toggle"
+              ],
+              [
+                "button[aria-controls=\"_r_3_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ]
+            ]
+          }
+        ],
+        "passes": 39,
+        "violations": []
+      },
+      "button": {
+        "disabled": false,
+        "focusVisible": true,
+        "focused": true,
+        "offset": "2px",
+        "outline": "rgb(209, 122, 83) solid 2px",
+        "rect": {
+          "h": 44,
+          "w": 217.0859375,
+          "x": 16,
+          "y": 480.4765625
+        },
+        "text": " Verf\u00fcgbarkeit erneut pr\u00fcfen"
+      },
+      "cards": 0,
+      "font": "16px",
+      "theme": "dark",
+      "viewport": {
+        "h": 844,
+        "scrollWidth": 390,
+        "w": 390
+      }
+    },
+    {
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": [
+              [
+                ".chat-history-toggle"
+              ],
+              [
+                "button[aria-controls=\"_r_3_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ]
+            ]
+          }
+        ],
+        "passes": 40,
+        "violations": []
+      },
+      "button": {
+        "disabled": false,
+        "focusVisible": true,
+        "focused": true,
+        "offset": "2px",
+        "outline": "rgb(209, 122, 83) solid 2px",
+        "rect": {
+          "h": 94,
+          "w": 358,
+          "x": 16,
+          "y": 282.0859375
+        },
+        "text": " Verf\u00fcgbarkeit erneut pr\u00fcfen"
+      },
+      "cards": 0,
+      "font": "32px",
+      "theme": "dark",
+      "viewport": {
+        "h": 844,
+        "scrollWidth": 390,
+        "w": 390
+      }
+    },
+    {
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": [
+              [
+                "button[aria-controls=\"_r_0_-actions\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_3_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "nodes": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-session-list--embedded > .chat-list-create[aria-label=\"Neuer Chat\"][type=\"button\"] > span"
+              ],
+              [
+                ".chat-session-list--embedded > .chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"admin\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                "select"
+              ],
+              [
+                ".chat-new > span"
+              ],
+              [
+                "#chat-ab7b026e-bbc5-4d41-b319-c23277f881bb-message-256df52a-f5ff-4912-9192-f9554488b92f > .chat-speaker"
+              ],
+              [
+                "time[datetime=\"2026-10-22T10:28:57.142Z\"]"
+              ],
+              [
+                "#chat-ab7b026e-bbc5-4d41-b319-c23277f881bb-message-80a901bd-4180-45ee-94bd-6df7a5279794 > .chat-speaker"
+              ],
+              [
+                "time[datetime=\"2026-10-22T10:28:58.095Z\"]"
+              ],
+              [
+                ".chat-tool-label"
+              ],
+              [
+                "#chat-ab7b026e-bbc5-4d41-b319-c23277f881bb-message-80a901bd-4180-45ee-94bd-6df7a5279794 > .chat-message-body > .y9CY2W_markdown > p"
+              ],
+              [
+                ".chat-room-results__toggle"
+              ],
+              [
+                ".chat-footnote"
+              ]
+            ]
+          }
+        ],
+        "passes": 41,
+        "violations": []
+      },
+      "button": {
+        "disabled": false,
+        "focusVisible": true,
+        "focused": true,
+        "offset": "2px",
+        "outline": "rgb(209, 122, 83) solid 2px",
+        "rect": {
+          "h": 44,
+          "w": 217.0859375,
+          "x": 364,
+          "y": 429.0859375
+        },
+        "text": " Verf\u00fcgbarkeit erneut pr\u00fcfen"
+      },
+      "cards": 0,
+      "font": "16px",
+      "theme": "dark",
+      "viewport": {
+        "h": 720,
+        "scrollWidth": 1280,
+        "w": 1280
+      }
+    },
+    {
+      "axe": {
+        "incomplete": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": [
+              [
+                "button[aria-controls=\"_r_0_-actions\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_3_-menu\"]"
+              ],
+              [
+                "button[aria-controls=\"_r_4_-menu\"]"
+              ]
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "nodes": [
+              [
+                ".brand-link > .brand-lockup > .brand-name"
+              ],
+              [
+                ".brand-caption"
+              ],
+              [
+                ".side-nav-label"
+              ],
+              [
+                ".chat-session-list--embedded > .chat-list-create[aria-label=\"Neuer Chat\"][type=\"button\"] > span"
+              ],
+              [
+                ".chat-session-list--embedded > .chat-list-footnote"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"bookings\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"connections\"] > span"
+              ],
+              [
+                ".primary-nav > .nav-link[href$=\"admin\"] > span"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > strong"
+              ],
+              [
+                ".side-prototype-card > span:nth-child(2) > small"
+              ],
+              [
+                ".profile-copy > strong"
+              ],
+              [
+                ".profile-copy > small"
+              ],
+              [
+                ".context-campus"
+              ],
+              [
+                ".prototype-label"
+              ],
+              [
+                "select"
+              ],
+              [
+                ".chat-new > span"
+              ],
+              [
+                "#chat-ab7b026e-bbc5-4d41-b319-c23277f881bb-message-80a901bd-4180-45ee-94bd-6df7a5279794 > .chat-speaker"
+              ],
+              [
+                "time[datetime=\"2026-10-22T10:28:58.095Z\"]"
+              ],
+              [
+                ".chat-tool-label"
+              ],
+              [
+                "#chat-ab7b026e-bbc5-4d41-b319-c23277f881bb-message-80a901bd-4180-45ee-94bd-6df7a5279794 > .chat-message-body > .y9CY2W_markdown > p"
+              ],
+              [
+                ".chat-room-results__toggle"
+              ],
+              [
+                ".chat-footnote"
+              ]
+            ]
+          }
+        ],
+        "passes": 42,
+        "violations": []
+      },
+      "button": {
+        "disabled": false,
+        "focusVisible": true,
+        "focused": true,
+        "offset": "2px",
+        "outline": "rgb(209, 122, 83) solid 2px",
+        "rect": {
+          "h": 55,
+          "w": 366.4296875,
+          "x": 364,
+          "y": 392.9921875
+        },
+        "text": " Verf\u00fcgbarkeit erneut pr\u00fcfen"
+      },
+      "cards": 0,
+      "font": "32px",
+      "theme": "dark",
+      "viewport": {
+        "h": 720,
+        "scrollWidth": 1280,
+        "w": 1280
+      }
+    }
+  ],
+  "keyboardActivation": {
+    "key": "Enter",
+    "busy": {
+      "disabled": true,
+      "cursor": "not-allowed",
+      "opacity": "0.58",
+      "cards": 0
+    },
+    "firstCompletedObservation": {
+      "cards": 4,
+      "paginationAdditional": 4,
+      "allVisibleSlots": "2026-10-23 10:00\u201316:00 Europe/Berlin",
+      "uncheckedText": false
+    },
+    "laterProtectedRefresh": {
+      "cards": 0,
+      "slots": [],
+      "uncheckedText": false
+    }
+  },
+  "realProviderCalls": 0,
+  "realBusinessWrites": 0,
+  "confirmedMockBookings": 0,
+  "cleanup": {
+    "ownedDatabaseStoppedAndRemoved": true,
+    "privateHomeRemoved": true,
+    "nextDeclarationRestored": true,
+    "sourceRevision": "66a25f0656863d9f409d20b04e4b1f5c45cd9ece"
+  },
+  "axe": {
+    "version": "4.14.0",
+    "source": "https://registry.npmjs.org/axe-core/-/axe-core-4.14.0.tgz",
+    "distIntegrity": "sha512-9WTZxEjsZ7b13TH8JPmbV2z8CHbl80/2hm3XPEG4JgNdQLK81IBRXmSxHfMAOkSqQeRxT/0dwNDz2GOm3zzpcQ==",
+    "bundleSha256": "20c09fe157a8a34a30e241aaa1fcdade657734f08ab379ecfbeb7d45cc46e878",
+    "license": "MPL-2.0",
+    "bundleBytes": 652140,
+    "licenseSha256": "af175b9d96ee93c21a036152e1b905b0b95304d4ae8c2c921c7609100ba8df7e"
+  },
+  "screenshot": {
+    "path": "availability-recheck-focus.png",
+    "sha256": "1cf7712aca349e589687c8dec657f5ec319f585ceec971ec5f83bb0c351834a0",
+    "viewport": {
+      "width": 320,
+      "height": 844
+    },
+    "accepted": true,
+    "capture": "explicit CSS visual-viewport clip; image inspected"
+  }
+}
