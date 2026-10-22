@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, formatDateTime, formatTime } from "@/lib/api";
 import type { Booking } from "@/lib/types";
+import { BookingReference } from "./booking-reference";
 
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
@@ -122,7 +123,7 @@ export function BookingsPage() {
                   <span><CalendarDays size={14} aria-hidden="true" />{formatDateTime(booking.startDate)}</span>
                   <span><Clock3 size={14} aria-hidden="true" />{formatTime(booking.startDate)}–{formatTime(booking.endDate)} Uhr</span>
                 </div>
-                <div className="booking-reference">BUCHUNGS-ID <span>{booking.id}</span></div>
+                <BookingReference reference={booking.id} />
               </div>
               <span className="booking-card-mark"><MapPin size={18} aria-hidden="true" /></span>
             </article>
