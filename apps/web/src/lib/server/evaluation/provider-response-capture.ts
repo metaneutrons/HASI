@@ -14,7 +14,7 @@ function providerMessageMemberNameHash(name: string): string {
   return hash(`${providerMessageMemberNameHashDomain}${name}`);
 }
 
-export type ProviderCaptureIssue = "unexpected_message_member" | "unexpected_message_role" | "legacy_function_call_present" | "audio_payload_present"
+export type ProviderCaptureIssue = "unexpected_message_member" | "unexpected_message_role" | "assistant_name_metadata_invalid" | "legacy_function_call_present" | "audio_payload_present"
   | "text_value_unavailable" | "tool_calls_container_invalid" | "tool_call_shape_invalid" | "tool_name_unavailable" | "tool_name_limit_exceeded"
   | "tool_arguments_unavailable" | "tool_arguments_limit_exceeded" | "tool_proposal_limit_exceeded"
   | "content_part_shape_invalid" | "content_part_type_unsupported" | "output_part_shape_invalid" | "output_message_content_invalid"
@@ -42,7 +42,7 @@ export function captureProviderAnswer(value: unknown) {
     const choice = Array.isArray(value.choices) ? value.choices[0] as unknown : undefined;
     if (object(choice) && object(choice.message)) {
       recognized = "content" in choice.message || Array.isArray(choice.message.tool_calls) || typeof choice.message.refusal === "string";
-      const messageKeys = new Set(["role", "content", "tool_calls", "reasoning", "reasoning_content", "refusal", "annotations", "audio", "function_call"]);
+      const messageKeys = new Set(["role", "name", "content", "tool_calls", "reasoning", "reasoning_content", "refusal", "annotations", "audio", "function_call"]);
       const unknownMessageMemberNames = Object.keys(choice.message).filter(key => !messageKeys.has(key));
       if (unknownMessageMemberNames.length) {
         markPartial("unexpected_message_member");
@@ -54,6 +54,10 @@ export function captureProviderAnswer(value: unknown) {
         };
       }
       if (choice.message.role !== "assistant") markPartial("unexpected_message_role");
+      // Optional OpenAI-compatible metadata never establishes identity or tool authority.
+      if (choice.message.name !== undefined && choice.message.name !== null && typeof choice.message.name !== "string") {
+        markPartial("assistant_name_metadata_invalid");
+      }
       if (choice.message.function_call !== undefined && choice.message.function_call !== null) markPartial("legacy_function_call_present");
       if (choice.message.audio !== undefined && choice.message.audio !== null) markPartial("audio_payload_present");
       if (choice.message.refusal !== undefined && choice.message.refusal !== null) addText(choice.message.refusal);

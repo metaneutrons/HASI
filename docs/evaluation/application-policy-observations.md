@@ -115,6 +115,25 @@ does not inspect or serialize member values. The digest list is truncated when
 the count exceeds eight. Field names often have low entropy, so these digests
 are guessable by checking candidate names and are not anonymization. They appear
 only in the private evaluation result, not standard output or production telemetry.
+The explicit optional chat assistant `name` member is different from unknown
+extensions: only a string, null, or absence is accepted and its value is
+immediately discarded. It cannot establish identity, role, permissions or a tool
+name. Other types produce `assistant_name_metadata_invalid`, omit proposals and
+stop before any evaluator-controlled read or follow-up. Unknown sibling members
+still use the partial-capture diagnostics above. This is a bounded evaluator
+compatibility decision, not a change to production authorization or the route's
+SDK response handling.
+
+A 2026-10-22 [actual diagnostic](https://github.com/metaneutrons/HASI/pull/205#issuecomment-6330233751)
+identified a current DeepInfra member as `name` by hash comparison. Its value was
+not retained, so neither its type nor compatibility with this new rule is proven.
+The original historical unsupported member remains unrecoverable. DeepInfra's
+[public OpenAPI](https://api.deepinfra.com/openapi.json) describes nullable-string
+`name` on the assistant **input** component, while the chat HTTP-200 output schema
+is unspecified. That is supporting compatibility context, not a formal documented
+output guarantee. The old report remains partial; a new qualified observation is
+required before claiming this fixes actual DeepInfra capture.
+
 Malformed, partial or unrecognized successful responses stop the
 current case as soon as its chat-route request returns. The route status is kept,
 but the incomplete route reply is not recorded or executed by the evaluator, so

@@ -407,6 +407,28 @@ describe("actual-route application-policy development observations", () => {
     expect(process.env.HASI_WEB_ORIGIN).toBe(previousWebOrigin);
   });
 
+  it.each([1, { role: "system", value: "synthetic-private-name-value" }])(
+    "stops before executing a route-usable proposal when assistant-name metadata is invalid (%j)", async name => {
+      const state = await admission();
+      const fetch: typeof globalThis.fetch = () => Promise.resolve(Response.json({ id: "invalid-assistant-name", object: "chat.completion",
+        created: 1_797_136_800, model: "openai/gpt-oss-120b", choices: [{ index: 0, finish_reason: "tool_calls",
+          message: { role: "assistant", name, content: null, tool_calls: [{ id: "call-1", type: "function", function: {
+            name: "knowledge_search", arguments: '{"query":"Lumen Trainingsblatt","sourceSystem":"intranet"}',
+          } }] } }], usage: { prompt_tokens: 24, completion_tokens: 7 } }));
+      const result = await runApplicationPolicyCase(caseById("access-01"), { caseId: "access-01", profileId: "groq-oss-120b", ...state,
+        maxProviderRequests: 2, fetch });
+      expect(result.outcome).toBe("observation_incomplete");
+      expect(result.providerResponses).toHaveLength(1);
+      expect(result.providerResponses[0]).toMatchObject({ captureStatus: "partial", captureIssues: ["assistant_name_metadata_invalid"] });
+      expect(result.providerResponses[0]).not.toHaveProperty("proposals");
+      expect(result.executedReads).toEqual([]);
+      expect(result.measurements).toMatchObject({ providerRequestCount: 1, inputTokens: 24, outputTokens: 7, usageStatus: "complete" });
+      expect(applicationPolicyStopReason(result)).toBe("provider_observation_unavailable");
+      expect(result.fixtureCleanup).toBe("completed");
+      expect(JSON.stringify(result)).not.toContain("synthetic-private-name-value");
+    },
+  );
+
   it("preserves a received successful status and stops the batch when response body observation is oversized", async () => {
     const state = await admission();
     const fetch: typeof globalThis.fetch = () => Promise.resolve(new Response("x".repeat(128 * 1024 + 1), {
