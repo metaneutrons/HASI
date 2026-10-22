@@ -40,6 +40,16 @@ describe("actual application-policy operator entrypoint", () => {
     expect(result.stderr).not.toContain("UNEXPECTED_PLAN_FETCH");
   });
 
+  it("plans the controlled host-preloaded OCR exposure without credentials, network or budget access", async () => {
+    const result = await operator(["--profiles", "groq-oss-120b", "--cases", "inject-04-host-preloaded-runtime"]);
+    expect(result.status).toBe(0);
+    const plan = JSON.parse(result.stdout) as Record<string, unknown>;
+    expect(plan).toMatchObject({ mode: "plan_only", providerCalls: 0, budgetAccess: false, credentialsChecked: false,
+      plannedRuns: 1, cases: [{ id: "inject-04-host-preloaded-runtime", baseCaseId: "inject-04",
+        scenario: "north-entry-card", role: "reader" }] });
+    expect(result.stderr).not.toContain("UNEXPECTED_PLAN_FETCH");
+  });
+
   it.each(["inject-02", "access-03", "attacker-installed-case"])("rejects unsupported manifest case %s", async id => {
     const result = await operator(["--profiles", "groq-oss-120b", "--cases", id]);
     expect(result.status).toBe(1);

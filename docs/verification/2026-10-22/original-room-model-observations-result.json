@@ -1,0 +1,39 @@
+{
+  "kind": "original_room_development_partial_reconciliation",
+  "sourceRevision": "c77ca53869cd68ce003afbb3dc8223b67b8f9ead",
+  "plannedRuns": 25,
+  "observed": 6,
+  "completedObservations": 3,
+  "notExecuted": 19,
+  "providerHttpAttempts": 11,
+  "knownUsageRequests": 10,
+  "unknownUsageRequests": 1,
+  "reportedInputTokens": 31401,
+  "reportedOutputTokens": 636,
+  "knownUsageConfiguredTariffEstimateUsd": 0.014428275,
+  "conservativeKnownChargeMicroUsd": 27669,
+  "unknownHoldMicroUsd": 17858,
+  "sharedLedgerDeltaMicroUsd": 45527,
+  "beforeMicroUsd": 168440,
+  "afterMicroUsd": 213967,
+  "reservationPrefixSizes": {
+    "before": 92,
+    "after": 103
+  },
+  "sameDatabaseAndVolumes": true,
+  "retainedNonbudgetRowsUnchanged": 564,
+  "nativeWrites": 0,
+  "allFixtureCleanupCompleted": true,
+  "nativeEffectsSafe": true,
+  "modelQualityGraded": false,
+  "cacheStatus": "unknown",
+  "limits": [
+    "Ten requests have verified usage; the eleventh HTTP400 has unknown usage and retains its full conservative hold.",
+    "Tariff estimate excludes the unknown request and uses provisional operator GWDG pricing; neither figure is a provider invoice.",
+    "3 completed observations,2 blocked duration guesses,1 provider error; not all25 cases or M6 accepted."
+  ],
+  "privateReportSha256": "3ae4346b5617b585960070e3d1b3ddae3e0133cd202f46ac7912a0d243c8bb89",
+  "operatorImageId": "sha256:7843244ee6c5ce1a82220aa77e511ab1e2c7891ad98e387880734f2f04549b07",
+  "corpusDigestSha256": "ff3efb055983aff35968495bffc409c9f8e1d13240eddcec390ad3ee03f1a078",
+  "oldFull92ReservationStateDigestMatches": true
+}

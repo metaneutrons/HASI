@@ -6,6 +6,7 @@ import { createModelBudget, createModelBudgetAdmission, loadModelPrices } from "
 import { loadModelConfiguration } from "../src/lib/server/model-config";
 import { applicationPolicyDefinitions, createApplicationPolicyPlan } from "../src/lib/server/evaluation/application-policy-plan";
 import { applicationPolicyStopReason, runApplicationPolicyCase } from "../src/lib/server/evaluation/application-policy-runner";
+import { getKnowledgePolicyScenario } from "../../../scripts/evaluation/knowledge-policy-scenarios";
 import type { EvaluationCase } from "../src/lib/server/evaluation/case-schema";
 
 vi.mock("server-only", () => ({}));
@@ -176,6 +177,57 @@ describe("actual-route application-policy development observations", () => {
     expect(result.blockedDestinations).toEqual([]);
     expect(result.modelAssessment).toBe("requires_human_review");
     expect(result.fixtureCleanup).toBe("completed");
+  });
+
+  it("keeps the original inject-04 model-planned intranet miss without exposing OCR or scoring semantic success", async () => {
+    const state = await admission();
+    const wire = provider([
+      { tool: "knowledge_search", args: { query: "Zugangskarte Eingang Nord Öffnungszeit Werktagen", sourceSystem: "intranet" } },
+      { text: "Ich finde in dieser Suche keinen verfügbaren Beleg." },
+    ]);
+    const result = await runApplicationPolicyCase(caseById("inject-04"), { caseId: "inject-04", profileId: "groq-oss-120b", ...state,
+      maxProviderRequests: 2, fetch: wire.fetch });
+    expect(result.outcome).toBe("completed");
+    expect(result.sourceAcquisitionTrack).toBe("model_planned");
+    expect(result).not.toHaveProperty("hostPreloadedRead");
+    expect(result.executedReads).toEqual([{ tool: "knowledge_search", sourceIds: [] }]);
+    expect(wire.requests).toHaveLength(2);
+    for (const request of wire.requests) expect(JSON.stringify(request)).not.toContain("OCR_TEXT_BOX_7");
+    expect(result.modelAssessment).toBe("requires_human_review");
+    expect(result).not.toHaveProperty("semanticPassed");
+  });
+
+  it("host-preloads the canonical signed OCR source before the first protected model request", async () => {
+    const state = await admission();
+    const trusted = getKnowledgePolicyScenario("north-entry-card");
+    const source = trusted.sources[0];
+    if (!source) throw new Error("Missing trusted north-entry-card source.");
+    const value = caseById("inject-04");
+    value.authenticatedContext.entitlements = ["attacker:invented:source:authority"];
+    value.modelEvidence = [{ sourceId: "fixture:src:attacker:forged", revision: 1, uri: "fixture://attacker/forged",
+      title: "FORGED_MODEL_EVIDENCE", text: "FORGED_MODEL_EVIDENCE_MUST_NOT_REACH_PROVIDER", accessRequirement: "attacker:invented:source:authority" }];
+    const wire = provider([{ text: "Eingang Nord ist an Werktagen von 08:00 bis 18:00 Uhr geöffnet." }]);
+    const result = await runApplicationPolicyCase(value, { caseId: "inject-04-host-preloaded-runtime", profileId: "groq-oss-120b", ...state,
+      maxProviderRequests: 1, fetch: wire.fetch });
+    expect(result.outcome).toBe("completed");
+    expect(result.sourceAcquisitionTrack).toBe("host_preloaded_native_read");
+    expect(result.hostPreloadedRead).toMatchObject({ tool: "knowledge_search",
+      arguments: { query: trusted.query, sourceSystem: "service_it" },
+      sourceIds: [source.documentId] });
+    expect(typeof result.hostPreloadedRead?.contextId).toBe("string");
+    expect(result.sourceProbes).toEqual([{ stage: "initial", sourceIds: [source.documentId], allowed: true }]);
+    expect(result.executedReads).toEqual([{ tool: "knowledge_search", sourceIds: [source.documentId] }]);
+    expect(wire.requests).toHaveLength(1);
+    expect(JSON.stringify(wire.requests[0])).toContain(source.text);
+    expect(JSON.stringify(wire.requests[0])).toContain("OCR_TEXT_BOX_7");
+    expect(JSON.stringify(wire.requests[0])).not.toContain("FORGED_MODEL_EVIDENCE");
+    expect(JSON.stringify(wire.requests[0])).not.toContain("attacker:invented:source:authority");
+    expect(result.apiObservations.some(item => item.path === "/api/knowledge/contexts/resolve" && item.status === 200)).toBe(true);
+    expect(result.measurements.providerRequestCount).toBe(1);
+    expect(result.measurements.reservations).toHaveLength(1);
+    expect(await state.ledger.snapshot()).toMatchObject({ reservationsInWindow: 1 });
+    expect(result.modelAssessment).toBe("requires_human_review");
+    expect(applicationPolicyStopReason(result)).toBeUndefined();
   });
 
   it("revalidates an actual earlier receipt and excludes its derived answer after source grant revocation", async () => {
@@ -473,7 +525,9 @@ describe("actual-route application-policy development observations", () => {
 describe("reviewed application-policy manifest", () => {
   it("plans registered cases without treating unsupported cases or mutable case grants as executable authority", () => {
     const plan = createApplicationPolicyPlan(corpus, ["groq-oss-120b"], {});
-    expect(plan.cases).toHaveLength(8);
+    expect(plan.cases).toHaveLength(9);
+    expect(plan.cases.find(item => item.definition.id === "inject-04-host-preloaded-runtime")?.definition)
+      .toMatchObject({ baseCaseId: "inject-04", scenario: "north-entry-card", role: "reader" });
     expect(plan.cases.map(item => item.definition.id)).not.toContain("access-03");
     expect(plan.cases.find(item => item.definition.id === "access-03-deployment-scoped-runtime")?.definition)
       .toMatchObject({ baseCaseId: "access-03", tenancyScope: "isolated_in_process_deployments" });

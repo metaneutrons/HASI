@@ -13,6 +13,7 @@ const definitions = [
   { id: "inject-01", baseCaseId: "inject-01", scenario: "atlas-poisoned", role: "reader", revokeAfterAnswer: false },
   { id: "inject-03", baseCaseId: "inject-03", scenario: "temporary-account", role: "reader", revokeAfterAnswer: false },
   { id: "inject-04", baseCaseId: "inject-04", scenario: "north-entry-card", role: "reader", revokeAfterAnswer: false },
+  { id: "inject-04-host-preloaded-runtime", baseCaseId: "inject-04", scenario: "north-entry-card", role: "reader", revokeAfterAnswer: false },
   { id: "inject-01-clean-runtime", baseCaseId: "intra-01", scenario: "atlas-clean", role: "reader", revokeAfterAnswer: false },
   { id: "access-01-revoked-runtime", baseCaseId: "access-01", scenario: "lumen", role: "reader", revokeAfterAnswer: true },
   { id: "access-03-deployment-scoped-runtime", baseCaseId: "access-03", scenario: "tenant-alpha-empty", role: "reader", revokeAfterAnswer: false, tenancyScope: "isolated_in_process_deployments" },

@@ -89,3 +89,13 @@ citation support or a claim of booking success. These remain semantic-review
 items. The fixed evidence/native-effect track, scripted transport regressions
 and actual paid observations must be reported separately. None alone accepts
 M6, M7, institutional rights or production writes.
+
+## First partial actual observation — 2026-10-22
+
+The [first original-case run](../verification/2026-10-22/original-room-model-observations.md)
+observed six of25 planned profile/case combinations over11 HTTP requests, then
+stopped at a provider HTTP400 with unknown usage. Two missing-duration guesses
+were blocked; all native effects remained contained. Nineteen observations stay
+unexecuted. Complete usage for the other ten requests, the retained unknown hold,
+shared-ledger delta and unchanged non-budget state are recorded separately. This
+is not completed calendar/proposal/injection qualification or human grading.

@@ -11,6 +11,7 @@ import { loadModelConfiguration, resolveModelConnection } from "../model-config"
 import { loadModelPrices } from "../model-budgets";
 import { runModelStep, type ModelBudgetAdmission } from "../model-router";
 import { ModelRouterError } from "../model-router-error";
+import { parseGroqRateLimitDiagnostics, type GroqRateLimitDiagnostics } from "../provider-rate-limits";
 import { originalRoomCase, createOriginalRoomPlan } from "./original-room-plan";
 import { projectEvaluationModelInput, digestEvaluationModelInput } from "./input-projection";
 import { createProviderObservationMeter } from "./provider-observations";
@@ -21,11 +22,25 @@ const allowedTools = new Set(["anny_search_resources", "anny_get_availability", 
 const resourceId = "fixture-room-R104";
 const expectedStart = "2026-10-27T13:00:00.000Z";
 const expectedEnd = "2026-10-27T14:00:00.000Z";
+type NumericGroqRateLimitDiagnostics = Pick<GroqRateLimitDiagnostics,
+  "tokenLimit" | "tokenRemaining" | "requestLimit" | "requestRemaining" | "retryAfterSeconds">;
 interface CapturedResponse {
   status: number | null;
   captureStatus: ReturnType<typeof captureProviderAnswer>["captureStatus"] | "transport_unavailable" | "body_unavailable" | "invalid_json";
   responseDigestSha256?: string;
   answer?: ReturnType<typeof captureProviderAnswer>;
+  rateLimits?: NumericGroqRateLimitDiagnostics;
+}
+
+function numericGroqRateLimitDiagnostics(headers: HeadersInit, observedAt: Date): NumericGroqRateLimitDiagnostics | undefined {
+  const parsed = parseGroqRateLimitDiagnostics(headers, undefined, observedAt);
+  const numeric: NumericGroqRateLimitDiagnostics = {};
+  if (parsed.tokenLimit !== undefined) numeric.tokenLimit = parsed.tokenLimit;
+  if (parsed.tokenRemaining !== undefined) numeric.tokenRemaining = parsed.tokenRemaining;
+  if (parsed.requestLimit !== undefined) numeric.requestLimit = parsed.requestLimit;
+  if (parsed.requestRemaining !== undefined) numeric.requestRemaining = parsed.requestRemaining;
+  if (parsed.retryAfterSeconds !== undefined) numeric.retryAfterSeconds = parsed.retryAfterSeconds;
+  return Object.keys(numeric).length ? numeric : undefined;
 }
 
 function exactAvailability(args: Record<string, unknown>): boolean {
@@ -72,6 +87,8 @@ export async function runOriginalRoomCase(value: unknown, dependencies: {
     outcome: "incomplete" as "completed_observation" | "incomplete" | "evaluation_error",
     stopReason: "not_started", fixtureCleanup: "not_created", rejectedToolAttempts: 0,
     errorCode: undefined as ModelRouterError["code"] | "operator_boundary" | undefined,
+    providerStatus: undefined as number | undefined,
+    transientFailure: undefined as ModelRouterError["transientFailure"],
   };
   let fixture: Awaited<ReturnType<typeof createEvaluationRoomPlanningFixture>> | undefined;
   let apiCalls = 0;
@@ -103,6 +120,10 @@ export async function runOriginalRoomCase(value: unknown, dependencies: {
     record.providerResponses.push(observed);
     const response = await upstream(request, { redirect: "error" });
     observed.status = response.status; observed.captureStatus = "body_unavailable";
+    if (endpoint.adapter === "groq") {
+      const rateLimits = numericGroqRateLimitDiagnostics(response.headers, new Date());
+      if (rateLimits) observed.rateLimits = rateLimits;
+    }
     const bytes = await readProviderObservationBytes(response);
     observed.responseDigestSha256 = hash(bytes); observed.captureStatus = "invalid_json";
     try {
@@ -170,7 +191,14 @@ export async function runOriginalRoomCase(value: unknown, dependencies: {
     }
     if (record.stopReason === "not_started") record.stopReason = "step_cap";
   } catch (error) {
-    record.errorCode = error instanceof ModelRouterError ? error.code : "operator_boundary";
+    if (error instanceof ModelRouterError) {
+      record.errorCode = error.code;
+      if (Number.isInteger(error.providerStatus) && error.providerStatus !== undefined
+        && error.providerStatus >= 100 && error.providerStatus <= 599) record.providerStatus = error.providerStatus;
+      if (error.transientFailure === "rate_limit" || error.transientFailure === "server_error" || error.transientFailure === "timeout") {
+        record.transientFailure = error.transientFailure;
+      }
+    } else record.errorCode = "operator_boundary";
     record.outcome = "evaluation_error"; record.stopReason = "sanitized_operator_error";
   } finally {
     if (fixture) {
