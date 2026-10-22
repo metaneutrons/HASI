@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { createServer, type AddressInfo } from "node:net";
+import { createConnection, createServer, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -153,19 +153,32 @@ describe("original-room operator entrypoint", () => {
     const output = join(directory, "existing.ndjson");
     await writeFile(output, "IMMUTABLE_PREVIOUS_REPORT\n");
     let databaseConnections = 0;
-    const databaseSentinel = createServer(socket => { databaseConnections += 1; socket.destroy(); });
+    let accepted: (() => void) | undefined;
+    const databaseSentinel = createServer(socket => { databaseConnections += 1; accepted?.(); socket.destroy(); });
     await new Promise<void>((resolve, reject) => {
       databaseSentinel.once("error", reject);
       databaseSentinel.listen(0, "127.0.0.1", resolve);
     });
     try {
       const address = databaseSentinel.address() as AddressInfo;
+      // Prove the counter detects a real connection before using its zero.
+      await new Promise<void>((resolve, reject) => {
+        accepted = resolve;
+        const probe = createConnection({ host: "127.0.0.1", port: address.port });
+        probe.once("error", reject);
+        probe.once("connect", () => { probe.end(); });
+      });
+      expect(databaseConnections).toBe(1);
+      accepted = undefined;
+      databaseConnections = 0;
       const result = await operator(["--profiles", "groq-oss-120b", "--run", "--output", output], {
         HASI_MODEL_EVALUATION: "1",
         HASI_EVALUATION_BUILD_REVISION: "a".repeat(40),
         DATABASE_URL: ["postgresql://test@127.0.0.1:", address.port, "/never_connect_for_existing_report"].join(""),
       });
       expectStatus(result, 1);
+      // spawnSync blocks the parent's callbacks; drain pending accepts first.
+      await new Promise(resolve => { setTimeout(resolve, 25); });
       expect(result.stderr).toContain(safeFailure);
       expect(await readFile(output, "utf8")).toBe("IMMUTABLE_PREVIOUS_REPORT\n");
       expect(databaseConnections).toBe(0);
