@@ -8,7 +8,7 @@ import { createMessageClock } from "../src/lib/server/message-timestamps";
 import { ProtectedWorkspaceStore } from "../src/lib/server/protected-workspaces";
 import {
   chatStorageKey,
-  createChatWorkspace,
+  createChatSession,
   parseChatWorkspace,
   saveChatWorkspace,
   updateChatSnapshot,
@@ -123,9 +123,8 @@ describe("generated room selection messages", () => {
     expect(serverClock.verify(visibleEvent, canonicalTimestamp)).toBeNull();
     expect(serverClock.verify(canonicalEvent, visibleTimestamp)).toBeNull();
 
-    const workspace = createChatWorkspace(OWNER_ID);
-    const session = workspace.sessions[0];
-    if (!session) throw new Error("The initial chat session is missing.");
+    const session = createChatSession("groq-oss-120b", FIXED_NOW);
+    const workspace = { version: 1 as const, ownerId: OWNER_ID, activeId: session.id, sessions: [session] };
     const displayMessage: ChatMessage = {
       id: messages.display.id,
       role: "user",
