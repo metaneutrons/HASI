@@ -136,14 +136,51 @@ describe("pinned original room planning observations", () => {
   });
 
   it("retains malformed HTTP failures and unknown usage without dispatching a retry", async () => {
-    const { provider, ledger, result: pending } = run("anny-01", [new Response("invalid", { status: 429 })]);
+    const { provider, ledger, result: pending } = run("anny-01", [new Response("invalid", { status: 429, headers: {
+      "x-ratelimit-limit-tokens": "not-a-counter", "x-ratelimit-remaining-requests": "-1", "retry-after": "not-a-delay",
+    } })]);
     const result = await pending;
     expect(provider.requests).toHaveLength(1);
     expect(result.providerResponses).toEqual([expect.objectContaining({ status: 429, captureStatus: "invalid_json" })]);
+    expect(result.providerResponses[0]?.rateLimits).toBeUndefined();
     expect(result.measurements.usageStatus).toBe("unknown");
     expect(ledger.settlements).toEqual([undefined]);
     expect(originalRoomStopReason(result)).toBe("provider_http_error");
     expect(result.fixtureCleanup).toBe("completed");
+  });
+
+  it("retains only bounded Groq quota numbers from a 429 using the real response time", async () => {
+    const retryAfter = new Date(Date.now() + 5 * 60_000).toUTCString();
+    const body = JSON.stringify({ error: {
+      message: "Rate limit reached for tokens per minute. Private error detail: private-error-body-sentinel",
+      code: "rate_limit_exceeded", request_id: "private-request-id-sentinel", reasoning: "private-reasoning-sentinel",
+    } });
+    const { provider, result: pending } = run("anny-01", [new Response(body, { status: 429, headers: {
+      "retry-after": retryAfter,
+      "x-ratelimit-limit-tokens": "1000000000001",
+      "x-ratelimit-remaining-tokens": "0",
+      "x-ratelimit-limit-requests": "1000",
+      "x-ratelimit-remaining-requests": "0",
+      "x-ratelimit-reset-requests": "90s",
+      "x-provider-private-header": "private-header-sentinel",
+    } })]);
+    const result = await pending;
+    const response = result.providerResponses[0];
+    expect(provider.requests).toHaveLength(1);
+    expect(response).toMatchObject({ status: 429, rateLimits: {
+      tokenRemaining: 0, requestLimit: 1000, requestRemaining: 0,
+    } });
+    expect(response?.rateLimits?.retryAfterSeconds).toBeGreaterThan(0);
+    expect(response?.rateLimits?.retryAfterSeconds).toBeLessThanOrEqual(300);
+    expect(response?.rateLimits).not.toHaveProperty("tokenLimit");
+    expect(response?.rateLimits).not.toHaveProperty("dimension");
+    expect(response).not.toHaveProperty("headers");
+    expect(response).not.toHaveProperty("body");
+    expect(result).toMatchObject({ errorCode: "provider_rate_limited", providerStatus: 429, transientFailure: "rate_limit" });
+    expect(result.measurements.usageStatus).toBe("unknown");
+    expect(originalRoomStopReason(result)).toBe("provider_http_error");
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toMatch(/synthetic-original-provider-key|private-error-body-sentinel|private-request-id-sentinel|private-reasoning-sentinel|private-header-sentinel|x-ratelimit-reset-requests/u);
   });
 
   it("requires explicit admission before any fixture or model request", async () => {
