@@ -198,6 +198,11 @@ plans an initial office search and direct preference refinement. Explicit live
 execution observes the protected chat route and native Anny bridge under synthetic
 `rooms:read` authority and the existing shared budget. It cannot prepare, confirm,
 execute or cancel a booking; no browser, semantic or M6 acceptance is implied.
+The same operator can explicitly plan a clean/poisoned fixed-native-evidence
+pair. That separate track compares one availability proposal before protected
+history projection; it is not an actual protected HTTP workflow. The linked
+instructions define its exposure checks, strict native-read limits and review
+requirements.
 
 ### Local PostgreSQL server mode
 

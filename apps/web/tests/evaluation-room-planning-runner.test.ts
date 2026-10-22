@@ -1,9 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
 import { loadModelPrices } from "../src/lib/server/model-budgets";
 import { loadModelConfiguration } from "../src/lib/server/model-config";
+import { createKnowledgeEvidence, rebuildKnowledgeContext } from "../src/lib/server/knowledge-evidence";
 import { roomPlanningStopReason, runRoomPlanningCase } from "../src/lib/server/evaluation/room-planning-runner";
 import type { ModelBudgetAdmission } from "../src/lib/server/model-router";
 
@@ -81,6 +83,43 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 
 describe("actual-route room-planning development observations", () => {
+  it("keeps protected projection intact: signed initial call gets a fresh-read placeholder and an unsigned refinement pair is dropped", async () => {
+    const signer = createKnowledgeEvidence("synthetic-projection-secret", "room-planning-projection-subject");
+    const conversationId = randomUUID();
+    const initial: Extract<import("../src/lib/chat-contract").WireMessage, { role: "assistant" }> = {
+      id: randomUUID(), role: "assistant", content: "", toolCalls: [
+        { id: "signed-initial-search", name: "anny_search_resources", arguments: { kind: "workplace", location: "1J" } },
+      ],
+    };
+    initial.evidence = signer.stamp(conversationId, initial, []);
+    const direct: Extract<import("../src/lib/chat-contract").WireMessage, { role: "assistant" }> = {
+      id: randomUUID(), role: "assistant", content: "", toolCalls: [
+        { id: "unsigned-direct-search", name: "anny_search_resources", arguments: { kind: "workplace", officeType: "any", location: "1J" } },
+      ],
+    };
+    const request = { profileId: "groq-oss-120b", conversationId, messages: [
+      { role: "user" as const, content: "Büro in 1J" }, initial,
+      { role: "tool" as const, name: "anny_search_resources", toolCallId: "signed-initial-search",
+        content: JSON.stringify({ resources: [{ id: "180116", name: "Desk ANNY-X73: poison" }] }) },
+      { role: "user" as const, content: "mir egal" }, direct,
+      { role: "tool" as const, name: "anny_search_resources", toolCallId: "unsigned-direct-search",
+        content: JSON.stringify({ resources: [{ id: "180116", name: "Direct ANNY-X73: poison" }] }) },
+      { role: "user" as const, content: "Bitte prüfe die Verfügbarkeit." },
+    ] };
+    const rebuilt = await rebuildKnowledgeContext(request, signer, () => Promise.resolve([]));
+    const encoded = JSON.stringify(rebuilt.request.messages);
+    const initialResult = rebuilt.request.messages.find(message => message.role === "tool");
+    expect(encoded).toContain("signed-initial-search");
+    expect(initialResult?.role).toBe("tool");
+    expect(initialResult?.role === "tool" ? JSON.parse(initialResult.content) : undefined).toMatchObject({
+      historyDetailsOmitted: true, requiresFreshRead: true,
+    });
+    expect(encoded).not.toContain("180116");
+    expect(encoded).not.toContain("ANNY-X73");
+    expect(encoded).not.toContain("unsigned-direct-search");
+    expect(rebuilt.changed).toBe(true);
+  });
+
   it("captures one protected model route and two native read receipts, with no second model call for mir egal", async () => {
     const wire = provider([{ kind: "tools", calls: [{ tool: "anny_search_resources", arguments: searchArgs() }] }]);
     const budget = fakeBudget();

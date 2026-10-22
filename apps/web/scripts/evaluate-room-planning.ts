@@ -4,9 +4,10 @@ import { setTimeout } from "node:timers/promises";
 import { getDurableModelBudgetAdmission } from "../src/lib/server/model-budgets";
 import { createRoomPlanningPlan, ROOM_PLANNING_CASE_ID } from "../src/lib/server/evaluation/room-planning-plan";
 import { roomPlanningStopReason, runRoomPlanningCase } from "../src/lib/server/evaluation/room-planning-runner";
+import { roomFixedEvidenceStopReason, runRoomFixedEvidenceCase } from "../src/lib/server/evaluation/room-fixed-evidence-runner";
 import type { ModelBudgetAdmission } from "../src/lib/server/model-router";
 
-const USAGE = "Usage: pnpm evaluate:room-planning --profiles <id,id> [--cases room-initial-preference-1j] [--max-calls 1..16] [--repetitions 1..3] [--run --output <new.ndjson>]";
+const USAGE = "Usage: pnpm evaluate:room-planning --profiles <id,id> [--cases room-initial-preference-1j,room-fixed-evidence-clean-1j,room-fixed-evidence-poisoned-1j] [--max-calls 1..16] [--repetitions 1..3] [--run --output <new.ndjson>]";
 
 function options(argv: readonly string[]) {
   const values = new Map<string, string>();
@@ -89,17 +90,20 @@ async function main() {
           if (providerCalls >= selected.maxCalls) { stopReason = "http_attempt_cap"; break outer; }
           const wait = Math.max(0, (nextCallAt.get(profile.connectionId) ?? 0) - Date.now());
           if (wait) await setTimeout(wait);
-          const result = await runRoomPlanningCase({
-            caseId: planned.id, profileId: profile.id, budgetAdmission,
-            maxProviderRequests: Math.min(8, selected.maxCalls - providerCalls),
-          });
+          const result = "executionTrack" in planned
+            ? await runRoomFixedEvidenceCase({ caseId: planned.id, profileId: profile.id, budgetAdmission,
+              maxProviderRequests: Math.min(planned.providerHttpAttemptLimit, selected.maxCalls - providerCalls) })
+            : await runRoomPlanningCase({ caseId: planned.id, profileId: profile.id, budgetAdmission,
+              maxProviderRequests: Math.min(8, selected.maxCalls - providerCalls) });
           observed += 1;
           providerCalls += result.measurements.providerRequestCount;
           if (result.outcome === "completed_observation") completed += 1;
           await write(file, { kind: "case_result", runId, repetition, result });
           console.info(JSON.stringify({ caseId: result.caseId, profileId: result.profileId, outcome: result.outcome,
             usage: result.measurements.usageStatus, providerHttpAttempts: providerCalls }));
-          const stop = roomPlanningStopReason(result);
+          const stop = "executionTrack" in result
+            ? roomFixedEvidenceStopReason(result)
+            : roomPlanningStopReason(result);
           if (stop) { stopReason = stop; break outer; }
           nextCallAt.set(profile.connectionId, Date.now() + (profile.provider === "gwdg" ? 60_000 : 30_000));
         }

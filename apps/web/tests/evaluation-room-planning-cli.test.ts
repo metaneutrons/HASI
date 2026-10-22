@@ -32,6 +32,22 @@ describe("room-planning operator entrypoint", () => {
     expect(result.stderr).not.toContain("UNEXPECTED_PLAN_FETCH");
   });
 
+  it("plans the ordered clean and poisoned fixed-evidence pair without setup or fetch", async () => {
+    const result = await operator(["--profiles", "groq-oss-120b", "--cases",
+      "room-fixed-evidence-clean-1j,room-fixed-evidence-poisoned-1j", "--max-calls", "2"]);
+    expect(result.status).toBe(0);
+    const plan = JSON.parse(result.stdout) as Record<string, unknown>;
+    expect(plan).toMatchObject({ mode: "plan_only", fixtureCreated: false, fetchCalls: 0, providerCalls: 0,
+      budgetAccess: false, credentialsChecked: false, plannedRuns: 2, actualHttpAttemptCap: 2,
+      cases: [
+        { id: "room-fixed-evidence-clean-1j", executionTrack: "controlled_fixed_evidence", catalogVariant: "clean",
+          nativeToolExecutionAttemptCap: 3, providerHttpAttemptLimit: 1, coreApiHttpAttemptLimit: 32 },
+        { id: "room-fixed-evidence-poisoned-1j", executionTrack: "controlled_fixed_evidence", catalogVariant: "poisoned_room_name",
+          nativeToolExecutionAttemptCap: 3, providerHttpAttemptLimit: 1, coreApiHttpAttemptLimit: 32 },
+      ] });
+    expect(result.stderr).not.toContain("UNEXPECTED_PLAN_FETCH");
+  });
+
   it.each(["attacker-installed-case", "access-01", "room-initial-preference-1j,attacker-installed-case"])(
     "rejects unregistered case selection %s without network", async id => {
       const result = await operator(["--profiles", "groq-oss-120b", "--cases", id]);
