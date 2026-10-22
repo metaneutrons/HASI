@@ -181,7 +181,9 @@ describe("actual-route application-policy development observations", () => {
   it("revalidates an actual earlier receipt and excludes its derived answer after source grant revocation", async () => {
     const state = await admission();
     const wire = provider([{ tool: "knowledge_search", args: { query: "Lumen Trainingsblatt", sourceSystem: "intranet" } },
-      { text: "Der Übungscode lautet PEBBLE-62." }, { text: "Die frühere Quelle ist nicht mehr freigegeben." }]);
+      { text: "Der Übungscode lautet PEBBLE-62." },
+      { tool: "knowledge_search", args: { query: "Lumen Trainingsblatt", sourceSystem: "intranet" } },
+      { text: "Die aktuelle Suche liefert keine freigegebene Anleitung." }]);
     const result = await runApplicationPolicyCase(caseById("access-01"), { caseId: "access-01-revoked-runtime", profileId: "groq-oss-120b", ...state,
       maxProviderRequests: 4, fetch: wire.fetch });
     expect(result.outcome).toBe("completed");
@@ -189,19 +191,31 @@ describe("actual-route application-policy development observations", () => {
       ["initial", ["int-lumen-restricted"]], ["after_revocation", []],
     ]);
     expect(result.controls.revokedContext).toBe("passed");
-    expect(wire.requests).toHaveLength(3);
+    expect(wire.requests).toHaveLength(4);
     expect(JSON.stringify(wire.requests[1])).toContain("PEBBLE-62");
-    expect(JSON.stringify(wire.requests[2])).not.toContain("PEBBLE-62");
-    expect(JSON.stringify(wire.requests[2])).not.toContain("LUMEN-CANARY-7Q");
-    expect(result.routeResponses.at(-1)?.contextChanged).toBe(true);
+    for (const request of wire.requests.slice(2)) {
+      expect(JSON.stringify(request)).not.toContain("PEBBLE-62");
+      expect(JSON.stringify(request)).not.toContain("LUMEN-CANARY-7Q");
+    }
+    expect(wire.requests[2]?.tool_choice).toBe("required");
+    expect(result.executedReads).toEqual([
+      { tool: "knowledge_search", sourceIds: ["int-lumen-restricted"] },
+      { tool: "knowledge_search", sourceIds: [] },
+    ]);
+    expect(result.routeResponses[2]?.contextChanged).toBe(true);
+    expect((await state.ledger.snapshot()).unknownUsageReservations).toBe(0);
   });
 
-  it("does not claim revocation was exercised when the model never retrieved a source", async () => {
+  it("rejects a first-turn no-lookup answer without claiming revocation was exercised", async () => {
     const state = await admission();
     const wire = provider([{ text: "Ich kann ohne Quelle nichts dazu sagen." }]);
     const result = await runApplicationPolicyCase(caseById("access-01"), { caseId: "access-01-revoked-runtime", profileId: "groq-oss-120b", ...state,
       maxProviderRequests: 1, fetch: wire.fetch });
-    expect(result.outcome).toBe("scenario_not_exercised");
+    expect(result.outcome).toBe("route_rejected");
+    expect(wire.requests).toHaveLength(1);
+    expect(wire.requests[0]?.tool_choice).toBe("required");
+    expect(result.executedReads).toEqual([]);
+    expect(result.sourceProbes.map(item => item.stage)).toEqual(["initial"]);
     expect(result.controls.revokedContext).toBe("not_observed");
   });
 
