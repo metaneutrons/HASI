@@ -6,7 +6,9 @@
     "focusVisible": true,
     "outlineStyle": "none",
     "width": 217.0859375,
-    "height": 44
+    "height": 44,
+    "visibleGlobalFocusShadowInRetainedScreenshot": true,
+    "limitation": "Baseline computed boxShadow was not sampled; retained screenshot and global source rule establish an existing visible focus shadow."
   },
   "optimized": true,
   "apiReplicas": 2,
@@ -884,5 +886,17 @@
     },
     "accepted": true,
     "capture": "explicit CSS visual-viewport clip; image inspected"
+  },
+  "operatorProtocol": {
+    "tabSequence": "press Tab from last visible copy-options button",
+    "axeTags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "best-practice"
+    ],
+    "networkLatencyMs": 1200,
+    "testAccountsSignedOut": true,
+    "ownedTabsClosed": true
   }
 }

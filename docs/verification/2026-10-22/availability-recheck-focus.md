@@ -2,9 +2,9 @@
 
 Supporting M7 #54; M6 and M7 remain open. Application revision `66a25f0656863d9f409d20b04e4b1f5c45cd9ece`; baseline `9bec43ae67c48088f4996fab68736de8c357c1c6`.
 
-## Observed defect and correction
+## Observed styling inconsistency and correction
 
-After protected-history reload, the actual native `Verfügbarkeit erneut prüfen` button was reachable with Tab and matched `:focus-visible`, but its computed outline style was `none`. It is rendered outside the result group, so group-scoped focus and disabled selectors did not apply. The correction explicitly includes the standalone toggle and suppresses disabled hover styling. The baseline is a real counter-observation, not a synthetic bad input.
+After protected-history reload, the actual native `Verfügbarkeit erneut prüfen` button was reachable with Tab and matched `:focus-visible`, but its computed outline style was `none`. The retained baseline screenshot shows that the global box-shadow already provided a visible focus indicator; the missing outline is not evidence of absent keyboard focus. It is rendered outside the result group, so the additional group-scoped outline and disabled selectors did not apply. The correction explicitly includes the standalone toggle for consistent result-action styling and suppresses disabled hover styling. The pre-existing global disabled cursor/opacity remain equivalent. The baseline is an actual styling counter-observation, not an accessibility-failure claim or synthetic bad input.
 
 ## Bounded optimized browser evidence
 
