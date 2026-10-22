@@ -6,12 +6,14 @@ import type { ActionPreview } from "@/lib/action-preview";
 import type { ChatProposal } from "@/lib/chat-sessions";
 import { forwardProposalStatus, proposalPresentation, readProposalSnapshot, sameProposalDetails } from "@/lib/proposal-presentation";
 
-export function ActionPreviewDetails({ preview }: { preview?: ActionPreview | undefined }) {
+export function ActionPreviewDetails({ preview, status = "pending" }: { preview?: ActionPreview | undefined; status?: ChatProposal["status"] }) {
   if (!preview) return null;
   return <div className="action-preview-details">
     <p><strong>{preview.instance}</strong> · {preview.account}</p>
-    <p>{preview.effect}</p>
-    <ul>{preview.consequences.map((text, index) => <li key={index}>{text}</li>)}</ul>
+    {status === "pending" && <>
+      <p>{preview.effect}</p>
+      <ul>{preview.consequences.map((text, index) => <li key={index}>{text}</li>)}</ul>
+    </>}
     <small>{preview.costs}</small>
   </div>;
 }

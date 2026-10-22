@@ -10,6 +10,13 @@ export function asksForActionControls(text: string): boolean {
   return /^(?:(?:ich )?(?:sehe|finde) (?:hier )?kein(?:e|en)? (?:schaltfläche|schaltflaeche|button|bestätigung|bestaetigung|bestätigungsschaltfläche|bestätigungsbutton)|wo (?:ist|finde ich) (?:die |den )?(?:schaltfläche|schaltflaeche|button|bestätigung|bestaetigung|bestätigungsschaltfläche|bestätigungsbutton)|(?:ich )?(?:möchte|moechte|will) (?:direkt )?(?:hier|von hier) buchen)$/u.test(normalized);
 }
 
+/** Standalone status questions only; mixed requests still enter normal planning. */
+export function asksForActionStatus(text: string): boolean {
+  if (text.length > 240) return false;
+  const normalized = text.trim().replace(/\s+/gu, " ");
+  return /^(?:hat das (?:geklappt|funktioniert)|was ist der (?:aktuelle )?status|ist (?:das|die buchung|meine buchung|die stornierung) (?:bestätigt|storniert|abgeschlossen)|gibt es (?:da |dazu )?(?:keine|eine) rückmeldung|(?:ich habe|es gibt) (?:noch )?keine rückmeldung|did that (?:work|go through)|what is the (?:current )?status|is (?:that|the booking|my booking|the cancellation) (?:confirmed|cancelled|completed)|(?:is there|i have) no feedback)[.!?…]*$/iu.test(normalized);
+}
+
 /** A help request may restore only the identical still-pending preview.
  * It never grants confirmation or regresses a completed/uncertain action.
  */

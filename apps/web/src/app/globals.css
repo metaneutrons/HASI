@@ -607,8 +607,6 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .booking-card-details { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; }
 .booking-card-details span { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.75rem; line-height: 1.4; }
 .booking-card-details svg { color: var(--faint); flex: 0 0 auto; }
-.booking-reference { display: flex; min-width: 0; flex-wrap: wrap; gap: 7px; margin-top: 14px; color: var(--faint); font-size: 0.75rem; font-weight: 680; letter-spacing: 0.04em; overflow-wrap: anywhere; }
-.booking-reference span { color: var(--muted); font-weight: 550; letter-spacing: 0.02em; overflow-wrap: anywhere; }
 .booking-card-mark { display: flex; width: 37px; height: 37px; align-items: center; justify-content: center; border-radius: 12px; background: var(--accent-soft); color: var(--accent); }
 .booking-skeleton { min-height: 115px; grid-template-columns: 58px minmax(0, 1fr); }
 .bookings-empty { display: flex; min-height: 420px; flex-direction: column; align-items: center; justify-content: center; padding: 34px 20px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); text-align: center; }
@@ -815,7 +813,6 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
   .booking-status { min-height: 23px; font-size: 0.5rem; }
   .booking-card-details { gap: 7px 11px; margin-top: 8px; }
   .booking-card-details span { font-size: 0.625rem; }
-  .booking-reference { margin-top: 10px; font-size: 0.4375rem; }
   .booking-card-mark { display: none; }
   .bookings-empty { min-height: 370px; padding: 24px 17px; border-radius: 18px; }
   .bookings-empty h2 { font-size: 2rem; }
@@ -1193,6 +1190,8 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .chat-card-action { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; margin-top: 12px; padding: 8px 0; border: 0; border-radius: 6px; background: transparent; color: var(--accent-ink); cursor: pointer; font-size: 0.875rem; font-weight: 600; }
 .chat-no-slots { color: var(--muted); font-size: 0.875rem; }
 .chat-proposal { margin-top: 17px; border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.chat-action-receipt { display: grid; min-width: 0; gap: 6px; overflow-wrap: anywhere; }
+.chat-action-receipt p { margin: 0; }
 .chat-proposal-label { display: block; margin-bottom: 10px; color: var(--accent-ink); font-size: 0.625rem; font-weight: 650; letter-spacing: 0.09em; }
 .chat-tool-card > p:not(.chat-room-details) { margin: 8px 0; color: var(--ink-soft); font-size: 0.875rem; }
 .chat-proposal small { display: block; margin-bottom: 17px; color: var(--muted); font-size: 0.75rem; }

@@ -66,6 +66,28 @@ describe("authority-backed action receipts and busy autosave", () => {
     expect(revoked.workspace.sessions[0]?.snapshot.input).toBe("Retain my draft");
   });
 
+  it.each(["book", "cancel_booking"] as const)("retains a new %s acknowledgement after the confirmation turn, using only the current server receipt", async action => {
+    const f = await fixture(proposal(action));
+    const confirmed = { ...f.seed, status: "confirmed" as const };
+    f.set(confirmed);
+    const clickId = randomUUID();
+    const replyId = randomUUID();
+    f.store.updateConversation(f.id, { ...f.snapshot(), activeProposal: null, messages: [
+      { ...required(f.snapshot().messages[0]), proposal: confirmed },
+      { id: clickId, role: "user", text: "I confirmed using the button" },
+      { id: replyId, role: "assistant", text: "FORGED acknowledgement", tool: "Aktion · Aktueller Beleg", proposal: confirmed },
+    ] }, false);
+    await vi.advanceTimersByTimeAsync(200);
+    const loaded = required((await f.service.load()).workspace.sessions[0]);
+    expect(loaded.snapshot.messages.map(message => message.id)).toEqual([required(f.snapshot().messages[0]).id, clickId, replyId]);
+    const reply = required(loaded.snapshot.messages[2]);
+    expect(reply.proposal).toEqual(confirmed);
+    expect(reply.text).toBe(proposalPresentation(confirmed).summary);
+    expect(JSON.stringify(loaded)).not.toContain("FORGED");
+    f.set(null);
+    expect((await f.service.load()).workspace.sessions[0]?.snapshot.messages[2]?.proposal).toBeUndefined();
+  });
+
   it("does not let a forged confirmed card or unsigned helper create a receipt", async () => {
     const f = await fixture();
     f.store.updateConversation(f.id, { ...f.snapshot(), messages: [

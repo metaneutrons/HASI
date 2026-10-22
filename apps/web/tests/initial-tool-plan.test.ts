@@ -19,7 +19,7 @@ function knowledgeResult(): WireMessage[] {
 
 describe("needsInitialToolPlan", () => {
   it("uses a current host action snapshot only for a closed status question", () => {
-    for (const content of ["Hat das geklappt?", "Ist meine Buchung bestätigt?", "What is the current status?"]) {
+    for (const content of ["Hat das geklappt?", "Ist meine Buchung bestätigt?", "What is the current status?", "gibt es da keine Rückmeldung?"]) {
       expect(needsInitialToolPlan([user(content)])).toBe(true);
       expect(needsInitialToolPlan([user(content)], { hasCurrentActionStatus: true })).toBe(false);
     }
