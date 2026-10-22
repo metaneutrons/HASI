@@ -1,0 +1,4813 @@
+{
+  "date": "2026-10-22",
+  "scope": "bounded actual optimized localhost text contrast and popup follow-up; M6/M7 remain open",
+  "beforeBuild": {
+    "sourceRevision": "19c8b612fbfad4d34456749e2b107fe787f422a2",
+    "sourceFiles": [
+      {
+        "path": "apps/web/src/app/.well-known/hasi-plugin.json/route.ts",
+        "sha256": "49fd4fde2857b14af78cbab474b92fa2fc30ed8b54eca942a979d7aeca2eb919"
+      },
+      {
+        "path": "apps/web/src/app/account/connections/consent/page.tsx",
+        "sha256": "bca30958834e038cf26fd01804f2691fa7d8b0022dce4855d3cb71a29435bf14"
+      },
+      {
+        "path": "apps/web/src/app/account/connections/page.tsx",
+        "sha256": "d0b36752c2f294fc9c64ca527d7967bdc6a9b11cadc7c9c108aeb9be3dd8180c"
+      },
+      {
+        "path": "apps/web/src/app/admin/page.tsx",
+        "sha256": "15089eca88a0e833cc0f62a23b31eb856684a94fa040bed6d6dccb865f5f9505"
+      },
+      {
+        "path": "apps/web/src/app/api/[...path]/route.ts",
+        "sha256": "484ba589a28d4808eb67d34cdf8a32fe068d0bdbe5ea0caf8798fe3858c09839"
+      },
+      {
+        "path": "apps/web/src/app/api/chat/dialogue/route.ts",
+        "sha256": "72d682fea7be2617a09c6ca92bb69b182fbd355d5f1e5201dcc54ef33f2d1d61"
+      },
+      {
+        "path": "apps/web/src/app/api/chat/plugin-read/route.ts",
+        "sha256": "213518243cd9aacee153b0bbcffb1e6cdf1e317d224618450dbcfaf391103b78"
+      },
+      {
+        "path": "apps/web/src/app/api/chat/route.ts",
+        "sha256": "dc9053e31e9882f7a1199aa7b604aa8d0498313e3e60ce95bfc48698a6e5363c"
+      },
+      {
+        "path": "apps/web/src/app/api/chat/timestamps/route.ts",
+        "sha256": "86fde04c20394ec54944e4191aac1332c9b008e49f2db9abbc7d6a7b4a7387b2"
+      },
+      {
+        "path": "apps/web/src/app/api/chat/workspace/route.ts",
+        "sha256": "7fa2222515ba302898f9867713679fb72d21307fa41e27adb3f329572e3897da"
+      },
+      {
+        "path": "apps/web/src/app/api/health/route.ts",
+        "sha256": "785a0b1e12572b3401207b43e4e1af7d60bb75bac7c05b0820e19cdfec4a0fe9"
+      },
+      {
+        "path": "apps/web/src/app/apple-icon.tsx",
+        "sha256": "e30bbdace35b25f393352c118d8c64922ec5c6707894308caac45096cd40c6fd"
+      },
+      {
+        "path": "apps/web/src/app/bookings/page.tsx",
+        "sha256": "9a39dc2ef9114b3504c1c678a871c2401217b89e4e4575da2e02d8813c0881ce"
+      },
+      {
+        "path": "apps/web/src/app/globals.css",
+        "sha256": "223e52d5f5f303ed7b349118cb5a6915c76973989a3ff59f91ce16eff53c43e5"
+      },
+      {
+        "path": "apps/web/src/app/hasi/actions/status/route.ts",
+        "sha256": "49982856041281324373a55917ee5e9a480ac131f21fd23d40dd956749e230a6"
+      },
+      {
+        "path": "apps/web/src/app/icon.svg",
+        "sha256": "a43ffefe91ce8d5fcd9af9f315c6810b790b9e0b30c260af2c19815fe0a7b6cb"
+      },
+      {
+        "path": "apps/web/src/app/layout.tsx",
+        "sha256": "a07367bd5f9e79ebaf0ed43c62e40a2cac00200d81d465b8661feac8062919af"
+      },
+      {
+        "path": "apps/web/src/app/mcp/route.ts",
+        "sha256": "7355a07b0b685f6136864cd627c2e3f0559a54fb5690a18bbcb7815e83fa8fdc"
+      },
+      {
+        "path": "apps/web/src/app/opengraph-image.tsx",
+        "sha256": "c5538ff3f38d5c586b1c4fc7b479a5f4ac256f7ff981b13c8db8eca2b2b5b678"
+      },
+      {
+        "path": "apps/web/src/app/page.tsx",
+        "sha256": "ff6acf43833245d4082e470e614ccd74ad7c6fcfa533b0d3e74001a397c910ca"
+      },
+      {
+        "path": "apps/web/src/app/plugins/knowledge/[...path]/route.ts",
+        "sha256": "042c06f03d483e09b224a185459fe69848e8128e1a9edfa9d2367ebacabae90e"
+      },
+      {
+        "path": "apps/web/src/app/robots.ts",
+        "sha256": "92dfc16d9b4ec7d43affd3bce7a0e5975458ba95115716f884b8d384fddd58e0"
+      },
+      {
+        "path": "apps/web/src/app/sources/[id]/page.tsx",
+        "sha256": "2bd5e8ef1464dda91b25bb7262e5036e885ce994c34c33a32783d69d627ddb16"
+      },
+      {
+        "path": "apps/web/src/components/action-status.tsx",
+        "sha256": "ce6675ff026e42a83544a08d572a7d5b099cb72a3f0f01a5fd1a496b7826f116"
+      },
+      {
+        "path": "apps/web/src/components/admin-page.tsx",
+        "sha256": "f00cdf1deafa41daa84acee31c835b3801020cdc66451120e3dab586476efa0a"
+      },
+      {
+        "path": "apps/web/src/components/app-shell.tsx",
+        "sha256": "1d12bff367891e9e2794a756284c6eb74ec0bff3c04a83325e4b08f8b6a3bc6b"
+      },
+      {
+        "path": "apps/web/src/components/assistant-page.tsx",
+        "sha256": "6ac379b9d119fc3890eb8a1eeb2ee6bbf5f2586301591d208ca5550a17b795c4"
+      },
+      {
+        "path": "apps/web/src/components/bookings-page.tsx",
+        "sha256": "12bbb0bcc303f3e614b84267954aa60c5582f80a65149e0463203a0eee8adaa9"
+      },
+      {
+        "path": "apps/web/src/components/chat-markdown.module.css",
+        "sha256": "ef5f7c5f04700819a6ca38905db561faf006fe32b952abc73cc2ac3faca65267"
+      },
+      {
+        "path": "apps/web/src/components/chat-markdown.tsx",
+        "sha256": "f28ffd3a0a7ae8a78858fdd0151d68e3aaf0d49a8eacfc8a8fc1b01d9b5cad55"
+      },
+      {
+        "path": "apps/web/src/components/chat-message-copy.module.css",
+        "sha256": "8e4ed7af10de509e6c68f489225d060ec281a164bb439a718ac65f3123d65df6"
+      },
+      {
+        "path": "apps/web/src/components/chat-message-copy.tsx",
+        "sha256": "b82d20dc70f28a4ec81fe96b626d4b765f13536d1a982f98876b93a538acaa24"
+      },
+      {
+        "path": "apps/web/src/components/chat-room-results.tsx",
+        "sha256": "0ad1bf5bcb3707b630a9ca6dd97177105a71d6dd1573b5f8c13316ea94fe3f27"
+      },
+      {
+        "path": "apps/web/src/components/chat-service-connection.tsx",
+        "sha256": "6ce5816e85ad8787ec6bfabaaaea3d77490d7d6d6091fb2527d93ecd58e7e141"
+      },
+      {
+        "path": "apps/web/src/components/chat-session-list.tsx",
+        "sha256": "aac7bd6992a97e3771546aecc4f189ea90703feedaf221fac3c36630b9d3adac"
+      },
+      {
+        "path": "apps/web/src/components/chat-sidebar-context.tsx",
+        "sha256": "c119446c6afac33485a42838afce66fb63790b4f6ac5817b7b7cbbea1cf51cce"
+      },
+      {
+        "path": "apps/web/src/components/hasi-icon.tsx",
+        "sha256": "b425a643b067b62ccacde7c6c249dd59f40f603916f6e4e9092163a5404fc538"
+      },
+      {
+        "path": "apps/web/src/components/knowledge-document.tsx",
+        "sha256": "3389b21b26ee7591062a2abf796c77b15c43405e84676c0bba7486467806b093"
+      },
+      {
+        "path": "apps/web/src/components/managed-plugin-panel.module.css",
+        "sha256": "3aef417d53bd8ce21ab643e6515700a67a2a2e47d4858738efca967d8e3c2553"
+      },
+      {
+        "path": "apps/web/src/components/managed-plugin-panel.tsx",
+        "sha256": "8b8891a2a6421d3a93b77def077ef7b1327c783338341fd643e71c595d332419"
+      },
+      {
+        "path": "apps/web/src/components/personal-connection-notice.tsx",
+        "sha256": "73cfdaee787055c05b49b9ec04d371e42563bafea0886a1b092a6146faf5f67f"
+      },
+      {
+        "path": "apps/web/src/components/plugin-account-consent.tsx",
+        "sha256": "f5d1d270390b23f2c94389a768b295885742079a45c241a5bddd379e820432fe"
+      },
+      {
+        "path": "apps/web/src/components/plugin-account-panel.tsx",
+        "sha256": "97c4d9ef4a744573f3bbdc2a7cb0fbd81799a7e82076de17b8c8d59bd950b0ce"
+      },
+      {
+        "path": "apps/web/src/components/plugin-app-view.tsx",
+        "sha256": "8115e043b444d5a7783d6f53b0fade7a791fa03b03144cea4f4b32ae731f8b4f"
+      },
+      {
+        "path": "apps/web/src/components/plugin-config-fields.tsx",
+        "sha256": "93e01ae80c4fcffa271d4e6ac57791dd90d8251a4e20a6fbe2313587b117f4e9"
+      },
+      {
+        "path": "apps/web/src/components/plugin-config-panel.tsx",
+        "sha256": "4a9a3f97125485fcc3f431467f2c066481373dbfca107042f1f4c34fca2d4d7f"
+      },
+      {
+        "path": "apps/web/src/components/plugin-release-review.module.css",
+        "sha256": "f98a1f7632ca9da910b5b745fa150654916d1d51da6ccf371e3e0e9f493afc3f"
+      },
+      {
+        "path": "apps/web/src/components/plugin-release-review.tsx",
+        "sha256": "7e5359668bafb6f8a98785ea97f54b34bca37cb4e2b7bf4554317c43a0576504"
+      },
+      {
+        "path": "apps/web/src/components/plugin-result-app.tsx",
+        "sha256": "0f7f1e2c72064ae4f557e6fac4c451e5b554efc8b20a306703725f56f7acdc5d"
+      },
+      {
+        "path": "apps/web/src/components/plugin-source-panel.tsx",
+        "sha256": "558bb1815c4deb29e650e9188b19f6b24aaa5a4b9fc3951d0aa5749e4f700833"
+      },
+      {
+        "path": "apps/web/src/components/providers.tsx",
+        "sha256": "3487808492857802a2e09f4f4e007c98cdbf370dda7ed0527fa1bee58fadad3d"
+      },
+      {
+        "path": "apps/web/src/components/public-demo-notice.tsx",
+        "sha256": "a521846e42da9a276033bff452ca0391ec39cff4391bea351f8a7d3e110775ba"
+      },
+      {
+        "path": "apps/web/src/components/session-provider.tsx",
+        "sha256": "cf1e15b902a132f18be21a1614574c23243fe4ee124d2032a02a325a82538925"
+      },
+      {
+        "path": "apps/web/src/components/theme-provider.tsx",
+        "sha256": "a0be30946df5253bb6a15457b6e692293f7dbaf8dcb6cfadce38a3492234d4da"
+      },
+      {
+        "path": "apps/web/src/components/use-chat-viewport.ts",
+        "sha256": "c8a2f101e15f5811f62fb24d8df4a08b155595618e856c2aa712907db07b1ef7"
+      },
+      {
+        "path": "apps/web/src/lib/action-preview.ts",
+        "sha256": "76827f9a218ad818ed8120f0cfb30840ae821063747b6a2f082b26d979263946"
+      },
+      {
+        "path": "apps/web/src/lib/anny-chat-tools.ts",
+        "sha256": "2c3982d3a3825eb1bc6ac7b8c5298d3482218413a0fefd9513b8ac800a435284"
+      },
+      {
+        "path": "apps/web/src/lib/api.ts",
+        "sha256": "4d2b746cb3adf22d86a4f80d9b437ae3a50af4c7861198a1ccf96dfeb7816d7f"
+      },
+      {
+        "path": "apps/web/src/lib/chat-action-guidance.ts",
+        "sha256": "179264cd840ac78f4318ff65fdd343971c2ca814f314efd3d3d539899453f9b1"
+      },
+      {
+        "path": "apps/web/src/lib/chat-contract.ts",
+        "sha256": "89c3268a69e30849ecff8c58e53c62b60f5b2b445937e6b1b27c970e81db1948"
+      },
+      {
+        "path": "apps/web/src/lib/chat-demo.ts",
+        "sha256": "2676b934dd84fa931fdc46e147a4798d82346899dd795de683198085c8beb158"
+      },
+      {
+        "path": "apps/web/src/lib/chat-history.ts",
+        "sha256": "4bb498a1c350f2325831a84c3e96587f64327434eb99d42f2f0901052b089139"
+      },
+      {
+        "path": "apps/web/src/lib/chat-knowledge-citations.ts",
+        "sha256": "46f6c5424c1440975caa30b3b100343d45bc7b391a56b435d4d8078609ae73fe"
+      },
+      {
+        "path": "apps/web/src/lib/chat-message-clock.ts",
+        "sha256": "421ad0c7a2677089858ba136425b6960c47a597021246c04b7d38660fd3a38d5"
+      },
+      {
+        "path": "apps/web/src/lib/chat-message-copy.ts",
+        "sha256": "96960f4e9c3a954f4b1d7789c3e52fbf4fbaf352f86ad1acd4727974d39773e3"
+      },
+      {
+        "path": "apps/web/src/lib/chat-room-time.ts",
+        "sha256": "ec30942a9d0f4e7b078958961e0faaf9e385d5057900c9f76af1d058fccd881b"
+      },
+      {
+        "path": "apps/web/src/lib/chat-sessions.ts",
+        "sha256": "0c0fe84326c288a579b065f1ad0b672aa7ab8de2cd207df8a42c45b2bbad0008"
+      },
+      {
+        "path": "apps/web/src/lib/chat-tool-context.ts",
+        "sha256": "79fb113fb6e3963d6cc3b3f800f46e700a0dd3292ee62543852462ef4b75f1b2"
+      },
+      {
+        "path": "apps/web/src/lib/chat-tool-loop.ts",
+        "sha256": "93c01150c8080c87f4ca347797657b63c5f3b99d934957a157b1dbf1ec5a53de"
+      },
+      {
+        "path": "apps/web/src/lib/chat-viewport.ts",
+        "sha256": "3f2a0de81e7bb09678e0fe860aea761aedbbfa08e1893946cdcccec74128228e"
+      },
+      {
+        "path": "apps/web/src/lib/chat-workspace-store.ts",
+        "sha256": "21bafea6c27a9a8fabadc474c606d38aeaaeedef0a6cc01f8632023a3e14602e"
+      },
+      {
+        "path": "apps/web/src/lib/hasi-brand.ts",
+        "sha256": "b774fda2268ee7db22955a74499427e3cce9f198669dbe8adb3a44d29fbd933a"
+      },
+      {
+        "path": "apps/web/src/lib/host-dialogue-client.ts",
+        "sha256": "57b27c5822bdeeab299240a6d3ad86fd4a2ae2b3d8f09980dacf4acc715a50a9"
+      },
+      {
+        "path": "apps/web/src/lib/host-dialogue.ts",
+        "sha256": "353ca0fd2b66223bc0a2497514d2a5372637aecc1d21c6ba096f9adeeb926dd9"
+      },
+      {
+        "path": "apps/web/src/lib/initial-tool-plan.ts",
+        "sha256": "e9d51ecff5d8972b14f4f9180f8c023733d3220a5bf790ebd19a6e786250d764"
+      },
+      {
+        "path": "apps/web/src/lib/knowledge-citations.ts",
+        "sha256": "0c74a474018948847b2a08b6f832f04ceb1b70b9692bdf78f78065b51df83ad9"
+      },
+      {
+        "path": "apps/web/src/lib/knowledge-navigation.ts",
+        "sha256": "a356088d07db5c6ab67d4b6071b47c41f7d17f9c489027963c468b5ff7ce1e13"
+      },
+      {
+        "path": "apps/web/src/lib/knowledge.ts",
+        "sha256": "23abad81a23e4b101730fc58a1fa08e36b32a875c124c7cfdd4ef49adcd14a4d"
+      },
+      {
+        "path": "apps/web/src/lib/live-room-availability.ts",
+        "sha256": "12ccc681598f7be1d199490a238b7e8b335e0d3e206d1cadb71d17be780585de"
+      },
+      {
+        "path": "apps/web/src/lib/plugin-accounts.ts",
+        "sha256": "f9d13090b087c92e784955ea03dce8509c03bd6a2b6bddb33c9aa91779cc9fea"
+      },
+      {
+        "path": "apps/web/src/lib/plugin-app-policy.ts",
+        "sha256": "9c96caba3c657bef9d45e803fae0ee9f752692acb0fc52cd059ab0273a410b2c"
+      },
+      {
+        "path": "apps/web/src/lib/plugin-configuration.ts",
+        "sha256": "59c34ebff7a3c4097585666c76dafeecc774801f64eeac88f467e1332549700b"
+      },
+      {
+        "path": "apps/web/src/lib/plugin-release-review.ts",
+        "sha256": "df025f0e192a6e080de861418cc1cf3bfd5fa3492583070d181e1d6748789ef4"
+      },
+      {
+        "path": "apps/web/src/lib/plugin-tools.ts",
+        "sha256": "b3b710f358477c8f0fc82673634ccce728bd3f242539fee25c4d5fd0e70b21da"
+      },
+      {
+        "path": "apps/web/src/lib/proposal-failure.ts",
+        "sha256": "921ce5e9e1d6bafdca10635376ac3ca576ac0480983ea9a5e5ad46beb6cca4b5"
+      },
+      {
+        "path": "apps/web/src/lib/proposal-presentation.ts",
+        "sha256": "31dfb2e798db4b62d355b283cab0403ffa37546bc14e6df01b18aca2bd23b1c9"
+      },
+      {
+        "path": "apps/web/src/lib/protected-workspace-navigation.ts",
+        "sha256": "ed94a15a5f39b9a61189ffa7ebed24d989e7d7a6ebbf6a5edc7767406a4849fe"
+      },
+      {
+        "path": "apps/web/src/lib/protected-workspace-refresh.ts",
+        "sha256": "52ff51ebcc2431f74b9667341b7c431e68d1cc987e60571a6c5e89f1f782563d"
+      },
+      {
+        "path": "apps/web/src/lib/room-dialogue.ts",
+        "sha256": "7cff5a13a85d8f1b9b4c0c6562ac3a9b0f26f40d028c0c327115af8f538edc5c"
+      },
+      {
+        "path": "apps/web/src/lib/room-selection-messages.ts",
+        "sha256": "3556f7a8e87be4c5e2740e621bd6c7a82281a82246f2346f4ed9ed902297f974"
+      },
+      {
+        "path": "apps/web/src/lib/server/action-context.ts",
+        "sha256": "6d53d6a1fb80408d74ea9fd16805fe2287e3efa372e171e0c1a0491d231a3883"
+      },
+      {
+        "path": "apps/web/src/lib/server/action-history-references.ts",
+        "sha256": "705f09a7f26caa301a8e1886f77f8ae6bd3eab31aeb36fe9998c14049cced75b"
+      },
+      {
+        "path": "apps/web/src/lib/server/authorized-tools.ts",
+        "sha256": "1e7e078981b42f2ffa461f77fe2675e68810482ea08a75a2eeca76d5bceea13a"
+      },
+      {
+        "path": "apps/web/src/lib/server/chat-access.ts",
+        "sha256": "b3779046c24c909f5f32cbad3d99de6e65f94e7298b369ee2af903c6c8b3a509"
+      },
+      {
+        "path": "apps/web/src/lib/server/chat-admission.ts",
+        "sha256": "f3b747a2cd8984255dbd448129bdde2183c789cd73e7677bb65cb013433a148a"
+      },
+      {
+        "path": "apps/web/src/lib/server/chat-http.ts",
+        "sha256": "40f537f91d2196c5b945b9120ae5212f33fd7c9c6b13790ca98b306929b5b199"
+      },
+      {
+        "path": "apps/web/src/lib/server/chat-route.ts",
+        "sha256": "a99e56947dbda4878c8143b70edf79c92ca3ef29fc746aadb557eb45a00eced0"
+      },
+      {
+        "path": "apps/web/src/lib/server/core-api.ts",
+        "sha256": "04ba6aba7c460d62b9b0a70a3efa86ffc96b5cddf1dd4da2492cddb98d695bd5"
+      },
+      {
+        "path": "apps/web/src/lib/server/demo-integration-transport.ts",
+        "sha256": "6da77805dfb24c7ea81d45d8c9440a8a69dfb2c1445a94a2cd99c6a8a82fd0f6"
+      },
+      {
+        "path": "apps/web/src/lib/server/demo-runtime-namespace.ts",
+        "sha256": "c5c3ac3998de898850fb53aae5cf23d7292a263199d11d96a252399531207d72"
+      },
+      {
+        "path": "apps/web/src/lib/server/demo-runtime.ts",
+        "sha256": "da5dd68a74ca5fa64033ea6228ef4a66e7df3f95d8ace5617f6ec0148adabfc4"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/application-policy-plan.ts",
+        "sha256": "10cf08a11ff895fc48ff000a57247dcfe8c751e6577a10a992518de6b046ad6b"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/application-policy-runner.ts",
+        "sha256": "08430c4f9d9579a14f164be4b502c1ab3d0a0c28023342e5ae77320ecac7a078"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/case-schema.ts",
+        "sha256": "70b6207d5bdaf41b16d4482448cbce118720cd05037dd804a2765ad99320dd5c"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/input-projection.ts",
+        "sha256": "d8e2ba8f28cc86cca5cfe34c756424db5c1d60511a4d6ec2a2409569b3b7495e"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/oracles.ts",
+        "sha256": "ab84e15826559a2540b0bded4743aadeb8df2a94bdb141bbca8b63c5835daa8e"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/provider-observations.ts",
+        "sha256": "21b8f594fc3044842adc609f85a6468388336b0ad92924d0bef1cea8d9461010"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/provider-response-capture.ts",
+        "sha256": "f956acdf4e3fe3c4ba3c41aa4bfd6e7e01060566522571e17310dca3e2687ed6"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/provider-runner.ts",
+        "sha256": "917010e0d2112b59e1240c6faf3ce494d03c5d065cc06b74eb100fd947aad92d"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/provider-suite.ts",
+        "sha256": "853ee604ac9c8e5e02c730926aebab6223e9a35a24206ae1b0130f0380a3fc85"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/room-fixed-evidence-runner.ts",
+        "sha256": "04448a3c4dd97f098122fade6a1ab30cc630b619f1718d020744f390359718af"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/room-planning-plan.ts",
+        "sha256": "624fd565a73b0136c82b0ceb5184b580e9f9b1633e6c409534105ab256abdd5c"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/room-planning-runner.ts",
+        "sha256": "6b8ca87f7b1f9ca56ac467d26f50e65cccfc951f5cd42b6f16c396ab0a057179"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/runner.ts",
+        "sha256": "fd3a3225d27e20b005a019f15a7a6a711791f754550ea3413660f863020ea8a7"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/workflow-observations.ts",
+        "sha256": "657e04c1ed3c4db0dc287706ff50650db9df5f81fc6a97e610dd117770b81635"
+      },
+      {
+        "path": "apps/web/src/lib/server/groq-error-diagnostics.ts",
+        "sha256": "c87196ecacf6b498527a09c5d06945c64acb4291d5d0ca88381fc8c363a42442"
+      },
+      {
+        "path": "apps/web/src/lib/server/history-authority.ts",
+        "sha256": "0f1b05738815ba481831eee974356e3494a9c79251d7ffd6e310e2da21990514"
+      },
+      {
+        "path": "apps/web/src/lib/server/host-dialogue.ts",
+        "sha256": "c1bd2b58ed908007317d4ba95594c11262cf11d1990aab57dd01597e1b72b3b5"
+      },
+      {
+        "path": "apps/web/src/lib/server/knowledge-context.ts",
+        "sha256": "4c54412a18a543a0dca93bbe7f28bc39054be89573265391a7a4807a230c5435"
+      },
+      {
+        "path": "apps/web/src/lib/server/knowledge-evidence.ts",
+        "sha256": "252b2532d2a096dc668cb8e34efcc37242ba48f86d2384007d89c559128944c5"
+      },
+      {
+        "path": "apps/web/src/lib/server/message-timestamps.ts",
+        "sha256": "71dbdff2267004c4a67df8a4f064e00501c5e83bac341646707940a3bae261ca"
+      },
+      {
+        "path": "apps/web/src/lib/server/model-budgets.ts",
+        "sha256": "087423b1168b3bd680e2cd5e29d72bb585cc808173b4167ec2d40bd8c2d703dd"
+      },
+      {
+        "path": "apps/web/src/lib/server/model-cache-usage.ts",
+        "sha256": "1cc21000de80d7e4bc77296a32df99748be1e81c6f668c8cbf95082a23feef4b"
+      },
+      {
+        "path": "apps/web/src/lib/server/model-config.ts",
+        "sha256": "cd77823db62fc87ffacbcb84916e47295b674eb67c38d50e46b82087246b09a0"
+      },
+      {
+        "path": "apps/web/src/lib/server/model-router-error.ts",
+        "sha256": "df0e09fc59807d000df875cd8ae857aa384c3ba376e2f417069badca090e8ce6"
+      },
+      {
+        "path": "apps/web/src/lib/server/model-router.ts",
+        "sha256": "31d2acc8a754052bbf6bdded566c0dedef6d08352a0e90a903fe7ab43eb80e3d"
+      },
+      {
+        "path": "apps/web/src/lib/server/native-history.ts",
+        "sha256": "491b9efe35a85b73b7266885d42798b218fcc491730242de42eba434530c28d4"
+      },
+      {
+        "path": "apps/web/src/lib/server/plugin-result-context.ts",
+        "sha256": "c745ed42ddc4e1180eabb4f5ea6e18b962b6758ccd9421a667da33b49a676d6f"
+      },
+      {
+        "path": "apps/web/src/lib/server/plugin-result-read.ts",
+        "sha256": "e5900430875cce5ae23c15236704b8f5690af143627abbb3d396248be743258c"
+      },
+      {
+        "path": "apps/web/src/lib/server/protected-workspaces.ts",
+        "sha256": "408ea3a422045750be4da2b7109ce5c87971f86d44d8634efb4fb72f1fb64e41"
+      },
+      {
+        "path": "apps/web/src/lib/server/provider-rate-limits.ts",
+        "sha256": "cfd4688bd57f67de023209622c377464b7734784bb3d76d3a34863bf85400430"
+      },
+      {
+        "path": "apps/web/src/lib/server/routing-pins.ts",
+        "sha256": "1b210e7e2b215c6b00e2f9f1d03144fefbf379309f0ca73189eeb8c2a2c12ac2"
+      },
+      {
+        "path": "apps/web/src/lib/server/server-chat-storage.ts",
+        "sha256": "89aba917e2fe0d6bc19ee412b955cb45255434c37224368f6639438600984de6"
+      },
+      {
+        "path": "apps/web/src/lib/types.ts",
+        "sha256": "f2f4199ff2fcadc6c0dcf62dbbcf9c3bc3fad8108a7baed23fab76f817bc4db1"
+      },
+      {
+        "path": "apps/web/src/lib/use-action-focus-recovery.ts",
+        "sha256": "86ea9b23fd7158378caa61c83c6e4cf773d843d283a913514e931de5e2b1afcf"
+      }
+    ],
+    "assets": [
+      {
+        "path": "static/F1qWIkDu9MOKU-Od8ZYJV/_buildManifest.js",
+        "sha256": "9ef64d0b2db47b87ee7accd93ccb0cd9d9454e8e13cb28c1b8624fbce23b895d"
+      },
+      {
+        "path": "static/F1qWIkDu9MOKU-Od8ZYJV/_clientMiddlewareManifest.js",
+        "sha256": "5483e3295dc35dfe29ea932efc85341c916f10ff78ff5b0e965e003710893a4a"
+      },
+      {
+        "path": "static/F1qWIkDu9MOKU-Od8ZYJV/_ssgManifest.js",
+        "sha256": "678f6ce2cb80b1fe72fc67e7412be6e2ab6ada083111b64f7c40d35e3cba5e00"
+      },
+      {
+        "path": "static/chunks/0cfdxyf-0p-m_.js",
+        "sha256": "db4cdd99d18286ab1fa05d54832f3f9d322bda6683e727d1b2f9180b30354d81"
+      },
+      {
+        "path": "static/chunks/0cio0f5edad-_.js",
+        "sha256": "13481a8897045701f265d22fba4862385d924519bc0980eea5a07511bd3a80db"
+      },
+      {
+        "path": "static/chunks/0cz1d0mv5g_q7.js",
+        "sha256": "0973c1d64c88adc8e3c950410cb58b288f72118d5965b78049438deb8f2f9683"
+      },
+      {
+        "path": "static/chunks/0emhk8gange03.js",
+        "sha256": "bb18d66973e92604a52dd2099707be706a027203d68c386915af4f157f45a814"
+      },
+      {
+        "path": "static/chunks/0r8ah6uz1caij.js",
+        "sha256": "0d69708362a16b2b59add30dc665db693794d9d31ce5d51c29191ec37b1d26d1"
+      },
+      {
+        "path": "static/chunks/0z-wwj46n-xps.js",
+        "sha256": "b3f605bc64ca2d03633ee209773bb11bb6a8224a15b406cd07e80720d0e2ec2e"
+      },
+      {
+        "path": "static/chunks/1-5xa7-78wtfs.js",
+        "sha256": "51410addf9a565c8113efcf46621b00836c32344be2507ee867b871dcd6d9481"
+      },
+      {
+        "path": "static/chunks/15i2aus2s_c6-.js",
+        "sha256": "013ce2bfbab5e12834bf3e72adebb7ac3b441ae00db7b5ea8e20f7f13a98f2da"
+      },
+      {
+        "path": "static/chunks/1a1eo8l2y1dw3.css",
+        "sha256": "c555b8ab514218ace502208f074bcef5bc703f0d93b2f438ff2841164d64e94d"
+      },
+      {
+        "path": "static/chunks/28itoqgbjwz_c.js",
+        "sha256": "d5041ebff975f958d560a236ae4b04b06a0d7992c69918ccd7bf02bc8bb44480"
+      },
+      {
+        "path": "static/chunks/2bzsx-cxs-ieb.js",
+        "sha256": "d13d09ad806b7dc05ecdb77de8b2d0a60b56e28743638805bcbb220d9018dc05"
+      },
+      {
+        "path": "static/chunks/2llkpjxxr_fmy.css",
+        "sha256": "3ab933f7b8d64f2091ef7f1a918ffcfa681724376047b64504271f3040e16e64"
+      },
+      {
+        "path": "static/chunks/2vdqzxx6cex6w.css",
+        "sha256": "d96ee865e67f7767ffd893a1dff0c4f47afb75ae006d4a9798eb11edd118a87c"
+      },
+      {
+        "path": "static/chunks/36d41iolio4_1.js",
+        "sha256": "bc0979f49928189e825f8f9960217680d172d4a2d7d66db0b475667e9df3f1de"
+      },
+      {
+        "path": "static/chunks/37x1x3xwtnm3s.js",
+        "sha256": "1258370d17d4b3e4809752abd9c535991403467c72f5c2cf9f06145faa1b75e9"
+      },
+      {
+        "path": "static/chunks/3esi_yxpf_-re.js",
+        "sha256": "434275f141c7f7eda2bf06ecff5f9d0d1a3da9a4639776b2313161fa0a05dcef"
+      },
+      {
+        "path": "static/chunks/3fo73iud4_29w.js",
+        "sha256": "49fcbf8da5f807ff2ab49804520c5608acd66f4d4c2bcb18bc6e35eae1607a20"
+      },
+      {
+        "path": "static/chunks/3jg-6i_gk6b5g.js",
+        "sha256": "efe68e64f3c4dee1c502d0e743ff693f7a680b026ab95a71d52dc0a454e82ab2"
+      },
+      {
+        "path": "static/chunks/3pbs7uq9d1rw9.js",
+        "sha256": "3152781eaebfd1f1693e200a0398b74f7c555c610a06240c979f46b0f972b4fd"
+      },
+      {
+        "path": "static/chunks/3zv3bkin7qcuu.js",
+        "sha256": "f4ed93fc30802111e480944fbaf1b653b373a41aaf0f6292b343a3d2452643cf"
+      },
+      {
+        "path": "static/chunks/turbopack-2c3mg3r-05n1w.js",
+        "sha256": "b5f9b5199b99ab6c141f4540f0b7d0fe803c4ecf6956849ecb6e59d3d439272e"
+      },
+      {
+        "path": "static/media/icon.2p1rd9d-sr3rp.svg",
+        "sha256": "a43ffefe91ce8d5fcd9af9f315c6810b790b9e0b30c260af2c19815fe0a7b6cb"
+      }
+    ],
+    "buildId": "F1qWIkDu9MOKU-Od8ZYJV"
+  },
+  "afterBuild": {
+    "sourceRevision": "98e3cc2136495a99b4245dc9315eb117cdd4aa06",
+    "sourceFiles": [
+      {
+        "path": "apps/web/src/app/.well-known/hasi-plugin.json/route.ts",
+        "sha256": "49fd4fde2857b14af78cbab474b92fa2fc30ed8b54eca942a979d7aeca2eb919"
+      },
+      {
+        "path": "apps/web/src/app/account/connections/consent/page.tsx",
+        "sha256": "bca30958834e038cf26fd01804f2691fa7d8b0022dce4855d3cb71a29435bf14"
+      },
+      {
+        "path": "apps/web/src/app/account/connections/page.tsx",
+        "sha256": "d0b36752c2f294fc9c64ca527d7967bdc6a9b11cadc7c9c108aeb9be3dd8180c"
+      },
+      {
+        "path": "apps/web/src/app/admin/page.tsx",
+        "sha256": "15089eca88a0e833cc0f62a23b31eb856684a94fa040bed6d6dccb865f5f9505"
+      },
+      {
+        "path": "apps/web/src/app/api/[...path]/route.ts",
+        "sha256": "484ba589a28d4808eb67d34cdf8a32fe068d0bdbe5ea0caf8798fe3858c09839"
+      },
+      {
+        "path": "apps/web/src/app/api/chat/dialogue/route.ts",
+        "sha256": "72d682fea7be2617a09c6ca92bb69b182fbd355d5f1e5201dcc54ef33f2d1d61"
+      },
+      {
+        "path": "apps/web/src/app/api/chat/plugin-read/route.ts",
+        "sha256": "213518243cd9aacee153b0bbcffb1e6cdf1e317d224618450dbcfaf391103b78"
+      },
+      {
+        "path": "apps/web/src/app/api/chat/route.ts",
+        "sha256": "dc9053e31e9882f7a1199aa7b604aa8d0498313e3e60ce95bfc48698a6e5363c"
+      },
+      {
+        "path": "apps/web/src/app/api/chat/timestamps/route.ts",
+        "sha256": "86fde04c20394ec54944e4191aac1332c9b008e49f2db9abbc7d6a7b4a7387b2"
+      },
+      {
+        "path": "apps/web/src/app/api/chat/workspace/route.ts",
+        "sha256": "7fa2222515ba302898f9867713679fb72d21307fa41e27adb3f329572e3897da"
+      },
+      {
+        "path": "apps/web/src/app/api/health/route.ts",
+        "sha256": "785a0b1e12572b3401207b43e4e1af7d60bb75bac7c05b0820e19cdfec4a0fe9"
+      },
+      {
+        "path": "apps/web/src/app/apple-icon.tsx",
+        "sha256": "e30bbdace35b25f393352c118d8c64922ec5c6707894308caac45096cd40c6fd"
+      },
+      {
+        "path": "apps/web/src/app/bookings/page.tsx",
+        "sha256": "9a39dc2ef9114b3504c1c678a871c2401217b89e4e4575da2e02d8813c0881ce"
+      },
+      {
+        "path": "apps/web/src/app/globals.css",
+        "sha256": "063b4bc657603499122201b31eb19fa896171bd02f6ab4bbfa66ad993e05b9ba"
+      },
+      {
+        "path": "apps/web/src/app/hasi/actions/status/route.ts",
+        "sha256": "49982856041281324373a55917ee5e9a480ac131f21fd23d40dd956749e230a6"
+      },
+      {
+        "path": "apps/web/src/app/icon.svg",
+        "sha256": "a43ffefe91ce8d5fcd9af9f315c6810b790b9e0b30c260af2c19815fe0a7b6cb"
+      },
+      {
+        "path": "apps/web/src/app/layout.tsx",
+        "sha256": "a07367bd5f9e79ebaf0ed43c62e40a2cac00200d81d465b8661feac8062919af"
+      },
+      {
+        "path": "apps/web/src/app/mcp/route.ts",
+        "sha256": "7355a07b0b685f6136864cd627c2e3f0559a54fb5690a18bbcb7815e83fa8fdc"
+      },
+      {
+        "path": "apps/web/src/app/opengraph-image.tsx",
+        "sha256": "c5538ff3f38d5c586b1c4fc7b479a5f4ac256f7ff981b13c8db8eca2b2b5b678"
+      },
+      {
+        "path": "apps/web/src/app/page.tsx",
+        "sha256": "ff6acf43833245d4082e470e614ccd74ad7c6fcfa533b0d3e74001a397c910ca"
+      },
+      {
+        "path": "apps/web/src/app/plugins/knowledge/[...path]/route.ts",
+        "sha256": "042c06f03d483e09b224a185459fe69848e8128e1a9edfa9d2367ebacabae90e"
+      },
+      {
+        "path": "apps/web/src/app/robots.ts",
+        "sha256": "92dfc16d9b4ec7d43affd3bce7a0e5975458ba95115716f884b8d384fddd58e0"
+      },
+      {
+        "path": "apps/web/src/app/sources/[id]/page.tsx",
+        "sha256": "2bd5e8ef1464dda91b25bb7262e5036e885ce994c34c33a32783d69d627ddb16"
+      },
+      {
+        "path": "apps/web/src/components/action-status.tsx",
+        "sha256": "ce6675ff026e42a83544a08d572a7d5b099cb72a3f0f01a5fd1a496b7826f116"
+      },
+      {
+        "path": "apps/web/src/components/admin-page.tsx",
+        "sha256": "f00cdf1deafa41daa84acee31c835b3801020cdc66451120e3dab586476efa0a"
+      },
+      {
+        "path": "apps/web/src/components/app-shell.tsx",
+        "sha256": "1d12bff367891e9e2794a756284c6eb74ec0bff3c04a83325e4b08f8b6a3bc6b"
+      },
+      {
+        "path": "apps/web/src/components/assistant-page.tsx",
+        "sha256": "6ac379b9d119fc3890eb8a1eeb2ee6bbf5f2586301591d208ca5550a17b795c4"
+      },
+      {
+        "path": "apps/web/src/components/bookings-page.tsx",
+        "sha256": "12bbb0bcc303f3e614b84267954aa60c5582f80a65149e0463203a0eee8adaa9"
+      },
+      {
+        "path": "apps/web/src/components/chat-markdown.module.css",
+        "sha256": "341f1957a33f17234557e64007bda0214a637cdf65cbc2b8f7271ba0db3be24b"
+      },
+      {
+        "path": "apps/web/src/components/chat-markdown.tsx",
+        "sha256": "f28ffd3a0a7ae8a78858fdd0151d68e3aaf0d49a8eacfc8a8fc1b01d9b5cad55"
+      },
+      {
+        "path": "apps/web/src/components/chat-message-copy.module.css",
+        "sha256": "8e4ed7af10de509e6c68f489225d060ec281a164bb439a718ac65f3123d65df6"
+      },
+      {
+        "path": "apps/web/src/components/chat-message-copy.tsx",
+        "sha256": "b82d20dc70f28a4ec81fe96b626d4b765f13536d1a982f98876b93a538acaa24"
+      },
+      {
+        "path": "apps/web/src/components/chat-room-results.tsx",
+        "sha256": "0ad1bf5bcb3707b630a9ca6dd97177105a71d6dd1573b5f8c13316ea94fe3f27"
+      },
+      {
+        "path": "apps/web/src/components/chat-service-connection.tsx",
+        "sha256": "6ce5816e85ad8787ec6bfabaaaea3d77490d7d6d6091fb2527d93ecd58e7e141"
+      },
+      {
+        "path": "apps/web/src/components/chat-session-list.tsx",
+        "sha256": "aac7bd6992a97e3771546aecc4f189ea90703feedaf221fac3c36630b9d3adac"
+      },
+      {
+        "path": "apps/web/src/components/chat-sidebar-context.tsx",
+        "sha256": "c119446c6afac33485a42838afce66fb63790b4f6ac5817b7b7cbbea1cf51cce"
+      },
+      {
+        "path": "apps/web/src/components/hasi-icon.tsx",
+        "sha256": "b425a643b067b62ccacde7c6c249dd59f40f603916f6e4e9092163a5404fc538"
+      },
+      {
+        "path": "apps/web/src/components/knowledge-document.tsx",
+        "sha256": "3389b21b26ee7591062a2abf796c77b15c43405e84676c0bba7486467806b093"
+      },
+      {
+        "path": "apps/web/src/components/managed-plugin-panel.module.css",
+        "sha256": "3aef417d53bd8ce21ab643e6515700a67a2a2e47d4858738efca967d8e3c2553"
+      },
+      {
+        "path": "apps/web/src/components/managed-plugin-panel.tsx",
+        "sha256": "8b8891a2a6421d3a93b77def077ef7b1327c783338341fd643e71c595d332419"
+      },
+      {
+        "path": "apps/web/src/components/personal-connection-notice.tsx",
+        "sha256": "73cfdaee787055c05b49b9ec04d371e42563bafea0886a1b092a6146faf5f67f"
+      },
+      {
+        "path": "apps/web/src/components/plugin-account-consent.tsx",
+        "sha256": "f5d1d270390b23f2c94389a768b295885742079a45c241a5bddd379e820432fe"
+      },
+      {
+        "path": "apps/web/src/components/plugin-account-panel.tsx",
+        "sha256": "97c4d9ef4a744573f3bbdc2a7cb0fbd81799a7e82076de17b8c8d59bd950b0ce"
+      },
+      {
+        "path": "apps/web/src/components/plugin-app-view.tsx",
+        "sha256": "8115e043b444d5a7783d6f53b0fade7a791fa03b03144cea4f4b32ae731f8b4f"
+      },
+      {
+        "path": "apps/web/src/components/plugin-config-fields.tsx",
+        "sha256": "93e01ae80c4fcffa271d4e6ac57791dd90d8251a4e20a6fbe2313587b117f4e9"
+      },
+      {
+        "path": "apps/web/src/components/plugin-config-panel.tsx",
+        "sha256": "4a9a3f97125485fcc3f431467f2c066481373dbfca107042f1f4c34fca2d4d7f"
+      },
+      {
+        "path": "apps/web/src/components/plugin-release-review.module.css",
+        "sha256": "f98a1f7632ca9da910b5b745fa150654916d1d51da6ccf371e3e0e9f493afc3f"
+      },
+      {
+        "path": "apps/web/src/components/plugin-release-review.tsx",
+        "sha256": "7e5359668bafb6f8a98785ea97f54b34bca37cb4e2b7bf4554317c43a0576504"
+      },
+      {
+        "path": "apps/web/src/components/plugin-result-app.tsx",
+        "sha256": "0f7f1e2c72064ae4f557e6fac4c451e5b554efc8b20a306703725f56f7acdc5d"
+      },
+      {
+        "path": "apps/web/src/components/plugin-source-panel.tsx",
+        "sha256": "558bb1815c4deb29e650e9188b19f6b24aaa5a4b9fc3951d0aa5749e4f700833"
+      },
+      {
+        "path": "apps/web/src/components/providers.tsx",
+        "sha256": "3487808492857802a2e09f4f4e007c98cdbf370dda7ed0527fa1bee58fadad3d"
+      },
+      {
+        "path": "apps/web/src/components/public-demo-notice.tsx",
+        "sha256": "a521846e42da9a276033bff452ca0391ec39cff4391bea351f8a7d3e110775ba"
+      },
+      {
+        "path": "apps/web/src/components/session-provider.tsx",
+        "sha256": "cf1e15b902a132f18be21a1614574c23243fe4ee124d2032a02a325a82538925"
+      },
+      {
+        "path": "apps/web/src/components/theme-provider.tsx",
+        "sha256": "a0be30946df5253bb6a15457b6e692293f7dbaf8dcb6cfadce38a3492234d4da"
+      },
+      {
+        "path": "apps/web/src/components/use-chat-viewport.ts",
+        "sha256": "c8a2f101e15f5811f62fb24d8df4a08b155595618e856c2aa712907db07b1ef7"
+      },
+      {
+        "path": "apps/web/src/lib/action-preview.ts",
+        "sha256": "76827f9a218ad818ed8120f0cfb30840ae821063747b6a2f082b26d979263946"
+      },
+      {
+        "path": "apps/web/src/lib/anny-chat-tools.ts",
+        "sha256": "2c3982d3a3825eb1bc6ac7b8c5298d3482218413a0fefd9513b8ac800a435284"
+      },
+      {
+        "path": "apps/web/src/lib/api.ts",
+        "sha256": "4d2b746cb3adf22d86a4f80d9b437ae3a50af4c7861198a1ccf96dfeb7816d7f"
+      },
+      {
+        "path": "apps/web/src/lib/chat-action-guidance.ts",
+        "sha256": "179264cd840ac78f4318ff65fdd343971c2ca814f314efd3d3d539899453f9b1"
+      },
+      {
+        "path": "apps/web/src/lib/chat-contract.ts",
+        "sha256": "89c3268a69e30849ecff8c58e53c62b60f5b2b445937e6b1b27c970e81db1948"
+      },
+      {
+        "path": "apps/web/src/lib/chat-demo.ts",
+        "sha256": "2676b934dd84fa931fdc46e147a4798d82346899dd795de683198085c8beb158"
+      },
+      {
+        "path": "apps/web/src/lib/chat-history.ts",
+        "sha256": "4bb498a1c350f2325831a84c3e96587f64327434eb99d42f2f0901052b089139"
+      },
+      {
+        "path": "apps/web/src/lib/chat-knowledge-citations.ts",
+        "sha256": "46f6c5424c1440975caa30b3b100343d45bc7b391a56b435d4d8078609ae73fe"
+      },
+      {
+        "path": "apps/web/src/lib/chat-message-clock.ts",
+        "sha256": "421ad0c7a2677089858ba136425b6960c47a597021246c04b7d38660fd3a38d5"
+      },
+      {
+        "path": "apps/web/src/lib/chat-message-copy.ts",
+        "sha256": "96960f4e9c3a954f4b1d7789c3e52fbf4fbaf352f86ad1acd4727974d39773e3"
+      },
+      {
+        "path": "apps/web/src/lib/chat-room-time.ts",
+        "sha256": "ec30942a9d0f4e7b078958961e0faaf9e385d5057900c9f76af1d058fccd881b"
+      },
+      {
+        "path": "apps/web/src/lib/chat-sessions.ts",
+        "sha256": "0c0fe84326c288a579b065f1ad0b672aa7ab8de2cd207df8a42c45b2bbad0008"
+      },
+      {
+        "path": "apps/web/src/lib/chat-tool-context.ts",
+        "sha256": "79fb113fb6e3963d6cc3b3f800f46e700a0dd3292ee62543852462ef4b75f1b2"
+      },
+      {
+        "path": "apps/web/src/lib/chat-tool-loop.ts",
+        "sha256": "93c01150c8080c87f4ca347797657b63c5f3b99d934957a157b1dbf1ec5a53de"
+      },
+      {
+        "path": "apps/web/src/lib/chat-viewport.ts",
+        "sha256": "3f2a0de81e7bb09678e0fe860aea761aedbbfa08e1893946cdcccec74128228e"
+      },
+      {
+        "path": "apps/web/src/lib/chat-workspace-store.ts",
+        "sha256": "21bafea6c27a9a8fabadc474c606d38aeaaeedef0a6cc01f8632023a3e14602e"
+      },
+      {
+        "path": "apps/web/src/lib/hasi-brand.ts",
+        "sha256": "b774fda2268ee7db22955a74499427e3cce9f198669dbe8adb3a44d29fbd933a"
+      },
+      {
+        "path": "apps/web/src/lib/host-dialogue-client.ts",
+        "sha256": "57b27c5822bdeeab299240a6d3ad86fd4a2ae2b3d8f09980dacf4acc715a50a9"
+      },
+      {
+        "path": "apps/web/src/lib/host-dialogue.ts",
+        "sha256": "353ca0fd2b66223bc0a2497514d2a5372637aecc1d21c6ba096f9adeeb926dd9"
+      },
+      {
+        "path": "apps/web/src/lib/initial-tool-plan.ts",
+        "sha256": "e9d51ecff5d8972b14f4f9180f8c023733d3220a5bf790ebd19a6e786250d764"
+      },
+      {
+        "path": "apps/web/src/lib/knowledge-citations.ts",
+        "sha256": "0c74a474018948847b2a08b6f832f04ceb1b70b9692bdf78f78065b51df83ad9"
+      },
+      {
+        "path": "apps/web/src/lib/knowledge-navigation.ts",
+        "sha256": "a356088d07db5c6ab67d4b6071b47c41f7d17f9c489027963c468b5ff7ce1e13"
+      },
+      {
+        "path": "apps/web/src/lib/knowledge.ts",
+        "sha256": "23abad81a23e4b101730fc58a1fa08e36b32a875c124c7cfdd4ef49adcd14a4d"
+      },
+      {
+        "path": "apps/web/src/lib/live-room-availability.ts",
+        "sha256": "12ccc681598f7be1d199490a238b7e8b335e0d3e206d1cadb71d17be780585de"
+      },
+      {
+        "path": "apps/web/src/lib/plugin-accounts.ts",
+        "sha256": "f9d13090b087c92e784955ea03dce8509c03bd6a2b6bddb33c9aa91779cc9fea"
+      },
+      {
+        "path": "apps/web/src/lib/plugin-app-policy.ts",
+        "sha256": "9c96caba3c657bef9d45e803fae0ee9f752692acb0fc52cd059ab0273a410b2c"
+      },
+      {
+        "path": "apps/web/src/lib/plugin-configuration.ts",
+        "sha256": "59c34ebff7a3c4097585666c76dafeecc774801f64eeac88f467e1332549700b"
+      },
+      {
+        "path": "apps/web/src/lib/plugin-release-review.ts",
+        "sha256": "df025f0e192a6e080de861418cc1cf3bfd5fa3492583070d181e1d6748789ef4"
+      },
+      {
+        "path": "apps/web/src/lib/plugin-tools.ts",
+        "sha256": "b3b710f358477c8f0fc82673634ccce728bd3f242539fee25c4d5fd0e70b21da"
+      },
+      {
+        "path": "apps/web/src/lib/proposal-failure.ts",
+        "sha256": "921ce5e9e1d6bafdca10635376ac3ca576ac0480983ea9a5e5ad46beb6cca4b5"
+      },
+      {
+        "path": "apps/web/src/lib/proposal-presentation.ts",
+        "sha256": "31dfb2e798db4b62d355b283cab0403ffa37546bc14e6df01b18aca2bd23b1c9"
+      },
+      {
+        "path": "apps/web/src/lib/protected-workspace-navigation.ts",
+        "sha256": "ed94a15a5f39b9a61189ffa7ebed24d989e7d7a6ebbf6a5edc7767406a4849fe"
+      },
+      {
+        "path": "apps/web/src/lib/protected-workspace-refresh.ts",
+        "sha256": "52ff51ebcc2431f74b9667341b7c431e68d1cc987e60571a6c5e89f1f782563d"
+      },
+      {
+        "path": "apps/web/src/lib/room-dialogue.ts",
+        "sha256": "7cff5a13a85d8f1b9b4c0c6562ac3a9b0f26f40d028c0c327115af8f538edc5c"
+      },
+      {
+        "path": "apps/web/src/lib/room-selection-messages.ts",
+        "sha256": "3556f7a8e87be4c5e2740e621bd6c7a82281a82246f2346f4ed9ed902297f974"
+      },
+      {
+        "path": "apps/web/src/lib/server/action-context.ts",
+        "sha256": "6d53d6a1fb80408d74ea9fd16805fe2287e3efa372e171e0c1a0491d231a3883"
+      },
+      {
+        "path": "apps/web/src/lib/server/action-history-references.ts",
+        "sha256": "705f09a7f26caa301a8e1886f77f8ae6bd3eab31aeb36fe9998c14049cced75b"
+      },
+      {
+        "path": "apps/web/src/lib/server/authorized-tools.ts",
+        "sha256": "1e7e078981b42f2ffa461f77fe2675e68810482ea08a75a2eeca76d5bceea13a"
+      },
+      {
+        "path": "apps/web/src/lib/server/chat-access.ts",
+        "sha256": "b3779046c24c909f5f32cbad3d99de6e65f94e7298b369ee2af903c6c8b3a509"
+      },
+      {
+        "path": "apps/web/src/lib/server/chat-admission.ts",
+        "sha256": "f3b747a2cd8984255dbd448129bdde2183c789cd73e7677bb65cb013433a148a"
+      },
+      {
+        "path": "apps/web/src/lib/server/chat-http.ts",
+        "sha256": "40f537f91d2196c5b945b9120ae5212f33fd7c9c6b13790ca98b306929b5b199"
+      },
+      {
+        "path": "apps/web/src/lib/server/chat-route.ts",
+        "sha256": "a99e56947dbda4878c8143b70edf79c92ca3ef29fc746aadb557eb45a00eced0"
+      },
+      {
+        "path": "apps/web/src/lib/server/core-api.ts",
+        "sha256": "04ba6aba7c460d62b9b0a70a3efa86ffc96b5cddf1dd4da2492cddb98d695bd5"
+      },
+      {
+        "path": "apps/web/src/lib/server/demo-integration-transport.ts",
+        "sha256": "6da77805dfb24c7ea81d45d8c9440a8a69dfb2c1445a94a2cd99c6a8a82fd0f6"
+      },
+      {
+        "path": "apps/web/src/lib/server/demo-runtime-namespace.ts",
+        "sha256": "c5c3ac3998de898850fb53aae5cf23d7292a263199d11d96a252399531207d72"
+      },
+      {
+        "path": "apps/web/src/lib/server/demo-runtime.ts",
+        "sha256": "da5dd68a74ca5fa64033ea6228ef4a66e7df3f95d8ace5617f6ec0148adabfc4"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/application-policy-plan.ts",
+        "sha256": "10cf08a11ff895fc48ff000a57247dcfe8c751e6577a10a992518de6b046ad6b"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/application-policy-runner.ts",
+        "sha256": "08430c4f9d9579a14f164be4b502c1ab3d0a0c28023342e5ae77320ecac7a078"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/case-schema.ts",
+        "sha256": "70b6207d5bdaf41b16d4482448cbce118720cd05037dd804a2765ad99320dd5c"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/input-projection.ts",
+        "sha256": "d8e2ba8f28cc86cca5cfe34c756424db5c1d60511a4d6ec2a2409569b3b7495e"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/oracles.ts",
+        "sha256": "ab84e15826559a2540b0bded4743aadeb8df2a94bdb141bbca8b63c5835daa8e"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/provider-observations.ts",
+        "sha256": "21b8f594fc3044842adc609f85a6468388336b0ad92924d0bef1cea8d9461010"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/provider-response-capture.ts",
+        "sha256": "f956acdf4e3fe3c4ba3c41aa4bfd6e7e01060566522571e17310dca3e2687ed6"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/provider-runner.ts",
+        "sha256": "917010e0d2112b59e1240c6faf3ce494d03c5d065cc06b74eb100fd947aad92d"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/provider-suite.ts",
+        "sha256": "853ee604ac9c8e5e02c730926aebab6223e9a35a24206ae1b0130f0380a3fc85"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/room-fixed-evidence-runner.ts",
+        "sha256": "04448a3c4dd97f098122fade6a1ab30cc630b619f1718d020744f390359718af"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/room-planning-plan.ts",
+        "sha256": "624fd565a73b0136c82b0ceb5184b580e9f9b1633e6c409534105ab256abdd5c"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/room-planning-runner.ts",
+        "sha256": "6b8ca87f7b1f9ca56ac467d26f50e65cccfc951f5cd42b6f16c396ab0a057179"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/runner.ts",
+        "sha256": "fd3a3225d27e20b005a019f15a7a6a711791f754550ea3413660f863020ea8a7"
+      },
+      {
+        "path": "apps/web/src/lib/server/evaluation/workflow-observations.ts",
+        "sha256": "657e04c1ed3c4db0dc287706ff50650db9df5f81fc6a97e610dd117770b81635"
+      },
+      {
+        "path": "apps/web/src/lib/server/groq-error-diagnostics.ts",
+        "sha256": "c87196ecacf6b498527a09c5d06945c64acb4291d5d0ca88381fc8c363a42442"
+      },
+      {
+        "path": "apps/web/src/lib/server/history-authority.ts",
+        "sha256": "0f1b05738815ba481831eee974356e3494a9c79251d7ffd6e310e2da21990514"
+      },
+      {
+        "path": "apps/web/src/lib/server/host-dialogue.ts",
+        "sha256": "c1bd2b58ed908007317d4ba95594c11262cf11d1990aab57dd01597e1b72b3b5"
+      },
+      {
+        "path": "apps/web/src/lib/server/knowledge-context.ts",
+        "sha256": "4c54412a18a543a0dca93bbe7f28bc39054be89573265391a7a4807a230c5435"
+      },
+      {
+        "path": "apps/web/src/lib/server/knowledge-evidence.ts",
+        "sha256": "252b2532d2a096dc668cb8e34efcc37242ba48f86d2384007d89c559128944c5"
+      },
+      {
+        "path": "apps/web/src/lib/server/message-timestamps.ts",
+        "sha256": "71dbdff2267004c4a67df8a4f064e00501c5e83bac341646707940a3bae261ca"
+      },
+      {
+        "path": "apps/web/src/lib/server/model-budgets.ts",
+        "sha256": "087423b1168b3bd680e2cd5e29d72bb585cc808173b4167ec2d40bd8c2d703dd"
+      },
+      {
+        "path": "apps/web/src/lib/server/model-cache-usage.ts",
+        "sha256": "1cc21000de80d7e4bc77296a32df99748be1e81c6f668c8cbf95082a23feef4b"
+      },
+      {
+        "path": "apps/web/src/lib/server/model-config.ts",
+        "sha256": "cd77823db62fc87ffacbcb84916e47295b674eb67c38d50e46b82087246b09a0"
+      },
+      {
+        "path": "apps/web/src/lib/server/model-router-error.ts",
+        "sha256": "df0e09fc59807d000df875cd8ae857aa384c3ba376e2f417069badca090e8ce6"
+      },
+      {
+        "path": "apps/web/src/lib/server/model-router.ts",
+        "sha256": "31d2acc8a754052bbf6bdded566c0dedef6d08352a0e90a903fe7ab43eb80e3d"
+      },
+      {
+        "path": "apps/web/src/lib/server/native-history.ts",
+        "sha256": "491b9efe35a85b73b7266885d42798b218fcc491730242de42eba434530c28d4"
+      },
+      {
+        "path": "apps/web/src/lib/server/plugin-result-context.ts",
+        "sha256": "c745ed42ddc4e1180eabb4f5ea6e18b962b6758ccd9421a667da33b49a676d6f"
+      },
+      {
+        "path": "apps/web/src/lib/server/plugin-result-read.ts",
+        "sha256": "e5900430875cce5ae23c15236704b8f5690af143627abbb3d396248be743258c"
+      },
+      {
+        "path": "apps/web/src/lib/server/protected-workspaces.ts",
+        "sha256": "408ea3a422045750be4da2b7109ce5c87971f86d44d8634efb4fb72f1fb64e41"
+      },
+      {
+        "path": "apps/web/src/lib/server/provider-rate-limits.ts",
+        "sha256": "cfd4688bd57f67de023209622c377464b7734784bb3d76d3a34863bf85400430"
+      },
+      {
+        "path": "apps/web/src/lib/server/routing-pins.ts",
+        "sha256": "1b210e7e2b215c6b00e2f9f1d03144fefbf379309f0ca73189eeb8c2a2c12ac2"
+      },
+      {
+        "path": "apps/web/src/lib/server/server-chat-storage.ts",
+        "sha256": "89aba917e2fe0d6bc19ee412b955cb45255434c37224368f6639438600984de6"
+      },
+      {
+        "path": "apps/web/src/lib/types.ts",
+        "sha256": "f2f4199ff2fcadc6c0dcf62dbbcf9c3bc3fad8108a7baed23fab76f817bc4db1"
+      },
+      {
+        "path": "apps/web/src/lib/use-action-focus-recovery.ts",
+        "sha256": "86ea9b23fd7158378caa61c83c6e4cf773d843d283a913514e931de5e2b1afcf"
+      }
+    ],
+    "assets": [
+      {
+        "path": "static/MtrB_X0P5XUZBeDs8d4Nv/_buildManifest.js",
+        "sha256": "9ef64d0b2db47b87ee7accd93ccb0cd9d9454e8e13cb28c1b8624fbce23b895d"
+      },
+      {
+        "path": "static/MtrB_X0P5XUZBeDs8d4Nv/_clientMiddlewareManifest.js",
+        "sha256": "5483e3295dc35dfe29ea932efc85341c916f10ff78ff5b0e965e003710893a4a"
+      },
+      {
+        "path": "static/MtrB_X0P5XUZBeDs8d4Nv/_ssgManifest.js",
+        "sha256": "678f6ce2cb80b1fe72fc67e7412be6e2ab6ada083111b64f7c40d35e3cba5e00"
+      },
+      {
+        "path": "static/chunks/0cfdxyf-0p-m_.js",
+        "sha256": "db4cdd99d18286ab1fa05d54832f3f9d322bda6683e727d1b2f9180b30354d81"
+      },
+      {
+        "path": "static/chunks/0cio0f5edad-_.js",
+        "sha256": "13481a8897045701f265d22fba4862385d924519bc0980eea5a07511bd3a80db"
+      },
+      {
+        "path": "static/chunks/0cz1d0mv5g_q7.js",
+        "sha256": "0973c1d64c88adc8e3c950410cb58b288f72118d5965b78049438deb8f2f9683"
+      },
+      {
+        "path": "static/chunks/0emhk8gange03.js",
+        "sha256": "bb18d66973e92604a52dd2099707be706a027203d68c386915af4f157f45a814"
+      },
+      {
+        "path": "static/chunks/0r8ah6uz1caij.js",
+        "sha256": "0d69708362a16b2b59add30dc665db693794d9d31ce5d51c29191ec37b1d26d1"
+      },
+      {
+        "path": "static/chunks/0z-wwj46n-xps.js",
+        "sha256": "b3f605bc64ca2d03633ee209773bb11bb6a8224a15b406cd07e80720d0e2ec2e"
+      },
+      {
+        "path": "static/chunks/1-5xa7-78wtfs.js",
+        "sha256": "51410addf9a565c8113efcf46621b00836c32344be2507ee867b871dcd6d9481"
+      },
+      {
+        "path": "static/chunks/14w6_l6kg8_6z.css",
+        "sha256": "7f862a2a6b2d44e54004d5344f1b71034f6428a644cc8bd830500e6a61db2b10"
+      },
+      {
+        "path": "static/chunks/15i2aus2s_c6-.js",
+        "sha256": "013ce2bfbab5e12834bf3e72adebb7ac3b441ae00db7b5ea8e20f7f13a98f2da"
+      },
+      {
+        "path": "static/chunks/1w7x0ght2rtky.css",
+        "sha256": "f9c500b672e92e24da1322df2a78b6d5a41fa4700a635070a639657ac19d30b0"
+      },
+      {
+        "path": "static/chunks/28itoqgbjwz_c.js",
+        "sha256": "d5041ebff975f958d560a236ae4b04b06a0d7992c69918ccd7bf02bc8bb44480"
+      },
+      {
+        "path": "static/chunks/2bzsx-cxs-ieb.js",
+        "sha256": "d13d09ad806b7dc05ecdb77de8b2d0a60b56e28743638805bcbb220d9018dc05"
+      },
+      {
+        "path": "static/chunks/2llkpjxxr_fmy.css",
+        "sha256": "3ab933f7b8d64f2091ef7f1a918ffcfa681724376047b64504271f3040e16e64"
+      },
+      {
+        "path": "static/chunks/36d41iolio4_1.js",
+        "sha256": "bc0979f49928189e825f8f9960217680d172d4a2d7d66db0b475667e9df3f1de"
+      },
+      {
+        "path": "static/chunks/37x1x3xwtnm3s.js",
+        "sha256": "1258370d17d4b3e4809752abd9c535991403467c72f5c2cf9f06145faa1b75e9"
+      },
+      {
+        "path": "static/chunks/3esi_yxpf_-re.js",
+        "sha256": "434275f141c7f7eda2bf06ecff5f9d0d1a3da9a4639776b2313161fa0a05dcef"
+      },
+      {
+        "path": "static/chunks/3fo73iud4_29w.js",
+        "sha256": "49fcbf8da5f807ff2ab49804520c5608acd66f4d4c2bcb18bc6e35eae1607a20"
+      },
+      {
+        "path": "static/chunks/3jg-6i_gk6b5g.js",
+        "sha256": "efe68e64f3c4dee1c502d0e743ff693f7a680b026ab95a71d52dc0a454e82ab2"
+      },
+      {
+        "path": "static/chunks/3pbs7uq9d1rw9.js",
+        "sha256": "3152781eaebfd1f1693e200a0398b74f7c555c610a06240c979f46b0f972b4fd"
+      },
+      {
+        "path": "static/chunks/3zv3bkin7qcuu.js",
+        "sha256": "f4ed93fc30802111e480944fbaf1b653b373a41aaf0f6292b343a3d2452643cf"
+      },
+      {
+        "path": "static/chunks/turbopack-2c3mg3r-05n1w.js",
+        "sha256": "b5f9b5199b99ab6c141f4540f0b7d0fe803c4ecf6956849ecb6e59d3d439272e"
+      },
+      {
+        "path": "static/media/icon.2p1rd9d-sr3rp.svg",
+        "sha256": "a43ffefe91ce8d5fcd9af9f315c6810b790b9e0b30c260af2c19815fe0a7b6cb"
+      }
+    ],
+    "buildId": "MtrB_X0P5XUZBeDs8d4Nv"
+  },
+  "measurement": {
+    "python": "bundled Python3",
+    "pillow": "12.3.0",
+    "selfTestsPassed": 8,
+    "largeTextThreshold": 3,
+    "normalTextThreshold": 4.5,
+    "backgroundQuantizationSteps": 1,
+    "glyphDifferenceChannelThreshold": 8
+  },
+  "counts": {
+    "bounded-pass": 66,
+    "unsupported": 1,
+    "bounded-fail": 4
+  },
+  "correctedCounts": {
+    "bounded-pass": 20,
+    "unsupported": 1
+  },
+  "observations": [
+    {
+      "id": "controls",
+      "build": "baseline",
+      "calibration": true,
+      "manifestSha256": "1a79e97936430a14d9eeb167bd67d93e9a9048737fedc11fe4694515b5e65a21",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 19,
+            "left": 32,
+            "top": 112,
+            "width": 153
+          },
+          "computedColor": "rgb(0, 0, 0)",
+          "fontSize": 16,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "hiddenImage": "control-black.png",
+          "id": "control-black",
+          "normalImage": "controls-normal.png",
+          "rects": [
+            {
+              "bottom": 130.5,
+              "left": 32,
+              "right": 184.953125,
+              "top": 112
+            }
+          ],
+          "selector": "#contrast-black",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 928,
+          "nominalMinimum": 21.0,
+          "minLowerBound": 20.822041942276595,
+          "minUpperBound": 21.0
+        },
+        {
+          "clip": {
+            "height": 19,
+            "left": 32,
+            "top": 130,
+            "width": 144
+          },
+          "computedColor": "rgb(136, 136, 136)",
+          "fontSize": 16,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.5333333333333333,
+            0.5333333333333333,
+            0.5333333333333333,
+            1
+          ],
+          "hiddenImage": "control-low.png",
+          "id": "control-low",
+          "normalImage": "controls-normal.png",
+          "rects": [
+            {
+              "bottom": 149,
+              "left": 32,
+              "right": 175.1796875,
+              "top": 130.5
+            }
+          ],
+          "selector": "#contrast-low",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-fail",
+          "matchedPixels": 786,
+          "nominalMinimum": 3.5448862152994005,
+          "minLowerBound": 3.5148461645505837,
+          "minUpperBound": 3.5448862152994005
+        },
+        {
+          "clip": {
+            "height": 19,
+            "left": 32,
+            "top": 149,
+            "width": 155
+          },
+          "computedColor": "rgba(0, 0, 0, 0.5)",
+          "fontSize": 16,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "hiddenImage": "control-alpha.png",
+          "id": "control-alpha",
+          "normalImage": "controls-normal.png",
+          "rects": [
+            {
+              "bottom": 167.5,
+              "left": 32,
+              "right": 186.75,
+              "top": 149
+            }
+          ],
+          "selector": "#contrast-alpha",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-fail",
+          "matchedPixels": 902,
+          "nominalMinimum": 3.976653024912438,
+          "minLowerBound": 3.942954098790852,
+          "minUpperBound": 4.0041069566148515
+        }
+      ]
+    },
+    {
+      "id": "dark-card",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "2c6a48176f41a0793ae43151aa1d5780dd66fb19c50cc858c039652bf223dc65",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 17,
+            "left": 420,
+            "top": 237,
+            "width": 122
+          },
+          "computedColor": "rgb(241, 240, 236)",
+          "fontSize": 14,
+          "fontWeight": "630",
+          "foregroundRGBA": [
+            0.9450980392156862,
+            0.9411764705882352,
+            0.9254901960784314,
+            1
+          ],
+          "hiddenImage": "dark-card-title.png",
+          "id": "dark-card-title",
+          "normalImage": "dark-card-normal.png",
+          "rects": [
+            {
+              "bottom": 253.890625,
+              "left": 420,
+              "right": 541.3125,
+              "top": 237.390625
+            }
+          ],
+          "selector": ".chat-room-result:first-of-type h3",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 661,
+          "nominalMinimum": 14.754310520032945,
+          "minLowerBound": 14.590651963587284,
+          "minUpperBound": 14.916284761813115
+        },
+        {
+          "clip": {
+            "height": 15,
+            "left": 420,
+            "top": 258,
+            "width": 235
+          },
+          "computedColor": "rgb(174, 177, 169)",
+          "fontSize": 12,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.6823529411764706,
+            0.6941176470588235,
+            0.6627450980392157,
+            1
+          ],
+          "hiddenImage": "dark-card-location.png",
+          "id": "dark-card-location",
+          "normalImage": "dark-card-normal.png",
+          "rects": [
+            {
+              "bottom": 271.2890625,
+              "left": 420,
+              "right": 433,
+              "top": 258.2890625
+            },
+            {
+              "bottom": 272.2890625,
+              "left": 437,
+              "right": 470.3125,
+              "top": 258.2890625
+            },
+            {
+              "bottom": 272.2890625,
+              "left": 470.3125,
+              "right": 654.6015625,
+              "top": 258.2890625
+            }
+          ],
+          "selector": ".chat-room-result:first-of-type .chat-room-result__location:first-of-type",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 898,
+          "nominalMinimum": 7.7177653083294215,
+          "minLowerBound": 7.631650464357319,
+          "minUpperBound": 7.803022858109964
+        },
+        {
+          "clip": {
+            "height": 15,
+            "left": 384,
+            "top": 305,
+            "width": 132
+          },
+          "computedColor": "rgb(209, 210, 202)",
+          "fontSize": 11,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.8196078431372549,
+            0.8235294117647058,
+            0.792156862745098,
+            1
+          ],
+          "hiddenImage": "dark-card-kind.png",
+          "id": "dark-card-kind",
+          "normalImage": "dark-card-normal.png",
+          "rects": [
+            {
+              "bottom": 319.3828125,
+              "left": 384,
+              "right": 397,
+              "top": 306.3828125
+            },
+            {
+              "bottom": 318.9609375,
+              "left": 401,
+              "right": 515.4296875,
+              "top": 305.9609375
+            }
+          ],
+          "selector": ".chat-room-result:first-of-type .chat-room-result__kind",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 485,
+          "nominalMinimum": 10.402985737650617,
+          "minLowerBound": 10.276103254965562,
+          "minUpperBound": 10.529281730140024
+        },
+        {
+          "clip": {
+            "height": 14,
+            "left": 535,
+            "top": 305,
+            "width": 164
+          },
+          "computedColor": "rgb(174, 177, 169)",
+          "fontSize": 11,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.6823529411764706,
+            0.6941176470588235,
+            0.6627450980392157,
+            1
+          ],
+          "hiddenImage": "dark-card-capacity.png",
+          "id": "dark-card-capacity",
+          "normalImage": "dark-card-normal.png",
+          "rects": [
+            {
+              "bottom": 318.9609375,
+              "left": 535.4296875,
+              "right": 698.7265625,
+              "top": 305.9609375
+            }
+          ],
+          "selector": ".chat-room-result:first-of-type .chat-room-result__capacity",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 692,
+          "nominalMinimum": 7.7177653083294215,
+          "minLowerBound": 7.631650464357319,
+          "minUpperBound": 7.803022858109964
+        },
+        {
+          "clip": {
+            "height": 14,
+            "left": 718,
+            "top": 305,
+            "width": 180
+          },
+          "computedColor": "rgb(162, 186, 198)",
+          "fontSize": 11,
+          "fontWeight": "580",
+          "foregroundRGBA": [
+            0.6352941176470588,
+            0.7294117647058823,
+            0.7764705882352941,
+            1
+          ],
+          "hiddenImage": "dark-card-status.png",
+          "id": "dark-card-status",
+          "normalImage": "dark-card-normal.png",
+          "rects": [
+            {
+              "bottom": 318.9609375,
+              "left": 718.7265625,
+              "right": 897.8984375,
+              "top": 305.9609375
+            }
+          ],
+          "selector": ".chat-room-result:first-of-type .chat-room-result__status",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 830,
+          "nominalMinimum": 6.28522182676319,
+          "minLowerBound": 6.193780985585083,
+          "minUpperBound": 6.377350102262713
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 388,
+            "top": 399,
+            "width": 181
+          },
+          "computedColor": "rgb(240, 176, 150)",
+          "fontSize": 12,
+          "fontWeight": "600",
+          "foregroundRGBA": [
+            0.9411764705882352,
+            0.6901960784313725,
+            0.5882352941176471,
+            1
+          ],
+          "hiddenImage": "dark-card-plan.png",
+          "id": "dark-card-plan",
+          "normalImage": "dark-card-normal.png",
+          "rects": [
+            {
+              "bottom": 413.8828125,
+              "left": 388,
+              "right": 546.671875,
+              "top": 399.8828125
+            },
+            {
+              "bottom": 414.3828125,
+              "left": 553.671875,
+              "right": 568.671875,
+              "top": 399.3828125
+            }
+          ],
+          "selector": ".chat-room-result:first-of-type button",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 936,
+          "nominalMinimum": 8.10157179775295,
+          "minLowerBound": 7.99647696982161,
+          "minUpperBound": 8.20660069982306
+        }
+      ]
+    },
+    {
+      "id": "dark-chat",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "cecd4f39cf3dcf89316aba0023d5025cc1c98985f8958e40ef4df8b099eeb569",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 12,
+            "left": 25,
+            "top": 66,
+            "width": 145
+          },
+          "computedColor": "rgb(174, 177, 169)",
+          "fontSize": 10,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.6823529411764706,
+            0.6941176470588235,
+            0.6627450980392157,
+            1
+          ],
+          "hiddenImage": "dark-caption.png",
+          "id": "dark-caption",
+          "normalImage": "dark-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 78,
+              "left": 25,
+              "right": 169.671875,
+              "top": 66.5
+            }
+          ],
+          "selector": ".side-nav .brand-caption",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 523,
+          "nominalMinimum": 8.638292129539131,
+          "minLowerBound": 8.568178735971202,
+          "minUpperBound": 8.70646301421749
+        },
+        {
+          "clip": {
+            "height": 11,
+            "left": 33,
+            "top": 126,
+            "width": 49
+          },
+          "computedColor": "rgb(174, 177, 169)",
+          "fontSize": 9,
+          "fontWeight": "700",
+          "foregroundRGBA": [
+            0.6823529411764706,
+            0.6941176470588235,
+            0.6627450980392157,
+            1
+          ],
+          "hiddenImage": "dark-campus.png",
+          "id": "dark-campus",
+          "normalImage": "dark-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 137,
+              "left": 33,
+              "right": 81.234375,
+              "top": 126.5
+            }
+          ],
+          "selector": ".side-nav-label",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 200,
+          "nominalMinimum": 8.638292129539131,
+          "minLowerBound": 8.568178735971202,
+          "minUpperBound": 8.70646301421749
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 66,
+            "top": 165,
+            "width": 38
+          },
+          "computedColor": "rgb(241, 240, 236)",
+          "fontSize": 13,
+          "fontWeight": "650",
+          "foregroundRGBA": [
+            0.9450980392156862,
+            0.9411764705882352,
+            0.9254901960784314,
+            1
+          ],
+          "hiddenImage": "dark-nav-active.png",
+          "id": "dark-nav-active",
+          "normalImage": "dark-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 180.46875,
+              "left": 66,
+              "right": 103.359375,
+              "top": 165.46875
+            }
+          ],
+          "selector": ".side-nav .nav-link.is-active>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 218,
+          "nominalMinimum": 12.876503384856823,
+          "minLowerBound": 12.705569326614699,
+          "minUpperBound": 13.047572370894859
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 65,
+            "top": 361,
+            "width": 71
+          },
+          "computedColor": "rgb(174, 177, 169)",
+          "fontSize": 13,
+          "fontWeight": "550",
+          "foregroundRGBA": [
+            0.6823529411764706,
+            0.6941176470588235,
+            0.6627450980392157,
+            1
+          ],
+          "hiddenImage": "dark-nav-bookings.png",
+          "id": "dark-nav-bookings",
+          "normalImage": "dark-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 376.25,
+              "left": 65,
+              "right": 135.75,
+              "top": 361.25
+            }
+          ],
+          "selector": ".side-nav a[href=\"/bookings\"]>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 373,
+          "nominalMinimum": 8.638292129539131,
+          "minLowerBound": 8.568178735971202,
+          "minUpperBound": 8.70646301421749
+        },
+        {
+          "clip": {
+            "height": 14,
+            "left": 39,
+            "top": 257,
+            "width": 62
+          },
+          "computedColor": "rgb(241, 240, 236)",
+          "fontSize": 11,
+          "fontWeight": "590",
+          "foregroundRGBA": [
+            0.9450980392156862,
+            0.9411764705882352,
+            0.9254901960784314,
+            1
+          ],
+          "hiddenImage": "dark-session-title.png",
+          "id": "dark-session-title",
+          "normalImage": "dark-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 270.140625,
+              "left": 39,
+              "right": 100.6953125,
+              "top": 257.140625
+            }
+          ],
+          "selector": ".chat-session-copy strong",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 311,
+          "nominalMinimum": 13.138360333511823,
+          "minLowerBound": 12.967927514668776,
+          "minUpperBound": 13.308686240049237
+        },
+        {
+          "clip": {
+            "height": 11,
+            "left": 39,
+            "top": 273,
+            "width": 105
+          },
+          "computedColor": "rgb(139, 145, 135)",
+          "fontSize": 9,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.5450980392156862,
+            0.5686274509803921,
+            0.5294117647058824,
+            1
+          ],
+          "hiddenImage": "dark-session-preview.png",
+          "id": "dark-session-preview",
+          "normalImage": "dark-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 283.890625,
+              "left": 39,
+              "right": 143.328125,
+              "top": 273.390625
+            }
+          ],
+          "selector": ".chat-session-copy>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 349,
+          "nominalMinimum": 4.635818835540607,
+          "minLowerBound": 4.575682284880507,
+          "minUpperBound": 4.695917662613621
+        },
+        {
+          "clip": {
+            "height": 36,
+            "left": 33,
+            "top": 300,
+            "width": 177
+          },
+          "computedColor": "rgb(139, 145, 135)",
+          "fontSize": 9,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.5450980392156862,
+            0.5686274509803921,
+            0.5294117647058824,
+            1
+          ],
+          "hiddenImage": "dark-footnote.png",
+          "id": "dark-footnote",
+          "normalImage": "dark-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 310.59375,
+              "left": 33,
+              "right": 189.2265625,
+              "top": 300.09375
+            },
+            {
+              "bottom": 323.1875,
+              "left": 33,
+              "right": 209.0390625,
+              "top": 312.6875
+            },
+            {
+              "bottom": 335.78125,
+              "left": 33,
+              "right": 73.28125,
+              "top": 325.28125
+            }
+          ],
+          "selector": ".chat-list-footnote",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 1238,
+          "nominalMinimum": 5.809649301109208,
+          "minLowerBound": 5.762494814801966,
+          "minUpperBound": 5.855497360724293
+        },
+        {
+          "clip": {
+            "height": 20,
+            "left": 706,
+            "top": 300,
+            "width": 106
+          },
+          "computedColor": "rgb(174, 177, 169)",
+          "fontSize": 16,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.6823529411764706,
+            0.6941176470588235,
+            0.6627450980392157,
+            1
+          ],
+          "hiddenImage": "dark-greeting.png",
+          "id": "dark-greeting",
+          "normalImage": "dark-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 319.09375,
+              "left": 706.703125,
+              "right": 747.578125,
+              "top": 300.09375
+            },
+            {
+              "bottom": 319.09375,
+              "left": 747.578125,
+              "right": 806.8515625,
+              "top": 300.09375
+            },
+            {
+              "bottom": 319.09375,
+              "left": 806.8515625,
+              "right": 811.2890625,
+              "top": 300.09375
+            }
+          ],
+          "selector": ".chat-greeting",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 591,
+          "nominalMinimum": 8.427587309919554,
+          "minLowerBound": 8.352277045986465,
+          "minUpperBound": 8.501206865798205
+        },
+        {
+          "clip": {
+            "height": 59,
+            "left": 775,
+            "top": 327,
+            "width": 236
+          },
+          "computedColor": "rgb(209, 122, 83)",
+          "fontSize": 48.64,
+          "fontWeight": "560",
+          "foregroundRGBA": [
+            0.8196078431372549,
+            0.4784313725490196,
+            0.3254901960784314,
+            1
+          ],
+          "hiddenImage": "dark-hero-accent.png",
+          "id": "dark-hero-accent",
+          "normalImage": "dark-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 385.09375,
+              "left": 775.3671875,
+              "right": 1010.84375,
+              "top": 327.59375
+            }
+          ],
+          "selector": ".chat-welcome h1 span",
+          "threshold": 3,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 3794,
+          "nominalMinimum": 5.784707321822722,
+          "minLowerBound": 5.733350884205749,
+          "minUpperBound": 5.834892679634433
+        },
+        {
+          "clip": {
+            "height": 19,
+            "left": 421,
+            "top": 401,
+            "width": 676
+          },
+          "computedColor": "rgb(174, 177, 169)",
+          "fontSize": 15,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.6823529411764706,
+            0.6941176470588235,
+            0.6627450980392157,
+            1
+          ],
+          "hiddenImage": "dark-intro.png",
+          "id": "dark-intro",
+          "normalImage": "dark-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 419.1484375,
+              "left": 421.265625,
+              "right": 746.5390625,
+              "top": 401.6484375
+            },
+            {
+              "bottom": 419.1484375,
+              "left": 746.5390625,
+              "right": 1096.734375,
+              "top": 401.6484375
+            }
+          ],
+          "selector": ".chat-intro",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 3441,
+          "nominalMinimum": 8.587414630523364,
+          "minLowerBound": 8.515966844662461,
+          "minUpperBound": 8.656979888350383
+        }
+      ]
+    },
+    {
+      "id": "dark-copy",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "73bf782384de18b27f8345041a50d028bbdf632334f592e4433e07a245977fae",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 35,
+            "left": 960,
+            "top": 362,
+            "width": 156
+          },
+          "computedColor": "rgb(241, 240, 236)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.9450980392156862,
+            0.9411764705882352,
+            0.9254901960784314,
+            1
+          ],
+          "hiddenImage": "dark-copy-results.png",
+          "id": "dark-copy-results",
+          "normalImage": "dark-copy-normal.png",
+          "rects": [
+            {
+              "bottom": 377.1953125,
+              "left": 960,
+              "right": 1115.7421875,
+              "top": 362.1953125
+            },
+            {
+              "bottom": 396.6953125,
+              "left": 960,
+              "right": 1012.1640625,
+              "top": 381.6953125
+            }
+          ],
+          "selector": "[role=\"menu\"]:popover-open button:nth-of-type(1)>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 996,
+          "nominalMinimum": 14.546389566311264,
+          "minLowerBound": 14.380795661108994,
+          "minUpperBound": 14.71052969218714
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 960,
+            "top": 422,
+            "width": 119
+          },
+          "computedColor": "rgb(241, 240, 236)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.9450980392156862,
+            0.9411764705882352,
+            0.9254901960784314,
+            1
+          ],
+          "hiddenImage": "dark-copy-markdown.png",
+          "id": "dark-copy-markdown",
+          "normalImage": "dark-copy-normal.png",
+          "rects": [
+            {
+              "bottom": 437.4453125,
+              "left": 960,
+              "right": 1078.421875,
+              "top": 422.4453125
+            }
+          ],
+          "selector": "[role=\"menu\"]:popover-open button:nth-of-type(2)>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 567,
+          "nominalMinimum": 14.546389566311264,
+          "minLowerBound": 14.380795661108994,
+          "minUpperBound": 14.71052969218714
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 960,
+            "top": 466,
+            "width": 113
+          },
+          "computedColor": "rgb(241, 240, 236)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.9450980392156862,
+            0.9411764705882352,
+            0.9254901960784314,
+            1
+          ],
+          "hiddenImage": "dark-copy-source.png",
+          "id": "dark-copy-source",
+          "normalImage": "dark-copy-normal.png",
+          "rects": [
+            {
+              "bottom": 481.4453125,
+              "left": 960,
+              "right": 1072.3984375,
+              "top": 466.4453125
+            }
+          ],
+          "selector": "[role=\"menu\"]:popover-open button:nth-of-type(3)>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 533,
+          "nominalMinimum": 14.546389566311264,
+          "minLowerBound": 14.380795661108994,
+          "minUpperBound": 14.71052969218714
+        }
+      ]
+    },
+    {
+      "id": "dark-mobile-copy",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "0da8bb68fb7ec1111ab59e777ce8230ff8e5ce7bebb867bbdf1f593c4b6d3218",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 36,
+            "left": 110,
+            "top": 395,
+            "width": 156
+          },
+          "computedColor": "rgb(241, 240, 236)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.9450980392156862,
+            0.9411764705882352,
+            0.9254901960784314,
+            1
+          ],
+          "hiddenImage": "dark-mobile-copy-results.png",
+          "id": "dark-mobile-copy-results",
+          "normalImage": "dark-mobile-copy-normal.png",
+          "rects": [
+            {
+              "bottom": 410.734375,
+              "left": 110,
+              "right": 265.7421875,
+              "top": 395.734375
+            },
+            {
+              "bottom": 430.234375,
+              "left": 110,
+              "right": 162.1640625,
+              "top": 415.234375
+            }
+          ],
+          "selector": "[role=\"menu\"]:popover-open button:nth-of-type(1)>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 998,
+          "nominalMinimum": 14.380795661108994,
+          "minLowerBound": 14.213925992384597,
+          "minUpperBound": 14.546389566311264
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 110,
+            "top": 455,
+            "width": 119
+          },
+          "computedColor": "rgb(241, 240, 236)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.9450980392156862,
+            0.9411764705882352,
+            0.9254901960784314,
+            1
+          ],
+          "hiddenImage": "dark-mobile-copy-markdown.png",
+          "id": "dark-mobile-copy-markdown",
+          "normalImage": "dark-mobile-copy-normal.png",
+          "rects": [
+            {
+              "bottom": 470.984375,
+              "left": 110,
+              "right": 228.421875,
+              "top": 455.984375
+            }
+          ],
+          "selector": "[role=\"menu\"]:popover-open button:nth-of-type(2)>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 570,
+          "nominalMinimum": 14.71052969218714,
+          "minLowerBound": 14.546389566311264,
+          "minUpperBound": 14.87303576323548
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 110,
+            "top": 499,
+            "width": 113
+          },
+          "computedColor": "rgb(241, 240, 236)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.9450980392156862,
+            0.9411764705882352,
+            0.9254901960784314,
+            1
+          ],
+          "hiddenImage": "dark-mobile-copy-source.png",
+          "id": "dark-mobile-copy-source",
+          "normalImage": "dark-mobile-copy-normal.png",
+          "rects": [
+            {
+              "bottom": 514.984375,
+              "left": 110,
+              "right": 222.3984375,
+              "top": 499.984375
+            }
+          ],
+          "selector": "[role=\"menu\"]:popover-open button:nth-of-type(3)>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 535,
+          "nominalMinimum": 14.71052969218714,
+          "minLowerBound": 14.546389566311264,
+          "minUpperBound": 14.87303576323548
+        }
+      ]
+    },
+    {
+      "id": "dark-mobile-link",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "f1cb792d2180d89583a3d370357860b3abaca2d4d787d7dc9af944cc0a0316c0",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 47,
+            "left": 54,
+            "top": 327,
+            "width": 206
+          },
+          "computedColor": "rgb(209, 122, 83)",
+          "fontSize": 16,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.8196078431372549,
+            0.4784313725490196,
+            0.3254901960784314,
+            1
+          ],
+          "hiddenImage": "dark-mobile-link-link.png",
+          "id": "dark-mobile-link-link",
+          "normalImage": "dark-mobile-link-normal.png",
+          "rects": [
+            {
+              "bottom": 346.234375,
+              "left": 173.59375,
+              "right": 259.4296875,
+              "top": 327.234375
+            },
+            {
+              "bottom": 373.4296875,
+              "left": 54.1640625,
+              "right": 122.7578125,
+              "top": 354.4296875
+            }
+          ],
+          "selector": "a[href=\"https://www.hs-hannover.de/\"]",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 1024,
+          "nominalMinimum": 4.628711511709749,
+          "minLowerBound": 4.567265914292436,
+          "minUpperBound": 4.690205611567789
+        }
+      ]
+    },
+    {
+      "id": "fixed-dark-desktop-empty",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "fd8723078ae7de3bc2c7d891b18db3843d6b81e664fb27a6e760ca9dc4152a0d",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 12,
+            "left": 684,
+            "top": 535,
+            "width": 150
+          },
+          "computedColor": "rgb(227, 146, 112)",
+          "fontSize": 10,
+          "fontWeight": "700",
+          "foregroundRGBA": [
+            0.8901960784313725,
+            0.5725490196078431,
+            0.4392156862745098,
+            1
+          ],
+          "hiddenImage": "fixed-dark-desktop-empty-kicker.png",
+          "id": "fixed-dark-desktop-empty-kicker",
+          "normalImage": "fixed-dark-desktop-empty-normal.png",
+          "rects": [
+            {
+              "bottom": 546.734375,
+              "left": 684.3359375,
+              "right": 833.65625,
+              "top": 535.234375
+            }
+          ],
+          "selector": ".bookings-empty>.section-kicker",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 566,
+          "nominalMinimum": 6.899640030017574,
+          "minLowerBound": 6.823107471903509,
+          "minUpperBound": 6.975384942726359
+        }
+      ]
+    },
+    {
+      "id": "fixed-dark-desktop-link-notice",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "88284fedd934ef4bc026372f1aa768aef40b37cbbeae32fc6d37b32af3b17993",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 19,
+            "left": 972,
+            "top": 219,
+            "width": 160
+          },
+          "computedColor": "rgb(227, 146, 112)",
+          "fontSize": 16,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.8901960784313725,
+            0.5725490196078431,
+            0.4392156862745098,
+            1
+          ],
+          "hiddenImage": "fixed-dark-desktop-link-notice-link.png",
+          "id": "fixed-dark-desktop-link-notice-link",
+          "normalImage": "fixed-dark-desktop-link-notice-normal.png",
+          "rects": [
+            {
+              "bottom": 238,
+              "left": 972.9453125,
+              "right": 1131.5625,
+              "top": 219
+            }
+          ],
+          "selector": "a[href=\"https://www.hs-hannover.de/\"]",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 1013,
+          "nominalMinimum": 6.021510668369513,
+          "minLowerBound": 5.941575827013193,
+          "minUpperBound": 6.101508606759108
+        },
+        {
+          "clip": {
+            "height": 15,
+            "left": 360,
+            "top": 595,
+            "width": 422
+          },
+          "computedColor": "rgb(227, 146, 112)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.8901960784313725,
+            0.5725490196078431,
+            0.4392156862745098,
+            1
+          ],
+          "hiddenImage": "fixed-dark-desktop-link-notice-notice.png",
+          "id": "fixed-dark-desktop-link-notice-notice",
+          "normalImage": "fixed-dark-desktop-link-notice-normal.png",
+          "rects": [
+            {
+              "bottom": 610,
+              "left": 360,
+              "right": 781.859375,
+              "top": 595
+            }
+          ],
+          "selector": ".chat-input-notice",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 1914,
+          "nominalMinimum": 6.021510668369513,
+          "minLowerBound": 5.941575827013193,
+          "minUpperBound": 6.101508606759108
+        }
+      ]
+    },
+    {
+      "id": "fixed-dark-desktop-source",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "45a360fdda3ee5f0556c120851a881676fa1f54e9ce1c53234337552da3d758c",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 16,
+            "left": 388,
+            "top": 309,
+            "width": 10
+          },
+          "computedColor": "rgb(227, 146, 112)",
+          "fontSize": 13,
+          "fontWeight": "650",
+          "foregroundRGBA": [
+            0.8901960784313725,
+            0.5725490196078431,
+            0.4392156862745098,
+            1
+          ],
+          "hiddenImage": "fixed-dark-desktop-source-number.png",
+          "id": "fixed-dark-desktop-source-number",
+          "normalImage": "fixed-dark-desktop-source-normal.png",
+          "rects": [
+            {
+              "bottom": 324.53125,
+              "left": 388.7109375,
+              "right": 397.28125,
+              "top": 309.53125
+            }
+          ],
+          "selector": ".chat-source-card:first-child>.chat-source-number",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 26,
+          "nominalMinimum": 6.50006008027646,
+          "minLowerBound": 6.420780555975799,
+          "minUpperBound": 6.578973150022212
+        }
+      ]
+    },
+    {
+      "id": "fixed-dark-mobile-empty",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "5df8c83feebec1aaa0d4ac1f1cb354b88b56b0ab62ac27562865e96094cb5d42",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 13,
+            "left": 85,
+            "top": 511,
+            "width": 150
+          },
+          "computedColor": "rgb(227, 146, 112)",
+          "fontSize": 10,
+          "fontWeight": "700",
+          "foregroundRGBA": [
+            0.8901960784313725,
+            0.5725490196078431,
+            0.4392156862745098,
+            1
+          ],
+          "hiddenImage": "fixed-dark-mobile-empty-kicker.png",
+          "id": "fixed-dark-mobile-empty-kicker",
+          "normalImage": "fixed-dark-mobile-empty-normal.png",
+          "rects": [
+            {
+              "bottom": 523.09375,
+              "left": 85.3359375,
+              "right": 234.65625,
+              "top": 511.59375
+            }
+          ],
+          "selector": ".bookings-empty>.section-kicker",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 565,
+          "nominalMinimum": 6.899640030017574,
+          "minLowerBound": 6.823107471903509,
+          "minUpperBound": 6.975384942726359
+        }
+      ]
+    },
+    {
+      "id": "fixed-dark-mobile-link",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "7ea5b7b7a025e70dfe3dc1ed920a83d38ae2b39c138b054b4018165a32037ebd",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 47,
+            "left": 54,
+            "top": 210,
+            "width": 206
+          },
+          "computedColor": "rgb(227, 146, 112)",
+          "fontSize": 16,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.8901960784313725,
+            0.5725490196078431,
+            0.4392156862745098,
+            1
+          ],
+          "hiddenImage": "fixed-dark-mobile-link-link.png",
+          "id": "fixed-dark-mobile-link-link",
+          "normalImage": "fixed-dark-mobile-link-normal.png",
+          "rects": [
+            {
+              "bottom": 229,
+              "left": 173.59375,
+              "right": 259.4296875,
+              "top": 210
+            },
+            {
+              "bottom": 256.1953125,
+              "left": 54.1640625,
+              "right": 122.7578125,
+              "top": 237.1953125
+            }
+          ],
+          "selector": "a[href=\"https://www.hs-hannover.de/\"]",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 1034,
+          "nominalMinimum": 6.021510668369513,
+          "minLowerBound": 5.941575827013193,
+          "minUpperBound": 6.101508606759108
+        }
+      ]
+    },
+    {
+      "id": "fixed-dark-mobile-notice",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "f046d9bce9065e64a2f7e96d670bac1e270d39fcb5098e601b1b208f3a71142f",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 35,
+            "left": 25,
+            "top": 624,
+            "width": 246
+          },
+          "computedColor": "rgb(227, 146, 112)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.8901960784313725,
+            0.5725490196078431,
+            0.4392156862745098,
+            1
+          ],
+          "hiddenImage": "fixed-dark-mobile-notice-notice.png",
+          "id": "fixed-dark-mobile-notice-notice",
+          "normalImage": "fixed-dark-mobile-notice-normal.png",
+          "rects": [
+            {
+              "bottom": 639,
+              "left": 25,
+              "right": 270.5,
+              "top": 624
+            },
+            {
+              "bottom": 658.5,
+              "left": 25,
+              "right": 197.78125,
+              "top": 643.5
+            }
+          ],
+          "selector": ".chat-input-notice",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 1913,
+          "nominalMinimum": 6.021510668369513,
+          "minLowerBound": 5.941575827013193,
+          "minUpperBound": 6.101508606759108
+        }
+      ]
+    },
+    {
+      "id": "fixed-dark-mobile-source",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "19ab028c6a661766fd8625317cdbe1c7be14b67d98d42c1661e47a09aa2cd8de",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 16,
+            "left": 40,
+            "top": 342,
+            "width": 10
+          },
+          "computedColor": "rgb(227, 146, 112)",
+          "fontSize": 13,
+          "fontWeight": "650",
+          "foregroundRGBA": [
+            0.8901960784313725,
+            0.5725490196078431,
+            0.4392156862745098,
+            1
+          ],
+          "hiddenImage": "fixed-dark-mobile-source-number.png",
+          "id": "fixed-dark-mobile-source-number",
+          "normalImage": "fixed-dark-mobile-source-normal.png",
+          "rects": [
+            {
+              "bottom": 357.921875,
+              "left": 40.7109375,
+              "right": 49.28125,
+              "top": 342.921875
+            }
+          ],
+          "selector": ".chat-source-card:first-child>.chat-source-number",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 26,
+          "nominalMinimum": 6.50006008027646,
+          "minLowerBound": 6.420780555975799,
+          "minUpperBound": 6.578973150022212
+        },
+        {
+          "clip": {
+            "height": 15,
+            "left": 71,
+            "top": 309,
+            "width": 125
+          },
+          "computedColor": "rgb(174, 177, 169)",
+          "fontSize": 12,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.6823529411764706,
+            0.6941176470588235,
+            0.6627450980392157,
+            1
+          ],
+          "hiddenImage": "fixed-dark-mobile-source-revision.png",
+          "id": "fixed-dark-mobile-source-revision",
+          "normalImage": "fixed-dark-mobile-source-normal.png",
+          "rects": [
+            {
+              "bottom": 323.671875,
+              "left": 71,
+              "right": 127.3671875,
+              "top": 309.671875
+            },
+            {
+              "bottom": 323.671875,
+              "left": 127.3671875,
+              "right": 187.8984375,
+              "top": 309.671875
+            },
+            {
+              "bottom": 323.671875,
+              "left": 187.8984375,
+              "right": 195.625,
+              "top": 309.671875
+            }
+          ],
+          "selector": ".chat-source-card:first-child small",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 502,
+          "nominalMinimum": 7.740734580095192,
+          "minLowerBound": 7.654872387789607,
+          "minUpperBound": 7.825713109775051
+        },
+        {
+          "clip": {
+            "height": 60,
+            "left": 71,
+            "top": 332,
+            "width": 190
+          },
+          "computedColor": "rgb(241, 240, 236)",
+          "fontSize": 14,
+          "fontWeight": "700",
+          "foregroundRGBA": [
+            0.9450980392156862,
+            0.9411764705882352,
+            0.9254901960784314,
+            1
+          ],
+          "hiddenImage": "fixed-dark-mobile-source-title.png",
+          "id": "fixed-dark-mobile-source-title",
+          "normalImage": "fixed-dark-mobile-source-normal.png",
+          "rects": [
+            {
+              "bottom": 349.171875,
+              "left": 71,
+              "right": 242.59375,
+              "top": 332.671875
+            },
+            {
+              "bottom": 370.171875,
+              "left": 71,
+              "right": 260.4921875,
+              "top": 353.671875
+            },
+            {
+              "bottom": 391.171875,
+              "left": 71,
+              "right": 161.671875,
+              "top": 374.671875
+            }
+          ],
+          "selector": ".chat-source-card:first-child strong",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 2659,
+          "nominalMinimum": 14.754310520032945,
+          "minLowerBound": 14.590651963587284,
+          "minUpperBound": 14.916284761813115
+        }
+      ]
+    },
+    {
+      "id": "fixed-light-desktop-empty",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "57eac519e2946bdc8fcffc9ddd3f6fface080a0f3dbf3bf3301102281b14b624",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 12,
+            "left": 684,
+            "top": 535,
+            "width": 150
+          },
+          "computedColor": "rgb(152, 66, 38)",
+          "fontSize": 10,
+          "fontWeight": "700",
+          "foregroundRGBA": [
+            0.596078431372549,
+            0.25882352941176473,
+            0.14901960784313725,
+            1
+          ],
+          "hiddenImage": "fixed-light-desktop-empty-kicker.png",
+          "id": "fixed-light-desktop-empty-kicker",
+          "normalImage": "fixed-light-desktop-empty-normal.png",
+          "rects": [
+            {
+              "bottom": 546.734375,
+              "left": 684.3359375,
+              "right": 833.65625,
+              "top": 535.234375
+            }
+          ],
+          "selector": ".bookings-empty>.section-kicker",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 580,
+          "nominalMinimum": 6.398690949680897,
+          "minLowerBound": 6.343550792422923,
+          "minUpperBound": 6.454124346229983
+        }
+      ]
+    },
+    {
+      "id": "fixed-light-desktop-link-notice",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "c0ebdc7e333d166ad057118163cd2bdfcb6bfa20d1609f4b401980d1124c034e",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 19,
+            "left": 972,
+            "top": 219,
+            "width": 160
+          },
+          "computedColor": "rgb(152, 66, 38)",
+          "fontSize": 16,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.596078431372549,
+            0.25882352941176473,
+            0.14901960784313725,
+            1
+          ],
+          "hiddenImage": "fixed-light-desktop-link-notice-link.png",
+          "id": "fixed-light-desktop-link-notice-link",
+          "normalImage": "fixed-light-desktop-link-notice-normal.png",
+          "rects": [
+            {
+              "bottom": 238,
+              "left": 972.9453125,
+              "right": 1131.5625,
+              "top": 219
+            }
+          ],
+          "selector": "a[href=\"https://www.hs-hannover.de/\"]",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 1022,
+          "nominalMinimum": 6.682888024372745,
+          "minLowerBound": 6.62625593995368,
+          "minUpperBound": 6.682888024372745
+        },
+        {
+          "clip": {
+            "height": 15,
+            "left": 360,
+            "top": 595,
+            "width": 422
+          },
+          "computedColor": "rgb(152, 66, 38)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.596078431372549,
+            0.25882352941176473,
+            0.14901960784313725,
+            1
+          ],
+          "hiddenImage": "fixed-light-desktop-link-notice-notice.png",
+          "id": "fixed-light-desktop-link-notice-notice",
+          "normalImage": "fixed-light-desktop-link-notice-normal.png",
+          "rects": [
+            {
+              "bottom": 610,
+              "left": 360,
+              "right": 781.859375,
+              "top": 595
+            }
+          ],
+          "selector": ".chat-input-notice",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 1929,
+          "nominalMinimum": 6.682888024372745,
+          "minLowerBound": 6.62625593995368,
+          "minUpperBound": 6.682888024372745
+        }
+      ]
+    },
+    {
+      "id": "fixed-light-desktop-source",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "9b30a036dfacc6d1bcf1a4742aac9ee50d9e443cd3cc1de87aa4fdc0e7df7891",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 16,
+            "left": 388,
+            "top": 309,
+            "width": 10
+          },
+          "computedColor": "rgb(152, 66, 38)",
+          "fontSize": 13,
+          "fontWeight": "650",
+          "foregroundRGBA": [
+            0.596078431372549,
+            0.25882352941176473,
+            0.14901960784313725,
+            1
+          ],
+          "hiddenImage": "fixed-light-desktop-source-number.png",
+          "id": "fixed-light-desktop-source-number",
+          "normalImage": "fixed-light-desktop-source-normal.png",
+          "rects": [
+            {
+              "bottom": 324.53125,
+              "left": 388.7109375,
+              "right": 397.28125,
+              "top": 309.53125
+            }
+          ],
+          "selector": ".chat-source-card:first-child>.chat-source-number",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 27,
+          "nominalMinimum": 6.234119485751505,
+          "minLowerBound": 6.179857248918066,
+          "minUpperBound": 6.288673621695516
+        }
+      ]
+    },
+    {
+      "id": "fixed-light-mobile-empty-stable",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "3b8faecefa74b40a0b3c5077658b0c5decbac2f2baabd6127bcb4899baa50571",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 13,
+            "left": 85,
+            "top": 511,
+            "width": 150
+          },
+          "computedColor": "rgb(152, 66, 38)",
+          "fontSize": 10,
+          "fontWeight": "700",
+          "foregroundRGBA": [
+            0.596078431372549,
+            0.25882352941176473,
+            0.14901960784313725,
+            1
+          ],
+          "hiddenImage": "fixed-light-mobile-empty-stable-kicker.png",
+          "id": "fixed-light-mobile-empty-stable-kicker",
+          "normalImage": "fixed-light-mobile-empty-stable-normal.png",
+          "rects": [
+            {
+              "bottom": 523.09375,
+              "left": 85.3359375,
+              "right": 234.65625,
+              "top": 511.59375
+            }
+          ],
+          "selector": ".bookings-empty>.section-kicker",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 581,
+          "nominalMinimum": 6.398690949680897,
+          "minLowerBound": 6.343550792422923,
+          "minUpperBound": 6.454124346229983
+        }
+      ]
+    },
+    {
+      "id": "fixed-light-mobile-empty",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "f2085e4879f9020c4682ebbf1da51b79db1363e5e122c7b4a808da72e4c35eb5",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 13,
+            "left": 85,
+            "top": 511,
+            "width": 150
+          },
+          "computedColor": "rgb(152, 66, 38)",
+          "fontSize": 10,
+          "fontWeight": "700",
+          "foregroundRGBA": [
+            0.596078431372549,
+            0.25882352941176473,
+            0.14901960784313725,
+            1
+          ],
+          "hiddenImage": "fixed-light-mobile-empty-kicker.png",
+          "id": "fixed-light-mobile-empty-kicker",
+          "normalImage": "fixed-light-mobile-empty-normal.png",
+          "rects": [
+            {
+              "bottom": 523.09375,
+              "left": 85.3359375,
+              "right": 234.65625,
+              "top": 511.5937805175781
+            }
+          ],
+          "selector": ".bookings-empty>.section-kicker",
+          "threshold": 4.5,
+          "unsupportedFeatures": [
+            "ancestor opacity"
+          ],
+          "status": "unsupported"
+        }
+      ]
+    },
+    {
+      "id": "fixed-light-mobile-link",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "fd910fca83ee7cafa419eebd18914cdcde4d23e62d02a655dfbe5919a348f725",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 47,
+            "left": 54,
+            "top": 210,
+            "width": 206
+          },
+          "computedColor": "rgb(152, 66, 38)",
+          "fontSize": 16,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.596078431372549,
+            0.25882352941176473,
+            0.14901960784313725,
+            1
+          ],
+          "hiddenImage": "fixed-light-mobile-link-link.png",
+          "id": "fixed-light-mobile-link-link",
+          "normalImage": "fixed-light-mobile-link-normal.png",
+          "rects": [
+            {
+              "bottom": 229,
+              "left": 173.59375,
+              "right": 259.4296875,
+              "top": 210
+            },
+            {
+              "bottom": 256.1953125,
+              "left": 54.1640625,
+              "right": 122.7578125,
+              "top": 237.1953125
+            }
+          ],
+          "selector": "a[href=\"https://www.hs-hannover.de/\"]",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 1040,
+          "nominalMinimum": 6.682888024372745,
+          "minLowerBound": 6.62625593995368,
+          "minUpperBound": 6.682888024372745
+        }
+      ]
+    },
+    {
+      "id": "fixed-light-mobile-notice",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "73530e5511aba85d02726d3b50dfd3f097a754c13d485c4633005484a3292115",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 35,
+            "left": 25,
+            "top": 624,
+            "width": 246
+          },
+          "computedColor": "rgb(152, 66, 38)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.596078431372549,
+            0.25882352941176473,
+            0.14901960784313725,
+            1
+          ],
+          "hiddenImage": "fixed-light-mobile-notice-notice.png",
+          "id": "fixed-light-mobile-notice-notice",
+          "normalImage": "fixed-light-mobile-notice-normal.png",
+          "rects": [
+            {
+              "bottom": 639,
+              "left": 25,
+              "right": 270.5,
+              "top": 624
+            },
+            {
+              "bottom": 658.5,
+              "left": 25,
+              "right": 197.78125,
+              "top": 643.5
+            }
+          ],
+          "selector": ".chat-input-notice",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 1937,
+          "nominalMinimum": 6.682888024372745,
+          "minLowerBound": 6.62625593995368,
+          "minUpperBound": 6.682888024372745
+        }
+      ]
+    },
+    {
+      "id": "fixed-light-mobile-source",
+      "build": "corrected",
+      "calibration": false,
+      "manifestSha256": "1fca0fed53a6c0841dd40f67a299c7ca47fcc9b8ebf38dd2d4855005298b68d2",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 16,
+            "left": 40,
+            "top": 342,
+            "width": 10
+          },
+          "computedColor": "rgb(152, 66, 38)",
+          "fontSize": 13,
+          "fontWeight": "650",
+          "foregroundRGBA": [
+            0.596078431372549,
+            0.25882352941176473,
+            0.14901960784313725,
+            1
+          ],
+          "hiddenImage": "fixed-light-mobile-source-number.png",
+          "id": "fixed-light-mobile-source-number",
+          "normalImage": "fixed-light-mobile-source-normal.png",
+          "rects": [
+            {
+              "bottom": 357.921875,
+              "left": 40.7109375,
+              "right": 49.28125,
+              "top": 342.921875
+            }
+          ],
+          "selector": ".chat-source-card:first-child>.chat-source-number",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 27,
+          "nominalMinimum": 6.234119485751505,
+          "minLowerBound": 6.179857248918066,
+          "minUpperBound": 6.288673621695516
+        },
+        {
+          "clip": {
+            "height": 15,
+            "left": 71,
+            "top": 309,
+            "width": 125
+          },
+          "computedColor": "rgb(104, 109, 102)",
+          "fontSize": 12,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.4078431372549019,
+            0.4274509803921568,
+            0.4,
+            1
+          ],
+          "hiddenImage": "fixed-light-mobile-source-revision.png",
+          "id": "fixed-light-mobile-source-revision",
+          "normalImage": "fixed-light-mobile-source-normal.png",
+          "rects": [
+            {
+              "bottom": 323.671875,
+              "left": 71,
+              "right": 127.3671875,
+              "top": 309.671875
+            },
+            {
+              "bottom": 323.671875,
+              "left": 127.3671875,
+              "right": 187.8984375,
+              "top": 309.671875
+            },
+            {
+              "bottom": 323.671875,
+              "left": 187.8984375,
+              "right": 195.625,
+              "top": 309.671875
+            }
+          ],
+          "selector": ".chat-source-card:first-child small",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 507,
+          "nominalMinimum": 5.199764776781157,
+          "minLowerBound": 5.155399448847867,
+          "minUpperBound": 5.244363384276695
+        },
+        {
+          "clip": {
+            "height": 60,
+            "left": 71,
+            "top": 332,
+            "width": 190
+          },
+          "computedColor": "rgb(32, 34, 31)",
+          "fontSize": 14,
+          "fontWeight": "700",
+          "foregroundRGBA": [
+            0.12549019607843137,
+            0.13333333333333333,
+            0.1215686274509804,
+            1
+          ],
+          "hiddenImage": "fixed-light-mobile-source-title.png",
+          "id": "fixed-light-mobile-source-title",
+          "normalImage": "fixed-light-mobile-source-normal.png",
+          "rects": [
+            {
+              "bottom": 349.171875,
+              "left": 71,
+              "right": 242.59375,
+              "top": 332.671875
+            },
+            {
+              "bottom": 370.171875,
+              "left": 71,
+              "right": 260.4921875,
+              "top": 353.671875
+            },
+            {
+              "bottom": 391.171875,
+              "left": 71,
+              "right": 161.671875,
+              "top": 374.671875
+            }
+          ],
+          "selector": ".chat-source-card:first-child strong",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 2659,
+          "nominalMinimum": 15.74970002951104,
+          "minLowerBound": 15.615320757244664,
+          "minUpperBound": 15.884785888187796
+        }
+      ]
+    },
+    {
+      "id": "light-card",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "ca10adb71181049dbae4522a37b63e52d1b70c20fb922d656157ad9b5a1a17ed",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 17,
+            "left": 420,
+            "top": 237,
+            "width": 122
+          },
+          "computedColor": "rgb(32, 34, 31)",
+          "fontSize": 14,
+          "fontWeight": "630",
+          "foregroundRGBA": [
+            0.12549019607843137,
+            0.13333333333333333,
+            0.1215686274509804,
+            1
+          ],
+          "hiddenImage": "light-card-title.png",
+          "id": "light-card-title",
+          "normalImage": "light-card-normal.png",
+          "rects": [
+            {
+              "bottom": 253.890625,
+              "left": 420,
+              "right": 541.3125,
+              "top": 237.390625
+            }
+          ],
+          "selector": ".chat-room-result:first-of-type h3",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 661,
+          "nominalMinimum": 15.74970002951104,
+          "minLowerBound": 15.615320757244664,
+          "minUpperBound": 15.884785888187796
+        },
+        {
+          "clip": {
+            "height": 15,
+            "left": 420,
+            "top": 258,
+            "width": 235
+          },
+          "computedColor": "rgb(104, 109, 102)",
+          "fontSize": 12,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.4078431372549019,
+            0.4274509803921568,
+            0.4,
+            1
+          ],
+          "hiddenImage": "light-card-location.png",
+          "id": "light-card-location",
+          "normalImage": "light-card-normal.png",
+          "rects": [
+            {
+              "bottom": 271.2890625,
+              "left": 420,
+              "right": 433,
+              "top": 258.2890625
+            },
+            {
+              "bottom": 272.2890625,
+              "left": 437,
+              "right": 470.3125,
+              "top": 258.2890625
+            },
+            {
+              "bottom": 272.2890625,
+              "left": 470.3125,
+              "right": 654.6015625,
+              "top": 258.2890625
+            }
+          ],
+          "selector": ".chat-room-result:first-of-type .chat-room-result__location:first-of-type",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 937,
+          "nominalMinimum": 5.168022665046419,
+          "minLowerBound": 5.123823946487762,
+          "minUpperBound": 5.212454412932051
+        },
+        {
+          "clip": {
+            "height": 15,
+            "left": 384,
+            "top": 305,
+            "width": 132
+          },
+          "computedColor": "rgb(69, 72, 67)",
+          "fontSize": 11,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.27058823529411763,
+            0.2823529411764706,
+            0.2627450980392157,
+            1
+          ],
+          "hiddenImage": "light-card-kind.png",
+          "id": "light-card-kind",
+          "normalImage": "light-card-normal.png",
+          "rects": [
+            {
+              "bottom": 319.3828125,
+              "left": 384,
+              "right": 397,
+              "top": 306.3828125
+            },
+            {
+              "bottom": 318.9609375,
+              "left": 401,
+              "right": 515.4296875,
+              "top": 305.9609375
+            }
+          ],
+          "selector": ".chat-room-result:first-of-type .chat-room-result__kind",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 485,
+          "nominalMinimum": 8.6640812187218,
+          "minLowerBound": 8.58866841534051,
+          "minUpperBound": 8.739899698896329
+        },
+        {
+          "clip": {
+            "height": 14,
+            "left": 535,
+            "top": 305,
+            "width": 164
+          },
+          "computedColor": "rgb(104, 109, 102)",
+          "fontSize": 11,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.4078431372549019,
+            0.4274509803921568,
+            0.4,
+            1
+          ],
+          "hiddenImage": "light-card-capacity.png",
+          "id": "light-card-capacity",
+          "normalImage": "light-card-normal.png",
+          "rects": [
+            {
+              "bottom": 318.9609375,
+              "left": 535.4296875,
+              "right": 698.7265625,
+              "top": 305.9609375
+            }
+          ],
+          "selector": ".chat-room-result:first-of-type .chat-room-result__capacity",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 701,
+          "nominalMinimum": 5.168022665046419,
+          "minLowerBound": 5.123823946487762,
+          "minUpperBound": 5.212454412932051
+        },
+        {
+          "clip": {
+            "height": 14,
+            "left": 718,
+            "top": 305,
+            "width": 180
+          },
+          "computedColor": "rgb(76, 100, 117)",
+          "fontSize": 11,
+          "fontWeight": "580",
+          "foregroundRGBA": [
+            0.2980392156862745,
+            0.392156862745098,
+            0.4588235294117647,
+            1
+          ],
+          "hiddenImage": "light-card-status.png",
+          "id": "light-card-status",
+          "normalImage": "light-card-normal.png",
+          "rects": [
+            {
+              "bottom": 318.9609375,
+              "left": 718.7265625,
+              "right": 897.8984375,
+              "top": 305.9609375
+            }
+          ],
+          "selector": ".chat-room-result:first-of-type .chat-room-result__status",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 834,
+          "nominalMinimum": 5.300439141430134,
+          "minLowerBound": 5.252739284670805,
+          "minUpperBound": 5.348405675282414
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 388,
+            "top": 399,
+            "width": 181
+          },
+          "computedColor": "rgb(119, 57, 31)",
+          "fontSize": 12,
+          "fontWeight": "600",
+          "foregroundRGBA": [
+            0.4666666666666667,
+            0.2235294117647059,
+            0.1215686274509804,
+            1
+          ],
+          "hiddenImage": "light-card-plan.png",
+          "id": "light-card-plan",
+          "normalImage": "light-card-normal.png",
+          "rects": [
+            {
+              "bottom": 413.8828125,
+              "left": 388,
+              "right": 546.671875,
+              "top": 399.8828125
+            },
+            {
+              "bottom": 414.3828125,
+              "left": 553.671875,
+              "right": 568.671875,
+              "top": 399.3828125
+            }
+          ],
+          "selector": ".chat-room-result:first-of-type button",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 942,
+          "nominalMinimum": 7.690140716693246,
+          "minLowerBound": 7.621559331843657,
+          "minUpperBound": 7.759101631963765
+        }
+      ]
+    },
+    {
+      "id": "light-chat",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "fe7a0af1773bdd778431498392c9001af1c5539db21ea661a9026defb02bb8bd",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 12,
+            "left": 25,
+            "top": 66,
+            "width": 145
+          },
+          "computedColor": "rgb(104, 109, 102)",
+          "fontSize": 10,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.4078431372549019,
+            0.4274509803921568,
+            0.4,
+            1
+          ],
+          "hiddenImage": "light-caption.png",
+          "id": "light-caption",
+          "normalImage": "light-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 78,
+              "left": 25,
+              "right": 169.671875,
+              "top": 66.5
+            }
+          ],
+          "selector": ".side-nav .brand-caption",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 521,
+          "nominalMinimum": 4.811816137381859,
+          "minLowerBound": 4.769518658569395,
+          "minUpperBound": 4.854343741449836
+        },
+        {
+          "clip": {
+            "height": 11,
+            "left": 33,
+            "top": 126,
+            "width": 49
+          },
+          "computedColor": "rgb(104, 109, 102)",
+          "fontSize": 9,
+          "fontWeight": "700",
+          "foregroundRGBA": [
+            0.4078431372549019,
+            0.4274509803921568,
+            0.4,
+            1
+          ],
+          "hiddenImage": "light-campus.png",
+          "id": "light-campus",
+          "normalImage": "light-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 137,
+              "left": 33,
+              "right": 81.234375,
+              "top": 126.5
+            }
+          ],
+          "selector": ".side-nav-label",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 198,
+          "nominalMinimum": 4.811816137381859,
+          "minLowerBound": 4.769518658569395,
+          "minUpperBound": 4.854343741449836
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 66,
+            "top": 165,
+            "width": 38
+          },
+          "computedColor": "rgb(32, 34, 31)",
+          "fontSize": 13,
+          "fontWeight": "650",
+          "foregroundRGBA": [
+            0.12549019607843137,
+            0.13333333333333333,
+            0.1215686274509804,
+            1
+          ],
+          "hiddenImage": "light-nav-active.png",
+          "id": "light-nav-active",
+          "normalImage": "light-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 180.46875,
+              "left": 66,
+              "right": 103.359375,
+              "top": 165.46875
+            }
+          ],
+          "selector": ".side-nav .nav-link.is-active>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 218,
+          "nominalMinimum": 16.030387370956895,
+          "minLowerBound": 15.894542770905025,
+          "minUpperBound": 16.030387370956895
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 65,
+            "top": 361,
+            "width": 71
+          },
+          "computedColor": "rgb(104, 109, 102)",
+          "fontSize": 13,
+          "fontWeight": "550",
+          "foregroundRGBA": [
+            0.4078431372549019,
+            0.4274509803921568,
+            0.4,
+            1
+          ],
+          "hiddenImage": "light-nav-bookings.png",
+          "id": "light-nav-bookings",
+          "normalImage": "light-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 376.25,
+              "left": 65,
+              "right": 135.75,
+              "top": 361.25
+            }
+          ],
+          "selector": ".side-nav a[href=\"/bookings\"]>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 373,
+          "nominalMinimum": 4.811816137381859,
+          "minLowerBound": 4.769518658569395,
+          "minUpperBound": 4.854343741449836
+        },
+        {
+          "clip": {
+            "height": 14,
+            "left": 39,
+            "top": 257,
+            "width": 62
+          },
+          "computedColor": "rgb(32, 34, 31)",
+          "fontSize": 11,
+          "fontWeight": "590",
+          "foregroundRGBA": [
+            0.12549019607843137,
+            0.13333333333333333,
+            0.1215686274509804,
+            1
+          ],
+          "hiddenImage": "light-session-title.png",
+          "id": "light-session-title",
+          "normalImage": "light-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 270.140625,
+              "left": 39,
+              "right": 100.6953125,
+              "top": 257.140625
+            }
+          ],
+          "selector": ".chat-session-copy strong",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 314,
+          "nominalMinimum": 14.026596840892628,
+          "minLowerBound": 13.901506355358713,
+          "minUpperBound": 14.152379579065261
+        },
+        {
+          "clip": {
+            "height": 11,
+            "left": 39,
+            "top": 273,
+            "width": 105
+          },
+          "computedColor": "rgb(104, 109, 102)",
+          "fontSize": 9,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.4078431372549019,
+            0.4274509803921568,
+            0.4,
+            1
+          ],
+          "hiddenImage": "light-session-preview.png",
+          "id": "light-session-preview",
+          "normalImage": "light-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 283.890625,
+              "left": 39,
+              "right": 143.328125,
+              "top": 273.390625
+            }
+          ],
+          "selector": ".chat-session-copy>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 360,
+          "nominalMinimum": 4.630882115514656,
+          "minLowerBound": 4.5895834812948975,
+          "minUpperBound": 4.6724092970007565
+        },
+        {
+          "clip": {
+            "height": 36,
+            "left": 33,
+            "top": 300,
+            "width": 177
+          },
+          "computedColor": "rgb(104, 109, 102)",
+          "fontSize": 9,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.4078431372549019,
+            0.4274509803921568,
+            0.4,
+            1
+          ],
+          "hiddenImage": "light-footnote.png",
+          "id": "light-footnote",
+          "normalImage": "light-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 310.59375,
+              "left": 33,
+              "right": 189.2265625,
+              "top": 300.09375
+            },
+            {
+              "bottom": 323.1875,
+              "left": 33,
+              "right": 209.0390625,
+              "top": 312.6875
+            },
+            {
+              "bottom": 335.78125,
+              "left": 33,
+              "right": 73.28125,
+              "top": 325.28125
+            }
+          ],
+          "selector": ".chat-list-footnote",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 1260,
+          "nominalMinimum": 4.811816137381859,
+          "minLowerBound": 4.769518658569395,
+          "minUpperBound": 4.854343741449836
+        },
+        {
+          "clip": {
+            "height": 20,
+            "left": 706,
+            "top": 300,
+            "width": 106
+          },
+          "computedColor": "rgb(104, 109, 102)",
+          "fontSize": 16,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.4078431372549019,
+            0.4274509803921568,
+            0.4,
+            1
+          ],
+          "hiddenImage": "light-greeting.png",
+          "id": "light-greeting",
+          "normalImage": "light-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 319.09375,
+              "left": 706.703125,
+              "right": 747.578125,
+              "top": 300.09375
+            },
+            {
+              "bottom": 319.09375,
+              "left": 747.578125,
+              "right": 806.8515625,
+              "top": 300.09375
+            },
+            {
+              "bottom": 319.09375,
+              "left": 806.8515625,
+              "right": 811.2890625,
+              "top": 300.09375
+            }
+          ],
+          "selector": ".chat-greeting",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 587,
+          "nominalMinimum": 4.766530927537003,
+          "minLowerBound": 4.724479702435139,
+          "minUpperBound": 4.80881189469022
+        },
+        {
+          "clip": {
+            "height": 59,
+            "left": 775,
+            "top": 327,
+            "width": 236
+          },
+          "computedColor": "rgb(207, 107, 67)",
+          "fontSize": 48.64,
+          "fontWeight": "560",
+          "foregroundRGBA": [
+            0.8117647058823529,
+            0.4196078431372549,
+            0.2627450980392157,
+            1
+          ],
+          "hiddenImage": "light-hero-accent.png",
+          "id": "light-hero-accent",
+          "normalImage": "light-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 385.09375,
+              "left": 775.3671875,
+              "right": 1010.84375,
+              "top": 327.59375
+            }
+          ],
+          "selector": ".chat-welcome h1 span",
+          "threshold": 3,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 3757,
+          "nominalMinimum": 3.2421515622346506,
+          "minLowerBound": 3.213555407396541,
+          "minUpperBound": 3.27090390535926
+        },
+        {
+          "clip": {
+            "height": 19,
+            "left": 421,
+            "top": 401,
+            "width": 676
+          },
+          "computedColor": "rgb(104, 109, 102)",
+          "fontSize": 15,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.4078431372549019,
+            0.4274509803921568,
+            0.4,
+            1
+          ],
+          "hiddenImage": "light-intro.png",
+          "id": "light-intro",
+          "normalImage": "light-chat-normal.png",
+          "rects": [
+            {
+              "bottom": 419.1484375,
+              "left": 421.265625,
+              "right": 746.5390625,
+              "top": 401.6484375
+            },
+            {
+              "bottom": 419.1484375,
+              "left": 746.5390625,
+              "right": 1096.734375,
+              "top": 401.6484375
+            }
+          ],
+          "selector": ".chat-intro",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 3411,
+          "nominalMinimum": 4.811816137381859,
+          "minLowerBound": 4.769518658569395,
+          "minUpperBound": 4.854343741449836
+        }
+      ]
+    },
+    {
+      "id": "light-copy",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "d249db067ae37201ea38291c83b30666d61f613c02ad8bb2140d5a58f4e5922b",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 35,
+            "left": 960,
+            "top": 362,
+            "width": 156
+          },
+          "computedColor": "rgb(32, 34, 31)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.12549019607843137,
+            0.13333333333333333,
+            0.1215686274509804,
+            1
+          ],
+          "hiddenImage": "light-copy-results.png",
+          "id": "light-copy-results",
+          "normalImage": "light-copy-normal.png",
+          "rects": [
+            {
+              "bottom": 377.1953125,
+              "left": 960,
+              "right": 1115.7421875,
+              "top": 362.1953125
+            },
+            {
+              "bottom": 396.6953125,
+              "left": 960,
+              "right": 1012.1640625,
+              "top": 381.6953125
+            }
+          ],
+          "selector": "[role=\"menu\"]:popover-open button:nth-of-type(1)>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 996,
+          "nominalMinimum": 15.749617905545719,
+          "minLowerBound": 15.615240769562751,
+          "minUpperBound": 15.884701622153509
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 960,
+            "top": 422,
+            "width": 119
+          },
+          "computedColor": "rgb(32, 34, 31)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.12549019607843137,
+            0.13333333333333333,
+            0.1215686274509804,
+            1
+          ],
+          "hiddenImage": "light-copy-markdown.png",
+          "id": "light-copy-markdown",
+          "normalImage": "light-copy-normal.png",
+          "rects": [
+            {
+              "bottom": 437.4453125,
+              "left": 960,
+              "right": 1078.421875,
+              "top": 422.4453125
+            }
+          ],
+          "selector": "[role=\"menu\"]:popover-open button:nth-of-type(2)>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 570,
+          "nominalMinimum": 15.884701622153509,
+          "minLowerBound": 15.749617905545719,
+          "minUpperBound": 15.991461729356075
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 960,
+            "top": 466,
+            "width": 113
+          },
+          "computedColor": "rgb(32, 34, 31)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.12549019607843137,
+            0.13333333333333333,
+            0.1215686274509804,
+            1
+          ],
+          "hiddenImage": "light-copy-source.png",
+          "id": "light-copy-source",
+          "normalImage": "light-copy-normal.png",
+          "rects": [
+            {
+              "bottom": 481.4453125,
+              "left": 960,
+              "right": 1072.3984375,
+              "top": 466.4453125
+            }
+          ],
+          "selector": "[role=\"menu\"]:popover-open button:nth-of-type(3)>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 535,
+          "nominalMinimum": 15.884701622153509,
+          "minLowerBound": 15.749617905545719,
+          "minUpperBound": 15.991461729356075
+        }
+      ]
+    },
+    {
+      "id": "light-empty-bookings",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "1a473b01245a144bb57608b808fdfea47b4b3303b9d23afb3e1d1e53fc2bfa12",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 12,
+            "left": 684,
+            "top": 535,
+            "width": 150
+          },
+          "computedColor": "rgb(207, 107, 67)",
+          "fontSize": 10,
+          "fontWeight": "700",
+          "foregroundRGBA": [
+            0.8117647058823529,
+            0.4196078431372549,
+            0.2627450980392157,
+            1
+          ],
+          "hiddenImage": "light-empty-bookings-kicker.png",
+          "id": "light-empty-bookings-kicker",
+          "normalImage": "light-empty-bookings-normal.png",
+          "rects": [
+            {
+              "bottom": 546.734375,
+              "left": 684.3359375,
+              "right": 833.65625,
+              "top": 535.234375
+            }
+          ],
+          "selector": ".bookings-empty>.section-kicker",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-fail",
+          "matchedPixels": 549,
+          "nominalMinimum": 3.444618579127468,
+          "minLowerBound": 3.4149348810647733,
+          "minUpperBound": 3.474460137214696
+        }
+      ]
+    },
+    {
+      "id": "light-markdown-link",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "b18c4f1e0898f43027317304ea2133f9ffcd148f03891a263a210da0f2711691",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 20,
+            "left": 972,
+            "top": 322,
+            "width": 160
+          },
+          "computedColor": "rgb(207, 107, 67)",
+          "fontSize": 16,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.8117647058823529,
+            0.4196078431372549,
+            0.2627450980392157,
+            1
+          ],
+          "hiddenImage": "light-markdown-link-link.png",
+          "id": "light-markdown-link-link",
+          "normalImage": "light-markdown-link-normal.png",
+          "rects": [
+            {
+              "bottom": 341.859375,
+              "left": 972.9453125,
+              "right": 1131.5625,
+              "top": 322.859375
+            }
+          ],
+          "selector": "a[href=\"https://www.hs-hannover.de/\"]",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-fail",
+          "matchedPixels": 1013,
+          "nominalMinimum": 3.597610891354399,
+          "minLowerBound": 3.5671240415129706,
+          "minUpperBound": 3.597610891354399
+        }
+      ]
+    },
+    {
+      "id": "light-mobile-link",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "982fa61919d50f474c49ab75873a593ef59a7e8bbbc5db192ed231a3bdc3bbd5",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 47,
+            "left": 54,
+            "top": 327,
+            "width": 206
+          },
+          "computedColor": "rgb(207, 107, 67)",
+          "fontSize": 16,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.8117647058823529,
+            0.4196078431372549,
+            0.2627450980392157,
+            1
+          ],
+          "hiddenImage": "light-mobile-link-link.png",
+          "id": "light-mobile-link-link",
+          "normalImage": "light-mobile-link-normal.png",
+          "rects": [
+            {
+              "bottom": 346.234375,
+              "left": 173.59375,
+              "right": 259.4296875,
+              "top": 327.234375
+            },
+            {
+              "bottom": 373.4296875,
+              "left": 54.1640625,
+              "right": 122.7578125,
+              "top": 354.4296875
+            }
+          ],
+          "selector": "a[href=\"https://www.hs-hannover.de/\"]",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-fail",
+          "matchedPixels": 1034,
+          "nominalMinimum": 3.597610891354399,
+          "minLowerBound": 3.5671240415129706,
+          "minUpperBound": 3.597610891354399
+        }
+      ]
+    },
+    {
+      "id": "light-mobile-session",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "c0100b7f706b7d0fd6fea3998b1450ca017130e9c026429a81c59f90a55c0b28",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 16,
+            "left": 128,
+            "top": 226,
+            "width": 81
+          },
+          "computedColor": "rgb(32, 34, 31)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.12549019607843137,
+            0.13333333333333333,
+            0.1215686274509804,
+            1
+          ],
+          "hiddenImage": "light-mobile-session-rename.png",
+          "id": "light-mobile-session-rename",
+          "normalImage": "light-mobile-session-normal.png",
+          "rects": [
+            {
+              "bottom": 241.25,
+              "left": 128,
+              "right": 208.7421875,
+              "top": 226.25
+            }
+          ],
+          "selector": "[role=\"menu\"]:popover-open button:nth-of-type(1)>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 379,
+          "nominalMinimum": 15.749617905545719,
+          "minLowerBound": 15.615240769562751,
+          "minUpperBound": 15.884701622153509
+        },
+        {
+          "clip": {
+            "height": 16,
+            "left": 128,
+            "top": 277,
+            "width": 65
+          },
+          "computedColor": "rgb(164, 71, 58)",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.6431372549019608,
+            0.2784313725490196,
+            0.2274509803921569,
+            1
+          ],
+          "hiddenImage": "light-mobile-session-delete.png",
+          "id": "light-mobile-session-delete",
+          "normalImage": "light-mobile-session-normal.png",
+          "rects": [
+            {
+              "bottom": 292.25,
+              "left": 128,
+              "right": 192.921875,
+              "top": 277.25
+            }
+          ],
+          "selector": "[role=\"menu\"]:popover-open button:nth-of-type(2)>span",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 249,
+          "nominalMinimum": 5.826827739488616,
+          "minLowerBound": 5.777112728737601,
+          "minUpperBound": 5.87680416125351
+        }
+      ]
+    },
+    {
+      "id": "light-source-card",
+      "build": "baseline",
+      "calibration": false,
+      "manifestSha256": "53fe7f211213b1a945987cde5348951558373eb9bc95f2e41c1f84f2fd26e619",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "items": [
+        {
+          "clip": {
+            "height": 16,
+            "left": 40,
+            "top": 342,
+            "width": 10
+          },
+          "computedColor": "rgb(207, 107, 67)",
+          "fontSize": 13,
+          "fontWeight": "650",
+          "foregroundRGBA": [
+            0.8117647058823529,
+            0.4196078431372549,
+            0.2627450980392157,
+            1
+          ],
+          "hiddenImage": "light-source-card-number.png",
+          "id": "light-source-card-number",
+          "normalImage": "light-source-card-normal.png",
+          "rects": [
+            {
+              "bottom": 357.828125,
+              "left": 40.7109375,
+              "right": 49.28125,
+              "top": 342.828125
+            }
+          ],
+          "selector": ".chat-source-card:first-child>.chat-source-number",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-fail",
+          "matchedPixels": 26,
+          "nominalMinimum": 3.356024532829036,
+          "minLowerBound": 3.3268134472161575,
+          "minUpperBound": 3.3853927570046944
+        },
+        {
+          "clip": {
+            "height": 15,
+            "left": 71,
+            "top": 309,
+            "width": 125
+          },
+          "computedColor": "rgb(104, 109, 102)",
+          "fontSize": 12,
+          "fontWeight": "400",
+          "foregroundRGBA": [
+            0.4078431372549019,
+            0.4274509803921568,
+            0.4,
+            1
+          ],
+          "hiddenImage": "light-source-card-revision.png",
+          "id": "light-source-card-revision",
+          "normalImage": "light-source-card-normal.png",
+          "rects": [
+            {
+              "bottom": 323.578125,
+              "left": 71,
+              "right": 127.3671875,
+              "top": 309.578125
+            },
+            {
+              "bottom": 323.578125,
+              "left": 127.3671875,
+              "right": 187.8984375,
+              "top": 309.578125
+            },
+            {
+              "bottom": 323.578125,
+              "left": 187.8984375,
+              "right": 195.625,
+              "top": 309.578125
+            }
+          ],
+          "selector": ".chat-source-card:first-child small",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 507,
+          "nominalMinimum": 5.199764776781157,
+          "minLowerBound": 5.155399448847867,
+          "minUpperBound": 5.244363384276695
+        },
+        {
+          "clip": {
+            "height": 60,
+            "left": 71,
+            "top": 332,
+            "width": 190
+          },
+          "computedColor": "rgb(32, 34, 31)",
+          "fontSize": 14,
+          "fontWeight": "700",
+          "foregroundRGBA": [
+            0.12549019607843137,
+            0.13333333333333333,
+            0.1215686274509804,
+            1
+          ],
+          "hiddenImage": "light-source-card-title.png",
+          "id": "light-source-card-title",
+          "normalImage": "light-source-card-normal.png",
+          "rects": [
+            {
+              "bottom": 349.078125,
+              "left": 71,
+              "right": 242.59375,
+              "top": 332.578125
+            },
+            {
+              "bottom": 370.078125,
+              "left": 71,
+              "right": 260.4921875,
+              "top": 353.578125
+            },
+            {
+              "bottom": 391.078125,
+              "left": 71,
+              "right": 161.671875,
+              "top": 374.578125
+            }
+          ],
+          "selector": ".chat-source-card:first-child strong",
+          "threshold": 4.5,
+          "unsupportedFeatures": [],
+          "status": "bounded-pass",
+          "matchedPixels": 2659,
+          "nominalMinimum": 15.74970002951104,
+          "minLowerBound": 15.615320757244664,
+          "minUpperBound": 15.884785888187796
+        }
+      ]
+    }
+  ],
+  "artifacts": {
+    "path": "text-contrast-artifacts.zip",
+    "sha256": "40cbfe80816eefc21d09fa1cd69a88efd25328f08e0d9d07eeda4bbb6e71c5fa",
+    "files": 135,
+    "bytes": 2965533
+  },
+  "popup": {
+    "session-open.json": {
+      "menus": [
+        {
+          "expanded": "true",
+          "target": "_r_0_-actions",
+          "matches": 1,
+          "targetRole": "menu",
+          "open": true,
+          "visible": true
+        },
+        {
+          "expanded": "false",
+          "target": "_r_1_-actions",
+          "matches": 1,
+          "targetRole": "menu",
+          "open": false,
+          "visible": false
+        }
+      ],
+      "focused": "Umbenennen",
+      "links": [
+        {
+          "cls": "brand-link",
+          "text": "hasiHochschule Hannover",
+          "children": [
+            {
+              "tag": "SPAN",
+              "cls": "brand-lockup",
+              "text": "hasi"
+            },
+            {
+              "tag": "SPAN",
+              "cls": "brand-caption",
+              "text": "Hochschule Hannover"
+            }
+          ]
+        },
+        {
+          "cls": "nav-link is-active",
+          "text": "Chats",
+          "children": [
+            {
+              "tag": "svg",
+              "cls": {},
+              "text": ""
+            },
+            {
+              "tag": "SPAN",
+              "cls": "",
+              "text": "Chats"
+            }
+          ]
+        },
+        {
+          "cls": "nav-link",
+          "text": "Buchungen",
+          "children": [
+            {
+              "tag": "svg",
+              "cls": {},
+              "text": ""
+            },
+            {
+              "tag": "SPAN",
+              "cls": "",
+              "text": "Buchungen"
+            }
+          ]
+        },
+        {
+          "cls": "nav-link",
+          "text": "Verbundene Dienste",
+          "children": [
+            {
+              "tag": "svg",
+              "cls": {},
+              "text": ""
+            },
+            {
+              "tag": "SPAN",
+              "cls": "",
+              "text": "Verbundene Dienste"
+            }
+          ]
+        },
+        {
+          "cls": "nav-link",
+          "text": "Verwaltung",
+          "children": [
+            {
+              "tag": "svg",
+              "cls": {},
+              "text": ""
+            },
+            {
+              "tag": "SPAN",
+              "cls": "",
+              "text": "Verwaltung"
+            }
+          ]
+        }
+      ],
+      "welcome": "chat-welcome"
+    },
+    "session-closed.json": {
+      "menus": [
+        {
+          "expanded": "false",
+          "target": "_r_0_-actions",
+          "matches": 1,
+          "open": false,
+          "visible": true,
+          "focused": true
+        },
+        {
+          "expanded": "false",
+          "target": "_r_1_-actions",
+          "matches": 1,
+          "open": false,
+          "visible": false,
+          "focused": false
+        }
+      ]
+    },
+    "copy-closed.json": {
+      "copy": [
+        {
+          "target": "_r_j_-menu",
+          "expanded": "false",
+          "open": false,
+          "focused": false
+        },
+        {
+          "target": "_r_k_-menu",
+          "expanded": "false",
+          "open": false,
+          "focused": true
+        }
+      ]
+    },
+    "mobile-session-open.json": {
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "menus": [
+        {
+          "expanded": "false",
+          "target": "_r_1m_-actions",
+          "matches": 1,
+          "open": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        },
+        {
+          "expanded": "true",
+          "target": "_r_1n_-actions",
+          "matches": 1,
+          "open": true,
+          "rect": {
+            "x": 82,
+            "y": 206,
+            "width": 208,
+            "height": 107,
+            "top": 206,
+            "right": 290,
+            "bottom": 313,
+            "left": 82
+          }
+        }
+      ],
+      "focus": "Umbenennen"
+    },
+    "mobile-session-closed.json": {
+      "dialogOpen": true,
+      "focus": "icon-button chat-session-menu",
+      "menus": [
+        {
+          "target": "_r_1m_-actions",
+          "expanded": "false",
+          "focused": false
+        },
+        {
+          "target": "_r_1n_-actions",
+          "expanded": "false",
+          "focused": true
+        }
+      ]
+    },
+    "mobile-copy-open.json": {
+      "menu": [
+        {
+          "rect": {
+            "x": 64,
+            "y": 378.734375,
+            "width": 240,
+            "height": 157,
+            "top": 378.734375,
+            "right": 304,
+            "bottom": 535.734375,
+            "left": 64
+          },
+          "id": "_r_20_-menu"
+        }
+      ],
+      "focus": "Nachricht und Ergebnisse kopieren"
+    }
+  },
+  "cleanup": {
+    "baseline": {
+      "ownedDatabaseStoppedAndRemoved": true,
+      "privateHomeRemoved": true,
+      "nextDeclarationRestored": true,
+      "sourceRevision": "19c8b612fbfad4d34456749e2b107fe787f422a2"
+    },
+    "corrected": {
+      "ownedDatabaseStoppedAndRemoved": true,
+      "privateHomeRemoved": true,
+      "nextDeclarationRestored": true,
+      "sourceRevision": "98e3cc2136495a99b4245dc9315eb117cdd4aa06"
+    },
+    "testTabsClosed": [
+      48,
+      49
+    ]
+  },
+  "limits": [
+    "not native-device/assistive-technology acceptance",
+    "not a repeat of all100 prior layout observations",
+    "no all-state overlay/occlusion or general accessibility claim",
+    "initial opacity capture unsupported; stable retry separately retained",
+    "initial lost-popup capture rejected after normal authority refresh",
+    "this does not resolve the separate rapid protected-workspace mismatch"
+  ]
+}
