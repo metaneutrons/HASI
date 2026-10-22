@@ -1,10 +1,15 @@
 # Protected generic plugin result history
 
-Status: local implementation and bounded synthetic browser verification,
-2026-10-20. M2/P3/P4/P6 remain unaccepted as complete qualification groups.
-The joined fixture exposed generic-result omission/redaction and an intermediate
-history/render loop. The new result path passes its bounded browser journey;
-see [evidence and remaining gates](../verification/2026-10-20/plugin-result-authority.md).
+Status: implemented; M2 is technically accepted under the
+[corrected final decision](https://github.com/metaneutrons/HASI/issues/49#issuecomment-6328924087).
+The initial 2026-10-20 joined fixture exposed generic-result omission/redaction
+and an intermediate history/render loop; its
+[dated report](../verification/2026-10-20/plugin-result-authority.md) retains that
+scope. The separate 2026-10-22
+[immutable-image recovery exercise](../verification/2026-10-22/immutable-web-history-recovery.md)
+qualifies bounded protected reads across post-format web images, including
+retained state and revocation. Full M6/M7 and institutional M8 acceptance remain
+separate.
 
 ## Authority and data flow
 
@@ -48,8 +53,10 @@ profile/fallback eligibility and shared budget policies.
 This pre-release evidence extension deliberately has no legacy proof verifier.
 Previously issued assistant proofs may be excluded and require a new query.
 The PostgreSQL data and owner/session/budget identities are not reset. Older
-application images do not understand new result references; immutable rollback
-and forward recovery with this history format need their M7 operational exercise.
+application images do not understand new result references. The M7 operational
+exercise above verifies rollback and forward recovery between two post-format
+web images without changing signing material, identity or storage; it adds no
+compatibility promise for a pre-format writer.
 
 ## Qualification required
 

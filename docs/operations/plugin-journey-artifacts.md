@@ -73,3 +73,8 @@ labelled `workspace-reference-fixture`. Partial inputs or external paths without
 `--managed` fail before runtime startup; input paths never enter child processes,
 web builds, model requests or log output. A safe diagnostic identifies invalid
 payloads without printing the underlying external reader error.
+
+For the separate Linux protected-history recovery exercise, use the
+[immutable web-image mode](plugin-journey-web-images.md). It replaces only the
+web container across a fixed TestIdP/API/database composition; it cannot be
+combined with this managed-artifact mode and does not install production images.

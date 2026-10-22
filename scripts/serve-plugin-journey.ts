@@ -36,6 +36,14 @@ import {
   loadExternalJourneyArtifactPair,
   snapshotExternalJourneyArtifacts,
 } from './plugin-journey-artifacts.js';
+import {
+  captureJourneyWebImageInputs,
+  inspectJourneyWebImagePair,
+  JourneyWebImageError,
+  JourneyWebImageRuntime,
+  journeyWebImageRuntimeEnvironment,
+  type JourneyWebImageSelection,
+} from './plugin-journey-web-images.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = fileURLToPath(import.meta.url);
@@ -230,15 +238,44 @@ const COMMON_FIXTURE_COMMANDS = ['expire-anny', 'expire-reference', 'revoke-refe
 const MANAGED_FIXTURE_COMMANDS = COMMON_FIXTURE_COMMANDS;
 const DIRECT_FIXTURE_COMMANDS = [...COMMON_FIXTURE_COMMANDS, 'reference-lose-ack', 'reference-source-unavailable',
   'reference-source-available', 'reference-drop-reply', 'restart-reference', 'reference-v2', 'reference-v1'] as const;
-type JourneyFixtureCommand = typeof DIRECT_FIXTURE_COMMANDS[number];
+type JourneyFixtureCommand = typeof DIRECT_FIXTURE_COMMANDS[number] | 'web-previous' | 'web-current';
 
 /** Terminal-only controls accepted by the held local qualification fixture. */
-export function journeyFixtureCommands(managedMode: boolean): readonly JourneyFixtureCommand[] {
-  return managedMode ? MANAGED_FIXTURE_COMMANDS : DIRECT_FIXTURE_COMMANDS;
+export function journeyFixtureCommands(managedMode: boolean, webImageMode = false): readonly JourneyFixtureCommand[] {
+  const commands: readonly JourneyFixtureCommand[] = managedMode ? MANAGED_FIXTURE_COMMANDS : DIRECT_FIXTURE_COMMANDS;
+  return webImageMode ? [...commands, 'web-previous', 'web-current'] : commands;
 }
 
-export function parseJourneyFixtureCommand(line: string, managedMode: boolean): JourneyFixtureCommand | undefined {
-  return journeyFixtureCommands(managedMode).find(command => command === line);
+export function parseJourneyFixtureCommand(line: string, managedMode: boolean, webImageMode = false): JourneyFixtureCommand | undefined {
+  return journeyFixtureCommands(managedMode, webImageMode).find(command => command === line);
+}
+
+/** The image-mode proxy has fixed destinations; request input can select only a known route class. */
+export function journeyWebImageProxyPath(requestUrl: string): string {
+  let containsControlCharacter = false;
+  for (let index = 0; index < requestUrl.length; index += 1) {
+    const codeUnit = requestUrl.charCodeAt(index);
+    if (codeUnit <= 0x20 || codeUnit === 0x7f) { containsControlCharacter = true; break; }
+  }
+  if (!requestUrl.startsWith('/') || requestUrl.startsWith('//') || requestUrl.includes('\\') || requestUrl.includes('#')
+    || containsControlCharacter) {
+    throw new Error('Invalid local web-proxy request path.');
+  }
+  let pathname: string;
+  try {
+    const parsed = new URL(requestUrl, WEB_ORIGIN);
+    const queryStart = requestUrl.indexOf('?');
+    const rawPathname = queryStart === -1 ? requestUrl : requestUrl.slice(0, queryStart);
+    if (parsed.origin !== WEB_ORIGIN || parsed.hash || parsed.pathname !== rawPathname) throw new Error('invalid target');
+    pathname = parsed.pathname;
+    return `${pathname}${parsed.search}`;
+  } catch { throw new Error('Invalid local web-proxy request path.'); }
+}
+
+export function journeyWebImageProxyTarget(requestUrl: string): 'web' | 'api' {
+  const pathname = new URL(journeyWebImageProxyPath(requestUrl), WEB_ORIGIN).pathname;
+  const webApiRoute = pathname === '/api/health' || pathname === '/api/chat' || pathname.startsWith('/api/chat/');
+  return pathname.startsWith('/api/') && !webApiRoute ? 'api' : 'web';
 }
 
 /** Return the fixture-only response for the one protected history route during a controlled outage. */
@@ -583,20 +620,31 @@ async function protectedWebProbe(issuer: string): Promise<void> {
 }
 
 /** A held, explicit synthetic composition for actual browser qualification. */
-async function serve(managedMode = false, optimizedMode = false): Promise<void> {
+async function serve(managedMode = false, optimizedMode = false, webImageMode = false): Promise<void> {
+  if (webImageMode && (managedMode || optimizedMode)) throw new Error('Web-image mode cannot be combined with managed or optimized mode.');
+  const webImageInputs = webImageMode ? captureJourneyWebImageInputs(process.env) : undefined;
   const preflight = await journeyPreflight({
     environment: process.env,
     managedMode,
   });
   const { connectionString, externalArtifactPair } = preflight;
-  for (const port of [3001, 4100, 4101, 4102, 4103]) await available(port);
+  const dockerCommandEnvironment = {
+    ...cleanEnvironment(),
+    ...(webImageInputs?.dockerHost ? { DOCKER_HOST: webImageInputs.dockerHost } : {}),
+  };
+  const webImages = webImageInputs
+    ? inspectJourneyWebImagePair(webImageInputs, { environment: dockerCommandEnvironment })
+    : undefined;
+  for (const port of [3001, 4100, 4101, 4102, 4103, ...(webImageMode ? [3002] : [])]) await available(port);
   const directory = await mkdtemp(join(tmpdir(), 'hasi-plugin-journey-'));
   const children: ChildProcess[] = [];
   const retiring = new WeakSet<ChildProcess>();
   const servers: Server[] = [];
+  const frontendProxyRequests = new Set<ReturnType<typeof httpRequest>>();
   let referenceProxy: Awaited<ReturnType<typeof startJourneyReferenceProxy>> | undefined;
   let managedRuntime: Awaited<ReturnType<typeof startManagedJourneyRuntime>> | undefined;
   let managedCleanup: Awaited<ReturnType<NonNullable<typeof managedRuntime>['close']>> | undefined;
+  let webImageRuntime: JourneyWebImageRuntime | undefined;
   let idp: Awaited<ReturnType<typeof startTestIdp>> | undefined;
   let model: Awaited<ReturnType<typeof startJourneyModel>> | undefined;
   let commands = Promise.resolve();
@@ -755,30 +803,75 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
     if (optimizedMode) {
       stage = 'web-build';
       await runStartupCommand(['--filter', '@hasi/web', 'build'], journeyWebBuildEnvironment(), 'pnpm', 10 * 60 * 1000);
+    }
+    if (optimizedMode || webImageMode) {
       stage = 'budget-initializer';
       await runStartupCommand(['--conditions=react-server', '--import', 'tsx', join(ROOT, 'apps/web/scripts/initialize-model-budget.ts'), '--initialize'],
         journeyBudgetInitializerEnvironment(connectionString, modelPrices), process.execPath, 30 * 1000);
     }
-    stage = 'web-process';
-    const web = child([optimizedMode ? 'start' : 'dev', join(ROOT, 'apps/web'), '--hostname', '127.0.0.1', '--port', '3001'], {
-      NODE_ENV: optimizedMode ? 'production' : 'development', NEXT_TELEMETRY_DISABLED: '1', HASI_LOCAL_TEST_IDP: '1', HASI_LOCAL_TEST_IDP_SCOPE: scope,
-      HASI_CHAT_SIGNING_SECRET: randomBytes(32).toString('base64url'), HASI_WEB_ORIGIN: WEB_ORIGIN, HASI_API_ORIGIN: WEB_API_ORIGIN, DATABASE_URL: connectionString,
-      NODE_EXTRA_CA_CERTS: tlsCertPath, CUSTOM_API_KEY: modelToken, HASI_LLM_CONFIG: JSON.stringify(config),
-      HASI_MODEL_PRICES: JSON.stringify(modelPrices),
-    }, ROOT, false, join(ROOT, 'apps/web/node_modules/.bin/next'));
-    await ready(`${WEB_ORIGIN}/api/session`, web);
-    await ready(`${WEB_ORIGIN}/`, web);
+    const signingSecret = randomBytes(32).toString('base64url');
+    const modelConfiguration = JSON.stringify(config);
+    const modelPriceConfiguration = JSON.stringify(modelPrices);
+    if (webImageMode) {
+      if (!webImages) throw new Error('Immutable web-image metadata was not admitted.');
+      stage = 'web-image-proxy';
+      const frontendProxy = httpServer((request, response) => {
+        let target: 'web' | 'api';
+        let proxyPath: string;
+        try {
+          proxyPath = journeyWebImageProxyPath(request.url ?? '');
+          target = journeyWebImageProxyTarget(proxyPath);
+        } catch {
+          response.writeHead(400); response.end(); return;
+        }
+        const port = target === 'api' ? 4100 : 3002;
+        const upstream = httpRequest({ hostname: '127.0.0.1', port, method: request.method,
+          path: proxyPath, headers: request.headers, timeout: 45_000 }, received => {
+          response.writeHead(received.statusCode ?? 502, received.headers); received.pipe(response);
+        });
+        frontendProxyRequests.add(upstream);
+        upstream.once('close', () => frontendProxyRequests.delete(upstream));
+        upstream.setTimeout(45_000, () => upstream.destroy());
+        response.once('close', () => { if (!response.writableEnded) upstream.destroy(); });
+        request.once('aborted', () => upstream.destroy());
+        upstream.once('error', () => { if (!response.headersSent) response.writeHead(503); response.end(); });
+        request.pipe(upstream);
+      });
+      servers.push(frontendProxy);
+      frontendProxy.listen(3001, '127.0.0.1');
+      await once(frontendProxy, 'listening');
+      stage = 'web-image';
+      webImageRuntime = new JourneyWebImageRuntime({ images: webImages, commandEnvironment: dockerCommandEnvironment,
+        runtimeEnvironment: journeyWebImageRuntimeEnvironment({ scope, signingSecret, databaseUrl: connectionString,
+          certificatePath: tlsCertPath, modelToken, llmConfig: modelConfiguration, modelPrices: modelPriceConfiguration }),
+        certificatePath: tlsCertPath, ...(webImageInputs?.dockerHost ? { dockerHost: webImageInputs.dockerHost } : {}),
+        onUnexpectedExit: () => { if (!stopping) { state.unexpectedExit = true; onSignal(); } },
+      });
+      await webImageRuntime.start('current');
+    } else {
+      stage = 'web-process';
+      const web = child([optimizedMode ? 'start' : 'dev', join(ROOT, 'apps/web'), '--hostname', '127.0.0.1', '--port', '3001'], {
+        NODE_ENV: optimizedMode ? 'production' : 'development', NEXT_TELEMETRY_DISABLED: '1', HASI_LOCAL_TEST_IDP: '1', HASI_LOCAL_TEST_IDP_SCOPE: scope,
+        HASI_CHAT_SIGNING_SECRET: signingSecret, HASI_WEB_ORIGIN: WEB_ORIGIN, HASI_API_ORIGIN: WEB_API_ORIGIN, DATABASE_URL: connectionString,
+        NODE_EXTRA_CA_CERTS: tlsCertPath, CUSTOM_API_KEY: modelToken, HASI_LLM_CONFIG: modelConfiguration,
+        HASI_MODEL_PRICES: modelPriceConfiguration,
+      }, ROOT, false, join(ROOT, 'apps/web/node_modules/.bin/next'));
+      await ready(`${WEB_ORIGIN}/api/session`, web);
+      await ready(`${WEB_ORIGIN}/`, web);
+    }
     stage = 'protected-web-probe';
     await protectedWebProbe(idp.issuer);
-    const fixtureCommands = journeyFixtureCommands(managedMode);
+    const fixtureCommands = journeyFixtureCommands(managedMode, webImageMode);
     const writeEvidence = async () => writeFile(join(directory, 'evidence.json'), JSON.stringify({ scope, webOrigin: WEB_ORIGIN, apiReplicas: 2, optimized: optimizedMode, hostPid: process.pid,
       apiPids: apis.map(process_ => process_.pid), ...(reference ? { referencePid: reference.pid, referenceVersion: activeRelease.evidence.pluginVersion } : {}),
       managed: managedRuntime ? await managedRuntime.snapshot() : undefined,
+      webImages: webImageRuntime?.snapshot(),
       persistentReferenceState: true, referenceStateMode: managedMode ? 'host-managed-mcp' : 'private-sqlite', referenceProxy: referenceProxy?.stats(),
       ...journeyArtifactEvidence(packaged) }, null, 2), { mode: 0o600 });
     await writeEvidence();
     console.info(JSON.stringify({ event: 'plugin-journey-ready', webOrigin: WEB_ORIGIN, evidence: join(directory, 'evidence.json'), apiReplicas: 2, optimized: optimizedMode,
       ...(reference ? { independentReferencePid: reference.pid } : {}), managed: managedMode, syntheticOnly: true,
+      webImages: webImageRuntime?.snapshot(),
       artifactInputMode: packaged.artifactInputMode, commands: fixtureCommands }));
     stage = 'ready';
     input = createInterface({ input: process.stdin, terminal: false });
@@ -786,9 +879,16 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
       if (state.shutdownRequested) return;
       commands = commands.then(async () => {
         if (state.shutdownRequested) return;
-        if (!parseJourneyFixtureCommand(line, managedMode)) { console.info(JSON.stringify({ event: 'unknown-fixture-command' })); return; }
+        if (!parseJourneyFixtureCommand(line, managedMode, webImageMode)) { console.info(JSON.stringify({ event: 'unknown-fixture-command' })); return; }
         if (line === 'quit') { onSignal(); return; }
-        if (line === 'expire-anny' || line === 'expire-reference') {
+        if (line === 'web-previous' || line === 'web-current') {
+          if (!webImageRuntime) throw new Error('Immutable web-image controls are unavailable.');
+          const selection: JourneyWebImageSelection = line === 'web-previous' ? 'previous' : 'current';
+          const snapshot = await webImageRuntime.switchTo(selection);
+          await writeEvidence();
+          console.info(JSON.stringify({ event: 'journey-web-image-switched', active: snapshot.active,
+            transitionCount: snapshot.transitionCount }));
+        } else if (line === 'expire-anny' || line === 'expire-reference') {
           await advanceAccountClocks(apis, line);
           console.info(JSON.stringify({ event: 'synthetic-account-clock-advanced', service: line, replicasAcknowledged: apis.length }));
         } else if (line === 'revoke-reference') {
@@ -824,7 +924,8 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
           console.info(JSON.stringify({ event: 'synthetic-model-stats', calls: model?.calls() ?? 0,
             unavailableResponses: model?.unavailableResponses() ?? 0, resultObservations: model?.resultObservations(), realProviderCalls: 0,
             reference: reference ? await sendReferenceCommand(reference, 'stats') : undefined,
-            managed: managedRuntime ? await managedRuntime.snapshot() : undefined, proxy: referenceProxy?.stats() }));
+            managed: managedRuntime ? await managedRuntime.snapshot() : undefined, webImages: webImageRuntime?.snapshot(),
+            proxy: referenceProxy?.stats() }));
           await writeEvidence();
         } else console.info(JSON.stringify({ event: 'unknown-fixture-command' }));
       }).catch(() => { if (!state.shutdownRequested) { state.unexpectedExit = true; onSignal(); } });
@@ -838,7 +939,9 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
   } finally {
     stopping = true; state.shutdownRequested = true; clearTimeout(timer); input?.close();
     await commands;
-    const results = await Promise.allSettled(children.map(stopJourneyChild));
+    for (const request of frontendProxyRequests) request.destroy();
+    const results = await Promise.allSettled([webImageRuntime?.close()]);
+    results.push(...await Promise.allSettled(children.map(stopJourneyChild)));
     results.push(...await Promise.allSettled(servers.map(server => new Promise<void>((done, reject) => {
       server.closeAllConnections(); server.close(error => { if (error) reject(error); else done(); });
     }))));
@@ -850,6 +953,7 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
     }
     for (const signal of ['SIGTERM', 'SIGINT'] as const) process.off(signal, onSignal);
     console.info(JSON.stringify({ event: 'plugin-journey-stopped', ownedProcessesStopped: !state.cleanupFailed, callerOwnedTestDatabaseRetained: true,
+      webImages: webImageRuntime?.snapshot(),
       ...(managedCleanup ? { managedCleanup } : {}),
       ...(state.cleanupFailed ? { recoveryDirectory: directory } : {}) }));
   }
@@ -858,20 +962,25 @@ async function serve(managedMode = false, optimizedMode = false): Promise<void> 
 }
 
 /** Docker mode is an explicit operator CLI choice, never a browser/plugin input. */
-export function journeyOperation(args: readonly string[]): { kind: 'serve'; managed: boolean; optimized: boolean } | { kind: 'api'; path: string } {
+export function journeyOperation(args: readonly string[]): { kind: 'serve'; managed: boolean; optimized: boolean; webImages?: true } | { kind: 'api'; path: string } {
   if (args.length === 0) return { kind: 'serve', managed: false, optimized: false };
   if (args[0] === '--api' && args.length === 2 && args[1] && !args[1].startsWith('--')) return { kind: 'api', path: args[1] };
-  if (args.some(argument => argument === '--api') || args.some(argument => !['--managed', '--optimized'].includes(argument))
+  if (args.some(argument => argument === '--api') || args.some(argument => !['--managed', '--optimized', '--web-images'].includes(argument))
     || new Set(args).size !== args.length) throw new Error('Invalid synthetic journey operation.');
-  return { kind: 'serve', managed: args.includes('--managed'), optimized: args.includes('--optimized') };
+  const managed = args.includes('--managed');
+  const optimized = args.includes('--optimized');
+  const webImages = args.includes('--web-images');
+  if (webImages && (managed || optimized)) throw new Error('Invalid synthetic journey operation.');
+  return { kind: 'serve', managed, optimized, ...(webImages ? { webImages: true as const } : {}) };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
     const operation = journeyOperation(process.argv.slice(2));
-    await (operation.kind === 'api' ? apiChild(operation.path) : serve(operation.managed, operation.optimized));
+    await (operation.kind === 'api' ? apiChild(operation.path) : serve(operation.managed, operation.optimized, operation.webImages ?? false));
   } catch (error) {
     console.error(JSON.stringify({ event: 'synthetic-plugin-journey-failed', stage, operatorCredentialsUsed: false, productionStateUsed: false,
+      ...(error instanceof JourneyWebImageError ? { diagnostic: error.message } : {}),
       ...(error instanceof ExternalPluginArtifactInputError ? { diagnostic: error.category } : {}),
       ...(error instanceof ReferencePackagingCommandError ? { diagnostic: error.message } : {}) }));
     process.exitCode = 1;
