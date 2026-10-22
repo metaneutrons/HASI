@@ -104,6 +104,7 @@ const SINGLE_OFFICE_PATTERN = /\b(?:einzelburos?|1er|single[- ]?offices?|buro\s+
 const SHARED_OFFICE_PATTERN = /\b(?:2|3)(?:er)?\s*(?:buros?|offices?)\b|\b(?:geteilte[nrsm]?|gemeinsame[nrsm]?|gemeinschafts)\s*(?:buros?|offices?)\b|\bshared(?:\s*(?:buros?|offices?))?\b/u;
 const ANY_OFFICE_PATTERN = /\b(?:egal|gleich|beides|keine?\s+pr(?:ae|a)ferenz|ohne\s+pr(?:ae|a)ferenz|keine?\s+bevorzugung)\b/u;
 const OFFICE_TYPE_QUERY_PATTERN = /\b(?:einzelb[uü]ros?|1er|single[- ]?offices?|(?:2|3)(?:er)?\s*(?:b[uü]ros?|offices?)|(?:geteilte[nrsm]?|gemeinsame[nrsm]?|gemeinschafts)\s*(?:b[uü]ros?|offices?)|shared(?:\s*(?:b[uü]ros?|offices?))?|egal|gleich|beides|keine?\s+(?:praeferenz|präferenz|bevorzugung)|ohne\s+(?:praeferenz|präferenz))\b/giu;
+const OFFICE_PREFERENCE_ACCEPTANCE_PATTERN = /\b(?:(?:(?:ein|eine|einen|einem|einer)\s+)?(?:einzelb[uü]ros?|1er[- ]?b[uü]ro|(?:2|3)(?:er)?\s*b[uü]ros?|(?:geteilte[nrsm]?|gemeinsame[nrsm]?)\s*b[uü]ros?|shared(?:\s+office)?|b[uü]ro\s+mit\s+(?:einem|1)\s+arbeitsplatz|platz\s+in\s+einem\s+geteilten\s+b[uü]ro)|beides)\s+ist\s+okay\b/giu;
 
 /** Prefer the complete-catalog office count; otherwise use only explicit office labels. */
 export function classifyWorkplaceOfficeType(resource: Resource): Exclude<OfficeType, "any"> | "unknown" {
@@ -381,13 +382,42 @@ function parseLocation(text: string): { found: boolean; value?: string } {
   return value === undefined ? { found: false } : { found: true, value };
 }
 
+function replaceOutsideQuotedSpans(
+  text: string,
+  pattern: RegExp,
+  replacement: string | ((match: string, start: number, source: string) => string),
+): string {
+  const quotePairs = new Map([["\"", "\""], ["'", "'"], ["„", "“"], ["“", "”"], ["«", "»"], ["‹", "›"], ["‚", "‘"], ["‘", "’"]]);
+  const replace = (value: string) => value.replace(new RegExp(pattern.source, pattern.flags), (match, start: number) =>
+    typeof replacement === "string" ? replacement : replacement(match, start, value));
+  let result = "";
+  let segmentStart = 0;
+  for (let cursor = 0; cursor < text.length; cursor += 1) {
+    const opener = text.charAt(cursor);
+    const closer = quotePairs.get(opener);
+    if (!closer || opener === "'" && /[\p{L}\p{N}_]/u.test(text[cursor - 1] ?? "")) continue;
+
+    let end = cursor + 1;
+    while (end < text.length && (text[end] !== closer || text[end - 1] === "\\")) end += 1;
+    if (end === text.length) return result + replace(text.slice(segmentStart, cursor)) + text.slice(cursor);
+
+    result += replace(text.slice(segmentStart, cursor)) + text.slice(cursor, end + 1);
+    segmentStart = end + 1;
+    cursor = end;
+  }
+  return result + replace(text.slice(segmentStart));
+}
+
 function parseQuery(text: string): string | undefined {
   if (parseStandaloneOfficePreference(text) !== undefined) return undefined;
   let residual = text;
+  const removePositiveOfficePreference = (match: string, start: number, source: string) =>
+    isNegatedNear(source, start, start + match.length) ? match : " ";
+  residual = replaceOutsideQuotedSpans(residual, OFFICE_PREFERENCE_ACCEPTANCE_PATTERN, removePositiveOfficePreference);
   const patterns = [
     /\b(?:neue|andere)\s+(?:raum)?suche\b/giu,
     /\b(?:ist|sind)\s+(?:(?:mir|uns)\s+)?(?:egal|gleich)\b/giu,
-    new RegExp(OFFICE_TYPE_QUERY_PATTERN.source, OFFICE_TYPE_QUERY_PATTERN.flags),
+    OFFICE_TYPE_QUERY_PATTERN,
     /\b(?:\d+|ein(?:e|en|em|er)?|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s+(?:arbeitsplätz(?:e|en)|arbeitsplaetz(?:e|en)|schreibtisch(?:e|en)|desks?)\b/giu,
     /\b(?:arbeitsplätz(?:e|en)?|arbeitsplatz|schreibtisch(?:e|en)?|büros?|bueros?|büroraum|büroräume|bueroraum|bueroraeume|flex[-\s]?büros?|flex[-\s]?bueros?|desks?|besprechungsräum(?:e|en)|besprechungsraum|meetingräum(?:e|en)|meetingraum|hörsäle|hörsaal|hoersaele|hoersaal)\b/giu,
     /(?<![\p{L}\p{N}_])(?:übermorgen|morgen|heute)(?![\p{L}\p{N}_])/giu,
@@ -405,7 +435,10 @@ function parseQuery(text: string): string | undefined {
     /\b(?:ich\s+)?(?:such(?:e|en)?|brauche|benötige|benoetige|möchte|moechte|hätte\s+gern|haette\s+gern|finde|finden|reserviere|buch(?:e|en)?|gibt\s+es|haben\s+sie)\b/giu,
     /\b(?:kannst|kann|können|koennen|könnt|koennt|du|mir|mich|uns|ihnen|zeig|zeige|zeigen|gib|gibt|einmal|mal|ein(?:e|en|em|er)?|der|die|das|welche|welcher|welchen|was|nach|einzeln(?:e|en|er)?|bitte|doch|lieber|stattdessen|campus|raumbuchung(?:en)?|raum|räume|raeume|zimmer|für|fuer|mit|ohne|am|im|in|und|oder|wir|sind|zu|von|person(?:en)?|leute|gruppe|morgen|heute|übermorgen|uebermorgen)\b/giu,
   ];
-  for (const pattern of patterns) residual = residual.replace(pattern, " ");
+  for (const pattern of patterns) {
+    const replacement = pattern === OFFICE_TYPE_QUERY_PATTERN ? removePositiveOfficePreference : " ";
+    residual = replaceOutsideQuotedSpans(residual, pattern, replacement);
+  }
   const words = normalize(residual).match(/[a-z0-9]+/gu)?.filter((word) => word.length > 2) ?? [];
   return words.length ? words.join(" ") : undefined;
 }
@@ -433,7 +466,7 @@ function parseOfficeType(text: string): OfficeType | undefined {
 export function parseStandaloneOfficePreference(text: string): OfficeType | undefined {
   if (text.length > 2_000) return undefined;
   const normalized = normalize(text).trim().replace(/[.!?]+$/u, "").trim();
-  if (!/^(?:(?:bitte|lieber)\s+)?(?:(?:ein|einen)\s+)?(?:einzelburo|1er[- ]?buro|buro\s+mit\s+(?:einem|1)\s+arbeitsplatz|platz\s+in\s+einem\s+geteilten\s+buro|geteiltes buro|gemeinsames buro|shared office|beides(?:\s+(?:ist\s+passend|passt))?|(?:mir\s+)?egal|keine praferenz)(?:\s+bitte)?$/u.test(normalized)) return undefined;
+  if (!/^(?:(?:bitte|lieber)\s+)?(?:(?:ein|einen)\s+)?(?:einzelburo|1er[- ]?buro|buro\s+mit\s+(?:einem|1)\s+arbeitsplatz|platz\s+in\s+einem\s+geteilten\s+buro|geteiltes buro|gemeinsames buro|shared office|beides(?:\s+(?:ist\s+passend|passt))?|(?:mir\s+)?egal|keine praferenz)(?:\s+ist\s+okay)?(?:\s+bitte)?$/u.test(normalized)) return undefined;
   return parseOfficeType(normalized);
 }
 
