@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asksForActionControls, currentActionControls } from "../src/lib/chat-action-guidance";
+import { asksForActionControls, asksForActionStatus, currentActionControls } from "../src/lib/chat-action-guidance";
 
 describe("bounded native action control help", () => {
   it.each(["ich sehe keine schaltfläche", "Ich finde keinen Button.", "Wo ist die Bestätigung?", "Ich will direkt von hier buchen!", "was soll das denn, ich will direkt von hier buchen", "Was soll das denn? Ich will hier buchen!", "Ich sehe keine Bestätigungsschaltfläche", "I don't see a button", "Where is the confirmation button?"])("recognizes %s", text => {
@@ -33,4 +33,14 @@ it("never restores confirmation for expired, completed, invalidated or uncertain
     expect(currentActionControls({ ...proposal, status }, { proposal }, now)).toBeNull();
     expect(currentActionControls(proposal, { proposal: { ...proposal, status } }, now)?.confirmable).toBe(false);
   }
+});
+
+
+describe("bounded action status replies", () => {
+  it.each(["gibt es da keine Rückmeldung?", "Gibt es dazu eine Rückmeldung?", "Ich habe noch keine Rückmeldung.", "Hat das geklappt?", "Ist meine Buchung bestätigt?", "Did that go through?"])("reads current status for %s", text => {
+    expect(asksForActionStatus(text)).toBe(true);
+  });
+  it.each(["Gibt es da keine Rückmeldung? Buche noch ein Büro.", "Hat das geklappt und storniere meine Buchung", "Bitte buche morgen 10–12 Uhr", "Bestätigt", "ja", "x".repeat(241)])("does not turn another request into a status reply: %s", text => {
+    expect(asksForActionStatus(text)).toBe(false);
+  });
 });

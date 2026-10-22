@@ -1,3 +1,4 @@
+import { asksForActionStatus } from "./chat-action-guidance";
 import { classifyIntent } from "./chat-demo";
 import { annyWorkflow } from "./chat-tool-loop";
 import type { WireMessage } from "./chat-contract";
@@ -5,7 +6,6 @@ import type { WireMessage } from "./chat-contract";
 const ENGLISH_GREETING = /^(?:(?:hello|hi|hey|good\s+morning|good\s+afternoon|good\s+evening|howdy)[!,.:;\s]*)+(?:hasi[!,.:;\s]*)?[.!?…]*$/iu;
 const CURRENT_CLOCK_QUESTION = /^(?:wie\s+spät\s+ist\s+es(?:\s+(?:jetzt|gerade))?|wie\s+ist\s+die\s+(?:aktuelle\s+)?uhrzeit(?:\s+(?:jetzt|gerade))?|welches\s+datum\s+(?:haben\s+wir|ist)\s+heute|was\s+ist\s+das\s+heutige\s+datum|what\s+time\s+is\s+it(?:\s+(?:today|now|right\s+now))?|what(?:'s|\s+is)\s+the\s+time(?:\s+(?:now|right\s+now))?|what\s+date\s+is\s+it\s+today|what(?:'s|\s+is)\s+the\s+date\s+today|what\s+day\s+is\s+it\s+today)[.!?…]*$/iu;
 const PRESENTATION_ONLY_FOLLOW_UP = /^(?:bitte\s+kürzer|fasse\s+(?:das|es)\s+kurz\s+zusammen|bitte\s+als\s+stichpunkte|translate\s+(?:that|this)\s+into\s+english)[.!?…]*$/iu;
-const CURRENT_ACTION_STATUS_QUESTION = /^(?:hat\s+das\s+(?:geklappt|funktioniert)|was\s+ist\s+der\s+(?:aktuelle\s+)?status|ist\s+(?:das|die\s+buchung|meine\s+buchung|die\s+stornierung)\s+(?:bestätigt|storniert|abgeschlossen)|did\s+that\s+(?:work|go\s+through)|what\s+is\s+the\s+(?:current\s+)?status|is\s+(?:that|the\s+booking|my\s+booking|the\s+cancellation)\s+(?:confirmed|cancelled|completed))[.!?…]*$/iu;
 
 const STANDALONE_CONVERSATION = [
   /^(?:danke(?:\s+(?:dir|ihnen|schön|schoen))?|vielen\s+dank(?:\s+(?:dir|ihnen))?|merci)[.!?…]*$/iu,
@@ -50,7 +50,7 @@ export function needsInitialToolPlan(messages: readonly WireMessage[], context: 
 
   const text = latestUser.content.trim();
   if (isPlainConversation(text) || CURRENT_CLOCK_QUESTION.test(text)) return false;
-  if (context.hasCurrentActionStatus && CURRENT_ACTION_STATUS_QUESTION.test(text)) return false;
+  if (context.hasCurrentActionStatus && asksForActionStatus(text)) return false;
   if (PRESENTATION_ONLY_FOLLOW_UP.test(text) && hasEarlierAssistantAnswer(messages, latestUserIndex)) return false;
   return true;
 }

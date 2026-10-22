@@ -1193,6 +1193,8 @@ button:disabled { cursor: not-allowed !important; opacity: 0.58; }
 .chat-card-action { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; margin-top: 12px; padding: 8px 0; border: 0; border-radius: 6px; background: transparent; color: var(--accent-ink); cursor: pointer; font-size: 0.875rem; font-weight: 600; }
 .chat-no-slots { color: var(--muted); font-size: 0.875rem; }
 .chat-proposal { margin-top: 17px; border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.chat-action-receipt { display: grid; min-width: 0; gap: 6px; overflow-wrap: anywhere; }
+.chat-action-receipt p { margin: 0; }
 .chat-proposal-label { display: block; margin-bottom: 10px; color: var(--accent-ink); font-size: 0.625rem; font-weight: 650; letter-spacing: 0.09em; }
 .chat-tool-card > p:not(.chat-room-details) { margin: 8px 0; color: var(--ink-soft); font-size: 0.875rem; }
 .chat-proposal small { display: block; margin-bottom: 17px; color: var(--muted); font-size: 0.75rem; }
