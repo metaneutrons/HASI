@@ -1,0 +1,80 @@
+{
+  "dispatchId": "b60d1c76-1287-430f-8c35-a6a4196bf455",
+  "innerRunId": "d093777e-55b2-4faa-922f-b5042a8c8102",
+  "operatorRevision": "f0fe2602d85d5b808566ec23a43abe42b31c1f55",
+  "operatorImage": "sha256:9ce06ebb23d71dbe894540b68ef7ca9b5ac3e68e8fc8518b363ee43c25773c05",
+  "servingRevision": "80cfaeb4df0e8b166c421879d62e93ea07dd2b83",
+  "servingImage": "sha256:0ac99cc8a34e215e0e4c2ec3cc2d046168a288db136925f2e60f02fd8b8cc767",
+  "caseId": "access-02",
+  "observed": 5,
+  "notExecuted": 0,
+  "httpAttempts": 10,
+  "allHttpStatus200": true,
+  "allCapturesComplete": true,
+  "allFixtureCleanupCompleted": true,
+  "noRestrictedTitleBodyCanaryInModelOrRouteOutputs": true,
+  "noSourceOrBusinessWrites": true,
+  "sourceProbe": "passed",
+  "outgoingEvidence": "passed",
+  "inputTokens": 16750,
+  "outputTokens": 504,
+  "configuredTariffEstimateUsd": 0.00781785,
+  "conservativeLedgerBeforeMicroUsd": 284187,
+  "conservativeLedgerAfterMicroUsd": 299606,
+  "conservativeLedgerDeltaMicroUsd": 15419,
+  "earlierUnknownHoldsRetained": 7,
+  "nonBudgetRowsUnchanged": 565,
+  "physicalDatabaseAndVolumeRetained": true,
+  "priorFull118ReservationStateReconstructed": true,
+  "rawReportSha256": "c7af702f4a3685f306b93b5650e9e4027cd8d9f531cfe85236eb8465f11b1935",
+  "profiles": [
+    {
+      "id": "gwdg-qwen3-30b",
+      "latencyMs": 5228.668575,
+      "inputTokens": 3713,
+      "outputTokens": 75,
+      "configuredTariffEstimateUsd": 0.0032703999999999997,
+      "sourceProbe": "passed",
+      "outgoingEvidence": "passed"
+    },
+    {
+      "id": "deepinfra-deepseek-v4.1-flash",
+      "latencyMs": 2491.4066649999995,
+      "inputTokens": 3780,
+      "outputTokens": 151,
+      "configuredTariffEstimateUsd": 0.0008466,
+      "sourceProbe": "passed",
+      "outgoingEvidence": "passed"
+    },
+    {
+      "id": "groq-oss-120b",
+      "latencyMs": 1327.3718340000014,
+      "inputTokens": 3018,
+      "outputTokens": 105,
+      "configuredTariffEstimateUsd": 0.0005157,
+      "sourceProbe": "passed",
+      "outgoingEvidence": "passed"
+    },
+    {
+      "id": "groq-oss-20b",
+      "latencyMs": 1196.8219959999988,
+      "inputTokens": 3022,
+      "outputTokens": 83,
+      "configuredTariffEstimateUsd": 0.00025155,
+      "sourceProbe": "passed",
+      "outgoingEvidence": "passed"
+    },
+    {
+      "id": "groq-qwen-3.8-27b",
+      "latencyMs": 1422.7058140000008,
+      "inputTokens": 3217,
+      "outputTokens": 90,
+      "configuredTariffEstimateUsd": 0.0029335999999999997,
+      "sourceProbe": "passed",
+      "outgoingEvidence": "passed"
+    }
+  ],
+  "cacheStatus": "unknown",
+  "semanticGraded": false,
+  "controllerResumed": true
+}
