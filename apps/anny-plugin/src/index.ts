@@ -12,7 +12,7 @@ export { annyAppViewSha256, loadAnnyAppView } from './app-view.js';
 export type { AnnyExecutionEvidenceReader } from './source-reconciliation.js';
 export type ResourceKind = 'workplace' | 'meeting_room' | 'lecture_hall' | 'room';
 export interface Presentation { capacity: number | null; location: string; features: string[]; serviceId: string; kind?: ResourceKind; parentId?: string | null; parentName?: string | null; officeWorkplaceCount?: number | null }
-export interface AnnyPluginOptions { executionJournal?: ExecutionJournal; readExecutionEvidence?: AnnyExecutionEvidenceReader; client: AnnyClient | ((actor: ActorContext, execution?: Readonly<ExecutionBinding>) => AnnyClient); allowedHosts?: string[]; consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>; publicKey: KeyObject; serviceToken: string; presentation: Record<string, Presentation>; version?: string; enableAppView?: boolean }
+export interface AnnyPluginOptions { executionJournal?: ExecutionJournal; readExecutionEvidence?: AnnyExecutionEvidenceReader; client: AnnyClient | ((actor: ActorContext, execution?: Readonly<ExecutionBinding>) => AnnyClient); allowedHosts?: string[]; consumeInvocation?: (jti: string, expiresAt: number) => Promise<boolean>; publicKey: KeyObject; serviceToken: string; presentation: Record<string, Presentation>; version?: string; enableAppView?: boolean; /** Trusted constructor-only clock for domain future-booking checks. */ bookingNow?: () => number }
 const annyId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/);
 const interval = z.strictObject({ resourceId: annyId, serviceId: annyId, startDate: z.iso.datetime({ offset: true }), endDate: z.iso.datetime({ offset: true }) });
 const cancellation = interval.omit({ serviceId: true }).extend({ bookingId: annyId });
@@ -56,6 +56,11 @@ export function createAnnyPlugin(options: AnnyPluginOptions): FastifyInstance {
     if (!(actor.resourceIds ?? []).includes(resourceId) || metadata?.serviceId !== serviceId) throw new Error('Resource/service access denied.');
     return metadata;
   };
+  const domainNow = (): number => {
+    const now = options.bookingNow === undefined ? Date.now() : options.bookingNow();
+    if (!Number.isSafeInteger(now) || !Number.isFinite(new Date(now).getTime())) throw new Error('Invalid booking interval.');
+    return now;
+  };
   const names = async (actor: ActorContext) => new Map((await client(actor).listResources()).map(resource => {
     const profile = options.presentation[resource.id];
     const name = resource.attributes?.name ?? 'Ressource';
@@ -64,8 +69,10 @@ export function createAnnyPlugin(options: AnnyPluginOptions): FastifyInstance {
   }));
   const assertAvailable = async (args: z.infer<typeof interval>, actor: ActorContext) => {
     authorized(args.resourceId, args.serviceId, actor);
-    const minutes = (Date.parse(args.endDate) - Date.parse(args.startDate)) / 60000;
-    if (!Number.isInteger(minutes) || minutes < 15 || minutes > 1440 || Date.parse(args.startDate) <= Date.now()) throw new Error('Invalid booking interval.');
+    const start = Date.parse(args.startDate);
+    const end = Date.parse(args.endDate);
+    const minutes = (end - start) / 60000;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || !Number.isInteger(minutes) || minutes < 15 || minutes > 1440 || start <= domainNow()) throw new Error('Invalid booking interval.');
     const result = await client(actor).getAvailability({ resourceId: args.resourceId, serviceId: args.serviceId, startDate: args.startDate, duration: minutes });
     if (!result.data.some(entry => entry.available === true && Date.parse(entry.start_date ?? '') === Date.parse(args.startDate) && Date.parse(entry.end_date ?? '') === Date.parse(args.endDate))) throw new Error('Requested interval is unavailable.');
   };
@@ -76,7 +83,7 @@ export function createAnnyPlugin(options: AnnyPluginOptions): FastifyInstance {
     return { ...booking, resourceId: booking.resourceId, startDate: booking.startDate, endDate: booking.endDate };
   };
   const cancellable = (booking: Awaited<ReturnType<typeof ownedBooking>>) => {
-    if (!['accepted', 'confirmed', 'requested'].includes(booking.status ?? '') || Date.parse(booking.startDate) <= Date.now()) throw new Error('Only active future bookings can be cancelled.');
+    if (!['accepted', 'confirmed', 'requested'].includes(booking.status ?? '') || Date.parse(booking.startDate) <= domainNow()) throw new Error('Only active future bookings can be cancelled.');
   };
   return createPluginServer({
     ...(options.readExecutionEvidence ? { reconcileExecution: createAnnySourceReconciler({

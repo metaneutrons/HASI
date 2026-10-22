@@ -204,6 +204,14 @@ history projection; it is not an actual protected HTTP workflow. The linked
 instructions define its exposure checks, strict native-read limits and review
 requirements.
 
+`pnpm evaluate:original-rooms --profiles groq-oss-120b` plans the five pinned
+original room/calendar cases, including the clean/poisoned Birke pair.
+The [original-case operator](docs/evaluation/original-room-observations.md)
+keeps full benchmark evidence separate from compact native tool output and
+may prepare one exact pending proposal in an isolated contract fixture.
+Explicit admitted execution uses the existing shared budget; it never confirms
+a booking and does not establish protected HTTP/browser or semantic acceptance.
+
 ### Local PostgreSQL server mode
 
 This one-process mode runs the server-backed demo against a local PostgreSQL database. Create a local database and a new 32-byte base64url `HASI_DEMO_SECRET`, then set these values in `apps/web/.env.local`:
