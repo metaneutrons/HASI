@@ -1,0 +1,175 @@
+{
+  "candidateComponentsMatchRevision": "f34e109e16d919fde277574efa0654723a64efcd",
+  "manifestSha256": "45d9274d42683e6454743a0766faf627ab6b5cfcaddee1aac87f3ac753435975",
+  "bundle": {
+    "path": "public/harness.js",
+    "bytes": 1953366,
+    "sha256": "5164637b970708ffef0813671342a30b85558afee472c8e1b8099c08a36af26f"
+  },
+  "componentSha256": "f28ffd3a0a7ae8a78858fdd0151d68e3aaf0d49a8eacfc8a8fc1b01d9b5cad55",
+  "positiveObserved": true,
+  "hostileNetwork": {
+    "startCursor": 103,
+    "endCursor": 104,
+    "truncated": false,
+    "hasMore": false,
+    "audit": {
+      "audit": "{\"mode\":\"hostile\",\"anchors\":0,\"images\":0,\"iframes\":0,\"scripts\":0,\"rawHtmlExecuted\":false}",
+      "html": "<div class=\"markdown\"><h1>Hostile synthetic Markdown</h1>\n<p>Raw script payload:</p>\n\n<p>Raw image payload:\n</p>\n<p>Uppercase raw HTML payload:\n</p>\n<p>Markdown image payload:\n</p>\n<p>Iframe payload:</p>\n\n<p>Unsafe and obfuscated links:</p>\n<ul>\n<li><span>javascript</span></li>\n<li><span>mixed-case scheme</span></li>\n<li><span>percent-encoded scheme</span></li>\n<li><span>encoded colon</span></li>\n<li><span>credential-bearing URL</span></li>\n</ul></div>",
+      "rawHtmlExecuted": false,
+      "url": "http://127.0.0.1:60823/",
+      "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
+    },
+    "events": []
+  },
+  "controlNetwork": {
+    "cursor": 103,
+    "truncated": false,
+    "hasMore": false,
+    "events": [
+      {
+        "sequence": 47,
+        "method": "Network.requestWillBeSent",
+        "url": "http://127.0.0.1:60823/",
+        "requestId": "A1388AC7A98092CEBBF30D211F443847"
+      },
+      {
+        "sequence": 51,
+        "method": "Network.responseReceived",
+        "url": "http://127.0.0.1:60823/",
+        "status": 200,
+        "requestId": "A1388AC7A98092CEBBF30D211F443847"
+      },
+      {
+        "sequence": 62,
+        "method": "Network.requestWillBeSent",
+        "url": "http://127.0.0.1:60823/chat-markdown.css",
+        "requestId": "84036.8"
+      },
+      {
+        "sequence": 63,
+        "method": "Network.requestWillBeSent",
+        "url": "http://127.0.0.1:60823/harness.js",
+        "requestId": "84036.9"
+      },
+      {
+        "sequence": 68,
+        "method": "Network.responseReceived",
+        "url": "http://127.0.0.1:60823/chat-markdown.css",
+        "status": 200,
+        "requestId": "84036.8"
+      },
+      {
+        "sequence": 73,
+        "method": "Network.responseReceived",
+        "url": "http://127.0.0.1:60823/harness.js",
+        "status": 200,
+        "requestId": "84036.9"
+      },
+      {
+        "sequence": 83,
+        "method": "Network.requestWillBeSent",
+        "url": "http://127.0.0.1:60823/favicon.ico",
+        "requestId": "84036.12"
+      },
+      {
+        "sequence": 86,
+        "method": "Network.responseReceived",
+        "url": "http://127.0.0.1:60823/favicon.ico",
+        "status": 204,
+        "requestId": "84036.12"
+      },
+      {
+        "sequence": 93,
+        "method": "Network.requestWillBeSent",
+        "url": "http://127.0.0.1:60823/sink/automatic-positive-control",
+        "requestId": "84036.13"
+      },
+      {
+        "sequence": 97,
+        "method": "Network.responseReceived",
+        "url": "http://127.0.0.1:60823/sink/automatic-positive-control",
+        "status": 204,
+        "requestId": "84036.13"
+      }
+    ]
+  },
+  "serverAfterHostile": {
+    "count": 1,
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/sink/automatic-positive-control"
+      }
+    ]
+  },
+  "cleanup": {
+    "ownedListenerClosed": true,
+    "ownedBrowserTabClosed": true
+  },
+  "scope": "actual client ChatMarkdown only; NextLink surrogate, no citation tokens, no full app/history/provider/route/AT qualification",
+  "probeErrorsExcluded": [
+    "blank-origin CDP authority unavailable before ordinary navigation; captured known-origin reload instead",
+    "malformed first DOM two-frame expression and failed variable assignment; valid DOM+cursor evidence replaces them"
+  ],
+  "harnessSources": [
+    {
+      "path": "src/harness.tsx",
+      "sha256": "8615f200e5c7fdb5759637aa15df84d905f3ee517746ba9c4cfb659b79d97fb2"
+    },
+    {
+      "path": "src/next-link-surrogate.tsx",
+      "sha256": "61c0f27a3819b1f839248979e2a9fc949c5ff241be0ed9bff792c5b7496aab71"
+    },
+    {
+      "path": "server.mjs",
+      "sha256": "dc3c236913fe2f2340d15dde7daa45fef46b93f9d3e48acf38020fd39d6df522"
+    },
+    {
+      "path": "build.mjs",
+      "sha256": "a6885f3e977447d689ffe9f38310a8e5ff9c642a846121a37b352b45dcabc16c"
+    },
+    {
+      "path": "public/index.html",
+      "sha256": "36980cac7506e78ce7cf1ffcce0c69ac29abea20e6ba868e57740d43a124cd4b"
+    }
+  ],
+  "packageVersions": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "zod": "4.6.7"
+  },
+  "actualStylesheet": {
+    "path": "apps/web/src/components/chat-markdown.module.css",
+    "sha256": "ef5f7c5f04700819a6ca38905db561faf006fe32b952abc73cc2ac3faca65267",
+    "servedAsset": "public/chat-markdown.css",
+    "servedSha256": "9d392f1334b8dc91b509dd7f59dc248ed25121ebf91afc7ae6d2b414d1799164",
+    "transform": "Original declarations retained; :global(...) wrappers unwrapped for standalone CSS parsing; CSS Module names use identity mapping."
+  },
+  "importedInputsAggregateSha256": "cd9c7825be2dc7bac454a1049f48c3743c0b457cf3efa6b3a379d9453261a00e",
+  "importedInputCount": 364,
+  "gitIdentityVerification": {
+    "revision": "f34e109e16d919fde277574efa0654723a64efcd",
+    "sourceFiles": [
+      {
+        "path": "apps/web/src/components/chat-markdown.module.css",
+        "sha256": "ef5f7c5f04700819a6ca38905db561faf006fe32b952abc73cc2ac3faca65267"
+      },
+      {
+        "path": "apps/web/src/components/chat-markdown.tsx",
+        "sha256": "f28ffd3a0a7ae8a78858fdd0151d68e3aaf0d49a8eacfc8a8fc1b01d9b5cad55"
+      },
+      {
+        "path": "apps/web/src/lib/knowledge-citations.ts",
+        "sha256": "0c74a474018948847b2a08b6f832f04ceb1b70b9692bdf78f78065b51df83ad9"
+      },
+      {
+        "path": "apps/web/src/lib/knowledge.ts",
+        "sha256": "23abad81a23e4b101730fc58a1fa08e36b32a875c124c7cfdd4ef49adcd14a4d"
+      }
+    ],
+    "lockfileSha256": "d17165ca9989d72401f3eaa9718d1ffa43bc1adb486113602760f30db13317ba"
+  }
+}

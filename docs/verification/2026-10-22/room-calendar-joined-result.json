@@ -1,0 +1,31 @@
+{
+  "testSha256": "070526ba19e382b657705c5f3e9960be40b4ba55985b02fb14638af743700acd",
+  "testedApplicationRevision": "f964a0d5cd509d2c2c9e45786e4fe6bbaa6f66a5",
+  "focusedExitCode": 0,
+  "focusedTotalPassed": 14,
+  "focusedTotalFailed": 0,
+  "calendarAssertions": [
+    {
+      "name": "keeps the first user's tomorrow anchored across Berlin midnight through a native availability read",
+      "status": "passed",
+      "durationMs": 243.02658299999996
+    },
+    {
+      "name": "composes the shared guard with the native route and requires a valid replacement for anny-05 spring gap",
+      "status": "passed",
+      "durationMs": 137.89966700000002
+    },
+    {
+      "name": "composes the shared guard with the native route and requires a valid replacement for anny-04 autumn fold",
+      "status": "passed",
+      "durationMs": 103.69041700000002
+    }
+  ],
+  "validation": [
+    "web ESLint with type information",
+    "web TypeScript",
+    "calendar and Markdown focused tests"
+  ],
+  "scope": "protected timestamp/chat handlers plus shared guard and native mock routes; scripted provider/budget, no UI/model-semantic claim",
+  "independentReview": "timestamp anchors bound to row positions; unique system message; local lint/type failures corrected with runtime-validated timeline types"
+}

@@ -1,0 +1,13 @@
+# Safe Markdown browser network observation
+
+Date: 2026-10-22. Supports M6 #53 without completing M6/M7. The [machine result](markdown-browser-result.json) pins the actual component, bundle, imports and browser observations.
+
+An isolated optimized React19.3.1/esbuild0.28.2 harness bundled the actual `ChatMarkdown` source (SHA-256 `f28ffd3a0a7ae8a78858fdd0151d68e3aaf0d49a8eacfc8a8fc1b01d9b5cad55`), react-markdown10.1.0, remark-gfm4.0.1 and the real stylesheet declarations. These application inputs match revision `f34e109e16d919fde277574efa0654723a64efcd`. CSS-module names use an identity map and `:global(...)` wrappers are removed for standalone parsing. A local anchor surrogate replaces `next/link`; no citation tokens or Next navigation/prefetch are exercised. The final bundle SHA-256 is `5164637b970708ffef0813671342a30b85558afee472c8e1b8099c08a36af26f`.
+
+A browser network cursor was obtained before a controlled reload on the known loopback origin. The normal source retained ordinary Markdown text and a safe HTTP anchor. A deliberately inserted image outside ChatMarkdown requested `/sink/automatic-positive-control`: both browser request/204 response and the server method/path counter record it. This is the counter-observation proving the network measurement can detect an automatic image request. The ordinary safe anchor was not clicked.
+
+A new cursor preceded replacement with hostile Markdown: raw script/image/uppercase-image/iframe HTML, a Markdown image, javascript/mixed-case/encoded schemes and a credential-bearing synthetic URL. The actual component rendered readable text but zero anchors, images, iframes or scripts; its execution canary remained false. After rendering and two animation frames, the complete non-truncated browser interval contains zero network events. The server retains exactly the one positive image request and no hostile sink path. No interception, CSP image block or sink-counter reset explains the absence.
+
+This is one bounded client-component observation, not a model, streaming, complete chat-route/history, citation, native-device or general injection-resistance qualification. Existing static-render tests complement it. An initial raw-CDP attempt from an origin-less blank tab was denied; ordinary navigation established the origin and only the subsequent reload is measured. An invalid first DOM-measurement expression was excluded; the preserved result uses the valid expression and complete cursor interval.
+
+The owned tab closed and server exited normally; its loopback listener is verified closed. No model, protected history, business action, credential, production database or shared budget was used.

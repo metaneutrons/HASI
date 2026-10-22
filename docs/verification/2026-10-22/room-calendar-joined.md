@@ -1,0 +1,13 @@
+# Room-calendar guards through protected routes and native contracts
+
+Date:2026-10-22. Supporting M6, not model-semantic or milestone acceptance. [Test](../../../apps/web/tests/evaluation-room-calendar-joined.test.ts); [focused evidence](room-calendar-joined-result.json).
+
+Three tests compose the actual protected timestamp and chat handlers, shared room-request/time guard and the browser's native Anny tool bridge against a TestIdP/API/signed-RPC mock fixture. A scripted fake Groq transport always returns the same workplace/1J resource-search call; its budget is also fake. These are contract and data-flow assertions, not actual provider interpretation or a test of AssistantPage's guard wiring.
+
+The first test stamps a user request before Berlin midnight and its missing-time clarification after midnight. It parses the one serialized system timeline and associates each position with that message's signed timestamp and its own today/tomorrow dates. The first request's tomorrow remains17October while the clarification's tomorrow becomes18October. The merged requested interval remains17October10:00–11:00 Berlin; one native availability read uses that UTC interval and no proposal is created.
+
+Spring-gap29March2026 and autumn-fold25October2026 cases request02:30 Berlin. The shared guard rejects a substituted03:30 availability or proposal before any temporal API/source call; the fixture has no proposal. A separately timestamped user correction to03:30 then permits one availability request and one pending proposal at the correct UTC instant. The native proposal performs its own availability recheck. No confirmation/execution occurs.
+
+The focused run passes all3 calendar cases and11 complementary Markdown tests at application revisionf964a0d with Node24. Web ESLint and TypeScript also pass; the serialized timeline is runtime-validated before its assertions. Independent review found an earlier unbound timestamp/date assertion insufficient; final row comparisons bind position and signed time to each date anchor and require a unique serialized system message. Environments/fetch/clock and the fixture are restored/closed in finally blocks. An earlier temporary focused copy was removed after execution; the current test is part of the normal commit/pre-push gates. No model credentials, real provider call, production state or shared-budget change occurred.
+
+The actual browser's separate office-preference report covers a runtime-dated ordinary dialogue. This test adds frozen-clock boundary coverage; it does not claim a frozen-clock browser or an actual-model DST comparison, live Anny tenant semantics or institutional booking permission.
