@@ -31,10 +31,10 @@ This does not repeat the initial search with live Groq, qualify arbitrary paraph
 | `apps/web/src/components/action-status.tsx` | `713d167f0ee8e5bddb17ec9676e2c3eed7ffd08fc77b669d231299a4c93406de` |
 | `apps/web/src/lib/chat-action-guidance.ts` | `33d191edc7acc928f3213c6d5754fad218226191c0115a744df73532c26d6d66` |
 | `apps/web/src/lib/initial-tool-plan.ts` | `db791115a825996e58c8650cc3d89da9310c3535fd0e2fc1f4c5b711e520705a` |
-| `apps/web/src/app/globals.css` | `48bc3baa9d3013b5b55e68598764d85782df2c6d2757e2a30c47dbeaccd99aad` |
+| `apps/web/src/app/globals.css` | `6dbc7341e7171b367a53031a8b30f3349788ffc30a61812b0e166cb6b65cd4cb` |
 
-## Optional support reference
+## Internal booking IDs
 
-The booking overview now puts its technical identifier in a closed native “Details” disclosure. Resource, date, interval and status remain visible. The optional reference is selectable and has an explicit copy control with pending/success/failure feedback; clipboard failure retains the selectable value. Backend IDs, status lookup and cancellation identity are unchanged.
+Following Fabian's clarification, Anny's internal booking ID is removed entirely from the user-facing overview. There is no identifier disclosure or copy control. Resource, date, interval and status remain visible. Backend IDs, status lookup and cancellation identity are unchanged. The earlier proposed optional support-reference component was withdrawn because the internal identifier is not useful as an Anny user-facing support reference.
 
-An isolated browser fixture rendered the actual reference component with the application's current CSS. The initial accessibility tree contained only the closed disclosure, not the identifier; expanding it exposed the reference and copy control. The browser API reported successful completion after the click, but the automation clipboard readback was empty, so an actual paste result is not claimed. Physical iPhone copy/paste remains unexecuted in M8-A7. This is a component check, not a second full application or production journey.
+A bounded isolated browser fixture rendered the actual `BookingsPage` against one synthetic read response that still contained an internal UUID. Initial rendering and a refresh showed the room, interval, status and count without that identifier or a Details control. The fixture used the current application CSS and a minimal Next environment shim; it is a component observation, not a new full application or actual-device test.
