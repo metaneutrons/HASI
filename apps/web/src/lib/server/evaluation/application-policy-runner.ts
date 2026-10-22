@@ -2,9 +2,13 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
-import { createEvaluationKnowledgePolicyFixture } from "../../../../../../scripts/evaluation/knowledge-policy-fixture";
+import { createEvaluationKnowledgePolicyFixture, type EvaluationKnowledgePolicyFixture } from "../../../../../../scripts/evaluation/knowledge-policy-fixture";
+import { getKnowledgePolicyScenario } from "../../../../../../scripts/evaluation/knowledge-policy-scenarios";
 import { chatToolSchemas, modelReplySchema, type WireMessage } from "../../chat-contract";
+import { chatAccess } from "../chat-access";
 import { createChatPostHandler } from "../chat-route";
+import { createKnowledgeEvidence } from "../knowledge-evidence";
+import { productionHistoryAuthority } from "../history-authority";
 import { loadModelConfiguration, resolveModelConnection } from "../model-config";
 import { loadModelPrices, modelPrice } from "../model-budgets";
 import type { ModelBudgetAdmission } from "../model-router";
@@ -24,6 +28,8 @@ export interface ApplicationPolicyRun {
   caseId: string;
   baseCaseId: string;
   scenario: string;
+  sourceAcquisitionTrack: "model_planned" | "host_preloaded_native_read";
+  hostPreloadedRead?: { tool: "knowledge_search"; arguments: { query: string; sourceSystem: "service_it" }; contextId: string; sourceIds: string[] };
   reviewStatus: "draft" | "reviewed" | "adjudicated";
   profileId: string;
   authenticatedRole: "reader" | "outsider";
@@ -116,6 +122,7 @@ export async function runApplicationPolicyCase(value: unknown, dependencies: {
   const record: Omit<ApplicationPolicyRun, "measurements"> = {
     runKind: "provider_application_policy", runId: randomUUID(), caseId: planned.definition.id,
     baseCaseId: planned.definition.baseCaseId, scenario: planned.definition.scenario,
+    sourceAcquisitionTrack: planned.definition.id === "inject-04-host-preloaded-runtime" ? "host_preloaded_native_read" : "model_planned",
     reviewStatus: planned.evaluationCase.reviewStatus, profileId: profile.id, authenticatedRole: planned.definition.role,
     tenancyScope: planned.definition.id === "access-03-deployment-scoped-runtime" ? "isolated_in_process_deployments" : "single_deployment",
     configurationDigestSha256: hash(JSON.stringify(configuration)), caseDigestSha256: hash(JSON.stringify(planned.evaluationCase)),
@@ -153,9 +160,9 @@ export async function runApplicationPolicyCase(value: unknown, dependencies: {
     record.sourceRevisions = scenario.sources.map(item => ({ id: item.id, logicalSourceId: item.sourceId,
       sourceSystem: item.sourceSystem, revision: item.revision, sourceDigestSha256: item.digestSha256,
       contentDigestSha256: hash(JSON.stringify({ title: item.title, text: item.text })) }));
-    const sourceProbe = async (stage: "initial" | "after_revocation") => {
+    const sourceProbe = async (stage: "initial" | "after_revocation", suppliedResult?: Awaited<ReturnType<EvaluationKnowledgePolicyFixture["search"]>>) => {
       if (!fixture) throw new Error("The source fixture is unavailable.");
-      const result = await fixture.search(planned.definition.role, scenario.sourceSystem);
+      const result = suppliedResult ?? await fixture.search(planned.definition.role, scenario.sourceSystem);
       const ids = result.documents.map(item => String(item.id));
       const expected = planned.definition.role === "outsider" || revoked ? [] : scenario.expectedVisibleSources.map(item => item.id);
       const allowed = JSON.stringify([...ids].sort()) === JSON.stringify([...expected].sort())
@@ -263,10 +270,46 @@ export async function runApplicationPolicyCase(value: unknown, dependencies: {
         directDocumentReadStatus: direct.status, peerContextReplayStatuses: statuses, passed };
       if (!passed) { record.controls.sourceProbe = "failed"; throw new Error("The actual peer deployment boundary failed."); }
     }
-    await sourceProbe("initial");
+    const isHostPreloadedRuntime = planned.definition.id === "inject-04-host-preloaded-runtime";
+    let hostPreloadedResult: Awaited<ReturnType<EvaluationKnowledgePolicyFixture["search"]>> | undefined;
+    if (isHostPreloadedRuntime) {
+      const policyFixture = fixture;
+      const trusted = getKnowledgePolicyScenario("north-entry-card");
+      if (scenario.id !== "north-entry-card" || planned.definition.role !== "reader"
+        || trusted.sources.length !== 1 || trusted.sources[0]?.sourceSystem !== "service_it") {
+        record.controls.sourceProbe = "failed";
+        throw new Error("The host-preloaded source binding differs from the reviewed scenario.");
+      }
+      const arguments_ = { query: trusted.query, sourceSystem: "service_it" as const };
+      hostPreloadedResult = await policyFixture.callKnowledgeSearch("reader", arguments_);
+      await sourceProbe("initial", hostPreloadedResult);
+      record.hostPreloadedRead = { tool: "knowledge_search", arguments: arguments_, contextId: hostPreloadedResult.contextId,
+        sourceIds: hostPreloadedResult.documents.map(item => String(item.id)) };
+      record.executedReads.push({ tool: "knowledge_search", sourceIds: hostPreloadedResult.documents.map(item => String(item.id)) });
+    }
+    if (!isHostPreloadedRuntime) await sourceProbe("initial");
     const post = createChatPostHandler({ getBudgetAdmission: () => Promise.resolve(observedAdmission) });
     const conversationId = randomUUID();
     const messages: WireMessage[] = planned.evaluationCase.userMessages.map(content => ({ role: "user", content }));
+    if (hostPreloadedResult) {
+      if (!record.hostPreloadedRead) throw new Error("The host-preloaded source observation is unavailable.");
+      const toolCallId = randomUUID();
+      const assistant: Extract<WireMessage, { role: "assistant" }> = { id: randomUUID(), role: "assistant", content: "",
+        toolCalls: [{ id: toolCallId, name: "knowledge_search", arguments: record.hostPreloadedRead.arguments }] };
+      const authorityRequest = new Request(`${fixture.webOrigin}/api/chat`, { method: "POST",
+        headers: { host: new URL(fixture.webOrigin).host, origin: fixture.webOrigin,
+          cookie: fixture.cookies.reader, "content-type": "application/json" },
+        body: JSON.stringify({ profileId: profile.id, conversationId, messages }),
+      });
+      const access = await chatAccess(authorityRequest);
+      if (access instanceof Response || !access.production) throw new Error("The host-preloaded reader is not authenticated in the protected route.");
+      const authorityDigest = await productionHistoryAuthority(access.request);
+      // Use chatAccess's exact per-reader production binding so the real route verifies the host event.
+      assistant.evidence = createKnowledgeEvidence(access.production.secret, access.production.scope)
+        .stamp(conversationId, assistant, [hostPreloadedResult.contextId], authorityDigest);
+      messages.push(assistant, { id: randomUUID(), role: "tool", name: "knowledge_search", toolCallId,
+        content: JSON.stringify(hostPreloadedResult) });
+    }
     let routingToken: string | undefined;
     for (let step = 0; step < 4; step++) {
       const providerResponseStart = record.providerResponses.length;
