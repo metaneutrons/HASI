@@ -571,6 +571,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
         }, reply.message.id);
         if (!reply.message.toolCalls?.length) return;
         let actionableResult = false;
+        let bookingsReadFailed = false;
         const successfulTools: ChatToolName[] = [];
         for (const call of reply.message.toolCalls) {
           const pluginDescriptor = isChatToolName(call.name) ? undefined : pluginToolsByModelName.get(call.name);
@@ -626,6 +627,9 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
               actionableResult ||= !toolNeedsModelFollowUp(result.name);
             }
           } catch (cause) {
+            // A failed personal read or empty-result verification needs a user
+            // retry, not another generation guessing from an omitted result.
+            if (call.name === "anny_list_my_bookings") bookingsReadFailed = true;
             if (cause instanceof RoomTimeUnresolvedError) actionableResult = true;
             output = { error: cause instanceof Error ? cause.message : "Das Tool konnte die Anfrage nicht abschließen.", ...(cause instanceof RoomTimeMismatchError ? { requestedInterval: cause.expectedInterval } : {}) };
             const failedLabel = pluginDescriptor ? `Plugin · ${pluginDescriptor.title} · Anfrage fehlgeschlagen` : call.name === "knowledge_search" ? "Wissensdienst · Anfrage fehlgeschlagen" : "anny · Anfrage fehlgeschlagen";
@@ -636,6 +640,7 @@ function Conversation({ composerFocus, sessionId, ownerId, name, initial, active
           const content = call.name === "knowledge_search" || toolContextId ? JSON.stringify(output) : omittedToolHistoryContent();
           history.current.push(remember({ role: "tool", toolCallId: call.id, name: call.name, content, ...(toolContextId ? { toolContextId } : {}) }));
         }
+        if (bookingsReadFailed) return;
         // Host-rendered cards already provide the answer and next action.
         // Stop after every successful Anny result, including empty/unchecked searches.
         if (actionableResult && !mixedRequest && !toolBatchNeedsModelFollowUp(successfulTools)) return;
