@@ -140,6 +140,8 @@ describe("chat route profile switching policy", () => {
   });
 
   it("reloads actor-approved tools on each profile switch and blocks a profile that cannot receive the full context", async () => {
+    // Conversational prose isolates registry refresh from substantive read
+    // planning, which is covered by the native-tool policy tests separately.
     const toolSnapshots = [
       [tool("example.status", "status.read")],
       [tool("example.catalog", "catalog.read")],
@@ -194,7 +196,7 @@ describe("chat route profile switching policy", () => {
     const first = await postChat({
       conversationId,
       profileId: "groq-oss-120b",
-      messages: [{ role: "user", content: "Read the current status." }],
+      messages: [{ role: "user", content: "Hallo." }],
     });
     expect(first.status).toBe(200);
     const firstReply = await first.json() as { message: Record<string, unknown>; profile: { id: string } };
@@ -204,9 +206,9 @@ describe("chat route profile switching policy", () => {
       conversationId,
       profileId: "groq-oss-20b",
       messages: [
-        { role: "user", content: "Read the current status." },
+        { role: "user", content: "Hallo." },
         firstReply.message,
-        { role: "user", content: "Read the status again." },
+        { role: "user", content: "Hello!" },
       ],
     });
     expect(second.status).toBe(200);
@@ -217,11 +219,11 @@ describe("chat route profile switching policy", () => {
       conversationId,
       profileId: "groq-qwen-3.8-27b",
       messages: [
-        { role: "user", content: "Read the current status." },
+        { role: "user", content: "Hallo." },
         firstReply.message,
-        { role: "user", content: "Read the status again." },
+        { role: "user", content: "Hello!" },
         secondReply.message,
-        { role: "user", content: "Read the status after switching models." },
+        { role: "user", content: "Danke." },
       ],
     });
 
@@ -230,9 +232,9 @@ describe("chat route profile switching policy", () => {
     expect(sessionFetches).toHaveLength(3);
     expect(toolFetches).toHaveLength(3);
     expect(providerRequests[1]?.messages).toEqual(expect.arrayContaining([
-      expect.objectContaining({ role: "user", content: "Read the current status." }),
+      expect.objectContaining({ role: "user", content: "Hallo." }),
       expect.objectContaining({ role: "assistant", content: "Test response." }),
-      expect.objectContaining({ role: "user", content: "Read the status again." }),
+      expect.objectContaining({ role: "user", content: "Hello!" }),
     ]));
     expect(providerRequests.map(request => request.model)).toEqual(["openai/gpt-oss-120b", "openai/gpt-oss-20b"]);
     expect(providerToolNames(providerRequests[0] ?? {})).toEqual([toolSnapshots[0]?.[0]?.modelName]);

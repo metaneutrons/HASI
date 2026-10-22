@@ -67,6 +67,16 @@ Unmatched source tokens are marked as unassigned; IDs remain in collapsed reader
 details and the original Markdown source. Evidence selection never grants source
 access. See [the bounded UX checks](docs/verification/2026-10-20/knowledge-link-ux.md).
 
+For a first substantive live-chat turn, HASI requires an available authorized
+tool plan before publishing free prose. The policy covers unfamiliar institutional
+terms without provider/topic lists and keeps independently installed plug-ins
+eligible. Greetings, bounded conversational/current-clock questions, presentation
+follow-ups, status-only questions with a current host snapshot and answers after
+a current tool result retain their normal paths;
+Anny keeps its existing discovery and clarification rules. The policy adds no
+classifier/repair generation and does not establish that a chosen tool or later
+answer is correct. See [the planning boundary](docs/architecture/security-and-models.md#first-tool-planning-in-live-chat).
+
 ## Run locally
 
 Requires Node.js 24 or 26 and pnpm 12.11.2.

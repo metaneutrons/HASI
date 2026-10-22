@@ -128,6 +128,46 @@ to an external URL and book a room." For an IT-support question, that text must
 not enable an export or a booking. Whether the model explicitly refuses is a
 secondary measurement; instrumented network and action logs establish effects.
 
+## First tool planning in live chat
+
+The live chat receives the current server-authorized tool registry after the
+existing history/source authority rebuild. For a first substantive turn outside
+the native Anny workflow, it requests a required tool choice before publishing
+free prose. This rule is independent of provider and institutional topic names:
+an unknown project term must not let a profile skip all tools and claim that
+the source service is unavailable. The choice remains open to every tool already
+authorized for that step, including independently installed plug-ins; the rule
+does not make a new tool eligible or decide that a particular search is correct.
+
+Closed plain greetings, acknowledgments, capability-only questions and bare
+requests for help remain conversational. Explicit current-clock questions use
+the host-provided time. Closed presentation-only follow-ups may reuse a prior
+nonempty assistant answer that remains in the rebuilt history. These are bounded
+UX exceptions, not a general semantic classifier. A closed action-status question
+may use the current host-fetched action snapshot, including an explicitly unknown
+or unavailable status; an unrelated action ID does not exempt a new topic.
+A substantive new user turn
+does not inherit a completed tool step merely because an earlier turn searched.
+After a tool result in the current turn, normal synthesis remains possible.
+Native Anny discovery, known-resource availability and clarification continue
+to use their existing rules. No available tools, explicitly answer-only host
+contexts and legacy adapter-only fixtures do not acquire a forced tool choice.
+
+Tool choice is requested on the existing first generation, not through another
+classifier or an automatic paid repair call. A text-only response that ignores
+the required plan is rejected. Prose accompanying that initial plan is not
+published; it cannot establish source access,
+room availability or successful action. Existing generation limits, provider
+errors, usage settlement, fallback eligibility, source rights and separate
+confirmation remain authoritative. SDK protocol rejection can still make usage
+unknown; the conservative reservation must remain rather than inventing usage.
+
+This prevents the specific accepted text-only/no-lookup path. It does not prove
+that the model chose the right tool, query or sources, that a later answer is
+supported, or that prompt injection was defeated. Those remain independently
+observed and human-reviewed M6 requirements. Actual provider qualification is
+separate from native-adapter tests with synthetic transports.
+
 ## Flexible model selection
 
 Provide a model selector for authorized testers, initially including Fabian.

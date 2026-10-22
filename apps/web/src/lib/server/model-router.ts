@@ -12,6 +12,7 @@ import { z } from "zod";
 import { ModelRouterError } from "./model-router-error";
 import { annyWorkflow, isAvailabilityFollowUp, isMixedKnowledgeRequest } from "../chat-tool-loop";
 import { classifyIntent, parseStandaloneOfficePreference } from "../chat-demo";
+import { needsInitialToolPlan } from "../initial-tool-plan";
 import { parseGroqRateLimitDiagnostics, type GroqRateLimitDiagnostics } from "./provider-rate-limits";
 import { modelToolContent, retainedAnnyResultIndices, projectNativeToolHistory } from "../chat-tool-context";
 import { groqErrorDiagnostics } from "./groq-error-diagnostics";
@@ -483,6 +484,11 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
     || parseStandaloneOfficePreference(userText) !== undefined;
   const needsInitialSearch = options.authorizedTools !== undefined && workflow === "rooms" && allowedTools.anny_search_resources !== undefined
     && !currentAnnyResult && (discoveryRequest || !earlierAnnyResult);
+  // Substantive live-chat turns must use an available capability before free
+  // prose. Keep the choice open to all current authorized plug-ins; a topic
+  // keyword list cannot decide which future institutional service is needed.
+  const needsToolPlan = options.authorizedTools !== undefined && options.context?.toolsRequired !== false
+    && toolNames.length > 0 && needsInitialToolPlan(request.messages, { hasCurrentActionStatus: Boolean(options.actionContext?.length) });
   const messages = toModelMessages(projectedHistory);
   const deadline = Math.min(budget.deadline, Date.now() + profile.parameters.timeoutMs);
   let attempts = 0;
@@ -528,7 +534,8 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
         messages,
         ...(options.signal ? { abortSignal: options.signal } : {}),
         tools: allowedTools,
-        ...(needsInitialSearch ? { toolChoice: { type: "tool" as const, toolName: "anny_search_resources" } } : {}),
+        ...(needsInitialSearch ? { toolChoice: { type: "tool" as const, toolName: "anny_search_resources" } }
+          : needsToolPlan ? { toolChoice: "required" as const } : {}),
         ...(profile.parameters.temperature === null ? {} : { temperature: retry ? 0 : profile.parameters.temperature }),
         ...(connection.adapter === "groq"
           ? { providerOptions: { groq: { reasoningEffort: profile.parameters.reasoningEffort ?? "low", parallelToolCalls: false } } }
@@ -632,6 +639,7 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
   if (needsInitialSearch && (toolCalls.length !== 1 || toolCalls[0]?.name !== "anny_search_resources")) {
     throw invalidModelResponse();
   }
+  if (needsToolPlan && toolCalls.length === 0) throw invalidModelResponse();
 
   if (
     (result.text.trim().length === 0 && toolCalls.length === 0) ||
@@ -650,9 +658,9 @@ async function generateProfile(request: ChatRequest, profile: ResolvedProfile, c
   const reply = {
     message: {
       role: "assistant",
-      // Search activity and native result cards provide the first-turn feedback.
-      // Prose generated before the read cannot establish room availability.
-      content: needsInitialSearch ? "" : result.text,
+      // Host activity/results provide feedback for the first tool plan. Prose
+      // generated before execution cannot establish source facts or availability.
+      content: needsInitialSearch || needsToolPlan ? "" : result.text,
       ...(toolCalls.length > 0 ? { toolCalls } : {}),
     },
     profile: {
