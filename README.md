@@ -179,6 +179,16 @@ The [first actual-route development run](docs/verification/2026-10-21/applicatio
 records nine provider calls and an intentional stop after partial DeepInfra
 capture; denied-source cases and human review remain open, with no model ranking.
 
+```sh
+pnpm evaluate:room-planning --profiles groq-oss-120b --cases room-initial-preference-1j --max-calls 4
+```
+
+This separately registered [read-only room observation](docs/evaluation/room-planning-observations.md)
+plans an initial office search and direct preference refinement. Explicit live
+execution observes the protected chat route and native Anny bridge under synthetic
+`rooms:read` authority and the existing shared budget. It cannot prepare, confirm,
+execute or cancel a booking; no browser, semantic or M6 acceptance is implied.
+
 ### Local PostgreSQL server mode
 
 This one-process mode runs the server-backed demo against a local PostgreSQL database. Create a local database and a new 32-byte base64url `HASI_DEMO_SECRET`, then set these values in `apps/web/.env.local`:

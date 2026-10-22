@@ -1,11 +1,11 @@
 # Room-planning development observations
 
 `evaluate:room-planning` observes one code-owned development scenario:
-`room-initial-preference-1j`. It sends an initial request for a **Büro** in
+`room-initial-preference-1j`. It sends an initial request using **Büro** for an office in
 building 1J from 10:00 to 16:00 on a Berlin date generated about seven days
 ahead from the current runtime clock. The model must normalize the office request
-to a workplace search; the input does not supply that tool argument. After the initial protected chat route
-returns a typed search call, the operator executes that read through the native
+to a workplace search; the input does not supply that tool argument. After the
+initial protected chat route returns a typed search call, the operator executes that read through the native
 Anny chat bridge. It then stamps the direct `mir egal` follow-up and uses the
 same `classifyIntent`, `mergeRoomRequest`, and `officePreferenceSearch` host
 helpers as the browser to issue a second search without another model call.
