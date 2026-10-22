@@ -103,9 +103,19 @@ They do not store authorization headers or provider reasoning. Private reports
 contain synthetic model inputs for reproducibility and subsequent human review;
 ordinary production logging does not acquire those prompts. Response capture
 records refusals and preserves received HTTP status even when a bounded body
-cannot be read. Partial-capture diagnostics use fixed parser-branch enums. Recognized text
-may be retained within the existing bound; proposals are omitted. Unknown provider
-field names or values, unsupported type values and reasoning are not retained. Malformed, partial or unrecognized successful responses stop the
+cannot be read. Partial-capture diagnostics use fixed parser-branch enums.
+Recognized text may be retained within the existing bound; proposals are omitted.
+Unknown provider field values, unsupported type values and reasoning are not
+retained. When a recognized chat response has `unexpected_message_member`, the
+private evaluation result also records the exact unknown-member count and at most eight sorted
+SHA-256 name digests. Each digest is computed over the UTF-8 bytes of the fixed
+domain separator `hasi.provider-message-member-name.v1\0` (a terminating NUL byte) followed by the UTF-8
+member name. Raw member names and values are not retained, and this diagnostic
+does not inspect or serialize member values. The digest list is truncated when
+the count exceeds eight. Field names often have low entropy, so these digests
+are guessable by checking candidate names and are not anonymization. They appear
+only in the private evaluation result, not standard output or production telemetry.
+Malformed, partial or unrecognized successful responses stop the
 current case as soon as its chat-route request returns. The route status is kept,
 but the incomplete route reply is not recorded or executed by the evaluator, so
 it cannot trigger a source read, revocation follow-up or another paid route step.

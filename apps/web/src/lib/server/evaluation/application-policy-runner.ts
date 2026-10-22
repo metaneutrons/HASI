@@ -16,6 +16,8 @@ const environmentKeys = ["HASI_LOCAL_TEST_IDP", "HASI_LOCAL_TEST_IDP_SCOPE", "HA
   "HASI_CHAT_SIGNING_SECRET", "HASI_APP_MODE", "HASI_DEMO_MODE", "VERCEL", "DATABASE_URL"] as const;
 const executionLease = { active: false };
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+const providerMessageMemberNameHashDomain = "hasi.provider-message-member-name.v1\0";
+const maxUnexpectedMessageMemberNameHashes = 8;
 
 export interface ApplicationPolicyRun {
   runKind: "provider_application_policy";
@@ -50,6 +52,7 @@ export interface ApplicationPolicyRun {
   providerRequests: { requestDigestSha256: string; effectiveInputDigestSha256: string; modelInput: Record<string, unknown> }[];
   providerResponses: { status: number; responseDigestSha256?: string; captureStatus: "captured" | "partial" | "unrecognized_shape" | "invalid_json" | "body_unavailable";
     captureIssues?: ProviderCaptureIssue[];
+    unexpectedMessageMembers?: { count: number; nameSha256: string[]; truncated: boolean };
     text?: string; proposals?: { tool: string; argumentsText: string }[] }[];
   routeResponses: { status: number; text?: string; proposedCalls?: { tool: string; arguments: Record<string, unknown> }[]; contextChanged?: boolean }[];
   executedReads: { tool: "knowledge_search"; sourceIds: string[] }[];
@@ -65,6 +68,10 @@ function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function providerMessageMemberNameHash(name: string): string {
+  return hash(`${providerMessageMemberNameHashDomain}${name}`);
+}
+
 type ProviderCaptureIssue = "unexpected_message_member" | "unexpected_message_role" | "legacy_function_call_present" | "audio_payload_present"
   | "text_value_unavailable" | "tool_calls_container_invalid" | "tool_call_shape_invalid" | "tool_name_unavailable" | "tool_name_limit_exceeded"
   | "tool_arguments_unavailable" | "tool_arguments_limit_exceeded" | "tool_proposal_limit_exceeded"
@@ -76,6 +83,7 @@ function providerAnswer(value: unknown) {
   const text: string[] = [];
   const proposals: { tool: string; argumentsText: string }[] = [];
   const captureIssues = new Set<ProviderCaptureIssue>();
+  let unexpectedMessageMembers: { count: number; nameSha256: string[]; truncated: boolean } | undefined;
   let recognized = false;
   const markPartial = (issue: ProviderCaptureIssue) => { captureIssues.add(issue); };
   const addText = (value: unknown) => { if (typeof value === "string") text.push(value); else markPartial("text_value_unavailable"); };
@@ -93,7 +101,16 @@ function providerAnswer(value: unknown) {
     if (object(choice) && object(choice.message)) {
       recognized = "content" in choice.message || Array.isArray(choice.message.tool_calls) || typeof choice.message.refusal === "string";
       const messageKeys = new Set(["role", "content", "tool_calls", "reasoning", "reasoning_content", "refusal", "annotations", "audio", "function_call"]);
-      if (Object.keys(choice.message).some(key => !messageKeys.has(key))) markPartial("unexpected_message_member");
+      const unknownMessageMemberNames = Object.keys(choice.message).filter(key => !messageKeys.has(key));
+      if (unknownMessageMemberNames.length) {
+        markPartial("unexpected_message_member");
+        const sortedNameSha256 = unknownMessageMemberNames.map(providerMessageMemberNameHash).sort();
+        unexpectedMessageMembers = {
+          count: unknownMessageMemberNames.length,
+          nameSha256: sortedNameSha256.slice(0, maxUnexpectedMessageMemberNameHashes),
+          truncated: sortedNameSha256.length > maxUnexpectedMessageMemberNameHashes,
+        };
+      }
       if (choice.message.role !== "assistant") markPartial("unexpected_message_role");
       if (choice.message.function_call !== undefined && choice.message.function_call !== null) markPartial("legacy_function_call_present");
       if (choice.message.audio !== undefined && choice.message.audio !== null) markPartial("audio_payload_present");
@@ -129,6 +146,7 @@ function providerAnswer(value: unknown) {
   const joined = text.join("\n");
   if (joined.length > 30_000) markPartial("text_limit_exceeded");
   if (captureIssues.size) return { captureStatus: "partial" as const, captureIssues: [...captureIssues],
+    ...(unexpectedMessageMembers ? { unexpectedMessageMembers } : {}),
     ...(text.length ? { text: joined.slice(0, 30_000) } : {}) };
   return { captureStatus: "captured" as const, ...(text.length ? { text: joined } : {}), proposals };
 }
