@@ -15,6 +15,12 @@ lock around each complete cycle and releases it before polling, so an idle
 The Docker CLI path and commands are fixed. The app image repository is exactly
 `tjzdwweelb3zhjtfpgzvjs8k`; tags must be full 40-character Git SHAs.
 
+Container inspection uses a raw JavaScript Go-template string so Docker receives
+the JSON quote escapes unchanged. A successful above-threshold service exit does
+not exercise this collector or the low-space cleanup path. Qualify the narrow
+collector against the actual Docker parser as well as injected tests; retain a
+corrupted-format counterprobe. See [the format regression record](../verification/2026-10-22/docker-maintenance-inspection.md).
+
 Run it without arguments first. The default is a dry run, and stdout contains
 only a JSON summary of byte and operation counts. With free space below 12 GiB,
 `--apply` prunes unused Docker builder cache first, with a 180-second timeout.
