@@ -175,6 +175,6 @@ If the model never retrieves before the revocation variant, that scenario is
 explicitly `scenario_not_exercised`. No semantic score, human/gold label, model
 ranking, cache hit or M6 acceptance follows from technical success. Remaining
 Source/tenant scenarios beyond this bounded deployment variant, Anny/tool-output,
-full planning/calendar/dialogue, model-switch, rendering/network and
-human-adjudication requirements remain in M6; Groq cache
-proof remains M8-A10.
+full planning/calendar/dialogue, model-switch and rendering/network requirements
+remain technical M6 work. Under V11, human answer adjudication belongs to final
+M8-A11/A12; Groq cache proof remains M8-A10. Neither transfer establishes a pass.

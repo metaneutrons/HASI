@@ -1,6 +1,15 @@
 # HASI consolidated delivery plan
 
-Plan version: 10. Manual VPN-review sequencing decision: 2026-10-22.
+Plan version: 11. Human-answer-assessment sequencing decision: 2026-10-22.
+Fabian moved all remaining human assessments of model-generated answers from
+M6/M7 to final **M8-A12**. The specified VPN packet stays in M8-A11. Preserve
+exact inputs, authorized evidence, captured outputs, traces and blinded mappings
+for the existing rubric and critical independent second review/adjudication.
+Actual model/function/security/access, rendering/network and usage/cost/budget
+tests stay in M6/M7. Answers remain ungraded; no quality pass, ranking, gold
+label, new case count or threshold follows.
+
+V10 manual VPN-review sequencing decision: 2026-10-22.
 Fabian deferred his manual review of the corrected-input ten-answer VPN packet
 until final acceptance and requested completion of the remaining technical work.
 That specific claim-level review, its rubric and any required independent
@@ -39,7 +48,7 @@ Test-IdP, mocks, synthetic data and browser/device simulation. Required CI and
 technical operational exercises remain required. The earlier V3 changed only
 issue granularity and was adopted on 2026-10-18.
 
-Decision state: **V10 transfers only the specified manual VPN review to M8-A11; V9 transfers only CACHE-A1 to M8-A10; V8 adds library catalogue discovery under #55; V7 transfers only the 1-second API acceptance to M8-A9;
+Decision state: **V11 transfers remaining human answer assessments to M8-A12; V10 transfers only the specified manual VPN review to M8-A11; V9 transfers only CACHE-A1 to M8-A10; V8 adds library catalogue discovery under #55; V7 transfers only the 1-second API acceptance to M8-A9;
 V6's local UI target remains in M2/M7; V5 retains
 the demo backup acceptance scope; V4 retains its
 qualification sequencing and final mobile-quality requirements.** Real iPhone/Safari, Android/Chrome,
@@ -47,7 +56,7 @@ VoiceOver/TalkBack and participant acceptance remain mandatory in M8-A7; they
 are not claimed passed by simulation. Other P1–P6 security/runtime criteria,
 remaining M1–M7 technical tests except CACHE-A1, and budgets remain required. Acceptance transfers
 are limited to the explicit M8-A8 continuity, M8-A9 API-performance,
-M8-A10 Groq-cache and M8-A11 manual VPN-review transfers. API measurements are not a passed M2/M7 prerequisite under V7. Source
+M8-A10 Groq-cache, M8-A11 manual VPN-review and M8-A12 remaining human-answer-assessment transfers. API measurements are not a passed M2/M7 prerequisite under V7. Source
 records transferred under V3 remain `not_planned`, never accepted work.
 Third-party MCP Apps remain off by default after the P2 no-go decision. This
 plan authorizes neither real institutional writes/protected-data tests nor
