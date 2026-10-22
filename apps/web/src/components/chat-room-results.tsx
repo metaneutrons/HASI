@@ -5,6 +5,7 @@ import { useId, useLayoutEffect, useRef, useState } from "react";
 import { formatDateTime, formatTime } from "@/lib/api";
 import type { ChatRoomOption } from "@/lib/chat-sessions";
 import type { Resource, TimeInterval } from "@/lib/types";
+import { availableRoomOptions } from "@/lib/available-room-search";
 
 const INITIAL_VISIBLE_ROOMS = 4;
 
@@ -13,6 +14,7 @@ export interface ChatRoomResultsProps {
   disabled: boolean;
   onChooseRoom: (resource: Resource) => void;
   onChooseSlot: (resource: Resource, interval: TimeInterval) => void;
+  onRecheck?: () => void;
 }
 
 function kindLabel(resource: Resource): string {
@@ -125,7 +127,7 @@ function RoomResult({
   );
 }
 
-export function ChatRoomResults({ rooms, disabled, onChooseRoom, onChooseSlot }: ChatRoomResultsProps) {
+export function ChatRoomResults({ rooms, disabled, onChooseRoom, onChooseSlot, onRecheck }: ChatRoomResultsProps) {
   const [expanded, setExpanded] = useState(false);
   const listId = `chat-room-results-${useId()}`;
   const headingId = `${listId}-heading`;
@@ -141,8 +143,21 @@ export function ChatRoomResults({ rooms, disabled, onChooseRoom, onChooseSlot }:
 
   if (rooms.length === 0) return null;
 
-  const visibleRooms = expanded ? rooms : rooms.slice(0, INITIAL_VISIBLE_ROOMS);
-  const remainingCount = Math.max(0, rooms.length - INITIAL_VISIBLE_ROOMS);
+  const available = availableRoomOptions(rooms);
+  if (available.length === 0) {
+    if (!rooms.some(room => !room.checked)) return null;
+    const first = rooms[0];
+    const canRecheck = first?.requestedStartDate && first.requestedEndDate
+      && Number.isFinite(Date.parse(first.requestedStartDate)) && Number.isFinite(Date.parse(first.requestedEndDate))
+      && Date.parse(first.requestedEndDate) > Date.parse(first.requestedStartDate);
+    return canRecheck && onRecheck ? (
+      <button className="chat-room-results__toggle" type="button" disabled={disabled} onClick={onRecheck}>
+        <CalendarDays size={16} aria-hidden="true" /> Verfügbarkeit erneut prüfen
+      </button>
+    ) : <p className="chat-room-result__no-slots">Starte eine neue Suche mit Datum, Uhrzeit und Dauer.</p>;
+  }
+  const visibleRooms = expanded ? available : available.slice(0, INITIAL_VISIBLE_ROOMS);
+  const remainingCount = Math.max(0, available.length - INITIAL_VISIBLE_ROOMS);
 
   return (
     <div className="chat-room-results" role="group" aria-labelledby={headingId}>

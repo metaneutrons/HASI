@@ -1,12 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { mergeRoomRequest } from "../src/lib/chat-demo";
-import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeMismatchError, RoomTimeUnresolvedError } from "../src/lib/chat-room-time";
+import { assertRequestedRoomTime, requestedRoomInterval, RoomTimeInvalidError, RoomTimeMismatchError, RoomTimeUnresolvedError } from "../src/lib/chat-room-time";
 
 const original = mergeRoomRequest("Ich brauche am kommenden Montag ein Büro im Gebäude 1J von 8-16 Uhr.", {}, new Date("2026-10-17T15:00:00.000Z"));
 const preference = mergeRoomRequest("Ein Einzelbüro bitte.", original, new Date("2026-10-17T15:01:00.000Z"));
 const args = { resourceId: "190449", date: "2026-10-19", time: "08:00", durationMinutes: 480 };
 
 describe("requested room time binding", () => {
+  it.each([
+    [{ date: "__invalid__", time: "10:00", durationMinutes: 60 }, "Datum"],
+    [{ date: "2026-10-23", time: "25:00", durationMinutes: 60 }, "Uhrzeit"],
+    [{ date: "2026-10-23", time: "10:00", durationMinutes: 0 }, "Dauer"],
+  ])("names invalid fields without incorrectly blaming daylight saving", (request, field) => {
+    expect(() => requestedRoomInterval(request)).toThrow(RoomTimeInvalidError);
+    expect(() => requestedRoomInterval(request)).toThrow(field);
+    try { requestedRoomInterval(request); } catch (cause) {
+      expect((cause as Error).message).not.toContain("Zeitumstellung");
+    }
+  });
   it("keeps today's bare building identifier and exact interval through an indifferent preference", () => {
     const now = new Date("2026-10-19T07:22:00.000Z");
     const request = mergeRoomRequest("ch brauche einen Büro für heute in 1J; von 10 - 16 Uhr", {}, now);

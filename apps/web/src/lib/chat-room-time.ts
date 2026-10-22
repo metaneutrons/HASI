@@ -8,7 +8,14 @@ export class RoomTimeMismatchError extends Error {
 }
 export class RoomTimeUnresolvedError extends Error {
   constructor() {
-    super("Die angegebene Ortszeit oder Dauer lässt sich nicht eindeutig bestimmen. Bitte präzisiere Datum, Uhrzeit und Dauer; bei der Zeitumstellung kann eine Uhrzeit doppelt auftreten oder ausfallen.");
+    super("Diese Ortszeit ist wegen der Zeitumstellung in Europe/Berlin nicht eindeutig oder existiert nicht. Bitte wähle eine andere Uhrzeit.");
+  }
+}
+
+export class RoomTimeInvalidError extends RoomTimeUnresolvedError {
+  constructor(fields: string[]) {
+    super();
+    this.message = `Bitte korrigiere die Angaben für ${fields.join(", ")}. Datum, Uhrzeit und eine Dauer von 15 Minuten bis 24 Stunden müssen gültig sein.`;
   }
 }
 
@@ -18,7 +25,11 @@ export function requestedRoomInterval(request: RoomRequest) {
   const shape = chatToolSchemas.anny_get_availability.safeParse({ resourceId: "intent", date: request.date, time: request.time, durationMinutes: request.durationMinutes });
   const startDate = requestStartDate(request);
   const duration = request.durationMinutes;
-  if (!shape.success || !startDate) throw new RoomTimeUnresolvedError();
+  if (!shape.success) {
+    const labels: Record<string, string> = { date: "Datum", time: "Uhrzeit", durationMinutes: "Dauer" };
+    throw new RoomTimeInvalidError([...new Set(shape.error.issues.map(issue => labels[String(issue.path[0])] ?? "Zeitraum"))]);
+  }
+  if (!startDate) throw new RoomTimeUnresolvedError();
   return { startDate: new Date(startDate).toISOString(), endDate: new Date(Date.parse(startDate) + duration * 60_000).toISOString() };
 }
 

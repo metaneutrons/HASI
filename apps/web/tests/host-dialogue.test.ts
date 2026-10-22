@@ -238,7 +238,7 @@ describe("ProtectedWorkspaceStore host dialogue reconstruction", () => {
     return { staticNote, searchNote };
   }
 
-  it("retains signed notes and rebuilds candidate cards from the current authorized catalog", async () => {
+  it("retains signed missing-time notes without rebuilding unchecked candidate cards", async () => {
     const workspace = createChatWorkspace(OWNER);
     const session = sessionOf(workspace);
     const { staticNote, searchNote } = signedHelpers(session.id);
@@ -265,11 +265,8 @@ describe("ProtectedWorkspaceStore host dialogue reconstruction", () => {
     expect(greeting?.text).toBe(staticHostDialogue.greeting);
     expect(roomNote?.text).toBe(searchNote.text);
     expect(roomNote?.tool).toBe("HASI · Dialoghinweis");
-    expect(roomNote?.rooms).toEqual(searchNote.hostDialogue.resourceIds.map(id => ({
-      resource: CATALOG.find(item => item.id === id),
-      intervals: [],
-      checked: false,
-    })));
+    expect(searchNote.hostDialogue.resourceIds).toEqual([]);
+    expect(roomNote?.rooms).toBeUndefined();
     expect(JSON.stringify(loaded.workspace)).not.toContain("Browser supplied room");
     expect(JSON.stringify(loaded.workspace)).not.toContain("Forged");
     expect(loaded.workspace.sessions[0]?.snapshot.history).toEqual([{ role: "user", content: "Find a meeting room." }]);

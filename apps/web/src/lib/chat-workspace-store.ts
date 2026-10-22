@@ -115,6 +115,17 @@ function compatibleOwnProjection(before: ChatSnapshot, approved: ChatSnapshot): 
         return projected;
       }
     }
+    if (message.role === "assistant" && message.bookings?.length && projected?.bookings?.length
+      && !message.evidence && !message.sources && !message.rooms && !message.proposal
+      && projected.tool === "anny · Eigene Buchungen"
+      && JSON.stringify(message.bookings) === JSON.stringify(projected.bookings)) {
+      // The host may refresh copy/attribution while the exact booking records
+      // remain current. Status, interval, ownership filtering and other fields
+      // must still match; an ID match alone cannot retain cancellation controls.
+      const remaining = (value: typeof message) => Object.fromEntries(Object.entries(value)
+        .filter(([key]) => !["text", "tool", "model", "interactionId"].includes(key)));
+      if (JSON.stringify(remaining(message)) === JSON.stringify(remaining(projected))) return projected;
+    }
     if (message.role !== "assistant" || !message.rooms || !projected?.rooms
       || message.evidence || message.sources || message.proposal || message.bookings
       || message.rooms.length !== projected.rooms.length) return message;

@@ -99,7 +99,7 @@ describe("planRoomDialogue", () => {
     expect(plan.text).toContain("Möchtest du");
   });
 
-  it("returns the first eight authorized candidates and names missing fields", () => {
+  it("asks for missing fields without presenting unchecked catalog candidates", () => {
     const catalog = Array.from({ length: 10 }, (_, index) =>
       resource(`room-${String(index)}`),
     );
@@ -107,7 +107,7 @@ describe("planRoomDialogue", () => {
     const plan = planRoomDialogue({ kind: "meeting_room" }, catalog);
 
     expect(plan.code).toBe("room_details");
-    expect(plan.resources).toEqual(catalog.slice(0, 8));
+    expect(plan.resources).toEqual([]);
     expect(plan.total).toBe(10);
     expect(plan.text).toContain("Datum (heute, morgen oder TT.MM.JJJJ)");
     expect(plan.text).toContain("Uhrzeit (z. B. 14:30)");
