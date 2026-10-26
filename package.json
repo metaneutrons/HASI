@@ -43,7 +43,7 @@
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
     "fastify": "5.12.7",
-    "jose": "6.2.12",
+    "jose": "6.2.13",
     "semver": "7.8.5",
     "zod": "4.6.7",
     "@hasi/state": "workspace:*",
@@ -58,7 +58,7 @@
     "eslint": "9.39.5",
     "tsx": "4.23.15",
     "typescript": "~6.0.3",
-    "typescript-eslint": "8.71.2",
+    "typescript-eslint": "8.72.0",
     "vitest": "5.0.5",
     "lefthook": "2.2.2"
   },
