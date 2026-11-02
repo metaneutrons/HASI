@@ -20,21 +20,21 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "4.0.81",
-    "@ai-sdk/groq": "4.0.62",
-    "@ai-sdk/openai": "4.0.95",
-    "@ai-sdk/openai-compatible": "3.0.69",
+    "@ai-sdk/anthropic": "4.0.93",
+    "@ai-sdk/groq": "4.0.74",
+    "@ai-sdk/openai": "4.0.106",
+    "@ai-sdk/openai-compatible": "3.0.82",
     "@hasi/demo-fixtures": "workspace:*",
     "@hasi/demo-runtime": "workspace:*",
     "@hasi/knowledge-plugin": "workspace:*",
     "@hasi/plugin-sdk": "workspace:*",
     "@hasi/state": "workspace:*",
-    "@modelcontextprotocol/ext-apps": "2.0.3",
+    "@modelcontextprotocol/ext-apps": "2.0.4",
     "@vercel/firewall": "1.2.6",
-    "ai": "7.0.142",
-    "lucide-react": "1.58.0",
+    "ai": "7.0.158",
+    "lucide-react": "1.65.0",
     "mdast-util-from-markdown": "2.1.0",
-    "next": "16.4.2",
+    "next": "16.4.3",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-markdown": "10.1.0",
@@ -48,7 +48,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.4.2"
+    "eslint-config-next": "16.4.3"
   },
   "type": "module"
 }
