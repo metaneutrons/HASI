@@ -33,7 +33,11 @@ describe('AnnyClient', () => {
     timeoutMs?: number;
     catalog?: AnnyMockCatalog;
   } = {}) {
-    const app = createAnnyMock({ token, ...(options.catalog ? { catalog: options.catalog } : {}) });
+    const app = createAnnyMock({
+      token,
+      availabilityNow: () => Date.parse('2026-11-01T00:00:00Z'),
+      ...(options.catalog ? { catalog: options.catalog } : {})
+    });
     apps.push(app);
     const address = await app.listen({ host: '127.0.0.1', port: 0 });
     return new AnnyClient({

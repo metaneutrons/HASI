@@ -10,8 +10,12 @@ redistributed under HASI's GPL license. `pnpm research:anny` downloads the
 current checksum-pinned references into the ignored `anny/current/` directory.
 The only structural change from the original snapshots is the additional
 optional `bookings.v1.attributes.is_recurring` property in both specifications.
-Current Admin pin: `7c7fe9113259802381c6e7b9d6cb350cba6b2638d54b2630f7f2ea2b836bd1d7`
-(1,271,245 bytes); Customer pin:
+Pin update, 2026-11-02: the Admin specification gained the optional boolean
+`booking-quotas.v1.include_add_ons` (quantity quotas only). No operation was
+added, removed or changed, and HASI does not use the quota resource. The
+Customer pin is unchanged.
+Current Admin pin: `b3b082347a3e62ef88be2f265d131fab88ee1c140fbbc2a730331204b69e502d`
+(1,271,706 bytes); Customer pin:
 `0097bae66aa5fdb29232a81a6b7027f48bf0db8295dfdff4b00648489476b976`
 (859,668 bytes). Tests validate the mock against those references.
 
