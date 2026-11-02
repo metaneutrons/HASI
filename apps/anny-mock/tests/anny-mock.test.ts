@@ -31,7 +31,7 @@ function validatorFor(spec: OpenApiSnapshot, filename: string, schemaName: strin
 }
 
 describe('Anny mock contract', () => {
-  const app = createAnnyMock({ token: 'contract-test-token' });
+  const app = createAnnyMock({ token: 'contract-test-token', availabilityNow: () => Date.parse('2026-11-01T00:00:00Z') });
 
   beforeAll(async () => {
     await app.ready();
