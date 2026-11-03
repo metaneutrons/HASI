@@ -20,6 +20,10 @@ updates:
       # Recheck the parser's published peer range before removing this entry.
       - dependency-name: typescript
         versions: ['>=6.1']
+      # Keep the Node typings on the runtime major (engines >=24, .nvmrc 24).
+      # Raise this together with the minimum supported Node version.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
