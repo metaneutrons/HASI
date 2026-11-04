@@ -14,8 +14,13 @@ Pin update, 2026-11-02: the Admin specification gained the optional boolean
 `booking-quotas.v1.include_add_ons` (quantity quotas only). No operation was
 added, removed or changed, and HASI does not use the quota resource. The
 Customer pin is unchanged.
-Current Admin pin: `b3b082347a3e62ef88be2f265d131fab88ee1c140fbbc2a730331204b69e502d`
-(1,271,706 bytes); Customer pin:
+Pin update, 2026-11-04: the Admin specification changed `display-panels.v1`
+(`layout` is now a string, new optional `map_only`, `people_first` and
+`people_first_qr_from`) and added the optional `booking-rules.v1.customer_scope`.
+No operation was added, removed or changed, and HASI uses neither resource. The
+Customer pin is unchanged.
+Current Admin pin: `04250b9fef39e2e989de444e85d89e3aef539809c29dc72a924ffef863f502b5`
+(1,273,024 bytes); Customer pin:
 `0097bae66aa5fdb29232a81a6b7027f48bf0db8295dfdff4b00648489476b976`
 (859,668 bytes). Tests validate the mock against those references.
 
