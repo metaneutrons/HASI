@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
 const references = [
-  { name: 'admin', sha256: 'b3b082347a3e62ef88be2f265d131fab88ee1c140fbbc2a730331204b69e502d' },
+  { name: 'admin', sha256: '04250b9fef39e2e989de444e85d89e3aef539809c29dc72a924ffef863f502b5' },
   { name: 'customer', sha256: '0097bae66aa5fdb29232a81a6b7027f48bf0db8295dfdff4b00648489476b976' },
 ] as const;
 const directory = new URL('../docs/research/anny/current/', import.meta.url);
