@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@hasi/demo-fixtures": "workspace:*",
-    "fastify": "5.12.7"
+    "fastify": "5.12.8"
   },
   "license": "GPL-3.0-only",
   "author": "Fabian Schmieder",

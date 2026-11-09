@@ -20,7 +20,7 @@
     "@hasi/anny-mock": "workspace:*",
     "@hasi/plugin-sdk": "workspace:*",
     "@hasi/state": "workspace:*",
-    "fastify": "5.12.7",
+    "fastify": "5.12.8",
     "zod": "4.6.7",
     "@hasi/knowledge-plugin": "workspace:*",
     "@hasi/demo-fixtures": "workspace:*"
